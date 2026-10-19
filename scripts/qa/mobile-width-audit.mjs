@@ -48,7 +48,8 @@ const snapshot = async (page) => {
   return { metrics: toMetrics(m), hasShell, finalPath: new URL(page.url()).pathname + new URL(page.url()).search };
 };
 
-const browser = await chromium.launch();
+// CHROMIUM_PATH permite usar um Chromium já instalado quando a versão do Playwright difere.
+const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 let failures = 0;
 let limitations = 0;
 for (const width of widths) {
