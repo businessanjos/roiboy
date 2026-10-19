@@ -105,10 +105,13 @@ export default function PublicJobOffer() {
       patch.candidate_phone = phone;
     }
     setResponding(true);
-    const { error } = await supabase
-      .from("hr_job_offers")
-      .update(patch)
-      .eq("public_token", offer.public_token);
+    const { error } = await (supabase as any).rpc("respond_job_offer", {
+      _token: offer.public_token,
+      _status: status,
+      _message: message || null,
+      _email: patch.candidate_email ?? null,
+      _phone: patch.candidate_phone ?? null,
+    });
     if (error) toast({ title: "Erro ao registrar resposta", description: error.message, variant: "destructive" });
     else setOffer({ ...offer, ...patch });
     setResponding(false);
