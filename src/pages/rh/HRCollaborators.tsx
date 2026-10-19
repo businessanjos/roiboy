@@ -784,7 +784,92 @@ export default function HRCollaborators() {
         </div>
       ) : (
         <>
-        <div className="border rounded-lg overflow-x-auto">
+        {/* Mobile: cartões */}
+        <div className="space-y-2 md:hidden">
+          <label className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={filtered.length > 0 && filtered.every(c => selectedRows.has(c.id))}
+              onCheckedChange={(v) => {
+                setSelectedRows(prev => {
+                  const next = new Set(prev);
+                  if (v) filtered.forEach(c => next.add(c.id));
+                  else filtered.forEach(c => next.delete(c.id));
+                  return next;
+                });
+              }}
+            />
+            Selecionar todos
+          </label>
+          {pgCollaborators.items.map(c => {
+            const st = STATUS_MAP[c.status || "active"] || STATUS_MAP.active;
+            return (
+              <div key={c.id} className={`rounded-lg border bg-card p-3 space-y-2 ${selectedRows.has(c.id) ? "border-primary/40 bg-primary/5" : ""}`}>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    className="mt-1 shrink-0"
+                    checked={selectedRows.has(c.id)}
+                    onCheckedChange={(v) => {
+                      setSelectedRows(prev => {
+                        const next = new Set(prev);
+                        if (v) next.add(c.id); else next.delete(c.id);
+                        return next;
+                      });
+                    }}
+                    aria-label={`Selecionar ${c.full_name}`}
+                  />
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarImage src={c.avatar_url || undefined} />
+                    <AvatarFallback className="bg-info/10 text-info text-xs font-medium">
+                      {getInitials(c.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground break-words">{c.full_name}</p>
+                    <p className="text-xs text-muted-foreground break-all">{c.email || "—"}</p>
+                  </div>
+                  <Badge variant={st.variant} className="text-xs shrink-0">{st.label}</Badge>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  {c.employment_type && (
+                    <Badge variant="outline" className="text-xs">{EMPLOYMENT_TYPES[c.employment_type] || c.employment_type}</Badge>
+                  )}
+                  {c.position && <span className="break-words">{c.position}</span>}
+                  {c.department && <span className="break-words">· {c.department}</span>}
+                  {c.unit && <span className="break-words">· {c.unit}</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => navigate(`/rh/collaborators/${c.id}`)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" /> Ver perfil
+                  </Button>
+                  {c.status !== "inactive" && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label={`Mais ações para ${c.full_name}`}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setDeactivateTarget(c)}
+                        >
+                          <UserX className="h-4 w-4 mr-2" /> Inativar colaborador
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Desktop: tabela */}
+        <div className="border rounded-lg overflow-x-auto hidden md:block">
           <table className="w-full min-w-[1100px] text-sm">
             <thead>
               <tr className="bg-muted/50 border-b">
