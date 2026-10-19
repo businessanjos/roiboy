@@ -923,7 +923,7 @@ export default function Events() {
                   Novo Evento
                 </Button>
               </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto grid-cols-1">
             <DialogHeader>
               <DialogTitle>
                 {editingEvent ? "Editar Evento" : "Novo Evento"}
