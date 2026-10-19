@@ -529,36 +529,114 @@ export default function HRCollaborators() {
       </Tabs>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[220px]">
+      <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
+        <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome, email, CPF, cargo, unidade..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input
+            aria-label="Buscar colaborador"
+            placeholder="Buscar por nome, email, CPF, cargo..."
+            className="pl-9"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {Object.entries(STATUS_MAP).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={deptFilter} onValueChange={setDeptFilter}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Departamento" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {departments.map(d => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[130px]"><SelectValue placeholder="Vínculo" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {Object.entries(EMPLOYMENT_TYPES).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        {/* Mobile: filtros identificados em painel inferior */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" className="h-10 sm:hidden" aria-label="Abrir filtros">
+              <SlidersHorizontal className="h-4 w-4 mr-1.5" />
+              Filtros
+              {((view !== "pda" && statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view !== "pda" && typeFilter !== "all" ? 1 : 0)) > 0 && (
+                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">
+                  {(view !== "pda" && statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view !== "pda" && typeFilter !== "all" ? 1 : 0)}
+                </Badge>
+              )}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto">
+            <SheetHeader className="text-left">
+              <SheetTitle>Filtros</SheetTitle>
+              <SheetDescription>
+                {view === "pda"
+                  ? "Na visão PDA valem a busca e o departamento; status e vínculo não se aplicam."
+                  : "Refina a lista de colaboradores exibida."}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-4 grid gap-3">
+              {view !== "pda" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-11" aria-label="Status"><SelectValue placeholder="Status" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {Object.entries(STATUS_MAP).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Departamento</Label>
+                <Select value={deptFilter} onValueChange={setDeptFilter}>
+                  <SelectTrigger className="h-11" aria-label="Departamento"><SelectValue placeholder="Departamento" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {departments.map(d => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {view !== "pda" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Vínculo</Label>
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="h-11" aria-label="Vínculo"><SelectValue placeholder="Vínculo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {Object.entries(EMPLOYMENT_TYPES).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            <SheetClose asChild>
+              <Button className="mt-4 h-11 w-full">Concluir</Button>
+            </SheetClose>
+          </SheetContent>
+        </Sheet>
+
+        {/* Desktop: selects inline */}
+        <div className="hidden sm:flex flex-wrap gap-3 items-center">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {Object.entries(STATUS_MAP).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={deptFilter} onValueChange={setDeptFilter}>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Departamento" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {departments.map(d => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[130px]"><SelectValue placeholder="Vínculo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {Object.entries(EMPLOYMENT_TYPES).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Bulk action bar */}
