@@ -73,7 +73,7 @@ export function FailedZappSendsAlert() {
         </Tooltip>
       </TooltipProvider>
 
-      <PopoverContent align="end" className="w-[380px] p-0">
+      <PopoverContent align="end" className="w-[min(380px,calc(100vw-1rem))] p-0">
         <div className="p-3 border-b border-border flex items-start justify-between gap-2">
           <div>
             <h4 className="text-sm font-semibold flex items-center gap-1.5">

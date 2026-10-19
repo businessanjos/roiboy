@@ -96,7 +96,7 @@ export function PayerSelector({ value, onChange, clientId, allowCreateFromClient
             <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="p-0 w-[480px]" align="start">
+        <PopoverContent className="p-0 w-[min(480px,calc(100vw-1rem))]" align="start">
           <Command>
             <CommandInput placeholder="Buscar por nome ou CPF/CNPJ..." />
             <CommandList>
