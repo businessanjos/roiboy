@@ -445,76 +445,76 @@ export const ZappMessageInput = memo(function ZappMessageInput({
 
       {/* Quick actions (mobile only) */}
       {!isRecording && !audioPreview && !imagePreview && !filePreview && (
-        <div className="sm:hidden bg-zapp-panel border-t border-zapp-border px-2 pt-2 pb-0.5">
+        <div className="sm:hidden bg-zapp-panel border-t border-zapp-border px-2 py-0.5">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            <button
+            <Button variant="ghost"
               type="button"
               onClick={onOpenQuickReplies}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover h-11 shrink-0 px-3 py-0 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
             >
-              <Zap className="h-3.5 w-3.5 text-[#ffb000]" />
+              <Zap className="h-3.5 w-3.5 text-warning" />
               Respostas
-            </button>
+            </Button>
             {onOpenPlaybook && (
-              <button
+              <Button variant="ghost"
                 type="button"
                 onClick={onOpenPlaybook}
-                className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover h-11 shrink-0 px-3 py-0 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
               >
                 <BookOpen className="h-3.5 w-3.5 text-zapp-accent" />
                 Playbook
-              </button>
+              </Button>
             )}
             {showSuggestionsButton && onToggleSuggestions && (
-              <button
+              <Button variant="ghost"
                 type="button"
                 onClick={onToggleSuggestions}
                 disabled={isLoadingSuggestions}
                 className={cn(
-                  "flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium active:scale-95 transition-transform",
-                  suggestionsOpen ? "bg-violet-500/15 text-violet-500" : "bg-zapp-hover text-zapp-text",
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-full h-11 shrink-0 px-3 py-0 text-xs font-medium active:scale-95 transition-transform",
+                  suggestionsOpen ? "bg-zapp-accent/15 text-zapp-accent" : "bg-zapp-hover text-zapp-text",
                 )}
               >
                 {isLoadingSuggestions ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-500" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-zapp-accent" />
                 ) : (
-                  <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                  <Sparkles className="h-3.5 w-3.5 text-zapp-accent" />
                 )}
                 Sugestões
-              </button>
+              </Button>
             )}
-            <button
+            <Button variant="ghost"
               type="button"
               onClick={() => imageInputRef?.current?.click()}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover h-11 shrink-0 px-3 py-0 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
             >
-              <ImageIcon className="h-3.5 w-3.5 text-[#007bfc]" />
+              <ImageIcon className="h-3.5 w-3.5 text-info" />
               Foto
-            </button>
-            <button
+            </Button>
+            <Button variant="ghost"
               type="button"
               onClick={() => fileInputRef?.current?.click()}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover h-11 shrink-0 px-3 py-0 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
             >
-              <FileText className="h-3.5 w-3.5 text-[#7f66ff]" />
+              <FileText className="h-3.5 w-3.5 text-zapp-accent" />
               Arquivo
-            </button>
+            </Button>
             {isMetaChannel && onOpenTemplates && (
-              <button
+              <Button variant="ghost"
                 type="button"
                 onClick={onOpenTemplates}
-                className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover h-11 shrink-0 px-3 py-0 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
               >
                 <BadgeCheck className="h-3.5 w-3.5 text-success" />
                 Template
-              </button>
+              </Button>
             )}
             {hasSignature && (
-              <button
+              <Button variant="ghost"
                 type="button"
                 onClick={onToggleSignature}
                 className={cn(
-                  "flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium active:scale-95 transition-transform",
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-full h-11 shrink-0 px-3 py-0 text-xs font-medium active:scale-95 transition-transform",
                   signatureEnabled
                     ? "bg-zapp-accent/20 text-zapp-accent"
                     : "bg-zapp-hover text-zapp-text"
@@ -522,7 +522,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
               >
                 <PenLine className="h-3.5 w-3.5" />
                 Assinatura
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -576,6 +576,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Button 
                   variant="ghost" 
                   size="icon" 
+                  aria-label="Emojis"
                   className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-10 sm:w-10"
                 >
                   <Smile className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -724,7 +725,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   variant="ghost"
                   size="icon"
                   className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-8 sm:w-8"
-                  onClick={onSendMessage}
+                  aria-label="Enviar mensagem"
+                onClick={onSendMessage}
                   disabled={uploadingMedia}
                 >
                   {uploadingMedia ? (
@@ -772,7 +774,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   variant="ghost"
                   size="icon"
                   className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-8 sm:w-8"
-                  onClick={onSendMessage}
+                  aria-label="Enviar mensagem"
+                onClick={onSendMessage}
                   disabled={uploadingMedia}
                 >
                   {uploadingMedia ? (
@@ -910,9 +913,10 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 onMentionInsert={onMentionInsert}
               />
             ) : (
-              <div className="flex-1 relative">
+              <div className="min-w-0 flex-1 relative">
                 <Textarea
                   ref={messageInputRef}
+                  aria-label="Mensagem"
                   placeholder="Digite uma mensagem"
                   value={messageInput}
                   onChange={(e) => {
@@ -952,11 +956,12 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="flex-shrink-0 h-11 w-11 sm:h-10 sm:w-10 rounded-full bg-zapp-accent text-white hover:bg-zapp-accent/90 sm:bg-transparent sm:text-zapp-accent sm:hover:bg-zapp-hover"
+                className="flex-shrink-0 h-11 w-11 sm:h-10 sm:w-10 rounded-full bg-zapp-accent text-primary-foreground hover:bg-zapp-accent/90 sm:bg-transparent sm:text-zapp-accent sm:hover:bg-zapp-hover"
                 onClick={(e) => {
                   e.preventDefault();
                   onSendMessage();
                 }}
+                aria-label="Enviar mensagem"
                 disabled={sendingMessage}
               >
                 {sendingMessage ? (
