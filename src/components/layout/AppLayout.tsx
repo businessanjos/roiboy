@@ -183,16 +183,18 @@ export function AppLayout() {
 
           <div className="flex flex-row flex-1 w-full min-h-0 overflow-hidden gap-4">
             <Sidebar />
-            {/* O main é o container de rolagem; o espaço inferior só existe quando há tab bar. */}
+            {/* O main é o container de rolagem; o espaço inferior só existe quando há tab bar.
+                No celular ele só rola na vertical: a tela nunca desliza para os lados;
+                conteúdo largo (tabelas, kanban) rola dentro da própria região. */}
             <main
               id={MAIN_SCROLL_ID}
               className={
-                "flex-1 min-w-0 min-h-0 flex flex-col overscroll-contain overflow-x-hidden lg:overflow-x-auto lg:pb-0 " +
+                "flex-1 min-w-0 min-h-0 flex flex-col overscroll-contain lg:pb-0 " +
                 (isRoyZapp
                   ? "overflow-hidden pb-0 pt-[env(safe-area-inset-top)] lg:pt-0"
                   : tabBarVisible
-                    ? "overflow-auto pb-[calc(3.75rem+env(safe-area-inset-bottom))]"
-                    : "overflow-auto pb-[env(safe-area-inset-bottom)]")
+                    ? "overflow-y-auto overflow-x-hidden lg:overflow-x-auto pb-[calc(3.75rem+env(safe-area-inset-bottom))]"
+                    : "overflow-y-auto overflow-x-hidden lg:overflow-x-auto pb-[env(safe-area-inset-bottom)]")
               }
             >
               <MainScrollRestoration />
