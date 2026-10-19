@@ -220,7 +220,7 @@ export function ZappMediaGallery({ open, onOpenChange, messages, contactName }: 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="bg-zapp-panel border-zapp-border w-[380px] sm:w-[420px] p-0 flex flex-col">
+      <SheetContent className="bg-zapp-panel border-zapp-border w-[min(380px,100vw)] sm:w-[420px] p-0 flex flex-col">
         <SheetHeader className="px-4 pt-4 pb-2 border-b border-zapp-border">
           <SheetTitle className="text-zapp-text text-base">
             Mídias e Links

@@ -132,7 +132,7 @@ export const ZappTeamList = memo(function ZappTeamList({
             return (
               <div
                 key={agent.id}
-                className="flex items-center gap-3 p-3 bg-zapp-panel rounded-lg"
+                className="flex flex-wrap items-center gap-3 p-3 bg-zapp-panel rounded-lg"
               >
                 <div className="relative">
                   <Avatar className="h-10 w-10">
@@ -148,8 +148,8 @@ export const ZappTeamList = memo(function ZappTeamList({
                     )}
                   />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0 basis-40">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-zapp-text text-sm font-medium truncate">
                       {agent.user?.name}
                     </span>
@@ -179,7 +179,7 @@ export const ZappTeamList = memo(function ZappTeamList({
                     {agent.department?.name || "Todos os departamentos"} • {agent.current_chats}/{agent.max_concurrent_chats}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 ml-auto">
                   {onToggleAgentGlobalAccess && (
                     <TooltipProvider delayDuration={200}>
                       <Tooltip>
