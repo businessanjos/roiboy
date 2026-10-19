@@ -242,7 +242,7 @@ export default function ClinicaRyka() {
             Clientes com produto Rykas Mentoring ou Eternum Club e o status do acesso ao sistema Ryka.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleSyncFromRyka} disabled={syncing || loading}>
             {syncing ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -271,14 +271,14 @@ export default function ClinicaRyka() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <CardTitle className="text-base">Clientes</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+              <div className="relative w-full sm:w-auto">
                 <Search className="h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar por nome, e-mail, telefone..."
-                  className="pl-8 w-[280px]"
+                  className="pl-8 w-full sm:w-[280px]"
                 />
               </div>
               <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
