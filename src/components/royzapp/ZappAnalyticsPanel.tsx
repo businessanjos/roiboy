@@ -219,7 +219,7 @@ function Kpi({
             <p className="text-[11px] uppercase tracking-wide text-zapp-text-muted font-medium">{label}</p>
             <p className={cn("text-2xl font-semibold leading-tight", toneClass)}>{value}</p>
             {hint && <p className="text-[11px] text-zapp-text-muted mt-0.5">{hint}</p>}
-            {onClick && <p className="text-[11px] text-zapp-accent mt-1">Clique para ver quem atendeu quem</p>}
+            {onClick && <p className="text-[11px] text-zapp-accent mt-1">{cta ?? "Clique para ver quem atendeu quem"}</p>}
           </div>
         </div>
       </CardContent>
@@ -260,6 +260,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [contactsDialog, setContactsDialog] = useState<"inbound" | "outbound" | null>(null);
   const [newConvDialog, setNewConvDialog] = useState<NewConvFilter | null>(null);
+  const [alertDetail, setAlertDetail] = useState<ZappAlertDetailKind | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
 
