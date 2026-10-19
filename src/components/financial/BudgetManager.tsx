@@ -272,7 +272,7 @@ export function BudgetManager({ open, onOpenChange }: BudgetManagerProps) {
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Realizado</p>
-                <p className="text-lg font-bold text-danger break-words tabular-nums">{formatCurrency(totals.actualExpenses)}</p>
+                <p className="text-lg font-bold text-danger whitespace-nowrap tabular-nums">{formatCurrency(totals.actualExpenses)}</p>
               </div>
             </div>
             <Progress 
@@ -292,7 +292,7 @@ export function BudgetManager({ open, onOpenChange }: BudgetManagerProps) {
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Realizado</p>
-                <p className="text-lg font-bold text-success break-words tabular-nums">{formatCurrency(totals.actualIncome)}</p>
+                <p className="text-lg font-bold text-success whitespace-nowrap tabular-nums">{formatCurrency(totals.actualIncome)}</p>
               </div>
             </div>
             <Progress 
