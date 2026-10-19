@@ -541,15 +541,22 @@ export default function HRCollaborators() {
           />
         </div>
 
-        {/* Mobile: filtros identificados em painel inferior */}
+        {/* Mobile: filtros identificados em painel inferior (na visão PDA o painel unificado fica no Workspace) */}
+        {view !== "pda" && (
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline" className="h-10 sm:hidden" aria-label="Abrir filtros">
-              <SlidersHorizontal className="h-4 w-4 mr-1.5" />
-              Filtros
-              {((view !== "pda" && statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view !== "pda" && typeFilter !== "all" ? 1 : 0)) > 0 && (
-                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">
-                  {(view !== "pda" && statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view !== "pda" && typeFilter !== "all" ? 1 : 0)}
+            <Button variant="outline" className="h-11 sm:hidden max-w-full" aria-label="Abrir filtros">
+              <SlidersHorizontal className="h-4 w-4 mr-1.5 shrink-0" />
+              <span className="truncate">
+                {[
+                  STATUS_MAP[statusFilter]?.label || "Ativo",
+                  deptFilter !== "all" ? deptFilter : null,
+                  view === "clt" && typeFilter !== "all" ? EMPLOYMENT_TYPES[typeFilter] || typeFilter : null,
+                ].filter(Boolean).join(" · ")}
+              </span>
+              {((statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view === "clt" && typeFilter !== "all" ? 1 : 0)) > 0 && (
+                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] shrink-0">
+                  {(statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view === "clt" && typeFilter !== "all" ? 1 : 0)}
                 </Badge>
               )}
             </Button>
@@ -557,27 +564,21 @@ export default function HRCollaborators() {
           <SheetContent side="bottom" className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto">
             <SheetHeader className="text-left">
               <SheetTitle>Filtros</SheetTitle>
-              <SheetDescription>
-                {view === "pda"
-                  ? "Na visão PDA valem a busca e o departamento; status e vínculo não se aplicam."
-                  : "Refina a lista de colaboradores exibida."}
-              </SheetDescription>
+              <SheetDescription>Refina a lista de colaboradores exibida.</SheetDescription>
             </SheetHeader>
             <div className="mt-4 grid gap-3">
-              {view !== "pda" && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-11" aria-label="Status"><SelectValue placeholder="Status" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {Object.entries(STATUS_MAP).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Status</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-11" aria-label="Status"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {Object.entries(STATUS_MAP).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Departamento</Label>
                 <Select value={deptFilter} onValueChange={setDeptFilter}>
@@ -588,7 +589,7 @@ export default function HRCollaborators() {
                   </SelectContent>
                 </Select>
               </div>
-              {view !== "pda" && (
+              {view === "clt" && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Vínculo</Label>
                   <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -603,11 +604,21 @@ export default function HRCollaborators() {
                 </div>
               )}
             </div>
+            {(statusFilter !== "active" || deptFilter !== "all" || typeFilter !== "all") && (
+              <Button
+                variant="ghost"
+                className="mt-3 h-11 w-full"
+                onClick={() => { setStatusFilter("active"); setDeptFilter("all"); setTypeFilter("all"); }}
+              >
+                <X className="h-4 w-4 mr-1" /> Limpar filtros
+              </Button>
+            )}
             <SheetClose asChild>
               <Button className="mt-4 h-11 w-full">Concluir</Button>
             </SheetClose>
           </SheetContent>
         </Sheet>
+        )}
 
         {/* Desktop: selects inline */}
         <div className="hidden sm:flex flex-wrap gap-3 items-center">
