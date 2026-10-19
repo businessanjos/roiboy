@@ -591,13 +591,15 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 hint={`p90 ${fmtDuration(data.p90_response_seconds)} · média ${fmtDuration(data.avg_response_seconds)} (distorcida por respostas no dia seguinte) · ${(data.responses_count ?? 0).toLocaleString("pt-BR")} respostas medidas`}
               />
               <Kpi icon={Timer} label="Respostas em até 5 min" value={data.responses_under_5min_pct === null ? "—" : `${data.responses_under_5min_pct}%`} tone={(data.responses_under_5min_pct ?? 0) < 50 ? "warning" : "success"} />
-              <Kpi icon={AlertTriangle} label="Sem resposta" value={data.unanswered_conversations.toLocaleString("pt-BR")} hint={`última mensagem é do cliente · ${data.unanswered_over_24h} há mais de 24h`} tone={data.unanswered_over_24h > 0 ? "danger" : undefined} />
+              <Kpi icon={AlertTriangle} label="Sem resposta" value={data.unanswered_conversations.toLocaleString("pt-BR")} hint={`última mensagem é do cliente · ${data.unanswered_over_24h} há mais de 24h`} tone={data.unanswered_over_24h > 0 ? "danger" : undefined} onClick={() => setAlertDetail("unanswered")} cta="Clique para ver as conversas" />
               <Kpi
                 icon={UserX}
                 label="Nunca escreveram"
                 value={data.clients_never_messaged.toLocaleString("pt-BR")}
                 hint={`de ${(data.clients_active_base ?? 0).toLocaleString("pt-BR")} clientes com contrato ativo que têm conversa nesta área · ${data.silent_conversations} conversas só com envio nosso no período`}
                 tone={data.clients_never_messaged > 0 ? "warning" : undefined}
+                onClick={() => setAlertDetail("never_messaged")}
+                cta="Clique para ver os clientes"
               />
               <Kpi
                 icon={Users}
@@ -605,6 +607,8 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 value={(data.clients_no_conversation ?? 0).toLocaleString("pt-BR")}
                 hint="clientes com contrato ativo sem nenhuma conversa nesta área — cobertura, não produtividade"
                 tone={(data.clients_no_conversation ?? 0) > 0 ? "warning" : undefined}
+                onClick={() => setAlertDetail("no_conversation")}
+                cta="Clique para ver os clientes"
               />
             </div>
 
@@ -887,6 +891,21 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             open={!!contactsDialog}
             onOpenChange={(o) => !o && setContactsDialog(null)}
             direction={contactsDialog}
+            sectorId={effectiveSector}
+            integrationId={effectiveIntegration}
+            includeGroups={includeGroups}
+            agentUserId={effectiveAgent}
+            from={range.from}
+            to={range.to}
+            periodLabel={`${format(range.from, "dd/MM", { locale: ptBR })} a ${format(range.to, "dd/MM", { locale: ptBR })}${selectedAgentName ? ` · ${selectedAgentName}` : ""}`}
+          />
+        )}
+
+        {alertDetail && (
+          <ZappAlertDetailDialog
+            open={!!alertDetail}
+            onOpenChange={(o) => !o && setAlertDetail(null)}
+            kind={alertDetail}
             sectorId={effectiveSector}
             integrationId={effectiveIntegration}
             includeGroups={includeGroups}
