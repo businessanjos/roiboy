@@ -64,3 +64,9 @@ Nenhuma pendente neste escopo. Aguardando revisão do usuário para publicação
 
 - `EventQuickFormDialog.tsx` e `EventEditDialog.tsx`: `DialogContent` recebeu `grid-cols-1` (além das grades internas já empilhadas).
 - Verificado em 320x740 (`/events/calendar` > Novo evento, gravações bloqueadas, nada salvo): diálogo x12..308, client 294 / scroll 294, topo e rodapé. Edição usa a mesma classe; não aberta para não tocar evento real.
+
+## Complemento: abas dos Filtros avançados do Pipeline
+
+- Causa: `TabsList grid-cols-4` em 304px não comportava os rótulos; "Recomendados" invadia "Personalizados".
+- Correção (`PipelineFilterButton.tsx`): abaixo de `sm` as abas formam grade 2x2 (altura automática, cada aba com min-h 40px); a partir de `sm`, quatro colunas como antes. Filtros e regras inalterados.
+- 320x740: abas x17..168 / 168..319 em duas linhas, todos os rótulos inteiros, sem sobreposição. 393x500: popover rola até a última opção (Vanessa Minelli) visível. 440: 2x2 sem corte. Gravações bloqueadas, nada salvo.
