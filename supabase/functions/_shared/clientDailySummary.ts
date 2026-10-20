@@ -1,11 +1,12 @@
 // Núcleo do resumo diário de conversas (Customer Success + grupos vinculados).
 // 1 registro por cliente por dia de Brasília (source "ai_whatsapp"); reexecução atualiza o mesmo registro.
 
-// Grupos internos e comunitários (gerais da mentoria) nunca entram no resumo individual.
+// Grupos internos da equipe nunca entram no resumo individual.
+// (Nome com "Rykas/Eternum Mentoring" é comum em grupos de acompanhamento, então não exclui.)
 const INTERNAL_GROUP_RE =
-  /(eternum club|ec \||em \||eternum mentoring|rykas mentoring|financeiro|ep club|bugs?\s*roy|tech supor|cancelamento|congelamento|cl[ií]nica ryka|comunidade|turma|avisos|networking)/i;
-// Só grupos de acompanhamento pequenos (mentorado + casal/sócio): no máximo 3 clientes vinculados.
-const MAX_LINKED_CLIENTS = 3;
+  /(financeiro|bugs?\s*roy|tech supor|cancelamento|congelamento)/i;
+// Grupos gigantes (20+ clientes vinculados) são comunitários e ficam de fora.
+const MAX_LINKED_CLIENTS = 19;
 
 const BRT_OFFSET_MS = 3 * 3600_000;
 
