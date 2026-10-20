@@ -111,7 +111,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   }
 
   return (
-    <div data-zapp-navigation className="relative flex items-center gap-1 px-2 sm:px-3 py-0 lg:py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
+    <div data-zapp-navigation className="relative flex items-center gap-1 lg:flex-wrap px-2 sm:px-3 py-0 lg:py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
       <div className="flex min-w-0 flex-1 items-center gap-1 lg:hidden">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -133,7 +133,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
       </div>
       {/* Trilha rolável: em telas pequenas os ícones deslizam horizontalmente
           em vez de quebrar ou desaparecer */}
-      <div className="hidden lg:flex flex-1 min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      <div className="hidden lg:flex flex-1 min-w-0 flex-wrap items-center gap-1 py-1">
       {navItems.map(({ view, icon: Icon, label }) => {
         const isActive = activeView === view;
         return (
