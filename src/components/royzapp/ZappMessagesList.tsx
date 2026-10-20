@@ -310,10 +310,15 @@ function ZappMessagesListInner({
     viewport.addEventListener("scroll", onScroll, { passive: true });
     viewport.addEventListener("wheel", onUserIntent, { passive: true });
     viewport.addEventListener("touchstart", onUserIntent, { passive: true });
+    // Clique em áudio/mensagem também solta o "pin" no fim.
+    viewport.addEventListener("pointerdown", onUserIntent, { passive: true });
+    viewport.addEventListener("play", onUserIntent, true);
     return () => {
       viewport.removeEventListener("scroll", onScroll);
       viewport.removeEventListener("wheel", onUserIntent);
       viewport.removeEventListener("touchstart", onUserIntent);
+      viewport.removeEventListener("pointerdown", onUserIntent);
+      viewport.removeEventListener("play", onUserIntent, true);
     };
   }, [conversationId]);
 

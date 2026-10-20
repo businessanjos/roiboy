@@ -483,12 +483,16 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   }, [accountId]);
 
   const fetchMessages = useCallback(async (zappConversationId: string) => {
+    // Atualização em segundo plano da MESMA conversa (realtime/polling) não
+    // pode esvaziar a lista: isso parava áudios e jogava a rolagem pro topo.
+    const isRefresh = currentConversationIdRef.current === zappConversationId && messagesRef.current.length > 0;
     currentConversationIdRef.current = zappConversationId;
-    setHasMoreMessages(false);
-    setIsLoadingMessages(true);
-    // Limpa imediatamente para não exibir a conversa anterior enquanto a nova
-    // carrega — era isso que dava a sensação de "delay" ao abrir.
-    setMessages([]);
+    if (!isRefresh) {
+      setHasMoreMessages(false);
+      setIsLoadingMessages(true);
+      // Limpa ao trocar de conversa para não exibir a anterior enquanto carrega.
+      setMessages([]);
+    }
 
     try {
       const { data, error } = await supabase
@@ -505,6 +509,19 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
       const rows = data || [];
       const msgs: Message[] = rows.slice().reverse().map(mapMessageRow);
+
+      if (isRefresh) {
+        // Mantém o histórico antigo já carregado e atualiza/insere o resto.
+        setMessages((prev) => {
+          const fetchedIds = new Set(msgs.map((m) => m.id));
+          const oldestFetched = msgs[0]?.created_at;
+          const olderKept = oldestFetched
+            ? prev.filter((m) => !fetchedIds.has(m.id) && m.created_at && m.created_at < oldestFetched)
+            : [];
+          return [...olderKept, ...msgs];
+        });
+        return;
+      }
 
       setMessages(msgs);
       setIsLoadingMessages(false);
