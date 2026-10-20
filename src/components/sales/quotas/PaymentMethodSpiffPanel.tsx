@@ -56,9 +56,10 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
   const closersQuery = useActiveSalesClosers();
 
   const allCloserIds = (closersQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
-  const participantIds = Array.isArray(spiff.participant_user_ids) && spiff.participant_user_ids.length > 0
+  const explicitParticipants = Array.isArray(spiff.participant_user_ids) && spiff.participant_user_ids.length > 0
     ? spiff.participant_user_ids
-    : allCloserIds;
+    : null;
+  const baseParticipantIds = explicitParticipants ?? allCloserIds;
 
   // Janela: mês corrente (SPIFFs zeram a cada mês), respeitando os limites da campanha.
   const now = new Date();
@@ -72,15 +73,18 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
 
   // Vendas ganhas no mês corrente
   const dealsQuery = useQuery({
-    queryKey: ["payment-spiff-deals", accountId, spiff.id, effectiveStart.toISOString(), effectiveEnd.toISOString(), participantIds.join(",")],
+    queryKey: ["payment-spiff-deals", accountId, spiff.id, effectiveStart.toISOString(), effectiveEnd.toISOString(), baseParticipantIds.join(","), explicitParticipants ? "explicit" : "auto"],
     queryFn: async () => {
-      if (participantIds.length === 0) return [];
-      const { data, error } = await supabase
+      if (explicitParticipants && explicitParticipants.length === 0) return [];
+      let q = supabase
         .from("deals")
         .select("id, responsible_user_id, won_at, value")
         .eq("account_id", accountId!)
         .eq("status", "won")
-        .in("responsible_user_id", participantIds)
+        .not("responsible_user_id", "is", null);
+      // Sem participantes definidos: inclui closers e qualquer pessoa (ex.: gestor) que fechou venda no período
+      if (explicitParticipants) q = q.in("responsible_user_id", explicitParticipants);
+      const { data, error } = await q
         .gte("won_at", effectiveStart.toISOString())
         .lte("won_at", effectiveEnd.toISOString());
       if (error) throw error;
@@ -99,7 +103,21 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
       }
       return deals;
     },
-    enabled: !!accountId && participantIds.length > 0,
+    enabled: !!accountId,
+  });
+
+  const sellerIds = Array.from(new Set((dealsQuery.data ?? []).map((d: any) => d.responsible_user_id).filter(Boolean))) as string[];
+  const participantIds = explicitParticipants
+    ? explicitParticipants
+    : Array.from(new Set([...allCloserIds, ...sellerIds]));
+  const extraIds = participantIds.filter((id) => !(closersQuery.data ?? []).some((c) => c.user_id === id));
+  const extraNamesQuery = useQuery({
+    queryKey: ["payment-spiff-extra-names", extraIds.join(",")],
+    queryFn: async () => {
+      const { data } = await supabase.from("users").select("id, name").in("id", extraIds);
+      return data ?? [];
+    },
+    enabled: extraIds.length > 0,
   });
 
   // Custom field values (Forma + Parcelas)
@@ -155,7 +173,7 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
       tierCounts[result.index] = cur;
       totalBonus += result.tier.bonus;
     }
-    return { uid, name: collab?.full_name || "—", totalSales: userDeals.length, tierCounts, totalBonus, unclassified };
+    return { uid, name: collab?.full_name || (extraNamesQuery.data ?? []).find((u: any) => u.id === uid)?.name || "—", totalSales: userDeals.length, tierCounts, totalBonus, unclassified };
   }).sort((a, b) => b.totalBonus - a.totalBonus || a.name.localeCompare(b.name));
 
   const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
