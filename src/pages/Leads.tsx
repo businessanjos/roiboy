@@ -2046,13 +2046,32 @@ export default function Leads() {
           setDetailLead(null);
           openDealDialogForLead(lead as Lead);
         }}
-        onDealClick={(deal) => {
-          setDetailLead(null);
-          const fullDeal = deals.find(d => d.id === deal.id);
-          if (fullDeal) {
-            setSelectedDeal(fullDeal);
-            setIsDealDetailOpen(true);
+        onDealClick={async (deal) => {
+          let fullDeal: any = deals.find(d => d.id === deal.id);
+          if (!fullDeal) {
+            const { data, error } = await supabase
+              .from('deals')
+              .select(`
+                id, account_id, title, client_id, lead_id, pipeline_id, contact_name, contact_phone, contact_email,
+                stage_id, value, entry_value, received_value, currency, expected_close_date, probability, source,
+                responsible_user_id, sdr_user_id, notes, status, won_at, lost_at, lost_reason,
+                loss_reason_id, loss_sub_reason_id, loss_notes, tags, is_renewal, renewal_responsible_user_id, created_at, updated_at,
+                client:clients(id, full_name, phone_e164, avatar_url),
+                lead:leads(id, full_name, phone, email, avatar_url),
+                responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url, is_active),
+                sdr_user:users!deals_sdr_user_id_fkey(id, name, avatar_url)
+              `)
+              .eq('id', deal.id)
+              .maybeSingle();
+            if (error || !data) {
+              toast.error("Não foi possível abrir este negócio. Tente novamente.");
+              return;
+            }
+            fullDeal = data;
           }
+          setDetailLead(null);
+          setSelectedDeal(fullDeal);
+          setIsDealDetailOpen(true);
         }}
       />
 
