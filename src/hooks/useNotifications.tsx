@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback,
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { GlobalNotificationToast, playNotificationChime } from "@/components/notifications/GlobalNotificationToast";
 import {
   notificationTabCountsKey,
   optimisticallyMarkReadInHistoryCache,
@@ -310,15 +311,30 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
               setNotifications((prev) => [data, ...prev]);
               setUnreadCount((prev) => prev + 1);
 
-              toast.info(data.title, {
-                description: data.content || undefined,
-                action: data.link
-                  ? {
-                      label: "Ver",
-                      onClick: () => (window.location.href = data.link!),
-                    }
-                  : undefined,
-              });
+              playNotificationChime();
+              const goTo = (path: string) => {
+                window.history.pushState({}, "", path);
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              };
+              toast.custom(
+                (t) => (
+                  <GlobalNotificationToast
+                    title={data.title}
+                    content={data.content}
+                    type={data.type}
+                    sourceType={data.source_type}
+                    actorName={(data as any).triggered_by_user?.name ?? null}
+                    actorAvatar={(data as any).triggered_by_user?.avatar_url ?? null}
+                    hasLink={!!data.link}
+                    onOpen={() => {
+                      toast.dismiss(t);
+                      goTo(data.link || "/notifications");
+                    }}
+                    onDismiss={() => toast.dismiss(t)}
+                  />
+                ),
+                { duration: 10000, position: "top-right" }
+              );
 
               // Send push notification via edge function (server-side)
               // This ensures it works even when the app is in the background
