@@ -201,7 +201,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [dealId]);
+  }, [dealId, leadId]);
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -230,7 +230,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
         custom_status:task_statuses!internal_tasks_custom_status_id_fkey(id, name, color, is_completed_status),
         activity_type:activity_types!internal_tasks_activity_type_id_fkey(id, name, color)
       `)
-      .eq("deal_id", dealId)
+      .or(leadId ? `deal_id.eq.${dealId},lead_id.eq.${leadId}` : `deal_id.eq.${dealId}`)
       .order("created_at", { ascending: false });
 
     if (error) {
