@@ -1235,6 +1235,17 @@ export function DealDetailSheet({
                   </Button>
                 </>
               )}
+              {deal.status === 'lost' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-11 sm:h-8 px-2.5 flex-1 sm:flex-none"
+                  onClick={() => setMergeDialogOpen(true)}
+                >
+                  <GitMerge className="h-4 w-4 mr-1" />
+                  Mesclar
+                </Button>
+              )}
               {isClosed && (
                 <Button
                   variant="ghost"
