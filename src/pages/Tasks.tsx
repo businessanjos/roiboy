@@ -20,10 +20,13 @@ import { Briefcase, ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePipelines } from "@/hooks/usePipelines";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -373,6 +376,21 @@ export default function Tasks() {
   
   // Deal stages and deal handlers for DealDetailSheet
   const { deals: allDeals, stages: dealStages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
+  const { pipelines: stagePipelines } = usePipelines();
+  // Etapas agrupadas por funil, na ordem dos funis (Closer, SDR, ...) e das etapas.
+  const stageGroups = useMemo(() => {
+    const groups = stagePipelines.map((p) => ({
+      id: p.id,
+      name: p.name,
+      stages: dealStages
+        .filter((s: any) => s.pipeline_id === p.id)
+        .sort((a, b) => a.display_order - b.display_order),
+    }));
+    const known = new Set(stagePipelines.map((p) => p.id));
+    const others = dealStages.filter((s: any) => !known.has(s.pipeline_id));
+    if (others.length) groups.push({ id: "__other", name: "Outros", stages: others });
+    return groups.filter((g) => g.stages.length > 0);
+  }, [stagePipelines, dealStages]);
 
   // Activity types for filtering - filtered by current sector
   const { activityTypes } = useActivityTypes(currentSector?.id);
@@ -2164,16 +2182,24 @@ export default function Tasks() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as etapas</SelectItem>
-                {dealStages.map((stage) => (
-                  <SelectItem key={stage.id} value={stage.id}>
-                    <div className="flex items-center gap-2">
-                      <span 
-                        className="w-2 h-2 rounded-full" 
-                        style={{ backgroundColor: stage.color }}
-                      />
-                      <span>{stage.name}</span>
-                    </div>
-                  </SelectItem>
+                {stageGroups.map((group) => (
+                  <SelectGroup key={group.id}>
+                    <SelectLabel className="pl-2 pt-2 text-[11px] uppercase tracking-wide text-muted-foreground border-t border-border/60 mt-1">
+                      Funil {group.name}
+                    </SelectLabel>
+                    {group.stages.map((stage) => (
+                      <SelectItem key={stage.id} value={stage.id}>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: stage.color }}
+                          />
+                          <span>{stage.name}</span>
+                          <span className="text-xs text-muted-foreground">({group.name})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>
