@@ -77,6 +77,7 @@ interface PlaybookDialogProps {
   onMultiSend?: (payload: MultiSendPayload) => void;
   variables?: Record<string, string>;
   sectorId?: string | null;
+  onOpenSequences?: () => void;
 }
 
 const contentTypeIcons: Record<PlaybookContentType, React.ReactNode> = {
@@ -122,6 +123,7 @@ export function PlaybookDialog({
   onMultiSend,
   variables = {},
   sectorId,
+  onOpenSequences,
 }: PlaybookDialogProps) {
   const {
     folders,
@@ -534,7 +536,13 @@ export function PlaybookDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between pr-10">
                 <span>Playbook</span>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {onOpenSequences && (
+                    <Button variant="outline" size="sm" onClick={onOpenSequences}>
+                      <ListOrdered className="h-4 w-4 mr-2" />
+                      Sequências
+                    </Button>
+                  )}
                   {onMultiSend && (
                     <Tooltip>
                       <TooltipTrigger asChild>

@@ -17,3 +17,4 @@
 - [x] Navegação mobile completa: contexto/voltar, Mais pesquisável, atalhos com acesso existente, rolagem por histórico, painéis e auditoria autenticada 320/393/430/1440; 44 testes passaram; sem escritas de dados nem publicação. Teclado/momentum em iPhone físico não verificados.
 
 - [x] Auditoria de largura mobile (deslocamento lateral): 139 rotas × 320/393/440/1440, interações (Mais, diálogos, buscas, RoyZapp, ir/voltar, teclado reduzido); causa raiz no shell + 40 telas; teste de inventário e roteiro em scripts/qa; docs/mobile-width-audit.md. iPhone físico não verificado.
+- [x] Sequências salvas no Playbook com envio em segundo plano
