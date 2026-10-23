@@ -1,5 +1,7 @@
 /** Traduz erros técnicos do envio para frases que qualquer pessoa entende. */
 export function friendlyError(raw: string, contentType?: string): string {
+  // Já está em português simples (gravado pelo próprio envio): mantém
+  if (/^(O |Esse |Muitas |Nenhum )/.test(raw || "")) return raw;
   const e = (raw || "").toLowerCase();
   const isFile = contentType && !["text", "link", "list", "template"].includes(contentType);
   if (isFile && (e.includes("timeout") || e.includes("failed to fetch url") || e.includes("failed to process file")))

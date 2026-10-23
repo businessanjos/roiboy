@@ -12,3 +12,10 @@ describe("erros da sequência em linguagem simples", () => {
     expect(friendlyError("qualquer coisa", "text")).toContain("não confirmou o envio");
   });
 });
+
+describe("erro já traduzido", () => {
+  it("não é trocado por outra frase", () => {
+    const ok = "O arquivo é grande demais para o WhatsApp.";
+    expect(friendlyError(ok, "document")).toBe(ok);
+  });
+});
