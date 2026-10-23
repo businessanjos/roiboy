@@ -85,7 +85,7 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
             Selecione mensagens ao lado para ver como elas vão sair na conversa.
           </p>
         ) : (
-          resolved.map(({ step, item, index }, pos) => {
+          resolved.map(({ item, index }, pos) => {
             const text = applyVars(item.text_content) || applyVars(item.template_body);
             const caption = applyVars(item.media_caption);
             const isMedia = item.content_type !== "text";
