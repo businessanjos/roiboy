@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Typeform: origem [TRAF-AMP-EC] cadastrada e conferida; criação automática por primeira tag ao registrar/sincronizar formulário, sem duplicar opções e isolada por conta. Quatro testes passaram, build OK; nenhum lead/negócio alterado, sem publicação. Recebimento de resposta nova não exercitado.
 - [x] Sequências: prévia 280×607 com proporção de celular conferida em 1280 e 393px; texto/legendas usam a assinatura ativa do remetente antes do agendamento, 13 testes passaram. Sem envios reais ou publicação.
 - [x] Complemento RoyZapp: entrada real 3C integrada no cabeçalho mobile; screenshots autenticadas 393×852/500 e 320×740 inspecionadas, Foto/Arquivo livres, abrir/recolher e fallback ao voltar conferidos, 9 testes e build automático OK; sem chamadas/gravações/publicação.
 - [x] RoyZapp: inbox compactado (lista y=210, header 64, navegação 45, busca 56); imagens autenticadas antes/depois em 320/393/440/1440, conversas/menus/CS Configurações/voltar com gravações bloqueadas, 33 testes e build automático OK; docs/royzapp-mobile-compact-review.md; sem publicação. iPhone físico, múltiplas conexões e ações de negócio não exercitados.
