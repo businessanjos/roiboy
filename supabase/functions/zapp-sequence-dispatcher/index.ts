@@ -155,7 +155,10 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
       const { data: echo } = await supabase.from("zapp_messages").select("id")
         .eq("zapp_conversation_id", conv.id).ilike("external_message_id", `%${suffix}`).limit(1).maybeSingle();
       if (echo) {
-        await supabase.from("zapp_messages").update({ sender_user_id: run.triggered_by, sender_name: run.triggered_by_name }).eq("id", echo.id);
+        const fix: Record<string, unknown> = { sender_user_id: run.triggered_by, sender_name: run.triggered_by_name };
+        // O eco traz o nome interno do arquivo salvo; mantém o nome original do Playbook
+        if (!isText && step.media_filename) fix.media_filename = step.media_filename;
+        await supabase.from("zapp_messages").update(fix).eq("id", echo.id);
       } else {
         await supabase.from("zapp_messages").insert(msgRow);
       }
