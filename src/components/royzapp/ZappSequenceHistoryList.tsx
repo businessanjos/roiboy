@@ -1,3 +1,5 @@
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { canSeeAllSequenceRuns } from "@/lib/zappSequenceHistoryAccess";
 import { friendlyError } from "@/lib/zappSequenceFriendlyError";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -67,17 +69,20 @@ function fmtTime(iso: string | null | undefined): string {
 export function ZappSequenceHistoryList({ open }: { open: boolean }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const qc = useQueryClient();
+  const { currentUser } = useCurrentUser();
+  const seesAll = canSeeAllSequenceRuns(currentUser as any);
 
   const { data: runs = [], isLoading, isRefetching } = useQuery({
-    queryKey: ["zapp-sequence-history", open],
-    enabled: open,
+    queryKey: ["zapp-sequence-history", open, seesAll, currentUser?.id],
+    enabled: open && !!currentUser?.id,
     refetchInterval: 15000,
     queryFn: async (): Promise<SequenceRunRow[]> => {
-      const { data, error } = await db
+      const q = db
         .from("zapp_sequence_runs")
         .select("id, sequence_name, status, sent_steps, total_steps, triggered_by_name, cancel_reason, created_at, finished_at, zapp_conversations(contact_name, phone_e164, is_group)")
         .order("created_at", { ascending: false })
         .limit(50);
+      const { data, error } = await (seesAll ? q : q.eq("triggered_by", currentUser!.id));
       if (error) throw error;
       return (data || []).map((r: any) => ({ ...r, contact_name: r.zapp_conversations?.contact_name ?? null, contact_phone: r.zapp_conversations?.is_group ? null : fmtPhone(r.zapp_conversations?.phone_e164) }));
     },
