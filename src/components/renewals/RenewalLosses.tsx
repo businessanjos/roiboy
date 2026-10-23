@@ -15,7 +15,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
-import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent, CheckCircle2, XCircle, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react";
+import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent, CheckCircle2, XCircle, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search, Download } from "lucide-react";
+import { canSeeAllSequenceRuns } from "@/lib/zappSequenceHistoryAccess";
 import { useToast } from "@/hooks/use-toast";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
@@ -569,6 +570,38 @@ export function RenewalLosses() {
         <p className="text-xs text-muted-foreground self-center">
           Período considera a data em que a consultora registrou o status (Renovado / Cancelou).
         </p>
+        {canSeeAllSequenceRuns(currentUser as any) && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto self-center"
+            disabled={loading || sortedItems.length === 0}
+            onClick={async () => {
+              const XLSX = await import("xlsx");
+              const outcomeLabel = (o: string | null) =>
+                o === "renewed" ? "Renovado" : o === "lost" ? "Cancelou" : o === "negotiating" ? "Em negociação" : "Pendente";
+              const rows = sortedItems.map((i) => ({
+                Cliente: i.client_name,
+                Consultora: i.responsible_name || "",
+                Produto: i.product_name || "",
+                "Valor Renovação": i.renewal_value,
+                "Venceu em": i.end_date ? formatLocalDate(i.end_date) : "",
+                "Data renovação": i.resolved_at ? new Date(i.resolved_at).toLocaleDateString("pt-BR") : "",
+                Status: outcomeLabel(i.outcome),
+                Motivo: i.loss_reason || "",
+                Observação: i.loss_notes || "",
+              }));
+              const ws = XLSX.utils.json_to_sheet(rows);
+              ws["!cols"] = [32, 24, 28, 16, 12, 14, 14, 28, 40].map((wch) => ({ wch }));
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, "Renovações");
+              XLSX.writeFile(wb, `renovacoes_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exportar ({sortedItems.length})
+          </Button>
+        )}
       </div>
 
 
