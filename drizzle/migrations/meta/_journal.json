@@ -169,6 +169,20 @@
       "when": 1792781628511,
       "tag": "0023_zapp_infer_device_sender_case",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792782205730,
+      "tag": "0024_zapp_metrics_window_speedup",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792782466280,
+      "tag": "0025_zapp_metrics_internal_contacts_once",
+      "breakpoints": true
     }
   ]
 }
