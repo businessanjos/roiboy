@@ -127,9 +127,9 @@ export default function RoyZapp() {
         update(next);
         return next;
       },
-      { replace: true },
+      { replace: true, state: navigationLocation.state },
     );
-  }, [setSearchParams]);
+  }, [setSearchParams, navigationLocation.state]);
   
   // Get sector and integrationId from URL if provided
   const sectorFromUrl = searchParams.get('sector') as SectorId | null;
