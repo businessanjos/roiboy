@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { useZappData, Message, TeamUser, InboundMessageData } from "@/hooks/useZappData";
+import { ASSIGNMENTS_SELECT } from "@/hooks/useZappConversations";
 import { useZappMessaging } from "@/hooks/useZappMessaging";
 import { useZappNotifications } from "@/hooks/useZappNotifications";
 import { useZappConversationActions } from "@/hooks/useZappConversationActions";
@@ -1250,14 +1251,16 @@ export default function RoyZapp() {
       }
       
       // 2. Não está na lista — busca metadados no DB (apenas uma vez por id)
-      if (conversationLookupRef.current !== conversationId && currentAgent?.id) {
+      if (conversationLookupRef.current !== conversationId) {
         conversationLookupRef.current = conversationId;
         (async () => {
-          const { data, error } = await supabase
+          const { data: rows, error } = await supabase
             .from("zapp_conversation_assignments")
-            .select("agent_id, zapp_conversation:zapp_conversations!inner(sector_id, integration_id)")
+            .select(ASSIGNMENTS_SELECT)
             .eq("zapp_conversation_id", conversationId)
-            .maybeSingle();
+            .order("updated_at", { ascending: false })
+            .limit(1);
+          const data = (rows?.[0] ?? null) as any;
           
           if (error || !data) {
             toast.error("Conversa não encontrada.");
@@ -1267,7 +1270,7 @@ export default function RoyZapp() {
           }
           
           // Atribuída a outro? Avisa e não abre.
-          if (data.agent_id && data.agent_id !== currentAgent.id) {
+          if (data.agent_id && currentAgent?.id && data.agent_id !== currentAgent.id) {
             const { data: agentRow } = await supabase
               .from("zapp_agents")
               .select("user:users(name)")
@@ -1295,7 +1298,10 @@ export default function RoyZapp() {
             switched = true;
           }
           if (!switched) {
-            toast.info("Conversa não visível no filtro atual. Ajuste os filtros para encontrá-la.");
+            // Conversa fora da lista carregada (ex.: encerrada/antiga): inclui e abre direto
+            setAssignments((prev) => (prev.some((x) => x.id === data.id) ? prev : [...prev, data]));
+            setSelectedConversation(data);
+            setInboxTab(data.agent_id && data.agent_id === currentAgent?.id ? "mine" : "queue");
             replaceSearchParams((next) => next.delete('conversation'));
             setUrlParamsProcessed(true);
           }
