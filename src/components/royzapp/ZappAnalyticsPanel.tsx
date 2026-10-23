@@ -78,7 +78,12 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 /** Pessoas que não são atendentes (ex.: Lucas dos Santos) ficam fora das listas de atendentes. */
-const HIDDEN_AGENT_IDS = new Set(["14389b62-d4a1-4837-9aee-61a19b28c383"]);
+// Não são atendentes de CS: Lucas dos Santos, Lucas Suporte e Jessica Campos.
+const HIDDEN_AGENT_IDS = new Set([
+  "14389b62-d4a1-4837-9aee-61a19b28c383",
+  "4385080f-e707-460f-b7ab-489fa3f73150",
+  "a1625047-8b72-4b1b-a42c-24bbdc9fd143",
+]);
 const isHiddenAgent = (id: string | null | undefined) => !!id && HIDDEN_AGENT_IDS.has(id);
 
 interface AgentRow {
