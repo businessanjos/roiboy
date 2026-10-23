@@ -59,6 +59,28 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
     try { await save(draft); setDraft(null); } catch { /* toast já exibido */ }
   };
 
+  const openCreateForm = (stepIndex: number | null) => {
+    pendingStepRef.current = stepIndex;
+    setFormOpen(true);
+  };
+
+  const handleFormClose = (createdItem?: PlaybookItem | null) => {
+    setFormOpen(false);
+    const created = createdItem || null;
+    const index = pendingStepRef.current;
+    pendingStepRef.current = null;
+    if (!created) return;
+    setDraft((d) => {
+      if (!d) return d;
+      if (index != null) {
+        return { ...d, steps: d.steps.map((s, j) => (j === index ? { ...s, playbook_item_id: created.id } : s)) };
+      }
+      if (d.steps.length >= SEQUENCE_MAX_STEPS) return d;
+      return { ...d, steps: [...d.steps, { playbook_item_id: created.id, delay_seconds: 5 }] };
+    });
+    toast.success(`"${created.name}" adicionada à sequência`);
+  };
+
   const handleStart = async (s: PlaybookSequence) => {
     if (!conversationId || !currentUser?.id || !currentUser.account_id) return;
     const steps = s.steps.map((st) => itemById.get(st.playbook_item_id)).filter(Boolean) as PlaybookItem[];
