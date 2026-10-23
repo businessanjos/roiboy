@@ -89,9 +89,10 @@ export function PlaybookItemSelect({
       <PopoverContent
         portalContainer={portalContainer}
         align="start"
-        className="w-[min(520px,calc(100vw-1rem))] p-0"
+        collisionPadding={8}
+        className="flex w-[min(520px,calc(100vw-1rem))] max-h-[min(460px,var(--radix-popover-content-available-height))] flex-col overflow-hidden p-0"
       >
-        <Command>
+        <Command className="min-h-0 flex-1">
           <CommandInput placeholder="Buscar mensagem..." />
           {groups.length > 1 && (
             <div role="group" aria-label="Filtrar por tipo" className="flex flex-wrap gap-1 border-b px-2 py-2">
@@ -112,7 +113,7 @@ export function PlaybookItemSelect({
               ))}
             </div>
           )}
-          <CommandList>
+          <CommandList className="max-h-none min-h-0 flex-1 overscroll-contain">
             <CommandEmpty>Nenhuma mensagem encontrada.</CommandEmpty>
             {visibleGroups.map((g) => (
               <CommandGroup
