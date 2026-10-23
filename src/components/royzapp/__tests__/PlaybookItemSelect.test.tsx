@@ -24,9 +24,9 @@ const ITEMS = [
   mk('3', 'Apresentação Jota - Curta'),
 ];
 
-/** Item conta como visível quando existe e nenhum ancestral está com hidden (cmdk filtra assim). */
+/** Item conta como visível quando existe e nenhum ancestral está com hidden (o cmdk também pode removê-lo da lista). */
 function isShown(name: string) {
-  return screen.getAllByText(name, { exact: false }).some((el) => !el.closest('[hidden]'));
+  return screen.queryAllByText(name, { exact: false }).some((el) => !el.closest('[hidden]'));
 }
 
 function open() {
