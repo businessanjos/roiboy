@@ -14,7 +14,7 @@ beforeAll(async () => {
   await db.exec(readFileSync('drizzle/migrations/0036_deal_typeform_reapplications.sql','utf8'));
 },20000);
 afterAll(async () => { await db.close(); });
-const state = async () => (await db.query('SELECT * FROM deals')).rows[0];
+const state = async () => (await db.query<{typeform_reapplication_count:number;typeform_last_reapplication_at:string}>('SELECT * FROM deals')).rows[0];
 it('flags a new application to an existing deal without changing its owner or stage',async () => {
   await db.query('INSERT INTO typeform_responses VALUES($1,$2,$3,$4,true)',['new',acc,deal,'2026-10-23T21:00:00Z']);
   expect(await state()).toMatchObject({typeform_reapplication_count:1,stage_id:'original-stage',responsible_user_id:'original-owner'});
