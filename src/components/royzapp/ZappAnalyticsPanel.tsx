@@ -824,7 +824,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                               <PopoverTrigger asChild>
                                 <button
                                   type="button"
-                                  className="cursor-help whitespace-nowrap underline decoration-dotted decoration-zapp-text-muted/60 underline-offset-4 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+                                  className="cursor-help whitespace-nowrap hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
                                 >
                                   {label}
                                 </button>
