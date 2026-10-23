@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Send, Trash2, ListOrdered, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
+import { PlaybookItemForm } from "@/components/sales/PlaybookItemForm";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   usePlaybookSequences, PlaybookSequence, SequenceStep, SEQUENCE_MAX_STEPS,
