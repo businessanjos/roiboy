@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Send, Trash2, ListOrdered, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Send, Trash2, ListOrdered, Loader2, History } from "lucide-react";
 import { toast } from "sonner";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { PlaybookItemForm } from "@/components/sales/PlaybookItemForm";
 import { PlaybookItemSelect } from "@/components/royzapp/PlaybookItemSelect";
 import { PlaybookSequencePreview } from "@/components/royzapp/PlaybookSequencePreview";
+import { ZappSequenceHistoryList } from "@/components/royzapp/ZappSequenceHistoryList";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   usePlaybookSequences, PlaybookSequence, SequenceStep, SEQUENCE_MAX_STEPS,
