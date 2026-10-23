@@ -83,6 +83,9 @@ export function PipelineExportDialog({
   // Products list
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
 
+  // Pipelines list (funis)
+  const [pipelines, setPipelines] = useState<{ id: string; name: string }[]>([]);
+
   // Custom fields definitions (show_in_deals)
   const [customFields, setCustomFields] = useState<CustomFieldDef[]>([]);
 
