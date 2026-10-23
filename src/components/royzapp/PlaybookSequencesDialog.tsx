@@ -205,6 +205,18 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
           </div>
         ) : (
           <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button variant={mode === "list" ? "default" : "outline"} size="sm" onClick={() => setMode("list")}>
+                <ListOrdered className="mr-1 h-4 w-4" /> Sequências
+              </Button>
+              <Button variant={mode === "history" ? "default" : "outline"} size="sm" onClick={() => setMode("history")}>
+                <History className="mr-1 h-4 w-4" /> Histórico
+              </Button>
+            </div>
+            {mode === "history" ? (
+              <ZappSequenceHistoryList open />
+            ) : (
+              <>
             <div className="flex gap-2">
               <Input placeholder="Buscar sequência" aria-label="Buscar sequência" value={search} onChange={(e) => setSearch(e.target.value)} />
               <Button onClick={newDraft}><Plus className="mr-1 h-4 w-4" /> Nova</Button>
