@@ -37,6 +37,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [mode, setMode] = useState<"list" | "history">("list");
   const pendingStepRef = useRef<number | null>(null);
 
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
