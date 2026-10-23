@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Send, Trash2, ListOrdered, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Send, Trash2, ListOrdered, Loader2, History } from "lucide-react";
 import { toast } from "sonner";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { PlaybookItemForm } from "@/components/sales/PlaybookItemForm";
 import { PlaybookItemSelect } from "@/components/royzapp/PlaybookItemSelect";
 import { PlaybookSequencePreview } from "@/components/royzapp/PlaybookSequencePreview";
+import { ZappSequenceHistoryList } from "@/components/royzapp/ZappSequenceHistoryList";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   usePlaybookSequences, PlaybookSequence, SequenceStep, SEQUENCE_MAX_STEPS,
@@ -36,6 +37,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [mode, setMode] = useState<"list" | "history">("list");
   const pendingStepRef = useRef<number | null>(null);
 
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
@@ -203,6 +205,18 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
           </div>
         ) : (
           <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button variant={mode === "list" ? "default" : "outline"} size="sm" onClick={() => setMode("list")}>
+                <ListOrdered className="mr-1 h-4 w-4" /> Sequências
+              </Button>
+              <Button variant={mode === "history" ? "default" : "outline"} size="sm" onClick={() => setMode("history")}>
+                <History className="mr-1 h-4 w-4" /> Histórico
+              </Button>
+            </div>
+            {mode === "history" ? (
+              <ZappSequenceHistoryList open />
+            ) : (
+              <>
             <div className="flex gap-2">
               <Input placeholder="Buscar sequência" aria-label="Buscar sequência" value={search} onChange={(e) => setSearch(e.target.value)} />
               <Button onClick={newDraft}><Plus className="mr-1 h-4 w-4" /> Nova</Button>
@@ -231,6 +245,8 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
                   )}
                 </div>
               ))
+            )}
+              </>
             )}
           </div>
         )}
