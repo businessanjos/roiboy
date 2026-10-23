@@ -549,43 +549,70 @@ export function LeadDetailSheet({
                       </Button>
                     )}
                   </div>
-                  {deals.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Nenhum negócio vinculado
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {deals.map((deal) => (
-                        <Card 
-                          key={deal.id}
-                          className={cn(onDealClick && "cursor-pointer hover:bg-muted/50")}
-                          onClick={() => onDealClick?.(deal)}
-                        >
-                          <CardContent className="p-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium text-sm">{deal.title}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {deal.stage?.name}
-                                </p>
+                  {(() => {
+                    const visibleIds = new Set(deals.map((d) => d.id));
+                    const lockedDeals = dealPresence.filter((p) => !p.can_view && !visibleIds.has(p.id));
+                    if (deals.length === 0 && lockedDeals.length === 0) {
+                      return (
+                        <p className="text-sm text-muted-foreground">
+                          Nenhum negócio vinculado
+                        </p>
+                      );
+                    }
+                    return (
+                      <div className="space-y-2">
+                        {deals.map((deal) => (
+                          <Card
+                            key={deal.id}
+                            className={cn(onDealClick && "cursor-pointer hover:bg-muted/50")}
+                            onClick={() => onDealClick?.(deal)}
+                          >
+                            <CardContent className="p-3">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-sm">{deal.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {deal.stage?.name}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {deal.value > 0 && (
+                                    <Badge variant="outline">
+                                      {new Intl.NumberFormat("pt-BR", {
+                                        style: "currency",
+                                        currency: "BRL",
+                                      }).format(deal.value)}
+                                    </Badge>
+                                  )}
+                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {deal.value > 0 && (
-                                  <Badge variant="outline">
-                                    {new Intl.NumberFormat("pt-BR", {
-                                      style: "currency",
-                                      currency: "BRL",
-                                    }).format(deal.value)}
-                                  </Badge>
-                                )}
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                        {lockedDeals.map((deal) => (
+                          <Card key={deal.id} className="border-dashed bg-muted/30">
+                            <CardContent className="p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="font-medium text-sm truncate">{deal.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {[deal.stage_name, deal.responsible_name && `Responsável: ${deal.responsible_name}`]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </p>
+                                </div>
+                                <Badge variant="secondary" className="shrink-0 gap-1">
+                                  <Lock className="h-3 w-3" />
+                                  Com outro responsável
+                                </Badge>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <Separator />
