@@ -114,6 +114,11 @@ export function PipelineExportDialog({
           .eq("account_id", currentUser.account_id)
           .eq("is_active", true)
           .order("name"),
+        supabase
+          .from("pipelines")
+          .select("id, name")
+          .eq("account_id", currentUser.account_id)
+          .order("name"),
       ]);
 
       const fields: CustomFieldDef[] = (fieldsRes.data || []).map((f: any) => ({
