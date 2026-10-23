@@ -99,4 +99,19 @@ describe("PlaybookSequencePreview", () => {
     );
     expect(screen.getByText(/Olá Lucas!/)).toBeInTheDocument();
   });
+
+  it("renderiza *texto* como negrito, sem mostrar o asterisco", () => {
+    const withFormat = [makeItem("f", "Formatado", "olá *Tudo bem* hoje")];
+    render(
+      <PlaybookSequencePreview
+        steps={[{ playbook_item_id: "f", delay_seconds: 5 }]}
+        items={withFormat}
+      />
+    );
+    const preview = screen.getByTestId("sequence-preview");
+    const bold = preview.querySelector("strong");
+    expect(bold).not.toBeNull();
+    expect(bold?.textContent).toBe("Tudo bem");
+    expect(preview.textContent || "").not.toContain("*");
+  });
 });
