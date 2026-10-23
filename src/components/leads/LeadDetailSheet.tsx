@@ -38,6 +38,7 @@ import {
   User,
   Package,
   Tag,
+  Lock,
 } from "lucide-react";
 
 // Nomes canônicos dos campos de DEAL espelhados no lead (resolvidos dinamicamente).
@@ -98,6 +99,17 @@ interface Deal {
   stage?: { name: string } | null;
   responsible_user_id?: string | null;
   responsible?: { name: string } | null;
+}
+
+// Presença de negócio retornada pela RPC get_lead_deal_presence (security definer):
+// expõe apenas metadados mínimos para evitar duplicidade, sem furar a RLS can_view_deal.
+interface DealPresence {
+  id: string;
+  title: string;
+  status: string | null;
+  stage_name: string | null;
+  responsible_name: string | null;
+  can_view: boolean;
 }
 
 interface LeadDetailSheetProps {
