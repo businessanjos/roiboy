@@ -45,16 +45,18 @@ interface Props {
   /** Admin/gestor: pode direcionar e tirar conversas da contagem. */
   canManage?: boolean;
   onChanged?: () => void;
+  onOpenConversation?: (id: string, page: number) => void;
+  initialPage?: number;
 }
 
 const PAGE = 50;
 
 /** Conversas de um atendente ou de uma origem "sem atendente". Busca só ao abrir, paginado. */
-export function ZappAgentConversationsDialog({ target, onClose, sectorId, integrationId, includeGroups, from, to, canManage, onChanged }: Props) {
+export function ZappAgentConversationsDialog({ target, onClose, sectorId, integrationId, includeGroups, from, to, canManage, onChanged, onOpenConversation, initialPage = 0 }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { currentUser } = useCurrentUser();
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(initialPage);
   const [busy, setBusy] = useState<string | null>(null);
   const [assignFor, setAssignFor] = useState<string | null>(null);
   const [excludeRow, setExcludeRow] = useState<Row | null>(null);
@@ -243,7 +245,7 @@ export function ZappAgentConversationsDialog({ target, onClose, sectorId, integr
                               </Button>
                             </>
                           )}
-                          <Button size="sm" variant="ghost" onClick={() => { onClose(); navigate(`/roy-zapp?conversation=${r.conversation_id}`); }}>
+                          <Button size="sm" variant="ghost" onClick={() => { if (onOpenConversation) { onOpenConversation(r.conversation_id, page); return; } onClose(); navigate(`/roy-zapp?conversation=${r.conversation_id}`); }}>
                             <ExternalLink className="h-4 w-4 mr-1" /> Abrir
                           </Button>
                         </div>

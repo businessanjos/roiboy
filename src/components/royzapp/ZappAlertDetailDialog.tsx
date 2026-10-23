@@ -68,6 +68,7 @@ interface Props {
   from: Date;
   to: Date;
   periodLabel?: string;
+  onOpenConversation?: (id: string) => void;
 }
 
 const TZ = "America/Sao_Paulo";
@@ -97,6 +98,7 @@ export function ZappAlertDetailDialog({
   from,
   to,
   periodLabel,
+  onOpenConversation,
 }: Props) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -146,6 +148,7 @@ export function ZappAlertDetailDialog({
 
   const openConversation = (conversationId: string | null | undefined) => {
     if (!conversationId) return;
+    if (onOpenConversation) { onOpenConversation(conversationId); return; }
     onOpenChange(false);
     navigate(`/roy-zapp?conversation=${conversationId}`);
   };

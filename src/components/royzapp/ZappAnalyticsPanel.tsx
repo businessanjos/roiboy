@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -252,6 +253,14 @@ function Kpi({
 
 
 export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: string | null; integrationId?: string | null }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [saved] = useState(() => location.state?.zappAnalyticsSnapshot as {
+    sector: ZappWhatsAppSector | "all"; period: PeriodKey; customRange: { from?: Date; to?: Date };
+    scope: "instance" | "sector"; includeGroups: boolean; agentId: string;
+    convTarget: AgentConversationsTarget | null; showUnattributed: boolean;
+    newConvDialog: NewConvFilter | null; alertDetail: ZappAlertDetailKind | null; page: number;
+  } | undefined);
   const { currentUser } = useCurrentUser();
   const canSeeDetails = canSeeAllSequenceRuns(currentUser as any);
   const { sectorAccess } = useSectorAccess();
@@ -273,21 +282,38 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   }, [unrestricted, canOpenZappSector, generalSectorIds, sectorId]);
 
   const [sector, setSector] = useState<ZappWhatsAppSector | "all">(
-    (sectorId as ZappWhatsAppSector) || availableSectors[0] || "operacoes"
+    saved?.sector || (sectorId as ZappWhatsAppSector) || availableSectors[0] || "operacoes"
   );
-  const [period, setPeriod] = useState<PeriodKey>("current_month");
-  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
+  const [period, setPeriod] = useState<PeriodKey>(saved?.period ?? "current_month");
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>(() => ({
+    from: saved?.customRange.from ? new Date(saved.customRange.from) : undefined,
+    to: saved?.customRange.to ? new Date(saved.customRange.to) : undefined,
+  }));
   const [customOpen, setCustomOpen] = useState(false);
-  const [scope, setScope] = useState<"instance" | "sector">(integrationId ? "instance" : "sector");
-  const [includeGroups, setIncludeGroups] = useState(false);
-  const [agentId, setAgentId] = useState<string>("all");
-  const [convTarget, setConvTarget] = useState<AgentConversationsTarget | null>(null);
-  const [showUnattributed, setShowUnattributed] = useState(false);
+  const [scope, setScope] = useState<"instance" | "sector">(saved?.scope ?? (integrationId ? "instance" : "sector"));
+  const [includeGroups, setIncludeGroups] = useState(saved?.includeGroups ?? false);
+  const [agentId, setAgentId] = useState<string>(saved?.agentId ?? "all");
+  const [convTarget, setConvTarget] = useState<AgentConversationsTarget | null>(saved?.convTarget ?? null);
+  const [showUnattributed, setShowUnattributed] = useState(saved?.showUnattributed ?? false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [contactsDialog, setContactsDialog] = useState<"inbound" | "outbound" | null>(null);
-  const [newConvDialog, setNewConvDialog] = useState<NewConvFilter | null>(null);
-  const [alertDetail, setAlertDetail] = useState<ZappAlertDetailKind | null>(null);
+  const [newConvDialog, setNewConvDialog] = useState<NewConvFilter | null>(saved?.newConvDialog ?? null);
+  const [alertDetail, setAlertDetail] = useState<ZappAlertDetailKind | null>(saved?.alertDetail ?? null);
   const [aiLoading, setAiLoading] = useState(false);
+
+  const openConversation = (id: string, page = 0) => {
+    const originState = { ...(location.state ?? {}), zappAnalyticsSnapshot: {
+      sector, period, customRange, scope, includeGroups, agentId, convTarget,
+      showUnattributed, newConvDialog, alertDetail, page,
+    } };
+    delete originState.zappConversationReturn;
+    const params = new URLSearchParams(location.search);
+    params.set("view", "inbox");
+    params.set("conversation", id);
+    navigate(`/roy-zapp?${params}`, { state: { zappConversationReturn: {
+      url: location.pathname + location.search, state: originState,
+    } } });
+  };
 
 
   const range = useMemo(
@@ -965,6 +991,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
 
         {newConvDialog && (
           <ZappNewConversationsDialog
+            onOpenConversation={openConversation}
             open={!!newConvDialog}
             onOpenChange={(o) => !o && setNewConvDialog(null)}
             initialFilter={newConvDialog}
@@ -978,6 +1005,8 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
           />
         )}
         <ZappAgentConversationsDialog
+          onOpenConversation={openConversation}
+          initialPage={saved?.page ?? 0}
           target={convTarget}
           onClose={() => setConvTarget(null)}
           sectorId={effectiveSector}
@@ -1004,6 +1033,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
 
         {alertDetail && (
           <ZappAlertDetailDialog
+            onOpenConversation={openConversation}
             open={!!alertDetail}
             onOpenChange={(o) => !o && setAlertDetail(null)}
             kind={alertDetail}

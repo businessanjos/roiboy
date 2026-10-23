@@ -42,6 +42,7 @@ interface Props {
   from: Date;
   to: Date;
   periodLabel?: string;
+  onOpenConversation?: (id: string) => void;
 }
 
 const TZ = "America/Sao_Paulo";
@@ -170,7 +171,7 @@ export function ZappNewConversationsDialog(p: Props) {
                             </span>
                             <span>Última: {fmtDT(r.last_at)}</span>
                             <Button variant="link" size="sm" className="ml-auto h-auto p-0 text-[11px]"
-                              onClick={() => { p.onOpenChange(false); navigate(`/roy-zapp?conversation=${r.conversation_id}`); }}>
+                              onClick={() => { if (p.onOpenConversation) { p.onOpenConversation(r.conversation_id); return; } p.onOpenChange(false); navigate(`/roy-zapp?conversation=${r.conversation_id}`); }}>
                               Abrir conversa <ExternalLink className="ml-1 h-3 w-3" />
                             </Button>
                           </div>
