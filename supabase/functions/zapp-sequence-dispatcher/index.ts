@@ -1,3 +1,4 @@
+import { encodeBase64 } from "jsr:@std/encoding@1/base64";
 // zapp-sequence-dispatcher
 //
 // Envia em segundo plano os passos de uma sequência do Playbook disparada numa conversa.
@@ -107,10 +108,20 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
         if (step.media_filename) payload.fileName = step.media_filename;
         // Arquivos grandes: o WhatsApp às vezes desiste de baixar o arquivo; tenta de novo antes de falhar
         res = await fetch(`${host}/send/media`, { method: "POST", headers: { "Content-Type": "application/json", token }, body: JSON.stringify(payload) });
-        for (let attempt = 1; attempt <= 2 && !res.ok; attempt++) {
-          console.warn(`[sequence] mídia falhou (HTTP ${res.status}), nova tentativa ${attempt}/2`);
-          await sleep(4000 * attempt);
-          res = await fetch(`${host}/send/media`, { method: "POST", headers: { "Content-Type": "application/json", token }, body: JSON.stringify(payload) });
+        // Se o WhatsApp não conseguiu baixar pelo link, o ROY baixa o arquivo e envia o conteúdo direto
+        if (!res.ok && step.media_url) {
+          console.warn(`[sequence] mídia por link falhou (HTTP ${res.status}); enviando arquivo direto`);
+          const fileRes = await fetch(step.media_url);
+          if (!fileRes.ok) throw new Error(`Não foi possível ler o arquivo salvo (HTTP ${fileRes.status})`);
+          const mime = fileRes.headers.get("content-type") || "application/octet-stream";
+          const b64 = encodeBase64(new Uint8Array(await fileRes.arrayBuffer()));
+          const direct = { ...payload, file: `data:${mime};base64,${b64}` };
+          for (let attempt = 0; attempt <= 2; attempt++) {
+            if (attempt > 0) await sleep(4000 * attempt);
+            res = await fetch(`${host}/send/media`, { method: "POST", headers: { "Content-Type": "application/json", token }, body: JSON.stringify(direct) });
+            if (res.ok) break;
+            console.warn(`[sequence] envio direto falhou (HTTP ${res.status}), tentativa ${attempt + 1}/3`);
+          }
         }
       }
       const result: any = await res.json().catch(() => ({}));
