@@ -810,17 +810,32 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Atendente</TableHead>
-                        <TableHead className="text-right">Enviadas</TableHead>
-                        <TableHead className="text-right">Conversas</TableHead>
-                        <TableHead className="text-right">
-                          <span className="inline-flex items-center justify-end gap-1 whitespace-nowrap" title="Conversas distintas ÷ dias em que a pessoa enviou mensagem">
-                            Média/dia <Info className="h-3.5 w-3.5 text-zapp-text-muted" />
-                          </span>
-                        </TableHead>
-                        <TableHead className="text-right">Novas iniciadas</TableHead>
-                        <TableHead className="text-right">Respostas</TableHead>
-                        <TableHead className="text-right">Resposta (mediana)</TableHead>
+                        {([
+                          ["Atendente", "Pessoa que enviou as mensagens. Envios pelo celular sem assinatura contam para quem está cuidando da conversa.", false],
+                          ["Enviadas", "Total de mensagens enviadas pela pessoa no período escolhido.", true],
+                          ["Conversas", "Quantidade de conversas diferentes em que a pessoa enviou pelo menos uma mensagem no período.", true],
+                          ["Média/dia", "Conversas atendidas divididas pelos dias em que a pessoa enviou mensagem. Dias sem envio não entram na conta.", true],
+                          ["Novas iniciadas", "Conversas em que a primeira mensagem de todas foi enviada por essa pessoa dentro do período.", true],
+                          ["Respostas", "Vezes em que a pessoa respondeu depois de uma mensagem do cliente.", true],
+                          ["Resposta (mediana)", "Tempo típico entre a mensagem do cliente e a resposta da pessoa. Metade das respostas foi mais rápida que esse tempo.", true],
+                        ] as const).map(([label, help, right]) => (
+                          <TableHead key={label} className={right ? "text-right" : undefined}>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="cursor-help whitespace-nowrap underline decoration-dotted decoration-zapp-text-muted/60 underline-offset-4 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+                                >
+                                  {label}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent align={right ? "end" : "start"} className="w-72 text-xs leading-relaxed">
+                                <p className="mb-1 text-sm font-semibold">{label}</p>
+                                <p className="text-muted-foreground">{help}</p>
+                              </PopoverContent>
+                            </Popover>
+                          </TableHead>
+                        ))}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
