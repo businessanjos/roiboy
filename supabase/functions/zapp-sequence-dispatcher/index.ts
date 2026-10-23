@@ -104,16 +104,26 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
         const type = step.content_type === "audio" ? "ptt" : step.content_type === "sticker" ? "image" : step.content_type;
         const payload: Record<string, unknown> = { number, type, file: step.media_url, text: step.media_caption || "" };
         if (step.media_filename) payload.fileName = step.media_filename;
+        // Arquivos grandes: o WhatsApp às vezes desiste de baixar o arquivo; tenta de novo antes de falhar
         res = await fetch(`${host}/send/media`, { method: "POST", headers: { "Content-Type": "application/json", token }, body: JSON.stringify(payload) });
+        for (let attempt = 1; attempt <= 2 && !res.ok; attempt++) {
+          console.warn(`[sequence] mídia falhou (HTTP ${res.status}), nova tentativa ${attempt}/2`);
+          await sleep(4000 * attempt);
+          res = await fetch(`${host}/send/media`, { method: "POST", headers: { "Content-Type": "application/json", token }, body: JSON.stringify(payload) });
+        }
       }
       const result: any = await res.json().catch(() => ({}));
-      const externalId = result?.messageid || result?.id || result?.data?.messageid || result?.data?.id || result?.messageId || null;
-      if (!res.ok || !externalId) throw new Error(result?.message || result?.error || `WhatsApp não confirmou o envio (HTTP ${res.status})`);
+      const shortId = result?.messageid || result?.data?.messageid || result?.messageId || result?.id || result?.data?.id || null;
+      if (!res.ok || !shortId) throw new Error(result?.message || result?.error || `WhatsApp não confirmou o envio (HTTP ${res.status})`);
+      // Mesmo formato de id que o webhook grava (dono:id), para o eco não virar mensagem duplicada
+      const fullId = [result?.id, result?.data?.id].find((x) => typeof x === "string" && x.includes(":"));
+      const suffix = String(shortId).includes(":") ? String(shortId).split(":").pop()! : String(shortId);
+      const externalId = fullId || suffix;
 
       // Marca o id antes de gravar a mensagem para não acionar a interrupção
       await supabase.from("zapp_sequence_run_steps").update({ status: "sent", sent_at: now, external_message_id: String(externalId), last_error: null }).eq("id", step.id);
       const preview = isText ? (step.text_content || "") : (step.media_caption || `[${step.content_type}]`);
-      await supabase.from("zapp_messages").insert({
+      const msgRow = {
         account_id: run.account_id,
         zapp_conversation_id: conv.id,
         direction: "outbound",
@@ -128,7 +138,15 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
         delivery_status: "sent",
         sender_user_id: run.triggered_by,
         sender_name: run.triggered_by_name,
-      });
+      };
+      // Se o eco do WhatsApp chegou antes, completa essa mensagem em vez de criar outra
+      const { data: echo } = await supabase.from("zapp_messages").select("id")
+        .eq("zapp_conversation_id", conv.id).ilike("external_message_id", `%${suffix}`).limit(1).maybeSingle();
+      if (echo) {
+        await supabase.from("zapp_messages").update({ sender_user_id: run.triggered_by, sender_name: run.triggered_by_name }).eq("id", echo.id);
+      } else {
+        await supabase.from("zapp_messages").insert(msgRow);
+      }
       await supabase.from("zapp_conversations").update({ last_message_at: now, last_message_preview: preview.substring(0, 100) }).eq("id", conv.id);
       await supabase.from("zapp_sequence_runs").update({ sent_steps: (run.sent_steps = (run.sent_steps || 0) + 1) }).eq("id", runId);
     } catch (err) {
