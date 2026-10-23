@@ -1,4 +1,5 @@
 import { resolveZappHistorySelection, zappSelectionHistoryStates } from "@/lib/navigation/zappMobileSelection";
+import { getZappConversationReturn } from "@/lib/navigation/zappAnalyticsReturn";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -116,6 +117,7 @@ export default function RoyZapp() {
     currentUser?.is_also_admin === true;
   const navigate = useNavigate();
   const navigationLocation = useLocation();
+  const conversationReturn = getZappConversationReturn(navigationLocation.state);
   const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
   const [searchParams, setSearchParams] = useSearchParams();
   const replaceSearchParams = useCallback((update: (params: URLSearchParams) => void) => {
@@ -1778,7 +1780,18 @@ export default function RoyZapp() {
 
 
   return (
-    <div className="flex flex-row flex-1 min-h-0 w-full overflow-hidden bg-zapp-bg">
+    <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden bg-zapp-bg">
+      {conversationReturn && (
+        <div className="shrink-0 border-b border-zapp-border bg-zapp-panel px-3 py-2">
+          <Button variant="ghost" size="sm" className="text-zapp-text" onClick={() => {
+            setSelectedConversation(null);
+            navigate(conversationReturn.url, { replace: true, state: conversationReturn.state });
+          }}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar à produtividade
+          </Button>
+        </div>
+      )}
+      <div className="flex flex-row flex-1 min-h-0 w-full overflow-hidden">
       {/* Left panel - Conversation list */}
       <div 
         className={cn(
@@ -2533,6 +2546,7 @@ export default function RoyZapp() {
         phone={selectedContactInfo?.phone || null}
         contactName={selectedContactInfo?.name || null}
       />
+      </div>
     </div>
   );
 }
