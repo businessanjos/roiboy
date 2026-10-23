@@ -8,6 +8,7 @@ import * as tus from "tus-js-client";
 import { Message } from "@/hooks/useZappData";
 import { ConversationAssignment, getContactInfo } from "@/components/royzapp/types";
 import { invokeWhatsAppManager } from "@/lib/whatsappRouting";
+import { applyZappSignature } from "@/lib/zappSignature";
 
 interface UseZappMessagingProps {
   selectedConversation: ConversationAssignment | null;
@@ -22,8 +23,6 @@ interface UseZappMessagingProps {
   navigate: (path: string) => void;
   onConversationUpdated?: (conversationId: string, lastMessageAt: string, lastMessagePreview: string) => void;
 }
-
-const normalizeSignature = (signature: string) => signature.trim().replace(/:+$/, "").trim();
 
 const MAX_ZAPP_MEDIA_SIZE_BYTES = 70 * 1024 * 1024;
 const RESUMABLE_UPLOAD_THRESHOLD_BYTES = 45 * 1024 * 1024;
@@ -111,17 +110,6 @@ const uploadZappMediaFile = async (bucket: string, fileName: string, file: File)
 
     upload.start();
   });
-};
-
-const buildSignatureHeader = (signature: string) => {
-  const cleanSignature = normalizeSignature(signature);
-  return cleanSignature ? `*${cleanSignature}:*` : "";
-};
-
-const hasSameSignatureHeader = (text: string, signature: string) => {
-  const firstLine = text.trim().split(/\r?\n/, 1)[0]?.trim();
-  if (!firstLine || !signature) return false;
-  return firstLine === `*${signature}:*` || firstLine === `*${signature}*`;
 };
 
 export function useZappMessaging({
@@ -268,12 +256,7 @@ export function useZappMessaging({
   const [sendingContact, setSendingContact] = useState(false);
 
   const buildSignedText = useCallback((text: string) => {
-    const baseText = text.trim();
-    const cleanSignature = normalizeSignature(userSignature);
-    if (!signatureEnabled || !cleanSignature || !baseText || hasSameSignatureHeader(baseText, cleanSignature)) {
-      return baseText;
-    }
-    return `${buildSignatureHeader(cleanSignature)}\n${baseText}`;
+    return applyZappSignature(text, userSignature, signatureEnabled);
   }, [signatureEnabled, userSignature]);
 
   // Quick replies state
@@ -1684,6 +1667,7 @@ export function useZappMessaging({
     savingQuickReply,
 
     // Actions
+    buildSignedText,
     sendMessage,
     sendMediaMessage,
     handleFileSelect,

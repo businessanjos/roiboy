@@ -23,11 +23,12 @@ interface Props {
   conversationId?: string | null;
   variables?: Record<string, string>;
   buildText?: (item: PlaybookItem, processedText?: string) => string;
+  signText?: (text: string) => string;
 }
 
 type Draft = { id?: string; name: string; visibility: "personal" | "sector"; steps: SequenceStep[] };
 
-export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversationId, variables = {}, buildText }: Props) {
+export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversationId, variables = {}, buildText, signText }: Props) {
   const { items, folders, replaceVariables } = usePlaybook({ sectorId });
   const { sequences, isLoading, save, isSaving, remove } = usePlaybookSequences(sectorId);
   const { currentUser } = useCurrentUser();
@@ -92,16 +93,18 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
       await startSequenceRun({
         conversationId,
         sequence: { id: s.id, name: s.name },
-        steps: s.steps.filter((st) => itemById.has(st.playbook_item_id)).map((st) => {
-          const item = itemById.get(st.playbook_item_id)!;
+        steps: s.steps.flatMap((st) => {
+          const item = itemById.get(st.playbook_item_id);
+          if (!item) return [];
           const processed = item.text_content ? replaceVariables(item.text_content, variables) : undefined;
           const text = buildText ? buildText(item, processed) : (processed || "");
-          return {
-            name: item.name, content_type: item.content_type, text_content: text || null,
+          const caption = item.media_caption ? replaceVariables(item.media_caption, variables) : "";
+          return [{
+            name: item.name, content_type: item.content_type, text_content: (signText ? signText(text) : text) || null,
             media_url: item.media_url, media_filename: item.media_filename,
-            media_caption: item.media_caption ? replaceVariables(item.media_caption, variables) : null,
+            media_caption: (signText ? signText(caption) : caption) || null,
             delay_seconds: st.delay_seconds,
-          };
+          }];
         }),
       }, { id: currentUser.id, name: currentUser.name, account_id: currentUser.account_id });
       toast.success(`Sequência "${s.name}" iniciada. Pode ir para outra conversa; se você escrever nesta, ela para.`);
@@ -195,7 +198,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
             </div>
           </div>
           <aside className="self-start lg:sticky lg:top-0">
-            <PlaybookSequencePreview steps={draft.steps} items={items} variables={variables} replaceVariables={replaceVariables} />
+            <PlaybookSequencePreview steps={draft.steps} items={items} variables={variables} replaceVariables={replaceVariables} signText={signText} />
           </aside>
           </div>
         ) : (
