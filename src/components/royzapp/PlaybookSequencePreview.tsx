@@ -77,7 +77,7 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
   // Acompanha a última mensagem, como no WhatsApp, ao adicionar/trocar etapas.
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    if (el?.scrollTo) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [lastKey]);
 
   const applyVars = (text: string | null) => {
