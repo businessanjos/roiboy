@@ -64,7 +64,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
     setFormOpen(true);
   };
 
-  const handleFormClose = (createdItem?: PlaybookItem | null) => {
+  const handleFormClose = (createdItem?: { id: string; name: string } | null) => {
     setFormOpen(false);
     const created = createdItem || null;
     const index = pendingStepRef.current;
