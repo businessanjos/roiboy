@@ -1,3 +1,4 @@
+import { friendlyError } from "@/lib/zappSequenceFriendlyError";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -160,7 +161,7 @@ export function ZappSequenceHistoryList({ open }: { open: boolean }) {
                             <Badge variant="secondary" className={cn("shrink-0 font-medium", STATUS_CLASS[s.status] || "")}>
                               {s.status === "sent" ? "Enviada" : s.status === "pending" ? "Pendente" : s.status === "claimed" ? "Enviando" : STATUS_LABEL[s.status] || s.status}
                             </Badge>
-                            {s.last_error && <span className="w-full text-destructive">{s.last_error}</span>}
+                            {s.last_error && <span className="w-full text-destructive">{friendlyError(s.last_error, s.content_type)}</span>}
                           </li>
                         ))}
                       </ul>
