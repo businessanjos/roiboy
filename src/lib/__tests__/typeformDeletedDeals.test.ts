@@ -23,7 +23,7 @@ async function runWebhook(deals: Record<string, any>[], repeats = 1) {
       eq: (k: string, v: any) => { filters.push(r => r[k] === v); return q; },
       is: (k: string, v: any) => { filters.push(r => (r[k] ?? null) === v); return q; },
       in: (k: string, v: any[]) => { filters.push(r => v.includes(r[k])); return q; },
-      ilike: (k: string, v: string) => { filters.push(r => String(r[k] ?? '').toLowerCase().includes(v.replaceAll('%', '').toLowerCase())); return q; },
+      ilike: (k: string, v: string) => { filters.push(r => String(r[k] ?? '').toLowerCase().includes(v.replace(/%/g, '').toLowerCase())); return q; },
       not: (k: string) => { filters.push(r => r[k] != null); return q; },
       or: () => { filters.push(r => !r.instagram); return q; },
       order: () => q,
