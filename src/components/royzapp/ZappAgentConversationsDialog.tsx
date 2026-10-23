@@ -30,6 +30,7 @@ interface Row {
   phone: string | null;
   is_group: boolean;
   sent: number;
+  inferred_sent?: number;
   last_sent: string;
 }
 
@@ -201,7 +202,14 @@ export function ZappAgentConversationsDialog({ target, onClose, sectorId, integr
                         <div className="font-medium">{r.contact_name || "Contato"}{r.is_group ? " (grupo)" : ""}</div>
                         {!r.is_group && r.phone && <div className="text-xs text-zapp-text-muted">{r.phone}</div>}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{r.sent}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {r.sent}
+                        {(r.inferred_sent ?? 0) > 0 && (
+                          <div className="text-[11px] text-zapp-text-muted" title="Envios feitos pelo celular, sem assinatura, atribuídos pelo dono da conversa">
+                            {r.inferred_sent} pelo celular
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right text-xs">{format(new Date(r.last_sent), "dd/MM HH:mm", { locale: ptBR })}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
