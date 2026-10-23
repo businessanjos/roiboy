@@ -38,6 +38,16 @@ Deno.serve(async (req) => {
     if (!run) return json({ error: "não autorizado" }, 401);
   }
 
+  const work = processRun(supabase, url, serviceKey, runId).catch((e) => console.error("[sequence]", e));
+  // Responde já; o envio segue em segundo plano mesmo que a tela seja fechada
+  // deno-lint-ignore no-explicit-any
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(work); else await work;
+  return json({ ok: true, accepted: true }, 202);
+});
+
+// deno-lint-ignore no-explicit-any
+async function processRun(supabase: any, url: string, serviceKey: string, runId: string): Promise<unknown> {
   const { data: run } = await supabase.from("zapp_sequence_runs").select("*").eq("id", runId).maybeSingle();
   if (!run || run.status !== "running") return json({ ok: true, idle: true });
   if ((run.hops || 0) >= MAX_HOPS) {
@@ -138,4 +148,4 @@ Deno.serve(async (req) => {
     }).catch(() => { /* a próxima instância começa mesmo se a resposta demorar */ });
   }
   return json({ ok: true, continued: true });
-});
+}
