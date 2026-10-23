@@ -7518,6 +7518,8 @@ export type Database = {
           status: string
           tags: Json | null
           title: string
+          typeform_last_reapplication_at: string | null
+          typeform_reapplication_count: number
           updated_at: string
           value: number | null
           won_at: string | null
@@ -7563,6 +7565,8 @@ export type Database = {
           status?: string
           tags?: Json | null
           title: string
+          typeform_last_reapplication_at?: string | null
+          typeform_reapplication_count?: number
           updated_at?: string
           value?: number | null
           won_at?: string | null
@@ -7608,6 +7612,8 @@ export type Database = {
           status?: string
           tags?: Json | null
           title?: string
+          typeform_last_reapplication_at?: string | null
+          typeform_reapplication_count?: number
           updated_at?: string
           value?: number | null
           won_at?: string | null

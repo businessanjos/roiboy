@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Pipeline: destacar reaplicações no cartão existente com data, sem duplicar negócios ou mudar etapa/responsável.
 - [x] Typeform: negócios excluídos filtrados em todos os caminhos do webhook, vínculo preservado em replay e Instagram vazio do lead completado. Função ativada; teste do Jonathan corrigido sem restaurar antigo, novo negócio conferido no Pipeline autenticado com cinco campos e ficha. Seis testes passaram, build OK. Novo envio real após correção não exercitado; Instagram personalizado do negócio não faz parte do mapeamento existente.
 - [x] Typeform: origem [TRAF-AMP-EC] cadastrada e conferida; criação automática por primeira tag ao registrar/sincronizar formulário, sem duplicar opções e isolada por conta. Quatro testes passaram, build OK; nenhum lead/negócio alterado, sem publicação. Recebimento de resposta nova não exercitado.
 - [x] Sequências: prévia 280×607 com proporção de celular conferida em 1280 e 393px; texto/legendas usam a assinatura ativa do remetente antes do agendamento, 13 testes passaram. Sem envios reais ou publicação.
