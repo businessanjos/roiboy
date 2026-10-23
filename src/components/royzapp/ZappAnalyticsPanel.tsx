@@ -554,7 +554,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
           </div>
         ) : data ? (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               <Kpi icon={ArrowDownLeft} label="Recebidas" value={data.messages_in.toLocaleString("pt-BR")} hint="mensagens de clientes" />
               <Kpi
                 icon={ArrowUpRight}
