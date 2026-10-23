@@ -259,7 +259,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
     sector: ZappWhatsAppSector | "all"; period: PeriodKey; customRange: { from?: Date; to?: Date };
     scope: "instance" | "sector"; includeGroups: boolean; agentId: string;
     convTarget: AgentConversationsTarget | null; showUnattributed: boolean;
-    newConvDialog: NewConvFilter | null; alertDetail: ZappAlertDetailKind | null; page: number;
+    newConvDialog: NewConvFilter | null; alertDetail: ZappAlertDetailKind | null; page: number; newUnidentified?: boolean;
   } | undefined);
   const { currentUser } = useCurrentUser();
   const canSeeDetails = canSeeAllSequenceRuns(currentUser as any);
@@ -298,13 +298,14 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [contactsDialog, setContactsDialog] = useState<"inbound" | "outbound" | null>(null);
   const [newConvDialog, setNewConvDialog] = useState<NewConvFilter | null>(saved?.newConvDialog ?? null);
+  const [newUnidentified, setNewUnidentified] = useState(saved?.newUnidentified ?? false);
   const [alertDetail, setAlertDetail] = useState<ZappAlertDetailKind | null>(saved?.alertDetail ?? null);
   const [aiLoading, setAiLoading] = useState(false);
 
   const openConversation = (id: string, page = 0) => {
     const originState = { ...(location.state ?? {}), zappAnalyticsSnapshot: {
       sector, period, customRange, scope, includeGroups, agentId, convTarget,
-      showUnattributed, newConvDialog, alertDetail, page,
+      showUnattributed, newConvDialog, alertDetail, page, newUnidentified,
     } };
     delete originState.zappConversationReturn;
     const params = new URLSearchParams(location.search);
@@ -768,8 +769,20 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                       ) : (
                         data.new_by_team_agent.map((a) => (
                           <TableRow key={a.user_id || a.name}>
-                            <TableCell className="font-medium">{a.name}</TableCell>
-                            <TableCell className="text-right">{a.count.toLocaleString("pt-BR")}</TableCell>
+                            <TableCell className="font-medium">
+                              {!a.user_id && canSeeDetails ? (
+                                <Button variant="link" className="h-auto p-0 text-zapp-text" onClick={() => { setNewUnidentified(true); setNewConvDialog("team"); }}>
+                                  {a.name}
+                                </Button>
+                              ) : a.name}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {!a.user_id && canSeeDetails ? (
+                                <Button variant="ghost" size="sm" className="tabular-nums" aria-label="Ver primeiros contatos sem atendente identificado" onClick={() => { setNewUnidentified(true); setNewConvDialog("team"); }}>
+                                  {a.count.toLocaleString("pt-BR")}
+                                </Button>
+                              ) : a.count.toLocaleString("pt-BR")}
+                            </TableCell>
                           </TableRow>
                         ))
                       )}
@@ -991,9 +1004,10 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
 
         {newConvDialog && (
           <ZappNewConversationsDialog
+            onlyUnidentified={newUnidentified}
             onOpenConversation={openConversation}
             open={!!newConvDialog}
-            onOpenChange={(o) => !o && setNewConvDialog(null)}
+            onOpenChange={(o) => { if (!o) { setNewConvDialog(null); setNewUnidentified(false); } }}
             initialFilter={newConvDialog}
             sectorId={effectiveSector}
             integrationId={effectiveIntegration}
