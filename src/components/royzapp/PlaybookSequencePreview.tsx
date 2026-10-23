@@ -94,7 +94,7 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
                 {pos > 0 && (
                   <div className="my-2 flex justify-center">
                     <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 text-[10px] text-muted-foreground shadow-sm">
-                      <Timer className="h-3 w-3" /> aguarda {step.delay_seconds}s
+                      <Timer className="h-3 w-3" /> aguarda {resolved[pos - 1].step.delay_seconds}s
                     </span>
                   </div>
                 )}
