@@ -21116,6 +21116,84 @@ export type Database = {
           },
         ]
       }
+      playbook_sequence_steps: {
+        Row: {
+          account_id: string
+          created_at: string
+          delay_seconds: number
+          id: string
+          playbook_item_id: string
+          position: number
+          sequence_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          delay_seconds?: number
+          id?: string
+          playbook_item_id: string
+          position?: number
+          sequence_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          delay_seconds?: number
+          id?: string
+          playbook_item_id?: string
+          position?: number
+          sequence_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_sequence_steps_playbook_item_id_fkey"
+            columns: ["playbook_item_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_sequence_steps_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playbook_sequences: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          sector_id: string | null
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          sector_id?: string | null
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          sector_id?: string | null
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
       practice_areas: {
         Row: {
           active: boolean
@@ -29017,6 +29095,140 @@ export type Database = {
           },
         ]
       }
+      zapp_sequence_run_steps: {
+        Row: {
+          account_id: string
+          claimed_at: string | null
+          content_type: string
+          created_at: string
+          external_message_id: string | null
+          id: string
+          last_error: string | null
+          media_caption: string | null
+          media_filename: string | null
+          media_url: string | null
+          name: string | null
+          position: number
+          run_id: string
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          text_content: string | null
+        }
+        Insert: {
+          account_id: string
+          claimed_at?: string | null
+          content_type: string
+          created_at?: string
+          external_message_id?: string | null
+          id?: string
+          last_error?: string | null
+          media_caption?: string | null
+          media_filename?: string | null
+          media_url?: string | null
+          name?: string | null
+          position: number
+          run_id: string
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string
+          text_content?: string | null
+        }
+        Update: {
+          account_id?: string
+          claimed_at?: string | null
+          content_type?: string
+          created_at?: string
+          external_message_id?: string | null
+          id?: string
+          last_error?: string | null
+          media_caption?: string | null
+          media_filename?: string | null
+          media_url?: string | null
+          name?: string | null
+          position?: number
+          run_id?: string
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          text_content?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_sequence_run_steps_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_sequence_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zapp_sequence_runs: {
+        Row: {
+          account_id: string
+          cancel_reason: string | null
+          conversation_id: string
+          created_at: string
+          finished_at: string | null
+          hops: number
+          id: string
+          sent_steps: number
+          sequence_id: string | null
+          sequence_name: string
+          status: string
+          total_steps: number
+          triggered_by: string | null
+          triggered_by_name: string | null
+        }
+        Insert: {
+          account_id: string
+          cancel_reason?: string | null
+          conversation_id: string
+          created_at?: string
+          finished_at?: string | null
+          hops?: number
+          id?: string
+          sent_steps?: number
+          sequence_id?: string | null
+          sequence_name: string
+          status?: string
+          total_steps?: number
+          triggered_by?: string | null
+          triggered_by_name?: string | null
+        }
+        Update: {
+          account_id?: string
+          cancel_reason?: string | null
+          conversation_id?: string
+          created_at?: string
+          finished_at?: string | null
+          hops?: number
+          id?: string
+          sent_steps?: number
+          sequence_id?: string | null
+          sequence_name?: string
+          status?: string
+          total_steps?: number
+          triggered_by?: string | null
+          triggered_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_sequence_runs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_sequence_runs_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zapp_tags: {
         Row: {
           account_id: string
@@ -29636,6 +29848,34 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "zapp_ruler_touches"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_zapp_sequence_step: {
+        Args: { p_run_id: string }
+        Returns: {
+          account_id: string
+          claimed_at: string | null
+          content_type: string
+          created_at: string
+          external_message_id: string | null
+          id: string
+          last_error: string | null
+          media_caption: string | null
+          media_filename: string | null
+          media_url: string | null
+          name: string | null
+          position: number
+          run_id: string
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          text_content: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "zapp_sequence_run_steps"
           isOneToOne: false
           isSetofReturn: true
         }
