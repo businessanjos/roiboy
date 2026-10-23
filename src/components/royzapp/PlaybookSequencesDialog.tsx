@@ -246,6 +246,8 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
                 </div>
               ))
             )}
+              </>
+            )}
           </div>
         )}
 
