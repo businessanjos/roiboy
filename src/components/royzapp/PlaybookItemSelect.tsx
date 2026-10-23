@@ -1,7 +1,7 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Check, ChevronsUpDown, Plus, MessageSquare, Image as ImageIcon, Video, Mic, FileText, List, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
@@ -49,33 +49,23 @@ interface Props {
 
 /**
  * Lista de mensagens do Playbook com barra de busca própria.
- * O popover é portalado para dentro do diálogo que o envolve, senão o
- * bloqueio de rolagem do diálogo impede rolar a lista no celular.
+ * Abre numa janela própria por cima do editor, para a lista inteira caber na tela.
  */
 export function PlaybookItemSelect({
   items, value, onChange, onCreate,
   placeholder = "Selecione uma mensagem", className, ariaLabel = "Mensagem do Playbook",
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = items.find((it) => it.id === value) || null;
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const groups = useMemo(() => groupPlaybookItems(items), [items]);
   const visibleGroups = typeFilter === "all" ? groups : groups.filter((g) => g.key === typeFilter);
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        if (next) setPortalContainer(triggerRef.current?.closest<HTMLElement>('[role="dialog"]') ?? null);
-        setOpen(next);
-      }}
-    >
-      <PopoverTrigger asChild>
+    <>
         <Button
-          ref={triggerRef}
           type="button"
+          onClick={() => setOpen(true)}
           variant="outline"
           role="combobox"
           aria-label={ariaLabel}
@@ -85,13 +75,11 @@ export function PlaybookItemSelect({
           <span className="min-w-0 truncate text-left">{selected ? selected.name : placeholder}</span>
           <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        portalContainer={portalContainer}
-        align="start"
-        collisionPadding={8}
-        className="flex w-[min(520px,calc(100vw-1rem))] max-h-[min(460px,var(--radix-popover-content-available-height))] flex-col overflow-hidden p-0"
-      >
+      <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="flex h-[min(720px,calc(100dvh-2rem))] w-[calc(100vw-1rem)] max-w-xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="border-b px-4 py-3 pr-12">
+          <DialogTitle className="text-base">Escolher mensagem do Playbook</DialogTitle>
+        </DialogHeader>
         <Command className="min-h-0 flex-1">
           <CommandInput placeholder="Buscar mensagem..." />
           {groups.length > 1 && (
@@ -152,7 +140,8 @@ export function PlaybookItemSelect({
             </div>
           </CommandList>
         </Command>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+      </Dialog>
+    </>
   );
 }
