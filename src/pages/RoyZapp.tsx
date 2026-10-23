@@ -73,6 +73,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ClientZappSheet } from "@/components/client/ClientZappSheet";
 import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDialog";
+import { PlaybookSequencesDialog } from "@/components/royzapp/PlaybookSequencesDialog";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
 import { ZappRulerEnrollDialog } from "@/components/royzapp/ruler/ZappRulerEnrollDialog";
@@ -1031,6 +1032,7 @@ export default function RoyZapp() {
 
   // Playbook dialog state for chat
   const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
+  const [sequencesDialogOpen, setSequencesDialogOpen] = useState(false);
   const [rulerEnrollOpen, setRulerEnrollOpen] = useState(false);
   const { templates: rulerTemplates, fetchAll: refetchRulers } = useZappRulers(selectedSectorId);
   const [multiSendInProgress, setMultiSendInProgress] = useState(false);
@@ -2366,11 +2368,21 @@ export default function RoyZapp() {
           }
         }}
         onMultiSend={handleMultiSend}
+        onOpenSequences={() => { setPlaybookDialogOpen(false); setSequencesDialogOpen(true); }}
         variables={extractPlaybookVariables({
           conversation: selectedConversation,
           currentUser: currentUser,
           deal: null,
         })}
+      />
+
+      <PlaybookSequencesDialog
+        open={sequencesDialogOpen}
+        onOpenChange={setSequencesDialogOpen}
+        sectorId={selectedSectorId}
+        conversationId={selectedConversation?.zapp_conversation_id ?? selectedConversation?.zapp_conversation?.id ?? null}
+        buildText={buildPlaybookText}
+        variables={extractPlaybookVariables({ conversation: selectedConversation, currentUser: currentUser, deal: null })}
       />
 
       {/* Close Ticket Dialog */}
