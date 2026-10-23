@@ -142,10 +142,18 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
               {draft.steps.map((st, i) => (
                 <div key={i} className="flex flex-wrap items-center gap-2 rounded-md border p-2">
                   <span className="w-5 text-center text-xs font-semibold text-muted-foreground">{i + 1}</span>
-                  <Select value={st.playbook_item_id || undefined} onValueChange={(v) => updateStep(i, { playbook_item_id: v })}>
+                  <Select
+                    value={st.playbook_item_id || undefined}
+                    onValueChange={(v) => {
+                      if (v === "__create__") { openCreateForm(i); return; }
+                      updateStep(i, { playbook_item_id: v });
+                    }}
+                  >
                     <SelectTrigger className="min-w-0 flex-1 basis-48"><SelectValue placeholder="Selecione uma mensagem" /></SelectTrigger>
                     <SelectContent>
                       {items.map((it) => <SelectItem key={it.id} value={it.id}>{it.name}</SelectItem>)}
+                      <div className="my-1 border-t" role="separator" />
+                      <SelectItem value="__create__"><span className="flex items-center gap-1.5"><Plus className="h-4 w-4" /> Nova mensagem…</span></SelectItem>
                     </SelectContent>
                   </Select>
                   {i < draft.steps.length - 1 && (
