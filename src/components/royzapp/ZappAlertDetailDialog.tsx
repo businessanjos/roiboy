@@ -68,6 +68,7 @@ interface Props {
   from: Date;
   to: Date;
   periodLabel?: string;
+  onOpenConversation?: (id: string) => void;
 }
 
 const TZ = "America/Sao_Paulo";
