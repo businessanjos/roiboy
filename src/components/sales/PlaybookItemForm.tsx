@@ -52,7 +52,7 @@ interface PlaybookItemFormProps {
   onOpenChange: (open: boolean) => void;
   editingItem: PlaybookItem | null;
   folders: PlaybookFolder[];
-  onClose: () => void;
+  onClose: (createdItem?: PlaybookItem | null) => void;
   sectorId?: string | null;
 }
 
