@@ -20,6 +20,7 @@ interface SequenceRunRow {
   created_at: string;
   finished_at: string | null;
   contact_name: string | null;
+  contact_phone: string | null;
 }
 
 interface RunStepRow {
@@ -74,11 +75,11 @@ export function ZappSequenceHistoryList({ open }: { open: boolean }) {
     queryFn: async (): Promise<SequenceRunRow[]> => {
       const { data, error } = await db
         .from("zapp_sequence_runs")
-        .select("id, sequence_name, status, sent_steps, total_steps, triggered_by_name, cancel_reason, created_at, finished_at, zapp_conversations(contact_name)")
+        .select("id, sequence_name, status, sent_steps, total_steps, triggered_by_name, cancel_reason, created_at, finished_at, zapp_conversations(contact_name, phone_e164, is_group)")
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data || []).map((r: any) => ({ ...r, contact_name: r.zapp_conversations?.contact_name ?? null }));
+      return (data || []).map((r: any) => ({ ...r, contact_name: r.zapp_conversations?.contact_name ?? null, contact_phone: r.zapp_conversations?.is_group ? null : fmtPhone(r.zapp_conversations?.phone_e164) }));
     },
   });
 
@@ -130,7 +131,7 @@ export function ZappSequenceHistoryList({ open }: { open: boolean }) {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{r.sequence_name}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {r.contact_name || "Contato"} · {r.triggered_by_name || "—"} · {fmtDateTime(r.created_at)}
+                      {r.contact_name && r.contact_name !== "Desconhecido" ? r.contact_name : "Contato"}{r.contact_phone ? ` (${r.contact_phone})` : ""} · {r.triggered_by_name || "—"} · {fmtDateTime(r.created_at)}
                     </p>
                   </div>
                   <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{r.sent_steps}/{r.total_steps}</span>
@@ -175,4 +176,14 @@ export function ZappSequenceHistoryList({ open }: { open: boolean }) {
       )}
     </div>
   );
+}
+
+function fmtPhone(raw?: string | null): string | null {
+  const d = String(raw || "").replace(/\D/g, "");
+  if (!d) return null;
+  if (d.startsWith("55") && (d.length === 12 || d.length === 13)) {
+    const n = d.slice(4);
+    return `+55 (${d.slice(2, 4)}) ${n.slice(0, n.length - 4)}-${n.slice(-4)}`;
+  }
+  return `+${d}`;
 }
