@@ -499,8 +499,8 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="no">Sem grupos</SelectItem>
-              <SelectItem value="yes">Incluir grupos</SelectItem>
+              <SelectItem value="no">Grupos de clientes</SelectItem>
+              <SelectItem value="yes">Todos os grupos</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching} aria-label="Atualizar">
@@ -510,9 +510,9 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
 
         {data && (
           <p className="text-[11px] leading-relaxed text-zapp-text-muted">
-            Base do cálculo: {includeGroups ? "conversas individuais e grupos" : "somente conversas individuais"}
+            Base do cálculo: {includeGroups ? "conversas individuais e todos os grupos" : "conversas individuais e grupos de clientes (até 19 clientes, sem grupos internos)"}
             {!includeGroups && (data.group_conversations_excluded ?? 0) > 0
-              ? ` (${data.group_conversations_excluded} grupos fora da conta)`
+              ? ` (${data.group_conversations_excluded} grupos gigantes ou internos fora da conta)`
               : ""}
             {" · "}
             {effectiveIntegration ? "somente a conexão selecionada" : "todas as conexões da área"}
