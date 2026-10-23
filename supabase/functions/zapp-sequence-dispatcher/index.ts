@@ -158,12 +158,14 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
       // Avisa quem disparou, em qualquer tela (igual às notificações de novas mensagens)
       if (run.triggered_by) {
         const contact = conv?.id ? (await supabase.from("zapp_conversations").select("contact_name").eq("id", conv.id).maybeSingle()).data?.contact_name : null;
+        const phoneDigits = conv?.is_group ? "" : String(conv?.phone_e164 || "").replace(/\D/g, "");
+        const who = [contact && contact !== "Desconhecido" ? contact : null, phoneDigits ? `+${phoneDigits}` : null].filter(Boolean).join(" · ");
         await supabase.from("notifications").insert({
           account_id: run.account_id,
           user_id: run.triggered_by,
           type: "zapp_sequence_failed",
           title: `Falha ao enviar "${step.name || "mensagem"}"`,
-          content: `Sequência "${run.sequence_name || ""}"${contact ? ` para ${contact}` : ""}: ${msg}`,
+          content: `Sequência "${run.sequence_name || ""}"${who ? ` para ${who}` : ""}: ${msg}`,
           link: `/roy-zapp?conversation=${conv.id}`,
           source_type: "zapp_sequence",
           source_id: runId,
