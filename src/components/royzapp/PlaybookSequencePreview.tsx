@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import {
   AudioLines, FileText, Image as ImageIcon, LayoutTemplate, Link2,
-  ListChecks, MessageSquareText, Smile, Timer, Video,
+  ListChecks, Smile, Timer, Video, ChevronLeft, Phone, CheckCheck, Zap, Paperclip, Mic,
 } from "lucide-react";
 import type { PlaybookItem } from "@/hooks/usePlaybook";
 import type { SequenceStep } from "@/hooks/usePlaybookSequences";
@@ -73,43 +73,87 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
   const applyVars = (text: string | null) =>
     text ? (replaceVariables ? replaceVariables(text, variables) : text) : null;
 
+  const wa = (v: string) => `hsl(var(--wa-${v}))`;
+  const contactName = variables.nome || variables.name || "Contato";
+
   return (
-    <div className="overflow-hidden rounded-lg border" data-testid="sequence-preview">
-      <div className="flex items-center gap-2 border-b bg-muted px-3 py-2">
-        <MessageSquareText className="h-4 w-4 text-muted-foreground" />
-        <p className="text-xs font-medium">Prévia no WhatsApp</p>
-      </div>
-      <div className="max-h-[420px] space-y-2 overflow-y-auto bg-muted/40 p-3">
-        {resolved.length === 0 ? (
-          <p className="py-8 text-center text-xs text-muted-foreground">
-            Selecione mensagens ao lado para ver como elas vão sair na conversa.
-          </p>
-        ) : (
-          resolved.map(({ item, index }, pos) => {
-            const text = applyVars(item.text_content) || applyVars(item.template_body);
-            const caption = applyVars(item.media_caption);
-            const isMedia = item.content_type !== "text";
-            return (
-              <div key={`${item.id}-${pos}`}>
-                {pos > 0 && (
-                  <div className="my-2 flex justify-center">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 text-[10px] text-muted-foreground shadow-sm">
-                      <Timer className="h-3 w-3" /> aguarda {resolved[pos - 1].step.delay_seconds}s
+    <div
+      className="mx-auto w-full max-w-[340px] rounded-[2.2rem] border-[6px] border-foreground/80 bg-foreground/80 p-0 shadow-xl"
+      data-testid="sequence-preview"
+      aria-label="Prévia no WhatsApp"
+    >
+      <div className="relative overflow-hidden rounded-[1.7rem]" style={{ background: wa("wallpaper") }}>
+        {/* Barra de status */}
+        <div className="flex items-center justify-between px-5 pb-1 pt-2 text-[10px] font-semibold" style={{ background: wa("header"), color: wa("header-foreground") }}>
+          <span>9:41</span>
+          <span className="h-4 w-16 rounded-full bg-foreground/90" aria-hidden />
+          <span>5G ▮▮▮</span>
+        </div>
+        {/* Cabeçalho do WhatsApp */}
+        <div className="flex items-center gap-2 px-3 pb-2" style={{ background: wa("header"), color: wa("header-foreground") }}>
+          <ChevronLeft className="h-5 w-5 shrink-0" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background/25 text-xs font-semibold">
+            {contactName.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="truncate text-sm font-semibold">{contactName}</p>
+            <p className="text-[10px] opacity-80">online</p>
+          </div>
+          <Video className="h-4 w-4 shrink-0" />
+          <Phone className="h-4 w-4 shrink-0" />
+        </div>
+
+        {/* Conversa */}
+        <div className="h-[440px] space-y-1.5 overflow-y-auto px-2.5 py-3">
+          <div className="mb-2 flex justify-center">
+            <span className="rounded-md px-2 py-0.5 text-[10px] shadow-sm" style={{ background: wa("chip"), color: wa("meta") }}>HOJE</span>
+          </div>
+          {resolved.length === 0 ? (
+            <p className="mx-4 mt-10 rounded-md px-3 py-2 text-center text-xs shadow-sm" style={{ background: wa("chip"), color: wa("meta") }}>
+              Selecione mensagens ao lado para ver como elas vão chegar no celular do cliente.
+            </p>
+          ) : (
+            resolved.map(({ item, step, index }, pos) => {
+              const text = applyVars(item.text_content) || applyVars(item.template_body);
+              const caption = applyVars(item.media_caption);
+              const isMedia = item.content_type !== "text";
+              return (
+                <div key={`${item.id}-${pos}`}>
+                  <div className="my-1.5 flex justify-center">
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] shadow-sm" style={{ background: wa("chip"), color: wa("meta") }}>
+                      {pos === 0 ? <><Zap className="h-3 w-3" /> instantâneo ao clicar</> : <><Timer className="h-3 w-3" /> aguarda {step.delay_seconds}s</>}
                     </span>
                   </div>
-                )}
-                <div className="ml-auto w-fit max-w-[90%] rounded-lg rounded-tr-none border border-primary/20 bg-primary/10 px-3 py-2 text-sm shadow-sm">
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {index + 1} · {item.name}
-                  </p>
-                  {isMedia && <div className="mb-1"><MediaBlock item={item} /></div>}
-                  {text && <p className="whitespace-pre-wrap break-words text-xs leading-relaxed">{text}</p>}
-                  {isMedia && caption && <p className="whitespace-pre-wrap break-words text-xs leading-relaxed">{caption}</p>}
+                  <div
+                    className="relative ml-auto w-fit min-w-[110px] max-w-[85%] rounded-lg rounded-tr-none px-2 pb-1 pt-1.5 text-[13px] shadow-sm"
+                    style={{ background: wa("bubble-out"), color: wa("bubble-out-foreground") }}
+                  >
+                    <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-wide" style={{ color: wa("meta") }}>
+                      {index + 1} · {item.name}
+                    </p>
+                    {isMedia && <div className="mb-1"><MediaBlock item={item} /></div>}
+                    {text && <p className="whitespace-pre-wrap break-words leading-snug">{text}</p>}
+                    {isMedia && caption && <p className="whitespace-pre-wrap break-words leading-snug">{caption}</p>}
+                    <div className="mt-0.5 flex items-center justify-end gap-0.5 text-[9px]" style={{ color: wa("meta") }}>
+                      <span>9:41</span>
+                      <CheckCheck className="h-3 w-3" style={{ color: wa("tick") }} />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
+
+        {/* Barra de digitação */}
+        <div className="flex items-center gap-2 px-2 pb-3 pt-1.5" style={{ background: wa("bar") }}>
+          <div className="flex flex-1 items-center gap-2 rounded-full bg-background px-3 py-1.5 text-xs text-muted-foreground">
+            <Smile className="h-4 w-4" /> <span className="flex-1">Mensagem</span> <Paperclip className="h-4 w-4" />
+          </div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: wa("header"), color: wa("header-foreground") }}>
+            <Mic className="h-4 w-4" />
+          </div>
+        </div>
       </div>
     </div>
   );
