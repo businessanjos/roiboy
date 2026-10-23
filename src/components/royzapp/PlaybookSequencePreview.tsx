@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { applyWhatsAppFormatting } from "@/lib/whatsappFormatting";
 import {
   AudioLines, FileText, Image as ImageIcon, LayoutTemplate, Link2,
   ListChecks, Smile, Timer, Video, ChevronLeft, Phone, CheckCheck, Zap, Paperclip, Mic,
@@ -136,8 +137,8 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
                       {index + 1} · {item.name}
                     </p>
                     {isMedia && <div className="mb-1"><MediaBlock item={item} /></div>}
-                    {text && <p className="whitespace-pre-wrap break-words leading-snug">{text}</p>}
-                    {isMedia && caption && <p className="whitespace-pre-wrap break-words leading-snug">{caption}</p>}
+                    {text && <p className="whitespace-pre-wrap break-words leading-snug">{applyWhatsAppFormatting(text, `t-${pos}`)}</p>}
+                    {isMedia && caption && <p className="whitespace-pre-wrap break-words leading-snug">{applyWhatsAppFormatting(caption, `c-${pos}`)}</p>}
                     <div className="mt-0.5 flex items-center justify-end gap-0.5 text-[9px]" style={{ color: wa("meta") }}>
                       <span>9:41</span>
                       <CheckCheck className="h-3 w-3" style={{ color: wa("tick") }} />
