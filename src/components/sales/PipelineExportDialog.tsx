@@ -233,6 +233,7 @@ export function PipelineExportDialog({
       const stagesMap = Object.fromEntries(stages.map((s) => [s.id, s.name]));
       const usersMap = Object.fromEntries(salesUsers.map((u) => [u.id, u.name]));
       const productsMap = Object.fromEntries(products.map((p) => [p.id, p.name]));
+      const pipelinesMap = Object.fromEntries(pipelines.map((p) => [p.id, p.name]));
 
       // Resolve field value to human-readable label
       const resolveLabel = (field: CustomFieldDef, rawValue: any): string => {
