@@ -62,6 +62,17 @@ import { cn } from "@/lib/utils";
 import { ZappContactsBreakdownDialog } from "./ZappContactsBreakdownDialog";
 import { ZappNewConversationsDialog, type NewConvFilter } from "./ZappNewConversationsDialog";
 import { ZappAlertDetailDialog, type ZappAlertDetailKind } from "./ZappAlertDetailDialog";
+import { ZappAgentConversationsDialog, type AgentConversationsTarget } from "./ZappAgentConversationsDialog";
+
+const ORIGIN_LABELS: Record<string, string> = {
+  channel: "Canal Eternum (número do canal)",
+  automation: "Automação CX (mensagens automáticas)",
+  device: "Enviado pelo celular ou WhatsApp Web",
+  history: "Importado do histórico",
+};
+const titleCase = (s: string) => s.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
+const originLabel = (o: string) =>
+  o.startsWith("signed:") ? `Assinado como "${titleCase(o.slice(7))}" (sem cadastro)` : ORIGIN_LABELS[o] ?? o;
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -128,6 +139,7 @@ interface Metrics {
   responses_count?: number;
   risk_samples: RiskSample[];
   by_agent: AgentRow[];
+  unattributed_breakdown?: { origin: string; messages_sent: number; conversations: number; avg_conversations_per_day: number | null }[];
   by_day: { day: string; inbound: number; outbound: number; conversations?: number }[];
   by_hour: { hour: number; inbound: number; outbound: number }[];
 }
@@ -261,6 +273,8 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   const [scope, setScope] = useState<"instance" | "sector">(integrationId ? "instance" : "sector");
   const [includeGroups, setIncludeGroups] = useState(false);
   const [agentId, setAgentId] = useState<string>("all");
+  const [convTarget, setConvTarget] = useState<AgentConversationsTarget | null>(null);
+  const [showUnattributed, setShowUnattributed] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [contactsDialog, setContactsDialog] = useState<"inbound" | "outbound" | null>(null);
   const [newConvDialog, setNewConvDialog] = useState<NewConvFilter | null>(null);
@@ -789,7 +803,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                         <TableHead>Atendente</TableHead>
                         <TableHead className="text-right">Enviadas</TableHead>
                         <TableHead className="text-right">Conversas</TableHead>
-                        <TableHead className="text-right">Média/dia</TableHead>
+                        <TableHead className="text-right" title="Conversas distintas ÷ dias em que a pessoa enviou mensagem">Média/dia ⓘ</TableHead>
                         <TableHead className="text-right">Novas iniciadas</TableHead>
                         <TableHead className="text-right">Respostas</TableHead>
                         <TableHead className="text-right">Resposta (mediana)</TableHead>
@@ -805,8 +819,12 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                       ) : (
                         <>
                           {data.by_agent.map((a) => (
-                            <TableRow key={a.user_id || a.name}>
-                              <TableCell className="font-medium">{a.name}</TableCell>
+                            <TableRow
+                              key={a.user_id || a.name}
+                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() => a.user_id && setConvTarget({ label: `Conversas de ${a.name}`, userId: a.user_id })}
+                            >
+                              <TableCell className="font-medium underline-offset-2 hover:underline">{a.name}</TableCell>
                               <TableCell className="text-right">{a.messages_sent.toLocaleString("pt-BR")}</TableCell>
                               <TableCell className="text-right">{a.conversations}</TableCell>
                               <TableCell className="text-right">{a.avg_conversations_per_day ?? "—"}</TableCell>
@@ -816,15 +834,33 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                             </TableRow>
                           ))}
                           {(data.messages_out_unattributed ?? 0) > 0 && (
-                            <TableRow className="opacity-70">
-                              <TableCell className="font-medium">Sem atendente identificado</TableCell>
-                              <TableCell className="text-right">{(data.messages_out_unattributed ?? 0).toLocaleString("pt-BR")}</TableCell>
-                              <TableCell className="text-right" colSpan={5}>
-                                <span className="text-xs text-zapp-text-muted">
-                                  envios feitos direto pelo celular/WhatsApp Web ou importados do histórico
-                                </span>
-                              </TableCell>
-                            </TableRow>
+                            <>
+                              <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => setShowUnattributed((v) => !v)}>
+                                <TableCell className="font-medium text-zapp-text-muted">
+                                  {showUnattributed ? "▾" : "▸"} Sem atendente identificado
+                                </TableCell>
+                                <TableCell className="text-right">{(data.messages_out_unattributed ?? 0).toLocaleString("pt-BR")}</TableCell>
+                                <TableCell className="text-right" colSpan={5}>
+                                  <span className="text-xs text-zapp-text-muted">
+                                    {showUnattributed ? "clique numa origem para ver as conversas" : "clique para ver de onde vieram"}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                              {showUnattributed &&
+                                (data.unattributed_breakdown || []).map((u) => (
+                                  <TableRow
+                                    key={u.origin}
+                                    className="cursor-pointer hover:bg-muted/50 text-zapp-text-muted"
+                                    onClick={() => setConvTarget({ label: originLabel(u.origin), origin: u.origin })}
+                                  >
+                                    <TableCell className="pl-8 text-sm">{originLabel(u.origin)}</TableCell>
+                                    <TableCell className="text-right">{u.messages_sent.toLocaleString("pt-BR")}</TableCell>
+                                    <TableCell className="text-right">{u.conversations}</TableCell>
+                                    <TableCell className="text-right">{u.avg_conversations_per_day ?? "—"}</TableCell>
+                                    <TableCell colSpan={3} />
+                                  </TableRow>
+                                ))}
+                            </>
                           )}
                         </>
                       )}
@@ -893,6 +929,15 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             periodLabel={`${format(range.from, "dd/MM", { locale: ptBR })} a ${format(range.to, "dd/MM", { locale: ptBR })}${selectedAgentName ? ` · ${selectedAgentName}` : ""}`}
           />
         )}
+        <ZappAgentConversationsDialog
+          target={convTarget}
+          onClose={() => setConvTarget(null)}
+          sectorId={effectiveSector}
+          integrationId={effectiveIntegration}
+          includeGroups={includeGroups}
+          from={range.from}
+          to={range.to}
+        />
 
         {contactsDialog && (
           <ZappContactsBreakdownDialog
