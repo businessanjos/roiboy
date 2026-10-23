@@ -620,10 +620,8 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 onClick={() => setAlertDetail("no_conversation")}
                 cta="Clique para ver os clientes"
               />
-            </div>
 
-            {/* Conversas novas e média diária */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Conversas novas e média diária (mesma grade: 15 cartões = 3 linhas de 5) */}
               <Kpi
                 icon={UserPlus}
                 label="Primeiro contato na área"
