@@ -47,6 +47,7 @@ const FIXED_FIELDS = [
   { key: "lead_name", label: "Lead (nome)" },
   { key: "lead_phone", label: "Telefone do lead" },
   { key: "lead_email", label: "Email do lead" },
+  { key: "pipeline", label: "Funil" },
   { key: "stage", label: "Etapa" },
   { key: "responsible", label: "Responsável" },
   { key: "value", label: "Valor" },
