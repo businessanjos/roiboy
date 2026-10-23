@@ -2382,6 +2382,7 @@ export default function RoyZapp() {
         sectorId={selectedSectorId}
         conversationId={selectedConversation?.zapp_conversation_id ?? selectedConversation?.zapp_conversation?.id ?? null}
         buildText={buildPlaybookText}
+        signText={messaging.buildSignedText}
         variables={extractPlaybookVariables({ conversation: selectedConversation, currentUser: currentUser, deal: null })}
       />
 

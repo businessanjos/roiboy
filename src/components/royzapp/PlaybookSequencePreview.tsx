@@ -11,6 +11,7 @@ interface Props {
   items: PlaybookItem[];
   variables?: Record<string, string>;
   replaceVariables?: (text: string, vars: Record<string, string>) => string;
+  signText?: (text: string) => string;
 }
 
 function MediaBlock({ item }: { item: PlaybookItem }) {
@@ -64,25 +65,28 @@ function MediaBlock({ item }: { item: PlaybookItem }) {
   }
 }
 
-export function PlaybookSequencePreview({ steps, items, variables = {}, replaceVariables }: Props) {
+export function PlaybookSequencePreview({ steps, items, variables = {}, replaceVariables, signText }: Props) {
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const resolved = steps
     .map((st, i) => ({ step: st, item: itemById.get(st.playbook_item_id), index: i }))
     .filter((r) => r.item) as { step: SequenceStep; item: PlaybookItem; index: number }[];
 
-  const applyVars = (text: string | null) =>
-    text ? (replaceVariables ? replaceVariables(text, variables) : text) : null;
+  const applyVars = (text: string | null) => {
+    if (!text) return null;
+    const processed = replaceVariables ? replaceVariables(text, variables) : text;
+    return signText ? signText(processed) : processed;
+  };
 
   const wa = (v: string) => `hsl(var(--wa-${v}))`;
   const contactName = variables.nome || variables.name || "Contato";
 
   return (
     <div
-      className="mx-auto w-full max-w-[340px] rounded-[2.2rem] border-[6px] border-foreground/80 bg-foreground/80 p-0 shadow-xl"
+      className="mx-auto aspect-[9/19.5] w-full max-w-[280px] rounded-[2.2rem] border-[6px] border-foreground/80 bg-foreground/80 p-0 shadow-xl"
       data-testid="sequence-preview"
       aria-label="Prévia no WhatsApp"
     >
-      <div className="relative overflow-hidden rounded-[1.7rem]" style={{ background: wa("wallpaper") }}>
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.7rem]" style={{ background: wa("wallpaper") }}>
         {/* Barra de status */}
         <div className="flex items-center justify-between px-5 pb-1 pt-2 text-[10px] font-semibold" style={{ background: wa("header"), color: wa("header-foreground") }}>
           <span>9:41</span>
@@ -104,7 +108,7 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
         </div>
 
         {/* Conversa */}
-        <div className="h-[440px] space-y-1.5 overflow-y-auto px-2.5 py-3">
+        <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-2.5 py-3">
           <div className="mb-2 flex justify-center">
             <span className="rounded-md px-2 py-0.5 text-[10px] shadow-sm" style={{ background: wa("chip"), color: wa("meta") }}>HOJE</span>
           </div>
