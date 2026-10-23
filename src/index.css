@@ -9,6 +9,7 @@
 
 @layer base {
   :root {
+    --wa-header: 168 75% 25%; --wa-header-foreground: 0 0% 100%; --wa-wallpaper: 37 30% 90%; --wa-bubble-out: 111 64% 87%; --wa-bubble-out-foreground: 200 15% 12%; --wa-meta: 200 6% 42%; --wa-tick: 199 85% 48%; --wa-chip: 45 80% 92%; --wa-bar: 30 15% 95%;
     /* New Palette: #201c19, #e7e4d8, #d2ae6d, #506767, #42423d, #efede6 */
     --background: 47 30% 92%; /* #efede6 */
     --foreground: 20 10% 11%; /* #201c19 */
@@ -121,6 +122,7 @@
   }
 
   .dark {
+    --wa-header: 168 60% 16%; --wa-header-foreground: 0 0% 100%; --wa-wallpaper: 30 12% 9%; --wa-bubble-out: 166 60% 22%; --wa-bubble-out-foreground: 0 0% 96%; --wa-meta: 160 10% 70%; --wa-tick: 199 85% 60%; --wa-chip: 200 12% 18%; --wa-bar: 200 10% 14%;
     /* Fundo mais profundo e elegante */
     --background: 20 12% 8%; /* mais escuro e rico */
     --foreground: 45 25% 95%; /* texto mais claro para contraste */
