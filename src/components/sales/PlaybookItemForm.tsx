@@ -52,7 +52,7 @@ interface PlaybookItemFormProps {
   onOpenChange: (open: boolean) => void;
   editingItem: PlaybookItem | null;
   folders: PlaybookFolder[];
-  onClose: (createdItem?: PlaybookItem | null) => void;
+  onClose: (createdItem?: { id: string; name: string } | null) => void;
   sectorId?: string | null;
 }
 
@@ -418,7 +418,7 @@ export function PlaybookItemForm({
         });
       } else {
         const created = await createItemAsync(input);
-        onClose(created ?? null);
+        onClose(created ? { id: created.id, name: created.name } : null);
         return;
       }
 
@@ -1047,7 +1047,7 @@ export function PlaybookItemForm({
         </div>
 
         <DialogFooter className="flex-shrink-0 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={() => onClose(null)}>
             Cancelar
           </Button>
           <Button
