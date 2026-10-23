@@ -76,7 +76,7 @@ export function usePlaybookSequences(sectorId?: string | null) {
         id = data.id;
       }
       const { error: stepErr } = await db.from("playbook_sequence_steps").insert(
-        steps.map((s, i) => ({ sequence_id: id, account_id: accountId, playbook_item_id: s.playbook_item_id, position: i, delay_seconds: clampDelay(s.delay_seconds) })),
+        normalizeSequenceSteps(steps).map((s, i) => ({ sequence_id: id, account_id: accountId, playbook_item_id: s.playbook_item_id, position: i, delay_seconds: s.delay_seconds })),
       );
       if (stepErr) throw stepErr;
     },
@@ -96,15 +96,25 @@ export function usePlaybookSequences(sectorId?: string | null) {
   return { sequences, isLoading, save: save.mutateAsync, isSaving: save.isPending, remove: remove.mutate };
 }
 
-/** Horário de cada passo: o primeiro sai já; cada seguinte espera o intervalo do passo anterior. */
+/** Espera ANTES de cada passo: o primeiro é sempre instantâneo. */
+export function effectiveDelay(delays: number[], i: number): number {
+  return i === 0 ? 0 : clampDelay(delays[i]);
+}
+
+/** Horário estimado de cada passo: o primeiro sai já; cada seguinte espera o próprio intervalo. */
 export function computeSequenceSchedule(delays: number[], startMs: number): number[] {
   const out: number[] = [];
   let t = startMs;
   delays.forEach((_, i) => {
-    if (i > 0) t += clampDelay(delays[i - 1]) * 1000;
+    t += effectiveDelay(delays, i) * 1000;
     out.push(t);
   });
   return out;
+}
+
+/** Garante que, após reordenar/remover, o novo primeiro passo fique instantâneo e os demais tenham espera válida. */
+export function normalizeSequenceSteps<T extends { delay_seconds: number }>(steps: T[]): T[] {
+  return steps.map((s, i) => ({ ...s, delay_seconds: i === 0 ? 0 : clampDelay(s.delay_seconds || 5) }));
 }
 
 export interface StartRunInput {
