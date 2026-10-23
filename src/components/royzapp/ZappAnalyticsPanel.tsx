@@ -65,6 +65,10 @@ import { ZappAlertDetailDialog, type ZappAlertDetailKind } from "./ZappAlertDeta
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+/** Pessoas que não são atendentes (ex.: Lucas dos Santos) ficam fora das listas de atendentes. */
+const HIDDEN_AGENT_IDS = new Set(["14389b62-d4a1-4837-9aee-61a19b28c383"]);
+const isHiddenAgent = (id: string | null | undefined) => !!id && HIDDEN_AGENT_IDS.has(id);
+
 interface AgentRow {
   user_id: string | null;
   name: string;
@@ -296,7 +300,13 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
         _agent_user_id: effectiveAgent,
       });
       if (error) throw error;
-      return data as Metrics;
+      const m = data as Metrics;
+      if (!m) return m;
+      return {
+        ...m,
+        by_agent: (m.by_agent || []).filter((a) => !isHiddenAgent(a.user_id)),
+        new_by_team_agent: (m.new_by_team_agent || []).filter((a) => !isHiddenAgent(a.user_id)),
+      };
     },
   });
 
@@ -324,7 +334,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
       });
       if (error) throw error;
       return ((data as Metrics)?.by_agent || [])
-        .filter((a) => !!a.user_id)
+        .filter((a) => !!a.user_id && !isHiddenAgent(a.user_id))
         .map((a) => ({ id: a.user_id as string, name: a.name }))
         .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     },
