@@ -1206,6 +1206,15 @@ export default function RoyZapp() {
   // Ref para garantir que o lookup async da conversa alvo rode só uma vez
   const conversationLookupRef = useRef<string | null>(null);
 
+  // Um novo ?conversation= (ex.: "Abrir" nas métricas, já dentro do RoyZapp) precisa ser processado de novo
+  const urlConversationParam = searchParams.get('conversation');
+  useEffect(() => {
+    if (urlConversationParam) {
+      conversationLookupRef.current = null;
+      setUrlParamsProcessed(false);
+    }
+  }, [urlConversationParam]);
+
   // Handle URL parameters for auto-selecting or creating conversations
   useEffect(() => {
     if (urlParamsProcessed || loading || !currentUser?.account_id) return;
