@@ -38,6 +38,7 @@ import {
   User,
   Package,
   Tag,
+  Lock,
 } from "lucide-react";
 
 // Nomes canônicos dos campos de DEAL espelhados no lead (resolvidos dinamicamente).
@@ -100,6 +101,17 @@ interface Deal {
   responsible?: { name: string } | null;
 }
 
+// Presença de negócio retornada pela RPC get_lead_deal_presence (security definer):
+// expõe apenas metadados mínimos para evitar duplicidade, sem furar a RLS can_view_deal.
+interface DealPresence {
+  id: string;
+  title: string;
+  status: string | null;
+  stage_name: string | null;
+  responsible_name: string | null;
+  can_view: boolean;
+}
+
 interface LeadDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -129,6 +141,7 @@ export function LeadDetailSheet({
   const canManageCustomFields = isAdmin || hasVendasAccess;
   const [lead, setLead] = useState<Lead | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealPresence, setDealPresence] = useState<DealPresence[]>([]);
   const [loading, setLoading] = useState(false);
   const [customFields, setCustomFields] = useState<LeadCustomField[]>([]);
   
@@ -226,6 +239,10 @@ export function LeadDetailSheet({
 
       if (dealsError) throw dealsError;
       setDeals(dealsData || []);
+
+      // Presença de negócios (inclui os que o usuário não pode abrir, p/ evitar duplicidade)
+      const { data: presenceData } = await supabase.rpc("get_lead_deal_presence", { p_lead_id: leadId });
+      setDealPresence((presenceData as DealPresence[] | null) || []);
 
       // Espelhar Item da Venda + Origem da Venda do deal mais recente que tenha valor.
       // Resolve IDs dinamicamente por NOME para não quebrar se o campo for renomeado/recriado.
@@ -532,43 +549,70 @@ export function LeadDetailSheet({
                       </Button>
                     )}
                   </div>
-                  {deals.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Nenhum negócio vinculado
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {deals.map((deal) => (
-                        <Card 
-                          key={deal.id}
-                          className={cn(onDealClick && "cursor-pointer hover:bg-muted/50")}
-                          onClick={() => onDealClick?.(deal)}
-                        >
-                          <CardContent className="p-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium text-sm">{deal.title}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {deal.stage?.name}
-                                </p>
+                  {(() => {
+                    const visibleIds = new Set(deals.map((d) => d.id));
+                    const lockedDeals = dealPresence.filter((p) => !p.can_view && !visibleIds.has(p.id));
+                    if (deals.length === 0 && lockedDeals.length === 0) {
+                      return (
+                        <p className="text-sm text-muted-foreground">
+                          Nenhum negócio vinculado
+                        </p>
+                      );
+                    }
+                    return (
+                      <div className="space-y-2">
+                        {deals.map((deal) => (
+                          <Card
+                            key={deal.id}
+                            className={cn(onDealClick && "cursor-pointer hover:bg-muted/50")}
+                            onClick={() => onDealClick?.(deal)}
+                          >
+                            <CardContent className="p-3">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-sm">{deal.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {deal.stage?.name}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {deal.value > 0 && (
+                                    <Badge variant="outline">
+                                      {new Intl.NumberFormat("pt-BR", {
+                                        style: "currency",
+                                        currency: "BRL",
+                                      }).format(deal.value)}
+                                    </Badge>
+                                  )}
+                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {deal.value > 0 && (
-                                  <Badge variant="outline">
-                                    {new Intl.NumberFormat("pt-BR", {
-                                      style: "currency",
-                                      currency: "BRL",
-                                    }).format(deal.value)}
-                                  </Badge>
-                                )}
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                        {lockedDeals.map((deal) => (
+                          <Card key={deal.id} className="border-dashed bg-muted/30">
+                            <CardContent className="p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="font-medium text-sm truncate">{deal.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {[deal.stage_name, deal.responsible_name && `Responsável: ${deal.responsible_name}`]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </p>
+                                </div>
+                                <Badge variant="secondary" className="shrink-0 gap-1">
+                                  <Lock className="h-3 w-3" />
+                                  Com outro responsável
+                                </Badge>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <Separator />
