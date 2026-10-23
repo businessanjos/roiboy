@@ -1,4 +1,6 @@
 import { useMemo, useRef, useState } from "react";
+import { History } from "lucide-react";
+import { ZappSequenceHistoryList } from "@/components/royzapp/ZappSequenceHistoryList";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
