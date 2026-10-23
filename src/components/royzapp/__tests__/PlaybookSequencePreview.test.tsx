@@ -114,4 +114,17 @@ describe("PlaybookSequencePreview", () => {
     expect(bold?.textContent).toBe("Tudo bem");
     expect(preview.textContent || "").not.toContain("*");
   });
+
+  it("mantém @menção como texto literal, sem destaque", () => {
+    const withMention = [makeItem("m", "Menção", "oi @Fulano tudo bem?")];
+    render(
+      <PlaybookSequencePreview
+        steps={[{ playbook_item_id: "m", delay_seconds: 5 }]}
+        items={withMention}
+      />
+    );
+    const preview = screen.getByTestId("sequence-preview");
+    expect(preview.textContent || "").toContain("oi @Fulano tudo bem?");
+    expect(preview.querySelector(".text-\\[\\#53bdeb\\]")).toBeNull();
+  });
 });
