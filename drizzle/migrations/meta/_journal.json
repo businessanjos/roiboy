@@ -239,6 +239,13 @@
       "when": 1792784261922,
       "tag": "0033_zapp_infer_sender_phone_match",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792784366168,
+      "tag": "0034_zapp_metrics_conversation_display_name",
+      "breakpoints": true
     }
   ]
 }
