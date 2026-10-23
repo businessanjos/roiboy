@@ -30089,6 +30089,17 @@ export type Database = {
           vnps_score: number
         }[]
       }
+      get_lead_deal_presence: {
+        Args: { p_lead_id: string }
+        Returns: {
+          can_view: boolean
+          id: string
+          responsible_name: string
+          stage_name: string
+          status: string
+          title: string
+        }[]
+      }
       get_my_account_id: { Args: never; Returns: string }
       get_my_user_accounts: {
         Args: never
