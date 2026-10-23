@@ -32,6 +32,8 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
   const [draft, setDraft] = useState<Draft | null>(null);
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const pendingStepRef = useRef<number | null>(null);
 
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const filtered = sequences.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()));
