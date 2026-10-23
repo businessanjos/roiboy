@@ -59,6 +59,7 @@ import {
   UserX,
   Users,
 } from "lucide-react";
+import { Info, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ZappContactsBreakdownDialog } from "./ZappContactsBreakdownDialog";
 import { ZappNewConversationsDialog, type NewConvFilter } from "./ZappNewConversationsDialog";
