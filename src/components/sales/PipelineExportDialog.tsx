@@ -100,7 +100,7 @@ export function PipelineExportDialog({
     if (!open || !currentUser?.account_id) return;
 
     const fetchData = async () => {
-      const [fieldsRes, productsRes] = await Promise.all([
+      const [fieldsRes, productsRes, pipelinesRes] = await Promise.all([
         supabase
           .from("custom_fields")
           .select("id, name, field_type, options")
