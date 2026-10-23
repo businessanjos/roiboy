@@ -195,7 +195,7 @@ export function PipelineExportDialog({
         const { data: batch, error } = await supabase
           .from("deals")
           .select(
-            `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id, client_id,
+            `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, pipeline_id, responsible_user_id, lead_id, client_id,
             leads(full_name, phone, email),
             clients!deals_client_id_fkey(full_name, phone_e164, emails)`
           )
