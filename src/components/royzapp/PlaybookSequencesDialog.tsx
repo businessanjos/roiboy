@@ -176,10 +176,15 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
                   </div>
                 </div>
               ))}
-              <Button variant="outline" size="sm" disabled={draft.steps.length >= SEQUENCE_MAX_STEPS}
-                onClick={() => setDraft({ ...draft, steps: [...draft.steps, { playbook_item_id: "", delay_seconds: 5 }] })}>
-                <Plus className="mr-1 h-4 w-4" /> Adicionar mensagem
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" disabled={draft.steps.length >= SEQUENCE_MAX_STEPS}
+                  onClick={() => setDraft({ ...draft, steps: [...draft.steps, { playbook_item_id: "", delay_seconds: 5 }] })}>
+                  <Plus className="mr-1 h-4 w-4" /> Adicionar mensagem
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => openCreateForm(null)}>
+                  <Plus className="mr-1 h-4 w-4" /> Nova mensagem
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground">Até {SEQUENCE_MAX_STEPS} mensagens, com espera de {SEQUENCE_MIN_DELAY} a {SEQUENCE_MAX_DELAY} segundos entre elas.</p>
             </div>
 
