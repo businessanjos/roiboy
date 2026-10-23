@@ -13,7 +13,7 @@ import { PlaybookSequencePreview } from "@/components/royzapp/PlaybookSequencePr
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   usePlaybookSequences, PlaybookSequence, SequenceStep, SEQUENCE_MAX_STEPS,
-  SEQUENCE_MIN_DELAY, SEQUENCE_MAX_DELAY, clampDelay, startSequenceRun,
+  SEQUENCE_MIN_DELAY, SEQUENCE_MAX_DELAY, clampDelay, startSequenceRun, normalizeSequenceSteps,
 } from "@/hooks/usePlaybookSequences";
 
 interface Props {
@@ -40,9 +40,9 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const filtered = sequences.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()));
 
-  const newDraft = () => setDraft({ name: "", visibility: "sector", steps: [{ playbook_item_id: "", delay_seconds: 5 }] });
+  const newDraft = () => setDraft({ name: "", visibility: "sector", steps: [{ playbook_item_id: "", delay_seconds: 0 }] });
   const editDraft = (s: PlaybookSequence, copy = false) =>
-    setDraft({ id: copy ? undefined : s.id, name: copy ? `${s.name} (cópia)` : s.name, visibility: s.visibility, steps: s.steps.map((st) => ({ ...st })) });
+    setDraft({ id: copy ? undefined : s.id, name: copy ? `${s.name} (cópia)` : s.name, visibility: s.visibility, steps: normalizeSequenceSteps(s.steps.map((st) => ({ ...st }))) });
 
   const updateStep = (i: number, patch: Partial<SequenceStep>) =>
     setDraft((d) => d && { ...d, steps: d.steps.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
@@ -53,7 +53,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
       const j = i + dir;
       if (j < 0 || j >= steps.length) return d;
       [steps[i], steps[j]] = [steps[j], steps[i]];
-      return { ...d, steps };
+      return { ...d, steps: normalizeSequenceSteps(steps) };
     });
 
   const handleSave = async () => {
@@ -115,13 +115,13 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) setDraft(null); onOpenChange(v); }}>
-      <DialogContent className={`grid-cols-1 max-h-[85vh] overflow-y-auto ${draft ? "max-w-4xl" : "max-w-2xl"}`}>
+      <DialogContent className={`grid-cols-1 overflow-y-auto max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:rounded-none sm:max-h-[92vh] ${draft ? "max-w-6xl" : "max-w-2xl"}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><ListOrdered className="h-5 w-5" /> Sequências do Playbook</DialogTitle>
         </DialogHeader>
 
         {draft ? (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_350px]">
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
               <div className="space-y-1.5">
@@ -143,7 +143,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
             <div className="space-y-2">
               <Label>Mensagens, na ordem de envio</Label>
               {draft.steps.map((st, i) => (
-                <div key={i} className="flex flex-wrap items-center gap-2 rounded-md border p-2">
+                <div key={i} className="flex flex-wrap items-center gap-2 rounded-md border p-2.5">
                   <span className="w-5 text-center text-xs font-semibold text-muted-foreground">{i + 1}</span>
                   <PlaybookItemSelect
                     items={items}
@@ -151,25 +151,29 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
                     onChange={(id) => updateStep(i, { playbook_item_id: id })}
                     onCreate={() => openCreateForm(i)}
                     ariaLabel={`Mensagem ${i + 1} da sequência`}
-                    className="min-w-0 flex-1 basis-48"
+                    className="min-w-0 flex-1 basis-56"
                   />
-                  {i < draft.steps.length - 1 && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <span>esperar</span>
-                      <Input
-                        type="number" min={SEQUENCE_MIN_DELAY} max={SEQUENCE_MAX_DELAY} className="h-9 w-20"
-                        aria-label={`Segundos após a mensagem ${i + 1}`}
-                        value={st.delay_seconds}
-                        onChange={(e) => updateStep(i, { delay_seconds: Number(e.target.value) })}
-                        onBlur={(e) => updateStep(i, { delay_seconds: clampDelay(Number(e.target.value)) })}
-                      />
-                      <span>s</span>
-                    </div>
-                  )}
+                  <div className="flex w-[8.5rem] shrink-0 items-center justify-end gap-1 text-xs text-muted-foreground">
+                    {i === 0 ? (
+                      <span className="inline-flex h-9 w-full items-center justify-center rounded-md border border-dashed text-xs font-medium">Instantâneo</span>
+                    ) : (
+                      <>
+                        <span>aguardar</span>
+                        <Input
+                          type="number" min={SEQUENCE_MIN_DELAY} max={SEQUENCE_MAX_DELAY} className="h-9 w-16 px-2"
+                          aria-label={`Segundos antes da mensagem ${i + 1}`}
+                          value={st.delay_seconds}
+                          onChange={(e) => updateStep(i, { delay_seconds: Number(e.target.value) })}
+                          onBlur={(e) => updateStep(i, { delay_seconds: clampDelay(Number(e.target.value)) })}
+                        />
+                        <span>s</span>
+                      </>
+                    )}
+                  </div>
                   <div className="flex">
                     <Button variant="ghost" size="icon" aria-label="Subir" disabled={i === 0} onClick={() => moveStep(i, -1)}><ArrowUp className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" aria-label="Descer" disabled={i === draft.steps.length - 1} onClick={() => moveStep(i, 1)}><ArrowDown className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" aria-label="Remover" className="text-destructive" onClick={() => setDraft({ ...draft, steps: draft.steps.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" aria-label="Remover" className="text-destructive" onClick={() => setDraft({ ...draft, steps: normalizeSequenceSteps(draft.steps.filter((_, j) => j !== i)) })}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
               ))}
@@ -182,7 +186,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
                   <Plus className="mr-1 h-4 w-4" /> Nova mensagem
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Até {SEQUENCE_MAX_STEPS} mensagens, com espera de {SEQUENCE_MIN_DELAY} a {SEQUENCE_MAX_DELAY} segundos entre elas.</p>
+              <p className="text-xs text-muted-foreground">Até {SEQUENCE_MAX_STEPS} mensagens, A 1ª sai no clique; cada seguinte aguarda de {SEQUENCE_MIN_DELAY} a {SEQUENCE_MAX_DELAY} segundos após o envio da anterior.</p>
             </div>
 
             <div className="flex justify-end gap-2">
