@@ -230,8 +230,6 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
           <TooltipContent side="bottom">Grupos</TooltipContent>
         </Tooltip>
       </div>
-      </div>
-
       {/* Status indicators — compactos em telas pequenas */}
       <div className="hidden lg:flex items-center gap-2 pl-1 text-xs shrink-0">
         <ZappRoleHelpPopover currentRole={zappRole ?? undefined} />
@@ -247,6 +245,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
             {totalQueueConversations}
           </Badge>
         )}
+      </div>
       </div>
 
     </div>
