@@ -134,6 +134,14 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
     } catch (err) {
       await supabase.from("zapp_sequence_run_steps").update({ status: "failed", last_error: String((err as Error).message).slice(0, 400) }).eq("id", step.id);
     }
+    // A espera do próximo passo conta a partir do envio real deste (não do clique)
+    const { data: nextStep } = await supabase.from("zapp_sequence_run_steps").select("id, delay_seconds")
+      .eq("run_id", runId).eq("status", "pending").order("position").limit(1).maybeSingle();
+    if (nextStep) {
+      const d = Math.max(0, Math.min(300, Number(nextStep.delay_seconds) || 0));
+      await supabase.from("zapp_sequence_run_steps").update({ scheduled_at: new Date(Date.now() + d * 1000).toISOString() })
+        .eq("id", nextStep.id).eq("status", "pending");
+    }
   }
 
   // Ainda há passos: reagenda (somente se a run continua ativa)

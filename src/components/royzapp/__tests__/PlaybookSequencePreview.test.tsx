@@ -60,7 +60,7 @@ describe("PlaybookSequencePreview", () => {
     expect(text.indexOf("Passando para saber")).toBeLessThan(text.indexOf("Olá {{nome}}!"));
   });
 
-  it("mostra a espera da mensagem anterior entre as bolhas", () => {
+  it("mostra a espera configurada na própria mensagem entre as bolhas", () => {
     render(
       <PlaybookSequencePreview
         steps={[
@@ -70,8 +70,8 @@ describe("PlaybookSequencePreview", () => {
         items={items}
       />
     );
-    expect(screen.getByText(/aguarda 42s/)).toBeInTheDocument();
-    expect(screen.queryByText(/aguarda 7s/)).not.toBeInTheDocument();
+    expect(screen.getByText(/aguarda 7s/)).toBeInTheDocument();
+    expect(screen.queryByText(/aguarda 42s/)).not.toBeInTheDocument();
   });
 
   it("ignora etapas sem mensagem selecionada", () => {

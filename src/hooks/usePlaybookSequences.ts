@@ -76,7 +76,7 @@ export function usePlaybookSequences(sectorId?: string | null) {
         id = data.id;
       }
       const { error: stepErr } = await db.from("playbook_sequence_steps").insert(
-        steps.map((s, i) => ({ sequence_id: id, account_id: accountId, playbook_item_id: s.playbook_item_id, position: i, delay_seconds: clampDelay(s.delay_seconds) })),
+        normalizeSequenceSteps(steps).map((s, i) => ({ sequence_id: id, account_id: accountId, playbook_item_id: s.playbook_item_id, position: i, delay_seconds: s.delay_seconds })),
       );
       if (stepErr) throw stepErr;
     },
