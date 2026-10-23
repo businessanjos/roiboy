@@ -7,6 +7,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { friendlyError } from "./friendlyError.ts";
 
 const BUDGET_MS = 110_000;
 const MAX_HOPS = 25;
@@ -51,7 +52,7 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
   const { data: run } = await supabase.from("zapp_sequence_runs").select("*").eq("id", runId).maybeSingle();
   if (!run || run.status !== "running") return json({ ok: true, idle: true });
   if ((run.hops || 0) >= MAX_HOPS) {
-    await supabase.from("zapp_sequence_runs").update({ status: "failed", cancel_reason: "limite de reagendamentos", finished_at: new Date().toISOString() }).eq("id", runId);
+    await supabase.from("zapp_sequence_runs").update({ status: "failed", cancel_reason: "O envio demorou além do limite e foi interrompido", finished_at: new Date().toISOString() }).eq("id", runId);
     return json({ ok: false });
   }
 
@@ -63,7 +64,7 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
   const integration = usable.find((i: any) => i.id === conv?.integration_id) || usable.find((i: any) => i.sector_id === conv?.sector_id) || null;
 
   if (!conv || !integration) {
-    await supabase.from("zapp_sequence_runs").update({ status: "failed", cancel_reason: "nenhuma conexão WhatsApp disponível", finished_at: new Date().toISOString() }).eq("id", runId);
+    await supabase.from("zapp_sequence_runs").update({ status: "failed", cancel_reason: "Nenhum WhatsApp conectado neste setor", finished_at: new Date().toISOString() }).eq("id", runId);
     await supabase.from("zapp_sequence_run_steps").update({ status: "cancelled" }).eq("run_id", runId).eq("status", "pending");
     return json({ ok: false });
   }
@@ -150,7 +151,25 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
       await supabase.from("zapp_conversations").update({ last_message_at: now, last_message_preview: preview.substring(0, 100) }).eq("id", conv.id);
       await supabase.from("zapp_sequence_runs").update({ sent_steps: (run.sent_steps = (run.sent_steps || 0) + 1) }).eq("id", runId);
     } catch (err) {
-      await supabase.from("zapp_sequence_run_steps").update({ status: "failed", last_error: String((err as Error).message).slice(0, 400) }).eq("id", step.id);
+      const raw = String((err as Error).message || "");
+      console.error("[sequence] falha no passo", step.id, raw.slice(0, 400));
+      const msg = friendlyError(raw, step.content_type);
+      await supabase.from("zapp_sequence_run_steps").update({ status: "failed", last_error: msg }).eq("id", step.id);
+      // Avisa quem disparou, em qualquer tela (igual às notificações de novas mensagens)
+      if (run.triggered_by) {
+        const contact = conv?.id ? (await supabase.from("zapp_conversations").select("contact_name").eq("id", conv.id).maybeSingle()).data?.contact_name : null;
+        await supabase.from("notifications").insert({
+          account_id: run.account_id,
+          user_id: run.triggered_by,
+          type: "zapp_sequence_failed",
+          title: `Falha ao enviar "${step.name || "mensagem"}"`,
+          content: `Sequência "${run.sequence_name || ""}"${contact ? ` para ${contact}` : ""}: ${msg}`,
+          link: `/roy-zapp?conversation=${conv.id}`,
+          source_type: "zapp_sequence",
+          source_id: runId,
+          sector_id: "vendas",
+        }).then(({ error }: any) => { if (error) console.error("[sequence] notificação", error.message); });
+      }
     }
     // A espera do próximo passo conta a partir do envio real deste (não do clique)
     const { data: nextStep } = await supabase.from("zapp_sequence_run_steps").select("id, delay_seconds, position")
