@@ -141,6 +141,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
       className={cn(
         "relative cursor-pointer hover:shadow-md transition-all duration-200 bg-card border-border/40 overflow-hidden group",
         isRenewal && "ring-1 ring-warning/40 bg-warning/5",
+        (deal.typeform_reapplication_count ?? 0) > 0 && "ring-1 ring-info/50 bg-info/5",
         (isDragging || isSortableDragging) && "opacity-30 shadow-none scale-95 border-dashed border-primary/40"
       )}
       onClick={onClick}
@@ -186,6 +187,20 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
             {formatCurrency(deal.value)}
           </span>
         </div>
+
+        {(deal.typeform_reapplication_count ?? 0) > 0 && (
+          <div className="flex flex-wrap items-center gap-1 rounded border border-info/30 bg-info/10 px-1.5 py-1 text-info text-[10px]"
+            title="Nova resposta de formulário recebida neste negócio. A etapa e o responsável foram mantidos.">
+            <RefreshCw className="h-3 w-3 shrink-0" />
+            <span className="font-semibold">Aplicou novamente</span>
+            {(deal.typeform_reapplication_count ?? 0) > 1 && <span>· {deal.typeform_reapplication_count} vezes</span>}
+            {deal.typeform_last_reapplication_at && (
+              <span className="w-full text-[9px]">
+                {new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(deal.typeform_last_reapplication_at))}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Row 2: Renewal badge */}
         {isRenewal && (
