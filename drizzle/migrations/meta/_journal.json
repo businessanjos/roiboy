@@ -176,6 +176,13 @@
       "when": 1792782205730,
       "tag": "0024_zapp_metrics_window_speedup",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792782466280,
+      "tag": "0025_zapp_metrics_internal_contacts_once",
+      "breakpoints": true
     }
   ]
 }
