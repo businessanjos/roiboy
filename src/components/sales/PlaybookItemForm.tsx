@@ -417,11 +417,13 @@ export function PlaybookItemForm({
           ...input,
         });
       } else {
-        await createItemAsync(input);
+        const created = await createItemAsync(input);
+        onClose(created ?? null);
+        return;
       }
 
       console.log('[Playbook Form] Item saved successfully');
-      onClose();
+      onClose(null);
     } catch (error: any) {
       console.error('[Playbook Form] Error saving:', error);
       toast.error('Erro ao salvar: ' + (error.message || 'Erro desconhecido'));
