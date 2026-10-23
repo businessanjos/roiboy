@@ -30434,6 +30434,10 @@ export type Database = {
         Args: { _auth_user_id: string; _sector_id: string }
         Returns: boolean
       }
+      zapp_is_followup_group: {
+        Args: { _conv: string; _name: string }
+        Returns: boolean
+      }
       zapp_is_internal_contact: {
         Args: { _account: string; _phone: string }
         Returns: boolean
