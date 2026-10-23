@@ -8,6 +8,12 @@ if (!(Element.prototype as any).hasPointerCapture) (Element.prototype as any).ha
 if (!(Element.prototype as any).setPointerCapture) (Element.prototype as any).setPointerCapture = () => {};
 if (!(Element.prototype as any).releasePointerCapture) (Element.prototype as any).releasePointerCapture = () => {};
 if (!(Element.prototype as any).scrollIntoView) (Element.prototype as any).scrollIntoView = () => {};
+// cmdk mede a lista com ResizeObserver, que o jsdom não traz.
+if (!(globalThis as any).ResizeObserver) {
+  (globalThis as any).ResizeObserver = class {
+    observe() {} unobserve() {} disconnect() {}
+  };
+}
 
 const mk = (id: string, name: string, content_type = 'text') =>
   ({ id, account_id: 'a1', folder_id: null, name, content_type, text_content: 'oi', position: 0 }) as PlaybookItem;
