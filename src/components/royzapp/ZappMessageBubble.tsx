@@ -20,6 +20,7 @@ import {
   SmilePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { applyWhatsAppFormatting } from "@/lib/whatsappFormatting";
 import { Message, getSenderColor } from "./types";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
