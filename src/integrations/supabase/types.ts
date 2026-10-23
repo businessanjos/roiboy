@@ -29101,6 +29101,7 @@ export type Database = {
           claimed_at: string | null
           content_type: string
           created_at: string
+          delay_seconds: number
           external_message_id: string | null
           id: string
           last_error: string | null
@@ -29120,6 +29121,7 @@ export type Database = {
           claimed_at?: string | null
           content_type: string
           created_at?: string
+          delay_seconds?: number
           external_message_id?: string | null
           id?: string
           last_error?: string | null
@@ -29139,6 +29141,7 @@ export type Database = {
           claimed_at?: string | null
           content_type?: string
           created_at?: string
+          delay_seconds?: number
           external_message_id?: string | null
           id?: string
           last_error?: string | null
@@ -29859,6 +29862,7 @@ export type Database = {
           claimed_at: string | null
           content_type: string
           created_at: string
+          delay_seconds: number
           external_message_id: string | null
           id: string
           last_error: string | null
