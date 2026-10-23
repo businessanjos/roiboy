@@ -899,3 +899,12 @@
   }
 }
 
+
+/* Prévia de celular do Playbook: rolagem discreta, igual ao WhatsApp no aparelho */
+.phone-preview-scroll {
+  scrollbar-width: none;
+}
+.phone-preview-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
