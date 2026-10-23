@@ -218,6 +218,13 @@
       "when": 1792783914435,
       "tag": "0030_zapp_metrics_exclude_jonathan_cs",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792783961205,
+      "tag": "0031_zapp_metrics_exclude_jessica_marcato_cs",
+      "breakpoints": true
     }
   ]
 }
