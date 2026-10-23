@@ -207,12 +207,37 @@ function SortHeader({ label, active, dir, onClick }: SortHeaderProps) {
 }
 
 
+function computeRange(period: string, from: string, to: string, today: Date): { start: Date | null; end: Date | null } {
+  const y = today.getFullYear(), m = today.getMonth();
+  const endOfDay = (d: Date) => { const e = new Date(d); e.setHours(23, 59, 59, 999); return e; };
+  switch (period) {
+    case "all": return { start: null, end: null };
+    case "this_month": return { start: new Date(y, m, 1), end: null };
+    case "last_month": return { start: new Date(y, m - 1, 1), end: endOfDay(new Date(y, m, 0)) };
+    case "this_quarter": return { start: new Date(y, Math.floor(m / 3) * 3, 1), end: null };
+    case "this_year": return { start: new Date(y, 0, 1), end: null };
+    case "last_year": return { start: new Date(y - 1, 0, 1), end: endOfDay(new Date(y - 1, 11, 31)) };
+    case "custom": {
+      const s = from ? parseLocalDate(from) : null;
+      const e = to ? parseLocalDate(to) : null;
+      return { start: s ?? null, end: e ? endOfDay(e) : null };
+    }
+    default: {
+      const s = new Date(today); s.setDate(today.getDate() - (parseInt(period) || 90));
+      return { start: s, end: null };
+    }
+  }
+}
+
 export function RenewalLosses() {
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [items, setItems] = useState<ExpiredContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterPeriod, setFilterPeriod] = useState("90");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [dateBasis, setDateBasis] = useState<"resolved" | "end">("resolved");
   const [filterConsultora, setFilterConsultora] = useState<string[]>([]);
   const [filterProduto, setFilterProduto] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
@@ -236,10 +261,8 @@ export function RenewalLosses() {
 
     try {
       const today = new Date();
-      const isAllPeriod = filterPeriod === "all";
-      const daysBack = parseInt(filterPeriod);
-      const cutoff = new Date(today);
-      if (!isAllPeriod) cutoff.setDate(today.getDate() - daysBack);
+      const { start: rangeStart, end: rangeEnd } = computeRange(filterPeriod, customFrom, customTo, today);
+      const isAllPeriod = !rangeStart && !rangeEnd;
       const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
       // 1) Source of truth for "Resultados": explicit outcomes (renovado / perdido)
@@ -330,9 +353,13 @@ export function RenewalLosses() {
       // falling back to the contract end_date when there is no resolution date.
       const inPeriod = (item: ExpiredContract) => {
         if (isAllPeriod) return true;
-        const ref = item.resolved_at ? new Date(item.resolved_at) : parseLocalDate(item.end_date);
+        const ref = dateBasis === "end"
+          ? parseLocalDate(item.end_date)
+          : (item.resolved_at ? new Date(item.resolved_at) : parseLocalDate(item.end_date));
         if (!ref) return false;
-        return ref.getTime() >= cutoff.getTime();
+        if (rangeStart && ref.getTime() < rangeStart.getTime()) return false;
+        if (rangeEnd && ref.getTime() > rangeEnd.getTime()) return false;
+        return true;
       };
 
       const resolvedItems = mapped.filter(
@@ -351,7 +378,7 @@ export function RenewalLosses() {
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.account_id, currentUser?.id, currentUser?.role, currentUser?.is_also_admin, filterPeriod, hasFullAccess]);
+  }, [currentUser?.account_id, currentUser?.id, currentUser?.role, currentUser?.is_also_admin, filterPeriod, customFrom, customTo, dateBasis, hasFullAccess]);
 
 
   useEffect(() => {
@@ -540,7 +567,7 @@ export function RenewalLosses() {
   });
 
   const pg = usePagedList(sortedItems, {
-    resetKey: [filterConsultora, filterProduto, filterStatus, filterMotivo, filterPeriod, searchClient, sortKey, sortDir],
+    resetKey: [filterConsultora, filterProduto, filterStatus, filterMotivo, filterPeriod, customFrom, customTo, dateBasis, searchClient, sortKey, sortDir],
     isLoading: loading,
   });
   const paginatedItems = pg.items;
@@ -555,20 +582,45 @@ export function RenewalLosses() {
     <div className="space-y-6">
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
+        <Select value={dateBasis} onValueChange={(v) => setDateBasis(v as "resolved" | "end")}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="resolved">Data do status</SelectItem>
+            <SelectItem value="end">Data de vencimento</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={filterPeriod} onValueChange={setFilterPeriod}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[190px]">
             <SelectValue placeholder="Período" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="7">Últimos 7 dias</SelectItem>
             <SelectItem value="30">Últimos 30 dias</SelectItem>
             <SelectItem value="90">Últimos 90 dias</SelectItem>
             <SelectItem value="180">Últimos 6 meses</SelectItem>
             <SelectItem value="365">Último ano</SelectItem>
+            <SelectItem value="this_month">Este mês</SelectItem>
+            <SelectItem value="last_month">Mês passado</SelectItem>
+            <SelectItem value="this_quarter">Este trimestre</SelectItem>
+            <SelectItem value="this_year">Este ano</SelectItem>
+            <SelectItem value="last_year">Ano passado</SelectItem>
+            <SelectItem value="custom">Personalizado…</SelectItem>
             <SelectItem value="all">Todo o período</SelectItem>
           </SelectContent>
         </Select>
+        {filterPeriod === "custom" && (
+          <div className="flex items-center gap-2">
+            <Input type="date" aria-label="De" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="w-[150px]" />
+            <span className="text-xs text-muted-foreground">até</span>
+            <Input type="date" aria-label="Até" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="w-[150px]" />
+          </div>
+        )}
         <p className="text-xs text-muted-foreground self-center">
-          Período considera a data em que a consultora registrou o status (Renovado / Cancelou).
+          {dateBasis === "resolved"
+            ? "Período pela data em que a consultora registrou o status (Renovado / Cancelou)."
+            : "Período pela data de vencimento do contrato."}
         </p>
         {canSeeAllSequenceRuns(currentUser as any) && (
           <Button
