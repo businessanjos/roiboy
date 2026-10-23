@@ -120,6 +120,13 @@
       "when": 1792769264115,
       "tag": "0016_lead_deal_presence_rpc",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792778717881,
+      "tag": "0017_zapp_metrics_exclude_lucas",
+      "breakpoints": true
     }
   ]
 }
