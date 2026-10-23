@@ -253,6 +253,13 @@
       "when": 1792791796745,
       "tag": "0035_typeform_auto_sale_origin",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792793408486,
+      "tag": "0036_deal_typeform_reapplications",
+      "breakpoints": true
     }
   ]
 }
