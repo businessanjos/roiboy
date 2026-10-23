@@ -399,6 +399,8 @@ export function PipelineExportDialog({
           row.push(contactPhone);
         if (selectedFixed.has("lead_email"))
           row.push(contactEmail);
+        if (selectedFixed.has("pipeline"))
+          row.push(deal.pipeline_id ? pipelinesMap[deal.pipeline_id] || "" : "");
         if (selectedFixed.has("stage"))
           row.push(stagesMap[deal.stage_id] || "");
         if (selectedFixed.has("responsible"))
