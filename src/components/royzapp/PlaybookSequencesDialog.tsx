@@ -26,7 +26,7 @@ interface Props {
 type Draft = { id?: string; name: string; visibility: "personal" | "sector"; steps: SequenceStep[] };
 
 export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversationId, variables = {}, buildText }: Props) {
-  const { items, replaceVariables } = usePlaybook({ sectorId });
+  const { items, folders, replaceVariables } = usePlaybook({ sectorId });
   const { sequences, isLoading, save, isSaving, remove } = usePlaybookSequences(sectorId);
   const { currentUser } = useCurrentUser();
   const [draft, setDraft] = useState<Draft | null>(null);
