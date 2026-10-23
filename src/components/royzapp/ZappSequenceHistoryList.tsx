@@ -36,6 +36,7 @@ interface RunStepRow {
 const STATUS_LABEL: Record<string, string> = {
   running: "Em andamento",
   completed: "Concluída",
+  done: "Concluída",
   cancelled: "Cancelada",
   failed: "Falhou",
 };
@@ -43,6 +44,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_CLASS: Record<string, string> = {
   running: "bg-primary/15 text-primary",
   completed: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  done: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
   cancelled: "bg-muted text-muted-foreground",
   failed: "bg-destructive/15 text-destructive",
 };
