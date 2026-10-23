@@ -14,20 +14,23 @@ O Playbook do chat já permite marcar vários itens e enviar em fila, com um ún
 2. **Lista de sequências**
    - Nova seção "Sequências" no Playbook, com busca, editar, duplicar e excluir (só quem criou, ou gestor).
 
-3. **Disparar no chat**
-   - No Playbook aberto dentro da conversa, a aba "Sequências" mostra as salvas; um clique em "Enviar" dispara todos os passos na ordem, com os tempos definidos.
-   - Aviso de progresso ("Enviando 2/5... próximo em 8s") e botão **Cancelar** para parar o restante.
+3. **Disparar no chat, rodando em segundo plano**
+   - No Playbook aberto dentro da conversa, a aba "Sequências" mostra as salvas; um clique em "Enviar" agenda todos os passos.
+   - O envio acontece pelo próprio ROY, não pela tela: você pode ir para outra conversa, outra página ou até fechar o navegador que a sequência continua respeitando os tempos.
+   - Na conversa aparece uma faixa discreta "Sequência X em andamento (2/5)" com botão **Cancelar**.
+   - **Interrupção automática:** se você (ou outra pessoa da equipe) mandar uma mensagem manual nessa mesma conversa, os passos restantes são cancelados na hora. Resposta do cliente não interrompe.
    - Variáveis como {primeiro_nome} continuam sendo trocadas em cada mensagem.
 
 4. **Segurança contra bloqueio do WhatsApp**
-   - Intervalo mínimo de 1s, máximo de 15 passos por sequência e uma sequência por vez na mesma conversa.
+   - Intervalo mínimo de 1s, máximo de 15 passos por sequência e uma sequência ativa por vez na mesma conversa.
 
 ## Fora do escopo
 - Agendamento para outro dia (isso já é a Régua de Relacionamento).
 - Disparo para vários contatos ao mesmo tempo (proibido pela regra anti-ban).
 
 ## Detalhes técnicos
-- Novas tabelas `playbook_sequences` (nome, visibilidade, setor, criador, conta) e `playbook_sequence_steps` (sequence_id, playbook_item_id, position, delay_seconds), com GRANTs e RLS no mesmo padrão de `playbook_items` (conta + visibilidade pessoal/setor).
-- Hook `usePlaybookSequences` (CRUD via react-query).
-- UI: `PlaybookSequenceForm` e aba "Sequências" em `PlaybookDialog.tsx` e `ZappPlaybookList.tsx`.
-- Envio: estender `handleMultiSend` em `RoyZapp.tsx` para aceitar delay por passo e cancelamento (ref de abort), reutilizando `sendSinglePlaybookItem`.
+- Tabelas de modelo: `playbook_sequences` (nome, visibilidade, setor, criador, conta) e `playbook_sequence_steps` (sequence_id, playbook_item_id, position, delay_seconds), com GRANTs e RLS no padrão de `playbook_items`.
+- Tabelas de execução: `zapp_sequence_runs` (conversa, sequência, quem disparou, status running/done/cancelled/failed, motivo) e `zapp_sequence_run_steps` (snapshot do conteúdo já com variáveis trocadas, scheduled_at, status, erro). RLS por conta + acesso ao setor.
+- Nova função de servidor `zapp-sequence-dispatcher`: acionada no momento do disparo e reagendada para cada próximo passo (sem varredura permanente); usa claim atômico para não enviar em dobro e envia pelo mesmo caminho UAZAPI da Régua (`zapp-ruler-dispatcher`), gravando a mensagem com `sender_user_id` de quem disparou.
+- Interrupção: trigger em `zapp_messages` (outbound, manual, não originada pela sequência) cancela runs ativas daquela conversa; mensagens da sequência são marcadas para não acionar o trigger.
+- UI: hook `usePlaybookSequences`, `PlaybookSequenceForm`, aba "Sequências" em `PlaybookDialog.tsx`/`ZappPlaybookList.tsx` e faixa de progresso em realtime no chat. O envio em fila atual (sem salvar) continua existindo.
