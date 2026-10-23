@@ -30709,8 +30709,23 @@ export type Database = {
           unread: number
         }[]
       }
+      zapp_norm_name: { Args: { _s: string }; Returns: string }
       zapp_norm_phone: { Args: { p: string }; Returns: string }
       zapp_phone_core: { Args: { _phone: string }; Returns: string }
+      zapp_productivity_agent_conversations: {
+        Args: {
+          _from: string
+          _include_groups?: boolean
+          _integration_id?: string
+          _limit?: number
+          _offset?: number
+          _origin?: string
+          _sector_id: string
+          _to: string
+          _user_id?: string
+        }
+        Returns: Json
+      }
       zapp_productivity_contacts: {
         Args: {
           _agent_user_id?: string
@@ -30765,6 +30780,14 @@ export type Database = {
       zapp_should_exclude_contact: {
         Args: { _account: string; _client_id: string; _phone: string }
         Returns: boolean
+      }
+      zapp_signature_name: { Args: { _content: string }; Returns: string }
+      zapp_signature_user_keys: {
+        Args: { _account: string }
+        Returns: {
+          id: string
+          key: string
+        }[]
       }
       zapp_user_can_use_view: {
         Args: { _sector: string; _user_id: string; _view: string }
