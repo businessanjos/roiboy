@@ -30710,6 +30710,10 @@ export type Database = {
         Args: { _auth_user_id: string; _sector_id: string }
         Returns: boolean
       }
+      zapp_infer_sender: {
+        Args: { _cid: string; _sent_at: string }
+        Returns: string
+      }
       zapp_is_followup_group: {
         Args: { _conv: string; _name: string }
         Returns: boolean
