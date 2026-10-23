@@ -30,7 +30,9 @@ export function RoyLogo({ className = "", size = "md" }: RoyLogoProps) {
     <img
       src={logoSrc}
       alt="ROY"
-      className={`object-contain ${sizeClasses[size]} ${className}`}
+      draggable={false}
+      onDragStart={(e) => e.preventDefault()}
+      className={`object-contain select-none ${sizeClasses[size]} ${className}`}
     />
   );
 }
