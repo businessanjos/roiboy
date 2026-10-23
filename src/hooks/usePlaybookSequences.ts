@@ -117,6 +117,23 @@ export function normalizeSequenceSteps<T extends { delay_seconds: number }>(step
   return steps.map((s, i) => ({ ...s, delay_seconds: i === 0 ? 0 : clampDelay(s.delay_seconds || 5) }));
 }
 
+/**
+ * Linhas dos passos de uma execução. `delay_seconds` é a espera ANTES do passo,
+ * contada pelo envio confirmado do anterior — precisa ir gravado, senão o envio sai sem pausa.
+ */
+export function buildRunStepRows(
+  steps: StartRunInput["steps"], runId: string, accountId: string, startMs: number,
+) {
+  const delays = steps.map((s) => s.delay_seconds);
+  const times = computeSequenceSchedule(delays, startMs);
+  return steps.map((s, i) => ({
+    run_id: runId, account_id: accountId, position: i, name: s.name, content_type: s.content_type,
+    text_content: s.text_content, media_url: s.media_url, media_filename: s.media_filename, media_caption: s.media_caption,
+    delay_seconds: effectiveDelay(delays, i),
+    scheduled_at: new Date(times[i]).toISOString(),
+  }));
+}
+
 export interface StartRunInput {
   conversationId: string;
   sequence: { id: string | null; name: string };
@@ -136,12 +153,9 @@ export async function startSequenceRun(input: StartRunInput, user: { id: string;
     if (String(error.code) === "23505") throw new Error("Já existe uma sequência em andamento nesta conversa.");
     throw error;
   }
-  const times = computeSequenceSchedule(steps.map((s) => s.delay_seconds), Date.now());
-  const { error: stepErr } = await db.from("zapp_sequence_run_steps").insert(steps.map((s, i) => ({
-    run_id: run.id, account_id: user.account_id, position: i, name: s.name, content_type: s.content_type,
-    text_content: s.text_content, media_url: s.media_url, media_filename: s.media_filename, media_caption: s.media_caption,
-    scheduled_at: new Date(times[i]).toISOString(),
-  })));
+  const { error: stepErr } = await db.from("zapp_sequence_run_steps").insert(
+    buildRunStepRows(steps, run.id, user.account_id, Date.now()),
+  );
   if (stepErr) {
     await db.from("zapp_sequence_runs").update({ status: "cancelled", cancel_reason: "erro ao agendar" }).eq("id", run.id);
     throw stepErr;
