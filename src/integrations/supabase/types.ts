@@ -28779,6 +28779,27 @@ export type Database = {
           },
         ]
       }
+      zapp_metrics_excluded_conversations: {
+        Row: {
+          account_id: string
+          conversation_id: string
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          account_id: string
+          conversation_id: string
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          conversation_id?: string
+          created_at?: string
+          created_by?: string | null
+        }
+        Relationships: []
+      }
       zapp_routing_audit_log: {
         Row: {
           account_id: string
@@ -30718,6 +30739,7 @@ export type Database = {
           _include_groups?: boolean
           _integration_id?: string
           _limit?: number
+          _mode?: string
           _offset?: number
           _origin?: string
           _sector_id: string

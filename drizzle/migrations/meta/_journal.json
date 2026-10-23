@@ -141,6 +141,13 @@
       "when": 1792779967301,
       "tag": "0019_zapp_followup_group_exclude_internal",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792780539604,
+      "tag": "0020_zapp_metrics_conversation_actions",
+      "breakpoints": true
     }
   ]
 }
