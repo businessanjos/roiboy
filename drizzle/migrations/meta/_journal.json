@@ -225,6 +225,13 @@
       "when": 1792783961205,
       "tag": "0031_zapp_metrics_exclude_jessica_marcato_cs",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792783995372,
+      "tag": "0032_zapp_metrics_cs_exclusions_allow_person_filter",
+      "breakpoints": true
     }
   ]
 }
