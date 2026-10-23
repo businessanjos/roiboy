@@ -197,6 +197,13 @@
       "when": 1792782939786,
       "tag": "0027_zapp_metrics_exclude_everton_cs",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1792783308111,
+      "tag": "0028_zapp_infer_sender_client_owner",
+      "breakpoints": true
     }
   ]
 }

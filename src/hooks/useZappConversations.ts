@@ -46,7 +46,7 @@ interface UseZappConversationsOptions {
 // hook is important: if this string is recreated on every render and is used in
 // callback dependency arrays, the RoyZapp data-loading effect re-runs
 // continuously and the screen flashes between loader and content in production.
-const ASSIGNMENTS_SELECT = `
+export const ASSIGNMENTS_SELECT = `
   *,
   agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
   department:zapp_departments(*),
