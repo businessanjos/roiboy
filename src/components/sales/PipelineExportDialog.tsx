@@ -130,6 +130,7 @@ export function PipelineExportDialog({
       setCustomFields(fields);
       setSelectedCustom(new Set(fields.map((f) => f.id)));
       setProducts(productsRes.data || []);
+      setPipelines(pipelinesRes.data || []);
     };
     fetchData();
   }, [open, currentUser?.account_id]);
