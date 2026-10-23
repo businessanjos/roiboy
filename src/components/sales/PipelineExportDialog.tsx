@@ -47,6 +47,7 @@ const FIXED_FIELDS = [
   { key: "lead_name", label: "Lead (nome)" },
   { key: "lead_phone", label: "Telefone do lead" },
   { key: "lead_email", label: "Email do lead" },
+  { key: "pipeline", label: "Funil" },
   { key: "stage", label: "Etapa" },
   { key: "responsible", label: "Responsável" },
   { key: "value", label: "Valor" },
@@ -82,6 +83,9 @@ export function PipelineExportDialog({
   // Products list
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
 
+  // Pipelines list (funis)
+  const [pipelines, setPipelines] = useState<{ id: string; name: string }[]>([]);
+
   // Custom fields definitions (show_in_deals)
   const [customFields, setCustomFields] = useState<CustomFieldDef[]>([]);
 
@@ -96,7 +100,7 @@ export function PipelineExportDialog({
     if (!open || !currentUser?.account_id) return;
 
     const fetchData = async () => {
-      const [fieldsRes, productsRes] = await Promise.all([
+      const [fieldsRes, productsRes, pipelinesRes] = await Promise.all([
         supabase
           .from("custom_fields")
           .select("id, name, field_type, options")
@@ -110,6 +114,11 @@ export function PipelineExportDialog({
           .eq("account_id", currentUser.account_id)
           .eq("is_active", true)
           .order("name"),
+        supabase
+          .from("pipelines")
+          .select("id, name")
+          .eq("account_id", currentUser.account_id)
+          .order("name"),
       ]);
 
       const fields: CustomFieldDef[] = (fieldsRes.data || []).map((f: any) => ({
@@ -121,6 +130,7 @@ export function PipelineExportDialog({
       setCustomFields(fields);
       setSelectedCustom(new Set(fields.map((f) => f.id)));
       setProducts(productsRes.data || []);
+      setPipelines(pipelinesRes.data || []);
     };
     fetchData();
   }, [open, currentUser?.account_id]);
@@ -185,7 +195,7 @@ export function PipelineExportDialog({
         const { data: batch, error } = await supabase
           .from("deals")
           .select(
-            `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id, client_id,
+            `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, pipeline_id, responsible_user_id, lead_id, client_id,
             leads(full_name, phone, email),
             clients!deals_client_id_fkey(full_name, phone_e164, emails)`
           )
@@ -223,6 +233,7 @@ export function PipelineExportDialog({
       const stagesMap = Object.fromEntries(stages.map((s) => [s.id, s.name]));
       const usersMap = Object.fromEntries(salesUsers.map((u) => [u.id, u.name]));
       const productsMap = Object.fromEntries(products.map((p) => [p.id, p.name]));
+      const pipelinesMap = Object.fromEntries(pipelines.map((p) => [p.id, p.name]));
 
       // Resolve field value to human-readable label
       const resolveLabel = (field: CustomFieldDef, rawValue: any): string => {
@@ -388,6 +399,8 @@ export function PipelineExportDialog({
           row.push(contactPhone);
         if (selectedFixed.has("lead_email"))
           row.push(contactEmail);
+        if (selectedFixed.has("pipeline"))
+          row.push(deal.pipeline_id ? pipelinesMap[deal.pipeline_id] || "" : "");
         if (selectedFixed.has("stage"))
           row.push(stagesMap[deal.stage_id] || "");
         if (selectedFixed.has("responsible"))
