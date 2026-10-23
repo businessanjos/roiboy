@@ -125,7 +125,7 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
         </div>
 
         {/* Conversa */}
-        <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-2 py-2.5">
+        <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto phone-preview-scroll px-2 py-2.5">
           <div className="mb-1 flex justify-center">
             <span className="rounded-md px-2 py-0.5 text-[10px] shadow-sm" style={{ background: wa("chip"), color: wa("meta") }}>HOJE</span>
           </div>
