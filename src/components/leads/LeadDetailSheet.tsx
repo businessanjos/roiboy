@@ -141,6 +141,7 @@ export function LeadDetailSheet({
   const canManageCustomFields = isAdmin || hasVendasAccess;
   const [lead, setLead] = useState<Lead | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealPresence, setDealPresence] = useState<DealPresence[]>([]);
   const [loading, setLoading] = useState(false);
   const [customFields, setCustomFields] = useState<LeadCustomField[]>([]);
   
@@ -238,6 +239,10 @@ export function LeadDetailSheet({
 
       if (dealsError) throw dealsError;
       setDeals(dealsData || []);
+
+      // Presença de negócios (inclui os que o usuário não pode abrir, p/ evitar duplicidade)
+      const { data: presenceData } = await supabase.rpc("get_lead_deal_presence", { p_lead_id: leadId });
+      setDealPresence((presenceData as DealPresence[] | null) || []);
 
       // Espelhar Item da Venda + Origem da Venda do deal mais recente que tenha valor.
       // Resolve IDs dinamicamente por NOME para não quebrar se o campo for renomeado/recriado.
