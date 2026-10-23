@@ -118,7 +118,7 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
       // Mesmo formato de id que o webhook grava (dono:id), para o eco não virar mensagem duplicada
       const fullId = [result?.id, result?.data?.id].find((x) => typeof x === "string" && x.includes(":"));
       const suffix = String(shortId).includes(":") ? String(shortId).split(":").pop()! : String(shortId);
-      const externalId = fullId || (conv.is_group ? suffix : (integration.config?.owner || cfg.owner ? `${(integration.config?.owner || cfg.owner)}:${suffix}` : suffix));
+      const externalId = fullId || suffix;
 
       // Marca o id antes de gravar a mensagem para não acionar a interrupção
       await supabase.from("zapp_sequence_run_steps").update({ status: "sent", sent_at: now, external_message_id: String(externalId), last_error: null }).eq("id", step.id);
