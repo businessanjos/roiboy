@@ -43,6 +43,7 @@ interface Props {
   to: Date;
   periodLabel?: string;
   onOpenConversation?: (id: string) => void;
+  onlyUnidentified?: boolean;
 }
 
 const TZ = "America/Sao_Paulo";
@@ -79,7 +80,7 @@ export function ZappNewConversationsDialog(p: Props) {
     },
   });
 
-  const all = data || [];
+  const all = (data || []).filter((r) => !p.onlyUnidentified || (r.started_by === "team" && r.starter_name === "Não identificado (celular)"));
   const counts = { all: all.length, client: all.filter((r) => r.started_by === "client").length, team: all.filter((r) => r.started_by === "team").length };
 
   const rows = useMemo(() => {
