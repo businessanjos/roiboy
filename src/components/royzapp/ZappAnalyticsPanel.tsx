@@ -311,6 +311,8 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
 
     enabled: allowed,
     staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<Metrics> => {
       const { data, error } = await (supabase as any).rpc("zapp_productivity_metrics", {
         _sector_id: effectiveSector,
@@ -810,7 +812,11 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                         <TableHead>Atendente</TableHead>
                         <TableHead className="text-right">Enviadas</TableHead>
                         <TableHead className="text-right">Conversas</TableHead>
-                        <TableHead className="text-right" title="Conversas distintas ÷ dias em que a pessoa enviou mensagem">Média/dia ⓘ</TableHead>
+                        <TableHead className="text-right">
+                          <span className="inline-flex items-center justify-end gap-1 whitespace-nowrap" title="Conversas distintas ÷ dias em que a pessoa enviou mensagem">
+                            Média/dia <Info className="h-3.5 w-3.5 text-zapp-text-muted" />
+                          </span>
+                        </TableHead>
                         <TableHead className="text-right">Novas iniciadas</TableHead>
                         <TableHead className="text-right">Respostas</TableHead>
                         <TableHead className="text-right">Resposta (mediana)</TableHead>
@@ -827,49 +833,65 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                         <>
                           {data.by_agent.map((a) => {
                             const canOpen = !!a.user_id && (canSeeDetails || a.user_id === currentUser?.id);
+                            const open = (what: string, mode: "sent" | "new" = "sent") =>
+                              canOpen && setConvTarget({ label: `${a.name} · ${what}`, userId: a.user_id!, mode });
+                            const Num = ({ v, what, mode }: { v: React.ReactNode; what: string; mode?: "sent" | "new" }) =>
+                              canOpen ? (
+                                <button
+                                  type="button"
+                                  onClick={() => open(what, mode)}
+                                  className="inline-flex min-w-[2.5rem] justify-end rounded-md px-2 py-1 font-medium tabular-nums text-zapp-text hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                  title={`Ver ${what.toLowerCase()} de ${a.name}`}
+                                >
+                                  {v}
+                                </button>
+                              ) : (
+                                <span className="px-2 tabular-nums">{v}</span>
+                              );
                             return (
-                            <TableRow
-                              key={a.user_id || a.name}
-                              className={canOpen ? "cursor-pointer hover:bg-muted/50" : undefined}
-                              onClick={() => canOpen && setConvTarget({ label: `Conversas de ${a.name}`, userId: a.user_id! })}
-                            >
-                              <TableCell className={canOpen ? "font-medium underline-offset-2 hover:underline" : "font-medium"}>{a.name}</TableCell>
-                              <TableCell className="text-right">{a.messages_sent.toLocaleString("pt-BR")}</TableCell>
-                              <TableCell className="text-right">{a.conversations}</TableCell>
-                              <TableCell className="text-right">{a.avg_conversations_per_day ?? "—"}</TableCell>
-                              <TableCell className="text-right">{a.new_started ?? 0}</TableCell>
-                              <TableCell className="text-right">{(a.responses_count ?? 0).toLocaleString("pt-BR")}</TableCell>
-                              <TableCell className="text-right">{fmtDuration(a.median_response_seconds ?? a.avg_response_seconds)}</TableCell>
+                            <TableRow key={a.user_id || a.name} className="hover:bg-muted/30">
+                              <TableCell className="font-medium">{a.name}</TableCell>
+                              <TableCell className="text-right"><Num v={a.messages_sent.toLocaleString("pt-BR")} what="Enviadas" /></TableCell>
+                              <TableCell className="text-right"><Num v={a.conversations} what="Conversas" /></TableCell>
+                              <TableCell className="text-right"><span className="px-2 tabular-nums text-zapp-text-muted">{a.avg_conversations_per_day ?? "—"}</span></TableCell>
+                              <TableCell className="text-right">
+                                {(a.new_started ?? 0) > 0 ? <Num v={a.new_started} what="Novas iniciadas" mode="new" /> : <span className="px-2 tabular-nums text-zapp-text-muted">0</span>}
+                              </TableCell>
+                              <TableCell className="text-right"><Num v={(a.responses_count ?? 0).toLocaleString("pt-BR")} what="Respostas" /></TableCell>
+                              <TableCell className="text-right"><span className="px-2 tabular-nums text-zapp-text-muted">{fmtDuration(a.median_response_seconds ?? a.avg_response_seconds)}</span></TableCell>
                             </TableRow>
                             );
                           })}
                           {(data.messages_out_unattributed ?? 0) > 0 && (
                             <>
-                              <TableRow className={canSeeDetails ? "cursor-pointer hover:bg-muted/50" : undefined} onClick={() => canSeeDetails && setShowUnattributed((v) => !v)}>
-                                <TableCell className="font-medium text-zapp-text-muted">
-                                  {canSeeDetails ? (showUnattributed ? "▾ " : "▸ ") : ""}Sem atendente identificado
+                              <TableRow className="border-t-2 bg-muted/20">
+                                <TableCell className="font-medium text-zapp-text-muted" colSpan={canSeeDetails ? 1 : 1}>
+                                  {canSeeDetails ? (
+                                    <button type="button" onClick={() => setShowUnattributed((v) => !v)} className="inline-flex items-center gap-1 rounded-md px-1 py-1 hover:text-primary">
+                                      {showUnattributed ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                      Sem atendente identificado
+                                    </button>
+                                  ) : "Sem atendente identificado"}
                                 </TableCell>
-                                <TableCell className="text-right">{(data.messages_out_unattributed ?? 0).toLocaleString("pt-BR")}</TableCell>
-                                <TableCell className="text-right" colSpan={5}>
-                                  <span className="text-xs text-zapp-text-muted">
-                                    {!canSeeDetails ? "" : showUnattributed ? "clique numa origem para ver as conversas" : "clique para ver de onde vieram"}
-                                  </span>
+                                <TableCell className="text-right"><span className="px-2 tabular-nums">{(data.messages_out_unattributed ?? 0).toLocaleString("pt-BR")}</span></TableCell>
+                                <TableCell className="text-right text-xs text-zapp-text-muted" colSpan={5}>
+                                  {canSeeDetails ? (showUnattributed ? "clique no número de uma origem para ver e tratar as conversas" : "abra para ver de onde vieram") : ""}
                                 </TableCell>
                               </TableRow>
                               {canSeeDetails && showUnattributed &&
-                                (data.unattributed_breakdown || []).map((u) => (
-                                  <TableRow
-                                    key={u.origin}
-                                    className="cursor-pointer hover:bg-muted/50 text-zapp-text-muted"
-                                    onClick={() => setConvTarget({ label: originLabel(u.origin), origin: u.origin })}
-                                  >
-                                    <TableCell className="pl-8 text-sm">{originLabel(u.origin)}</TableCell>
-                                    <TableCell className="text-right">{u.messages_sent.toLocaleString("pt-BR")}</TableCell>
-                                    <TableCell className="text-right">{u.conversations}</TableCell>
-                                    <TableCell className="text-right">{u.avg_conversations_per_day ?? "—"}</TableCell>
+                                (data.unattributed_breakdown || []).map((u) => {
+                                  const go = () => setConvTarget({ label: `${originLabel(u.origin)} · Conversas`, origin: u.origin });
+                                  const btn = "inline-flex min-w-[2.5rem] justify-end rounded-md px-2 py-1 tabular-nums hover:bg-primary/10 hover:text-primary";
+                                  return (
+                                  <TableRow key={u.origin} className="bg-muted/10 text-zapp-text-muted">
+                                    <TableCell className="pl-9 text-sm">{originLabel(u.origin)}</TableCell>
+                                    <TableCell className="text-right"><button type="button" className={btn} onClick={go}>{u.messages_sent.toLocaleString("pt-BR")}</button></TableCell>
+                                    <TableCell className="text-right"><button type="button" className={btn} onClick={go}>{u.conversations}</button></TableCell>
+                                    <TableCell className="text-right"><span className="px-2 tabular-nums">{u.avg_conversations_per_day ?? "—"}</span></TableCell>
                                     <TableCell colSpan={3} />
                                   </TableRow>
-                                ))}
+                                  );
+                                })}
                             </>
                           )}
                         </>
