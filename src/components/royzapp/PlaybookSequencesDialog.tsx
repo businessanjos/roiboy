@@ -226,6 +226,16 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
             )}
           </div>
         )}
+
+        {/* Atalho: criar nova mensagem do Playbook sem sair daqui */}
+        <PlaybookItemForm
+          open={formOpen}
+          onOpenChange={(v) => { if (!v) handleFormClose(null); }}
+          editingItem={null}
+          folders={folders}
+          sectorId={sectorId}
+          onClose={(created) => handleFormClose(created)}
+        />
       </DialogContent>
     </Dialog>
   );
