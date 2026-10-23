@@ -1,4 +1,5 @@
 import { RefObject, useCallback, useEffect, useState, useMemo } from "react";
+import { ZappSequenceRunBanner } from "./ZappSequenceRunBanner";
 import { MessageSquare, Clock, Lock } from "lucide-react";
 import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
