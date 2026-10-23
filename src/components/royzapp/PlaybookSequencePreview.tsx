@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { applyWhatsAppFormatting } from "@/lib/whatsappFormatting";
 import {
   AudioLines, FileText, Image as ImageIcon, LayoutTemplate, Link2,
@@ -72,6 +72,13 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
   const resolved = steps
     .map((st, i) => ({ step: st, item: itemById.get(st.playbook_item_id), index: i }))
     .filter((r) => r.item) as { step: SequenceStep; item: PlaybookItem; index: number }[];
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastKey = resolved.map((r) => r.item.id).join(",");
+  // Acompanha a última mensagem, como no WhatsApp, ao adicionar/trocar etapas.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el?.scrollTo) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [lastKey]);
 
   const applyVars = (text: string | null) => {
     if (!text) return null;
@@ -125,7 +132,7 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
         </div>
 
         {/* Conversa */}
-        <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto phone-preview-scroll px-2 py-2.5">
+        <div ref={scrollRef} className="min-h-0 flex-1 space-y-1.5 overflow-y-auto phone-preview-scroll px-2 py-2.5">
           <div className="mb-1 flex justify-center">
             <span className="rounded-md px-2 py-0.5 text-[10px] shadow-sm" style={{ background: wa("chip"), color: wa("meta") }}>HOJE</span>
           </div>
