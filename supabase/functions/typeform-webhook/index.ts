@@ -311,7 +311,7 @@ Deno.serve(async (req) => {
     const { data: l } = await supabase.from("leads").select("id").eq("account_id", accountId).ilike("email", email).limit(1).maybeSingle();
     if (l) { leadId = l.id; method = "email"; }
     if (!leadId) {
-      const { data: d } = await supabase.from("deals").select("id").eq("account_id", accountId).ilike("contact_email", email).limit(1).maybeSingle();
+      const { data: d } = await supabase.from("deals").select("id").eq("account_id", accountId).is("deleted_at", null).ilike("contact_email", email).limit(1).maybeSingle();
       if (d) { dealId = d.id; method = "email"; }
     }
   }
@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
       if (!leadId) {
         const { data: d } = await supabase
           .from("deals").select("id, contact_phone")
-          .eq("account_id", accountId).in("contact_phone", variants).limit(1).maybeSingle();
+          .eq("account_id", accountId).is("deleted_at", null).in("contact_phone", variants).limit(1).maybeSingle();
         if (d) { dealId = d.id; method = "phone"; }
       }
     }
@@ -335,7 +335,7 @@ Deno.serve(async (req) => {
       const m = (l || []).find((x: any) => phoneCoreKey(x.phone) === coreKey);
       if (m) { leadId = m.id; method = "phone"; }
       if (!leadId) {
-        const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).not("contact_phone", "is", null).limit(200);
+        const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).is("deleted_at", null).not("contact_phone", "is", null).limit(200);
         const dm = (d || []).find((x: any) => phoneCoreKey(x.contact_phone) === coreKey);
         if (dm) { dealId = dm.id; method = "phone"; }
       }
@@ -424,16 +424,20 @@ Deno.serve(async (req) => {
   // ---------- Matched lead but no deal yet → create deal (routes by MQL) ----------
   if (leadId && !createdLeadId && row.is_completed) {
     try {
-      const { data: existingDeals } = await supabase
+      const { data: existingDeals, error: existingDealsError } = await supabase
         .from("deals")
         .select("id, status")
         .eq("account_id", accountId)
-        .eq("lead_id", leadId);
-      const hasActive = (existingDeals || []).some(
+        .eq("lead_id", leadId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
+      if (existingDealsError) throw existingDealsError;
+      const activeDeal = (existingDeals || []).find(
         (d: any) => !["won", "lost", "canceled", "cancelled"].includes((d.status || "").toLowerCase()),
       );
+      if (activeDeal) dealId = activeDeal.id;
 
-      if (!hasActive) {
+      if (!activeDeal) {
         const isMql = mqlOption === "opt_1";
         // Nomes alternativos: o funil de não-MQL já foi renomeado algumas vezes
         // (TP - Eternum Pass → E-Pass / Clinica Ryka). Tentamos todos.
@@ -528,6 +532,14 @@ Deno.serve(async (req) => {
         revenue_range: bundle.revenue_range || null,
         canal: source && source !== "Typeform" ? source : null,
       }).eq("id", leadId).eq("account_id", accountId);
+      // Complete a missing Instagram without replacing an existing one.
+      if (bundle.instagram) {
+        const { error: instagramError } = await supabase.from("leads")
+          .update({ instagram: bundle.instagram })
+          .eq("id", leadId).eq("account_id", accountId)
+          .or("instagram.is.null,instagram.eq.");
+        if (instagramError) throw instagramError;
+      }
     } catch (e) {
       noteFailure(`Enriquecimento de campos do lead falhou: ${(e as any)?.message || e}`);
     }
@@ -543,11 +555,13 @@ Deno.serve(async (req) => {
       .select("id")
       .eq("account_id", accountId)
       .eq("lead_id", leadId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     enrichDealId = latest?.id || null;
   }
+  if (enrichDealId) dealId = enrichDealId;
   if (enrichDealId && row.is_completed) {
     try {
       const { data: dealFieldDefs } = await supabase
@@ -621,12 +635,15 @@ Deno.serve(async (req) => {
         .select("id")
         .eq("account_id", accountId)
         .eq("lead_id", leadId)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       noteDealId = latestDeal?.id || null;
     }
     if (noteDealId && row.is_completed) {
+      // Keep the response linked even when its note already exists on replay.
+      dealId = noteDealId;
       const content = buildTypeformNote(formTitle, enrichedAnswers, fr.submitted_at || null);
       // Avoid duplicating the same note if the webhook is replayed.
       const { data: existingNote } = await supabase
@@ -647,7 +664,6 @@ Deno.serve(async (req) => {
           user_id: distributionUserId,
           completed_at: new Date().toISOString(),
         });
-        if (!dealId) dealId = noteDealId;
       }
     }
   } catch (e: any) {
