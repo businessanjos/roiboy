@@ -211,6 +211,13 @@
       "when": 1792783652099,
       "tag": "0029_zapp_followup_group_exclude_momento_cx",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792783914435,
+      "tag": "0030_zapp_metrics_exclude_jonathan_cs",
+      "breakpoints": true
     }
   ]
 }
