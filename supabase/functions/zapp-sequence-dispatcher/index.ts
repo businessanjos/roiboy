@@ -167,7 +167,6 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
           link: `/roy-zapp?conversation=${conv.id}`,
           source_type: "zapp_sequence",
           source_id: runId,
-          sector_id: "vendas",
         }).then(({ error }: any) => { if (error) console.error("[sequence] notificação", error.message); });
       }
     }
