@@ -92,6 +92,13 @@
       "when": 1792438803109,
       "tag": "0012_speed_up_zapp_productivity_detail",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792762562069,
+      "tag": "0013_zapp_metrics_followup_groups",
+      "breakpoints": true
     }
   ]
 }
