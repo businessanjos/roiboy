@@ -134,6 +134,13 @@
       "when": 1792779278537,
       "tag": "0018_zapp_metrics_unattributed_breakdown",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792779967301,
+      "tag": "0019_zapp_followup_group_exclude_internal",
+      "breakpoints": true
     }
   ]
 }
