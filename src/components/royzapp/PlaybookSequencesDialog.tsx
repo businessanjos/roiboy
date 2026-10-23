@@ -121,6 +121,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
         </DialogHeader>
 
         {draft ? (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
               <div className="space-y-1.5">
@@ -188,6 +189,10 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
               <Button variant="outline" onClick={() => setDraft(null)}>Cancelar</Button>
               <Button onClick={handleSave} disabled={isSaving}>{isSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}Salvar</Button>
             </div>
+          </div>
+          <aside className="self-start lg:sticky lg:top-0">
+            <PlaybookSequencePreview steps={draft.steps} items={items} variables={variables} replaceVariables={replaceVariables} />
+          </aside>
           </div>
         ) : (
           <div className="space-y-3">
