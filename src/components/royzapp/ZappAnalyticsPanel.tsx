@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { canSeeAllSequenceRuns } from "@/lib/zappSequenceHistoryAccess";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
@@ -246,6 +247,7 @@ function Kpi({
 
 export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: string | null; integrationId?: string | null }) {
   const { currentUser } = useCurrentUser();
+  const canSeeDetails = canSeeAllSequenceRuns(currentUser as any);
   const { sectorAccess } = useSectorAccess();
   const { unrestricted, canOpenZappSector } = useRoyZappViewAccess();
   const allowed = canViewZappAnalytics(currentUser);
@@ -818,13 +820,15 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                         </TableRow>
                       ) : (
                         <>
-                          {data.by_agent.map((a) => (
+                          {data.by_agent.map((a) => {
+                            const canOpen = !!a.user_id && (canSeeDetails || a.user_id === currentUser?.id);
+                            return (
                             <TableRow
                               key={a.user_id || a.name}
-                              className="cursor-pointer hover:bg-muted/50"
-                              onClick={() => a.user_id && setConvTarget({ label: `Conversas de ${a.name}`, userId: a.user_id })}
+                              className={canOpen ? "cursor-pointer hover:bg-muted/50" : undefined}
+                              onClick={() => canOpen && setConvTarget({ label: `Conversas de ${a.name}`, userId: a.user_id! })}
                             >
-                              <TableCell className="font-medium underline-offset-2 hover:underline">{a.name}</TableCell>
+                              <TableCell className={canOpen ? "font-medium underline-offset-2 hover:underline" : "font-medium"}>{a.name}</TableCell>
                               <TableCell className="text-right">{a.messages_sent.toLocaleString("pt-BR")}</TableCell>
                               <TableCell className="text-right">{a.conversations}</TableCell>
                               <TableCell className="text-right">{a.avg_conversations_per_day ?? "—"}</TableCell>
@@ -832,21 +836,22 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                               <TableCell className="text-right">{(a.responses_count ?? 0).toLocaleString("pt-BR")}</TableCell>
                               <TableCell className="text-right">{fmtDuration(a.median_response_seconds ?? a.avg_response_seconds)}</TableCell>
                             </TableRow>
-                          ))}
+                            );
+                          })}
                           {(data.messages_out_unattributed ?? 0) > 0 && (
                             <>
-                              <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => setShowUnattributed((v) => !v)}>
+                              <TableRow className={canSeeDetails ? "cursor-pointer hover:bg-muted/50" : undefined} onClick={() => canSeeDetails && setShowUnattributed((v) => !v)}>
                                 <TableCell className="font-medium text-zapp-text-muted">
-                                  {showUnattributed ? "▾" : "▸"} Sem atendente identificado
+                                  {canSeeDetails ? (showUnattributed ? "▾ " : "▸ ") : ""}Sem atendente identificado
                                 </TableCell>
                                 <TableCell className="text-right">{(data.messages_out_unattributed ?? 0).toLocaleString("pt-BR")}</TableCell>
                                 <TableCell className="text-right" colSpan={5}>
                                   <span className="text-xs text-zapp-text-muted">
-                                    {showUnattributed ? "clique numa origem para ver as conversas" : "clique para ver de onde vieram"}
+                                    {!canSeeDetails ? "" : showUnattributed ? "clique numa origem para ver as conversas" : "clique para ver de onde vieram"}
                                   </span>
                                 </TableCell>
                               </TableRow>
-                              {showUnattributed &&
+                              {canSeeDetails && showUnattributed &&
                                 (data.unattributed_breakdown || []).map((u) => (
                                   <TableRow
                                     key={u.origin}
