@@ -1,20 +1,29 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessageCircle, Trash2 } from "lucide-react";
+import { MessageCircle, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 /** Gestores que recebem o aviso de pedido de transferência no WhatsApp (somente leitura aqui; gravação via RPC). */
 export function DealTransferWhatsappRecipients() {
   const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
   const [userId, setUserId] = useState("");
   const [phone, setPhone] = useState("");
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["dtr-whatsapp-recipients"],
+    enabled: open,
     queryFn: async () => {
       const [{ data: recs }, { data: managers }] = await Promise.all([
         (supabase as any).from("deal_transfer_whatsapp_recipients").select("id, user_id, phone_e164"),
@@ -40,32 +49,56 @@ export function DealTransferWhatsappRecipients() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2"><MessageCircle className="h-4 w-4" /> Aviso no WhatsApp</CardTitle>
-        <CardDescription>Gestores que recebem os pedidos com botões Aprovar e Recusar.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {(data?.recs || []).length === 0 && <p className="text-sm text-muted-foreground">Nenhum gestor cadastrado ainda.</p>}
-        {(data?.recs || []).map((r) => (
-          <div key={r.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <span><strong>{names.get(r.user_id) || "Gestor"}</strong> · {r.phone_e164}</span>
-            <Button size="icon" variant="ghost" onClick={() => remove(r.user_id)} aria-label="Remover"><Trash2 className="h-4 w-4" /></Button>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          <MessageCircle className="h-3.5 w-3.5" />
+          Avisos no WhatsApp
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base">Avisos no WhatsApp</DialogTitle>
+          <DialogDescription>Escolha quem recebe os pedidos com os botões de Aprovar e Recusar.</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Carregando…</p>
+          ) : (data?.recs || []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum número cadastrado ainda.</p>
+          ) : (
+            (data?.recs || []).map((r) => (
+              <div key={r.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span className="min-w-0 truncate"><strong>{names.get(r.user_id) || "Gestor"}</strong> · {r.phone_e164}</span>
+                <Button size="icon" variant="ghost" onClick={() => remove(r.user_id)} aria-label="Remover"><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            ))
+          )}
+
+          <div className="flex flex-col gap-2 border-t pt-3">
+            <select
+              className="h-9 rounded-md border bg-background px-2 text-sm"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+            >
+              <option value="">Escolha o gestor</option>
+              {(data?.managers || []).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input className="flex-1" placeholder="WhatsApp com DDD, ex: 11 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <Button disabled={!userId || phone.replace(/\D/g, "").length < 10} onClick={save}>
+                <Plus className="h-4 w-4 mr-1" /> Adicionar
+              </Button>
+            </div>
           </div>
-        ))}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <select
-            className="h-9 rounded-md border bg-background px-2 text-sm flex-1"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-          >
-            <option value="">Escolha o gestor</option>
-            {(data?.managers || []).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-          <Input className="flex-1" placeholder="WhatsApp com DDD, ex: 11 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <Button disabled={!userId || phone.replace(/\D/g, "").length < 10} onClick={save}>Adicionar</Button>
         </div>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
