@@ -50,6 +50,17 @@ const RENEWALS_FULL_ACCESS_USER_IDS = [
   "0a9f7f34-cce9-4687-9f94-51f84f7324ea", // Maria (Suporte)
 ];
 
+// Motivos gravados na ficha do contrato (Detalhes do Contrato), usados quando a renovação não tem motivo próprio.
+const CONTRACT_REASON_LABELS: Record<string, string> = {
+  financeiro: "Financeiro",
+  operacional_financeiro: "Operacional/Financeiro",
+  problemas_pessoais: "Problemas pessoais",
+  falta_tempo: "Falta de tempo / priorização",
+  nao_adaptou: "Não se adaptou ao formato",
+  mudanca_momento: "Mudança de momento do negócio",
+  cliente_nao_retorna_inadimplente: "Cliente não retorna – Inadimplente",
+};
+
 interface ExpiredContract {
   id: string;
   client_id: string;
