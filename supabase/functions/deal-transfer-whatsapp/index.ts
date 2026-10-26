@@ -35,6 +35,31 @@ async function post(s: { host: string; token: string }, path: string, body: unkn
   return ok;
 }
 
+function buildMessage(d: {
+  requester: string; title: string; pipeline?: string | null; stage?: string | null; owner: string;
+  value?: number | null; createdAt?: string | null; reason?: string | null; sample?: boolean;
+}) {
+  const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const date = d.createdAt
+    ? new Date(d.createdAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
+    : null;
+  const lines = [
+    `🔄 *Solicitação de transferência${d.sample ? " (exemplo)" : ""}*`,
+    "",
+    `*${d.requester}* solicitou a responsabilidade pelo negócio abaixo:`,
+    "",
+    `📌 *Negócio:* ${d.title}`,
+  ];
+  if (d.pipeline) lines.push(`🧭 *Funil:* ${d.pipeline}`);
+  if (d.stage) lines.push(`📍 *Etapa:* ${d.stage}`);
+  if (d.value && Number(d.value) > 0) lines.push(`💰 *Valor:* ${brl(Number(d.value))}`);
+  lines.push(`👤 *Responsável atual:* ${d.owner}`);
+  if (date) lines.push(`📅 *Criado em:* ${date}`);
+  if (d.reason) lines.push("", `💬 *Motivo:* _${d.reason}_`);
+  lines.push("", "Deseja aprovar a transferência?");
+  return lines.join("\n");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -60,21 +85,22 @@ Deno.serve(async (req) => {
       if (number.length <= 11) number = "55" + number;
       const s = await getSender(supabase, me.account_id);
       if (!s) return json({ error: "WhatsApp do Comercial desconectado" }, 400);
-      const text = [
-        "*Pedido de transferência de negócio* (EXEMPLO)",
-        "Darlan Ferreira pediu: *[ORG-BP] Vanessa Fonseca*",
-        "Etapa: Novo Lead · Hoje com: Jonathan Marcato",
-        'Motivo: "cliente já falou comigo pelo Instagram"',
-      ].join("\n");
+      const text = buildMessage({
+        requester: "Darlan Ferreira",
+        title: "[ORG-BP] Vanessa Fonseca",
+        pipeline: "Closer",
+        stage: "Novo Lead",
+        owner: "Jonathan Marcato",
+        value: 18000,
+        createdAt: new Date(Date.now() - 86400000).toISOString(),
+        reason: "Cliente já falou comigo pelo Instagram",
+        sample: true,
+      });
       const okMenu = await post(s, "/send/menu", {
         number, type: "button", text,
-        choices: ["Aprovar|dtr:sample:approve", "Recusar|dtr:sample:reject"], footerText: "ROY APP",
+        choices: ["✅ Aprovar|dtr:sample:approve", "❌ Recusar|dtr:sample:reject"], footerText: "ROY APP · Comercial",
       });
-      const okText = await post(s, "/send/text", {
-        number,
-        text: `Se os botões não aparecerem, use os links:\n\nAprovar: ${APP_URL}/transferencia/exemplo?d=sim\nRecusar: ${APP_URL}/transferencia/exemplo?d=nao`,
-      });
-      return json({ ok: okMenu || okText, buttons: okMenu, links: okText });
+      return json({ ok: okMenu, buttons: okMenu });
     }
 
     if (!UUID_RE.test(requestId)) return json({ error: "Pedido inválido" }, 400);
@@ -106,7 +132,7 @@ Deno.serve(async (req) => {
     if (r.status !== "pending") return json({ ok: true, skipped: "decided" });
 
     const [{ data: deal }, { data: owner }, { data: recipients }] = await Promise.all([
-      supabase.from("deals").select("title, stage:deal_stages(name)").eq("id", r.deal_id).maybeSingle(),
+      supabase.from("deals").select("title, value, created_at, stage:deal_stages(name), pipeline:pipelines(name)").eq("id", r.deal_id).maybeSingle(),
       r.current_owner_id
         ? supabase.from("users").select("name").eq("id", r.current_owner_id).maybeSingle()
         : Promise.resolve({ data: null }),
@@ -116,17 +142,17 @@ Deno.serve(async (req) => {
     const s = await getSender(supabase, r.account_id);
     if (!s) return json({ ok: false, sent: 0, reason: "WhatsApp do Comercial desconectado" });
 
-    const lines = [
-      "*Pedido de transferência de negócio*",
-      `${me.name} pediu: *${deal?.title || "Negócio"}*`,
-      `Etapa: ${(deal as any)?.stage?.name || "—"} · Hoje com: ${owner?.name || "Sem responsável"}`,
-    ];
-    if (r.reason) lines.push(`Motivo: "${r.reason}"`);
-    const linkText = [
-      "",
-      `Aprovar: ${APP_URL}/transferencia/${r.id}?d=sim`,
-      `Recusar: ${APP_URL}/transferencia/${r.id}?d=nao`,
-    ].join("\n");
+    const text = buildMessage({
+      requester: me.name,
+      title: deal?.title || "Negócio",
+      pipeline: (deal as any)?.pipeline?.name,
+      stage: (deal as any)?.stage?.name,
+      owner: owner?.name || "Sem responsável",
+      value: (deal as any)?.value,
+      createdAt: (deal as any)?.created_at,
+      reason: r.reason,
+    });
+    const linkText = `\n\nAprovar: ${APP_URL}/transferencia/${r.id}?d=sim\nRecusar: ${APP_URL}/transferencia/${r.id}?d=nao`;
 
     let sent = 0;
     for (const rec of recipients) {
@@ -135,15 +161,12 @@ Deno.serve(async (req) => {
       const okMenu = await post(s, "/send/menu", {
         number,
         type: "button",
-        text: lines.join("\n"),
-        choices: [`Aprovar|dtr:approve:${r.id}`, `Recusar|dtr:reject:${r.id}`],
-        footerText: "ROY APP",
+        text,
+        choices: [`✅ Aprovar|dtr:approve:${r.id}`, `❌ Recusar|dtr:reject:${r.id}`],
+        footerText: "ROY APP · Comercial",
       });
-      // Links sempre, pois botões nem sempre aparecem em todos os aparelhos.
-      const okText = await post(s, "/send/text", {
-        number,
-        text: okMenu ? `Se os botões não aparecerem, use os links:${linkText}` : lines.join("\n") + "\n" + linkText,
-      });
+      // Links só se o envio com botões falhar.
+      const okText = okMenu ? true : await post(s, "/send/text", { number, text: text + linkText });
       if (okMenu || okText) sent++;
     }
     return json({ ok: true, sent });
