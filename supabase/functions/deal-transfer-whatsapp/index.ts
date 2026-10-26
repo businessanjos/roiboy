@@ -44,7 +44,41 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
     const requestId = String(body?.request_id || "");
+
+    // Exemplo visual para um gestor ver o modelo (sem pedido real; botões não decidem nada).
+    if (action === "sample") {
+      const userClient = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: req.headers.get("Authorization") || "" } },
+      });
+      const { data: u } = await userClient.auth.getUser();
+      if (!u?.user) return json({ error: "Não autenticado" }, 401);
+      const { data: isMgr } = await supabase.rpc("can_manage_spiff_payments", { _auth_user_id: u.user.id } as any);
+      const { data: me } = await supabase.from("users").select("account_id").eq("auth_user_id", u.user.id).maybeSingle();
+      if (!isMgr || !me) return json({ error: "Apenas gestores" }, 403);
+      let number = String(body?.phone || "").replace(/\D/g, "");
+      if (number.length < 10 || number.length > 13) return json({ error: "Telefone inválido" }, 400);
+      if (number.length <= 11) number = "55" + number;
+      const s = await getSender(supabase, me.account_id);
+      if (!s) return json({ error: "WhatsApp do Comercial desconectado" }, 400);
+      const text = [
+        "*Pedido de transferência de negócio* (EXEMPLO)",
+        "Darlan Ferreira pediu: *[ORG-BP] Vanessa Fonseca*",
+        "Etapa: Novo Lead · Hoje com: Jonathan Marcato",
+        'Motivo: "cliente já falou comigo pelo Instagram"',
+      ].join("\n");
+      const okMenu = await post(s, "/send/menu", {
+        number, type: "button", text,
+        choices: ["Aprovar|dtr:sample:approve", "Recusar|dtr:sample:reject"], footerText: "ROY APP",
+      });
+      const okText = await post(s, "/send/text", {
+        number,
+        text: `Se os botões não aparecerem, use os links:\n\nAprovar: ${APP_URL}/transferencia/exemplo?d=sim\nRecusar: ${APP_URL}/transferencia/exemplo?d=nao`,
+      });
+      return json({ ok: okMenu || okText, buttons: okMenu, links: okText });
+    }
+
     if (!UUID_RE.test(requestId)) return json({ error: "Pedido inválido" }, 400);
+
 
     const { data: r } = await supabase.from("deal_transfer_requests").select("*").eq("id", requestId).maybeSingle();
     if (!r) return json({ error: "Pedido não encontrado" }, 404);
