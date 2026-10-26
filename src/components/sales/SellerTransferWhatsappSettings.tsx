@@ -96,7 +96,7 @@ export function SellerTransferWhatsappSettings() {
   const saveTexts = async () => {
     if (!accountId || savingTexts) return;
     const errorText = validateTransferTemplate(templates.private) || validateTransferTemplate(templates.group);
-    if (errorText) return toast.error(errorText);
+    if (errorText) { toast.error(errorText); return; }
     setSavingTexts(true);
     try {
       const { error } = await db.from("sales_transfer_whatsapp_settings").upsert({
