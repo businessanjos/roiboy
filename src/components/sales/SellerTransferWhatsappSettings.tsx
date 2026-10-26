@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search } from "lucide-react";
+import { Search, X, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { TransferMessageEditor } from "./TransferMessageEditor";
 import { DEFAULT_TRANSFER_TEMPLATES, validateTransferTemplate, type TransferMessageChannel } from "@/lib/transferMessageTemplate";
@@ -48,6 +48,7 @@ export function SellerTransferWhatsappSettings() {
   const [search, setSearch] = useState("");
   const [groupSearch, setGroupSearch] = useState("");
   const [tab, setTab] = useState("sellers");
+  const [showRemoved, setShowRemoved] = useState(false);
   const [templates, setTemplates] = useState({ ...DEFAULT_TRANSFER_TEMPLATES });
   const [savingTexts, setSavingTexts] = useState(false);
 
@@ -88,7 +89,10 @@ export function SellerTransferWhatsappSettings() {
 
   const phoneOf = new Map((data?.phones || []).map((p) => [p.user_id, p.phone_e164]));
   const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const excludedIds = new Set<string>(((data?.cfg?.excluded_user_ids || []) as string[]));
   const sellers = (data?.users || []).filter((u) => norm(u.name).includes(norm(search)));
+  const visibleSellers = sellers.filter((u) => !excludedIds.has(u.id));
+  const removedSellers = sellers.filter((u) => excludedIds.has(u.id));
   const groups = (data?.groups || []).filter((g) => norm(g.contact_name || "").includes(norm(groupSearch)));
   const refresh = () => qc.invalidateQueries({ queryKey: ["seller-transfer-whatsapp", accountId] });
   const savedTemplates = { private: data?.cfg?.private_message_template || DEFAULT_TRANSFER_TEMPLATES.private, group: data?.cfg?.group_message_template || DEFAULT_TRANSFER_TEMPLATES.group };
@@ -145,6 +149,13 @@ export function SellerTransferWhatsappSettings() {
     if (error) return toast.error("Não foi possível remover.");
     refresh();
   };
+  const toggleRemoved = async (uid: string, hide: boolean) => {
+    const next = hide ? [...excludedIds, uid] : [...excludedIds].filter((id) => id !== uid);
+    const { error } = await db.from("sales_transfer_whatsapp_settings").upsert({ account_id: accountId, excluded_user_ids: next, updated_at: new Date().toISOString() });
+    if (error) return toast.error("Não foi possível atualizar a lista.");
+    toast.success(hide ? "Removido da lista" : "Restaurado na lista");
+    refresh();
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -178,15 +189,15 @@ export function SellerTransferWhatsappSettings() {
                 <Switch id="stw-private" checked={priv} onCheckedChange={(v) => { setPriv(v); saveCfg({ notify_private: v }); }} />
               </div>
               <p className="text-xs text-muted-foreground">
-                {(data?.users || []).filter((u: any) => phoneOf.has(u.id)).length} de {(data?.users || []).length} vendedores com número ativo para envio
+                {visibleSellers.filter((u: any) => phoneOf.has(u.id)).length} de {visibleSellers.length} vendedores com número ativo para envio
               </p>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-8" placeholder="Buscar vendedor" value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
               <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
-                {sellers.length === 0 && <p className="py-4 text-center text-xs text-muted-foreground">Nenhum vendedor encontrado.</p>}
-                {sellers.map((u) => {
+                {visibleSellers.length === 0 && removedSellers.length === 0 && <p className="py-4 text-center text-xs text-muted-foreground">Nenhum vendedor encontrado.</p>}
+                {visibleSellers.map((u) => {
                   const saved = phoneOf.get(u.id);
                   const editing = userId === u.id;
                   return (
@@ -213,8 +224,9 @@ export function SellerTransferWhatsappSettings() {
                             {saved ? "Editar" : <><Plus className="mr-1 h-3.5 w-3.5" />Número</>}
                           </Button>
                           {saved && (
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removePhone(u.id)} aria-label="Remover"><Trash2 className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removePhone(u.id)} aria-label="Remover número"><Trash2 className="h-4 w-4" /></Button>
                           )}
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleRemoved(u.id, true)} aria-label="Remover da lista" title="Remover da lista"><X className="h-4 w-4" /></Button>
                         </div>
                       </div>
                       {editing && (
@@ -226,6 +238,20 @@ export function SellerTransferWhatsappSettings() {
                     </div>
                   );
                 })}
+                {removedSellers.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-[11px] text-muted-foreground">Fora da lista ({removedSellers.length})</p>
+                    {removedSellers.map((u) => (
+                      <div key={u.id} className="flex items-center justify-between gap-2 rounded-md border border-dashed px-3 py-2 text-sm">
+                        <p className="truncate text-muted-foreground">{u.name}</p>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => toggleRemoved(u.id, false)}>
+                          <RotateCcw className="mr-1 h-3 w-3" />
+                          Restaurar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
 
