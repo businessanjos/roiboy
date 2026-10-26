@@ -147,6 +147,9 @@ export function SellerTransferWhatsappSettings() {
                 <Label htmlFor="stw-private" className="text-sm font-medium">Avisar no WhatsApp de cada vendedor</Label>
                 <Switch id="stw-private" checked={priv} onCheckedChange={(v) => { setPriv(v); saveCfg({ notify_private: v }); }} />
               </div>
+              <p className="text-xs text-muted-foreground">
+                {(data?.users || []).filter((u: any) => phoneOf.has(u.id)).length} de {(data?.users || []).length} vendedores com número ativo para envio
+              </p>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-8" placeholder="Buscar vendedor" value={search} onChange={(e) => setSearch(e.target.value)} />
