@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
     if (!s) return json({ ok: false, reason: "WhatsApp do Comercial desconectado" });
 
     const result: Record<string, boolean> = {};
-    if (cfg.notify_private) {
+    if (cfg.notify_private && !((cfg.excluded_user_ids || []) as string[]).includes(n.user_id)) {
       const { data: ph } = await supabase.from("sales_user_whatsapp_phones").select("phone_e164").eq("user_id", n.user_id).maybeSingle();
       const number = String(ph?.phone_e164 || "").replace(/\D/g, "");
       if (number.length >= 10) {
