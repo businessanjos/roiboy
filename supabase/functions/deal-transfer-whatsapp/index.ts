@@ -35,6 +35,31 @@ async function post(s: { host: string; token: string }, path: string, body: unkn
   return ok;
 }
 
+function buildMessage(d: {
+  requester: string; title: string; pipeline?: string | null; stage?: string | null; owner: string;
+  value?: number | null; createdAt?: string | null; reason?: string | null; sample?: boolean;
+}) {
+  const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const date = d.createdAt
+    ? new Date(d.createdAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
+    : null;
+  const lines = [
+    `🔄 *Solicitação de transferência${d.sample ? " (exemplo)" : ""}*`,
+    "",
+    `*${d.requester}* solicitou a responsabilidade pelo negócio abaixo:`,
+    "",
+    `📌 *Negócio:* ${d.title}`,
+  ];
+  if (d.pipeline) lines.push(`🧭 *Funil:* ${d.pipeline}`);
+  if (d.stage) lines.push(`📍 *Etapa:* ${d.stage}`);
+  if (d.value && Number(d.value) > 0) lines.push(`💰 *Valor:* ${brl(Number(d.value))}`);
+  lines.push(`👤 *Responsável atual:* ${d.owner}`);
+  if (date) lines.push(`📅 *Criado em:* ${date}`);
+  if (d.reason) lines.push("", `💬 *Motivo:* _${d.reason}_`);
+  lines.push("", "Deseja aprovar a transferência?");
+  return lines.join("\n");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -60,21 +85,22 @@ Deno.serve(async (req) => {
       if (number.length <= 11) number = "55" + number;
       const s = await getSender(supabase, me.account_id);
       if (!s) return json({ error: "WhatsApp do Comercial desconectado" }, 400);
-      const text = [
-        "*Pedido de transferência de negócio* (EXEMPLO)",
-        "Darlan Ferreira pediu: *[ORG-BP] Vanessa Fonseca*",
-        "Etapa: Novo Lead · Hoje com: Jonathan Marcato",
-        'Motivo: "cliente já falou comigo pelo Instagram"',
-      ].join("\n");
+      const text = buildMessage({
+        requester: "Darlan Ferreira",
+        title: "[ORG-BP] Vanessa Fonseca",
+        pipeline: "Closer",
+        stage: "Novo Lead",
+        owner: "Jonathan Marcato",
+        value: 18000,
+        createdAt: new Date(Date.now() - 86400000).toISOString(),
+        reason: "Cliente já falou comigo pelo Instagram",
+        sample: true,
+      });
       const okMenu = await post(s, "/send/menu", {
         number, type: "button", text,
-        choices: ["Aprovar|dtr:sample:approve", "Recusar|dtr:sample:reject"], footerText: "ROY APP",
+        choices: ["✅ Aprovar|dtr:sample:approve", "❌ Recusar|dtr:sample:reject"], footerText: "ROY APP · Comercial",
       });
-      const okText = await post(s, "/send/text", {
-        number,
-        text: `Se os botões não aparecerem, use os links:\n\nAprovar: ${APP_URL}/transferencia/exemplo?d=sim\nRecusar: ${APP_URL}/transferencia/exemplo?d=nao`,
-      });
-      return json({ ok: okMenu || okText, buttons: okMenu, links: okText });
+      return json({ ok: okMenu, buttons: okMenu });
     }
 
     if (!UUID_RE.test(requestId)) return json({ error: "Pedido inválido" }, 400);
