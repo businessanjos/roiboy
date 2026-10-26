@@ -759,24 +759,51 @@ export function RenewalLosses() {
           </CardHeader>
           <CardContent>
             {reasonPieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={reasonPieData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    outerRadius={80}
-                    dataKey="value"
-                  >
-                    {reasonPieData.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={reasonPieData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                    >
+                      {reasonPieData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                      formatter={(value: number, name: string) => {
+                        const total = reasonPieData.reduce((s, r) => s + r.value, 0);
+                        const pct = total > 0 ? ((value / total) * 100).toFixed(0) : "0";
+                        return [`${value} (${pct}%)`, name];
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <ul className="mt-2 space-y-1">
+                  {[...reasonPieData]
+                    .sort((a, b) => b.value - a.value)
+                    .map((entry, i) => {
+                      const colorIdx = reasonPieData.indexOf(entry);
+                      const total = reasonPieData.reduce((s, r) => s + r.value, 0);
+                      const pct = total > 0 ? ((entry.value / total) * 100).toFixed(0) : "0";
+                      return (
+                        <li key={i} className="flex items-center gap-2 text-xs">
+                          <span
+                            className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+                            style={{ backgroundColor: PIE_COLORS[colorIdx % PIE_COLORS.length] }}
+                          />
+                          <span className="flex-1 truncate">{entry.name}</span>
+                          <span className="text-muted-foreground tabular-nums">
+                            {entry.value} ({pct}%)
+                          </span>
+                        </li>
+                      );
+                    })}
+                </ul>
+              </div>
             ) : (
               <div className="flex items-center justify-center h-[250px] text-muted-foreground text-sm">
                 Nenhuma perda registrada
