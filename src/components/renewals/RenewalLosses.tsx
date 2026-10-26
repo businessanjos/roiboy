@@ -301,6 +301,7 @@ export function RenewalLosses() {
           .from("client_contracts")
           .select(`
             id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
+            cancellation_reason, cancellation_justification,
             clients!inner(full_name, logo_url, responsible_user_id, users:responsible_user_id(name)),
             products(name, color, price, cash_price, installment_price, renewal_discount_percent)
           `)
@@ -341,8 +342,8 @@ export function RenewalLosses() {
           responsible_user_id: (c.clients as any)?.responsible_user_id || null,
           outcome: outcome?.outcome || null,
           outcome_id: outcome?.id || null,
-          loss_reason: outcome?.loss_reason || null,
-          loss_notes: outcome?.loss_notes || null,
+          loss_reason: outcome?.loss_reason || CONTRACT_REASON_LABELS[c.cancellation_reason] || c.cancellation_reason || null,
+          loss_notes: outcome?.loss_notes || c.cancellation_justification || null,
           resolved_at: outcome?.resolved_at || outcome?.created_at || null,
           days_expired: daysExpired,
           has_new_contract: false,
