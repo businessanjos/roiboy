@@ -147,7 +147,7 @@ export function LeadDetailSheet({
   const requestTransfer = async (dealId: string) => {
     const reason = window.prompt("Motivo do pedido de transferência (opcional):") ?? null;
     if (reason === null) return;
-    const { error } = await (supabase as any).rpc("request_deal_transfer", { _deal_id: dealId, _reason: reason || null });
+    const { data: requestId, error } = await (supabase as any).rpc("request_deal_transfer", { _deal_id: dealId, _reason: reason || null });
     if (error) {
       const msg = String(error.message || "");
       if (msg.includes("pendente")) setRequestedDealIds((p) => [...p, dealId]);
@@ -156,6 +156,10 @@ export function LeadDetailSheet({
     }
     setRequestedDealIds((p) => [...p, dealId]);
     toast.success("Pedido enviado ao gestor. Você será avisado da decisão.");
+    // Aviso no WhatsApp do gestor: não bloqueia o pedido se falhar.
+    supabase.functions
+      .invoke("deal-transfer-whatsapp", { body: { action: "notify", request_id: requestId } })
+      .catch(() => undefined);
   };
   const [loading, setLoading] = useState(false);
   const [customFields, setCustomFields] = useState<LeadCustomField[]>([]);
