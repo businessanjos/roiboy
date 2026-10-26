@@ -119,13 +119,16 @@ export default function DealTransferRequests() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-4xl">
-      <div>
-        <h1 className="text-xl font-semibold flex items-center gap-2">
-          <ArrowRightLeft className="h-5 w-5" /> Pedidos de transferência
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {isManager ? "Aprove ou recuse os pedidos dos vendedores." : "Acompanhe seus pedidos de transferência."}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-semibold flex items-center gap-2">
+            <ArrowRightLeft className="h-5 w-5" /> Pedidos de transferência
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {isManager ? "Aprove ou recuse os pedidos dos vendedores." : "Acompanhe seus pedidos de transferência."}
+          </p>
+        </div>
+        {isManager && <DealTransferWhatsappRecipients />}
       </div>
       <Card>
         <CardHeader>
