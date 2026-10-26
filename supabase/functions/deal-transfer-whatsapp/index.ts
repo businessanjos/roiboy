@@ -36,9 +36,10 @@ async function post(s: { host: string; token: string }, path: string, body: unkn
 }
 
 function buildMessage(d: {
-  requester: string; title: string; pipeline?: string | null; stage?: string | null; owner: string;
+  requester: string; title: string; pipeline?: string | null; stage?: string | null;
   value?: number | null; createdAt?: string | null; reason?: string | null; sample?: boolean;
 }) {
+  const firstName = (n: string) => (n || "").trim().split(/\s+/)[0] || "Alguém";
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const date = d.createdAt
     ? new Date(d.createdAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
@@ -46,14 +47,13 @@ function buildMessage(d: {
   const lines = [
     `🔄 *Solicitação de transferência${d.sample ? " (exemplo)" : ""}*`,
     "",
-    `*${d.requester}* solicitou a responsabilidade pelo negócio abaixo:`,
+    `*${firstName(d.requester)}* solicitou a responsabilidade pelo negócio abaixo:`,
     "",
     `📌 *Negócio:* ${d.title}`,
   ];
   if (d.pipeline) lines.push(`🧭 *Funil:* ${d.pipeline}`);
   if (d.stage) lines.push(`📍 *Etapa:* ${d.stage}`);
   if (d.value && Number(d.value) > 0) lines.push(`💰 *Valor:* ${brl(Number(d.value))}`);
-  lines.push(`👤 *Responsável atual:* ${d.owner}`);
   if (date) lines.push(`📅 *Criado em:* ${date}`);
   if (d.reason) lines.push("", `💬 *Motivo:* _${d.reason}_`);
   lines.push("", "Deseja aprovar a transferência?");
@@ -90,7 +90,6 @@ Deno.serve(async (req) => {
         title: "[ORG-BP] Vanessa Fonseca",
         pipeline: "Closer",
         stage: "Novo Lead",
-        owner: "Jonathan Marcato",
         value: 18000,
         createdAt: new Date(Date.now() - 86400000).toISOString(),
         reason: "Cliente já falou comigo pelo Instagram",
@@ -131,11 +130,8 @@ Deno.serve(async (req) => {
     if (!me || me.id !== r.requester_id) return json({ error: "Não autorizado" }, 403);
     if (r.status !== "pending") return json({ ok: true, skipped: "decided" });
 
-    const [{ data: deal }, { data: owner }, { data: recipients }] = await Promise.all([
+    const [{ data: deal }, { data: recipients }] = await Promise.all([
       supabase.from("deals").select("title, value, created_at, stage:deal_stages(name), pipeline:pipelines(name)").eq("id", r.deal_id).maybeSingle(),
-      r.current_owner_id
-        ? supabase.from("users").select("name").eq("id", r.current_owner_id).maybeSingle()
-        : Promise.resolve({ data: null }),
       supabase.from("deal_transfer_whatsapp_recipients").select("user_id, phone_e164").eq("account_id", r.account_id),
     ]);
     if (!recipients?.length) return json({ ok: true, sent: 0, reason: "Nenhum gestor com WhatsApp cadastrado" });
@@ -147,7 +143,6 @@ Deno.serve(async (req) => {
       title: deal?.title || "Negócio",
       pipeline: (deal as any)?.pipeline?.name,
       stage: (deal as any)?.stage?.name,
-      owner: owner?.name || "Sem responsável",
       value: (deal as any)?.value,
       createdAt: (deal as any)?.created_at,
       reason: r.reason,
