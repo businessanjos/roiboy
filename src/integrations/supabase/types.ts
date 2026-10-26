@@ -7518,6 +7518,30 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_transfer_whatsapp_recipients: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          phone_e164: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          phone_e164: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          phone_e164?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           account_id: string
@@ -29981,6 +30005,19 @@ export type Database = {
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
       decide_deal_transfer: {
         Args: { _approve: boolean; _note?: string; _request_id: string }
+        Returns: Json
+      }
+      decide_deal_transfer_by_phone: {
+        Args: { _approve: boolean; _phone: string; _request_id: string }
+        Returns: Json
+      }
+      decide_deal_transfer_core: {
+        Args: {
+          _approve: boolean
+          _manager_id: string
+          _note?: string
+          _request_id: string
+        }
         Returns: Json
       }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
