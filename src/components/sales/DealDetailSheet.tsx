@@ -104,6 +104,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
 import { DealTransferDialog } from "./DealTransferDialog";
 import { MergeDealDialog } from "./MergeDealDialog";
+import { UndoDealMergeButton } from "./UndoDealMergeButton";
 import { CallEngineButton } from "./CallEngineButton";
 import { DealRulerButton } from "./DealRulerButton";
 import { useDealMerge } from "@/hooks/useDealMerge";
@@ -1235,6 +1236,7 @@ export function DealDetailSheet({
                   </Button>
                 </>
               )}
+              <UndoDealMergeButton dealId={deal.id} onRestored={() => { onOpenChange(false); onDealUpdated?.(); }} />
               {deal.status === 'lost' && (
                 <Button
                   variant="ghost"
