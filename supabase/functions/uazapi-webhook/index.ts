@@ -998,6 +998,43 @@ Deno.serve(async (req) => {
         }
         
         const contactName = (isGroupMessage ? msg.senderName : chat.name) || "Desconhecido";
+
+        // Resposta de botão do pedido de transferência de negócio (Aprovar/Recusar).
+        if (direction === "inbound" && !isGroupMessage && phone) {
+          const m = msg as any;
+          const btnId = String(
+            m.buttonOrListid || m.content?.selectedButtonId || m.content?.selectedId ||
+            m.content?.singleSelectReply?.selectedRowId || "",
+          );
+          const dtr = btnId.match(/^dtr:(approve|reject):([0-9a-f-]{36})$/i);
+          if (dtr) {
+            const approve = dtr[1].toLowerCase() === "approve";
+            const { data: res } = await supabase.rpc("decide_deal_transfer_by_phone", {
+              _request_id: dtr[2], _phone: phone, _approve: approve,
+            });
+            const r: any = res || {};
+            let reply = "";
+            if (r.ok) {
+              reply = r.status === "approved"
+                ? `Aprovado: negócio "${r.deal_title}" transferido para ${r.requester_name}.`
+                : `Recusado: o pedido de ${r.requester_name} para "${r.deal_title}" foi recusado.`;
+            } else if (r.already) {
+              reply = `Esse pedido já foi ${r.already === "approved" ? "aprovado" : "recusado"}.`;
+            } else if (r.error === "not_manager") {
+              reply = "Este número não está autorizado a aprovar transferências.";
+            }
+            if (reply) {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deal-transfer-whatsapp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                body: JSON.stringify({ action: "confirm", request_id: dtr[2], phone, text: reply }),
+              }).catch((e) => console.warn("[WEBHOOK] dtr confirm falhou:", e));
+            }
+            return new Response(JSON.stringify({ handled: "deal_transfer_decision" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
         
         // Extract content and media from various formats
         let content = "";
