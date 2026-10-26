@@ -6,6 +6,19 @@ import { useToast } from "@/hooks/use-toast";
 import { withRetry } from "@/lib/retryFetch";
 import { DEAL_FIELD_IDS } from "@/utils/dealToClientContractMapping";
 
+/** Traduz erros técnicos do carregamento para frases que qualquer pessoa entende. */
+function friendlyLoadError(error: any): string {
+  const raw = typeof error?.message === 'string' ? error.message : '';
+  const e = raw.toLowerCase();
+  if (e.includes('failed to fetch') || e.includes('networkerror') || e.includes('network') || e.includes('load failed'))
+    return 'A conexão com a internet falhou. Verifique sua rede e tente novamente.';
+  if (e.includes('timeout') || e.includes('timed out'))
+    return 'O servidor demorou demais para responder. Tente novamente em alguns segundos.';
+  if (e.includes('jwt') || e.includes('401') || e.includes('403') || e.includes('permission') || e.includes('row-level'))
+    return 'Não foi possível acessar esses negócios. Faça login novamente; se persistir, fale com o gestor.';
+  return 'Não foi possível carregar as negociações agora. Tente novamente.';
+}
+
 export interface DealStage {
   id: string;
   account_id: string;
