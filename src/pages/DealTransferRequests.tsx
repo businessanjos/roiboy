@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { DealTransferWhatsappRecipients } from "@/components/sales/DealTransferWhatsappRecipients";
 
 interface Req {
   id: string;
@@ -140,6 +141,7 @@ export default function DealTransferRequests() {
           )}
         </CardContent>
       </Card>
+      {isManager && <DealTransferWhatsappRecipients />}
       {history.length > 0 && (
         <Card>
           <CardHeader>

@@ -7518,6 +7518,30 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_transfer_whatsapp_recipients: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          phone_e164: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          phone_e164: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          phone_e164?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           account_id: string
@@ -29983,6 +30007,19 @@ export type Database = {
         Args: { _approve: boolean; _note?: string; _request_id: string }
         Returns: Json
       }
+      decide_deal_transfer_by_phone: {
+        Args: { _approve: boolean; _phone: string; _request_id: string }
+        Returns: Json
+      }
+      decide_deal_transfer_core: {
+        Args: {
+          _approve: boolean
+          _manager_id: string
+          _note?: string
+          _request_id: string
+        }
+        Returns: Json
+      }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
       delete_admission_doc_attachment: {
         Args: { _doc_id: string; _path: string; _token: string }
@@ -30320,6 +30357,13 @@ export type Database = {
         }
         Returns: string
       }
+      list_deal_transfer_managers: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       mi_tier_ticket_range: { Args: { _tier: string }; Returns: number[] }
       next_digital_contract_number: {
         Args: { p_account_id: string }
@@ -30551,6 +30595,10 @@ export type Database = {
           _token: string
         }
         Returns: boolean
+      }
+      set_deal_transfer_whatsapp_recipient: {
+        Args: { _phone: string; _user_id: string }
+        Returns: undefined
       }
       settle_installment_from_import: {
         Args: { p_payment_status?: string; p_row_id: string }
