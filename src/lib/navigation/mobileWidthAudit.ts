@@ -17,7 +17,7 @@ export const MOBILE_WIDTH_AUDIT_ROUTES: readonly string[] = [
   "/operations/consultant-bonus", "/operations/cs-incentive-presentation", "/operations/scripts",
   "/operations/instagram-ranking", "/contracts", "/settings/contract-defaults", "/settings/team/pendencias",
   "/sales/contracts", "/sales/contracts/templates", "/sales/contracts/defaults", "/pipeline",
-  "/sales-dashboard", "/sales/logs", "/sales-calendar", "/sales-team", "/sales-team/spiffs",
+  "/sales-dashboard", "/sales/logs", "/sales-calendar", "/sales-team", "/sales-team/spiffs", "/sales-team/transfer-requests",
   "/sales-team/incentive-presentation", "/leads",
   "/financial", "/financial/dashboard", "/financial/cash-flow", "/financial/bank-accounts",
   "/financial/bank-accounts/:id/extrato", "/financial/categories", "/financial/cost-centers",
