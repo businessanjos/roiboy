@@ -1236,17 +1236,21 @@ export function DealDetailSheet({
                   </Button>
                 </>
               )}
-              <UndoDealMergeButton dealId={deal.id} onRestored={() => { onOpenChange(false); onDealUpdated?.(); }} />
-              {deal.status === 'lost' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-11 sm:h-8 px-2.5 flex-1 sm:flex-none"
-                  onClick={() => setMergeDialogOpen(true)}
-                >
-                  <GitMerge className="h-4 w-4 mr-1" />
-                  Mesclar
-                </Button>
+              {deal.status === 'lost' ? (
+                <div className="flex flex-col items-stretch gap-1 sm:items-start">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-11 sm:h-8 px-2.5 flex-1 sm:flex-none"
+                    onClick={() => setMergeDialogOpen(true)}
+                  >
+                    <GitMerge className="h-4 w-4 mr-1" />
+                    Mesclar
+                  </Button>
+                  <UndoDealMergeButton dealId={deal.id} onRestored={() => { onOpenChange(false); onDealUpdated?.(); }} />
+                </div>
+              ) : (
+                <UndoDealMergeButton dealId={deal.id} onRestored={() => { onOpenChange(false); onDealUpdated?.(); }} />
               )}
               {isClosed && (
                 <Button
