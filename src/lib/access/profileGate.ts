@@ -20,6 +20,8 @@ export interface RouteRule {
 
 // Mais específico primeiro.
 export const PROFILE_ROUTE_RULES: RouteRule[] = [
+  // A fila pessoal acompanha Leads; não herda o bloqueio de Ranking/Gestão.
+  { prefix: "/sales-team/transfer-requests", items: [{ module: "comercial", sub: "leads" }], label: "Pedidos de transferência" },
   { prefix: "/sales-team/incentive-presentation", items: [{ module: "comercial", sub: "accelerometer" }], label: "Acelerômetro" },
   { prefix: "/sales-team/spiffs", items: [{ module: "comercial", sub: "spiffs" }], label: "SPIFFs" },
   { prefix: "/sales-team", items: [{ module: "comercial", sub: "ranking" }], label: "Ranking" },

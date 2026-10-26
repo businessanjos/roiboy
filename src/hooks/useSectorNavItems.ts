@@ -24,6 +24,7 @@ export const SDR_FULL_VENDAS_EMAILS = new Set<string>([
 export const SDR_VENDAS_ALLOWED_ROUTES = new Set<string>([
   "/pipeline",
   "/leads",
+  "/sales-team/transfer-requests",
   "/tasks",
   "/sales-calendar",
   "/clients",

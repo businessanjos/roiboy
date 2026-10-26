@@ -80,7 +80,9 @@ export function decideRouteAccess(
     };
   }
 
-  const item = routeSector.navItems.find((nav) => pathname.startsWith(nav.to));
+  const item = routeSector.navItems
+    .filter((nav) => pathname === nav.to || pathname.startsWith(`${nav.to}/`))
+    .sort((a, b) => b.to.length - a.to.length)[0];
   if (!item || !item.permission) {
     return { allowed: true, reason: "sector active + no permission required" };
   }
