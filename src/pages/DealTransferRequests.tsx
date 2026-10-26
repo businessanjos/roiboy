@@ -144,8 +144,6 @@ export default function DealTransferRequests() {
           )}
         </CardContent>
       </Card>
-      {isManager && <DealTransferWhatsappRecipients />}
-      {history.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Histórico</CardTitle>
