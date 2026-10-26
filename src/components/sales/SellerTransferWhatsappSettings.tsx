@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { TransferMessageEditor } from "./TransferMessageEditor";
+import { DEFAULT_TRANSFER_TEMPLATES, validateTransferTemplate, type TransferMessageChannel } from "@/lib/transferMessageTemplate";
 
 const db = supabase as any;
 
@@ -45,6 +47,9 @@ export function SellerTransferWhatsappSettings() {
   const [phone, setPhone] = useState("");
   const [search, setSearch] = useState("");
   const [groupSearch, setGroupSearch] = useState("");
+  const [tab, setTab] = useState("sellers");
+  const [templates, setTemplates] = useState({ ...DEFAULT_TRANSFER_TEMPLATES });
+  const [savingTexts, setSavingTexts] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["seller-transfer-whatsapp", accountId],
@@ -57,6 +62,7 @@ export function SellerTransferWhatsappSettings() {
         db.from("zapp_conversations").select("group_jid, contact_name").eq("sector_id", "vendas").eq("is_group", true)
           .not("group_jid", "is", null).order("last_message_at", { ascending: false }).limit(200),
       ]);
+      for (const response of [cfg, phones, users, groups]) if (response.error) throw response.error;
       const seen = new Set<string>();
       const groupList = ((groups.data || []) as any[]).filter((g) => !seen.has(g.group_jid) && seen.add(g.group_jid));
       return {
@@ -77,6 +83,7 @@ export function SellerTransferWhatsappSettings() {
     setPriv(!!data.cfg?.notify_private);
     setGroup(!!data.cfg?.notify_group);
     setGroupJid(data.cfg?.group_jid || "");
+    setTemplates({ private: data.cfg?.private_message_template || DEFAULT_TRANSFER_TEMPLATES.private, group: data.cfg?.group_message_template || DEFAULT_TRANSFER_TEMPLATES.group });
   }, [data]);
 
   const phoneOf = new Map((data?.phones || []).map((p) => [p.user_id, p.phone_e164]));
@@ -84,6 +91,26 @@ export function SellerTransferWhatsappSettings() {
   const sellers = (data?.users || []).filter((u) => norm(u.name).includes(norm(search)));
   const groups = (data?.groups || []).filter((g) => norm(g.contact_name || "").includes(norm(groupSearch)));
   const refresh = () => qc.invalidateQueries({ queryKey: ["seller-transfer-whatsapp", accountId] });
+  const savedTemplates = { private: data?.cfg?.private_message_template || DEFAULT_TRANSFER_TEMPLATES.private, group: data?.cfg?.group_message_template || DEFAULT_TRANSFER_TEMPLATES.group };
+  const textsDirty = templates.private !== savedTemplates.private || templates.group !== savedTemplates.group;
+  const saveTexts = async () => {
+    if (!accountId || savingTexts) return;
+    const errorText = validateTransferTemplate(templates.private) || validateTransferTemplate(templates.group);
+    if (errorText) return toast.error(errorText);
+    setSavingTexts(true);
+    try {
+      const { error } = await db.from("sales_transfer_whatsapp_settings").upsert({
+        account_id: accountId,
+        private_message_template: templates.private,
+        group_message_template: templates.group,
+        updated_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      await refresh();
+      toast.success("Textos salvos para os próximos avisos");
+    } catch { toast.error("Não foi possível salvar os textos. Tente novamente."); }
+    finally { setSavingTexts(false); }
+  };
 
   const saveCfg = async (next: { notify_private?: boolean; notify_group?: boolean; group_jid?: string }) => {
     const merged = { notify_private: priv, notify_group: group, group_jid: groupJid, ...next };
@@ -127,7 +154,7 @@ export function SellerTransferWhatsappSettings() {
           Aviso ao vendedor
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className={`max-h-[85vh] overflow-y-auto ${tab === "message" ? "sm:max-w-3xl" : "sm:max-w-md"}`}>
         <DialogHeader>
           <DialogTitle className="text-base">Aviso ao vendedor no WhatsApp</DialogTitle>
           <DialogDescription>Quando um lead ou negócio é transferido, o vendedor recebe um aviso. Ative uma ou as duas opções.</DialogDescription>
@@ -135,11 +162,14 @@ export function SellerTransferWhatsappSettings() {
 
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
+        ) : !data ? (
+          <p role="alert" className="text-sm text-destructive">Não foi possível carregar as configurações. Feche e tente novamente.</p>
         ) : (
-          <Tabs defaultValue="sellers" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs value={tab} onValueChange={setTab} className="min-w-0 space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="sellers">Vendedores</TabsTrigger>
               <TabsTrigger value="group">Grupo do time</TabsTrigger>
+              <TabsTrigger value="message">Mensagem</TabsTrigger>
             </TabsList>
 
             <TabsContent value="sellers" className="space-y-3">
@@ -213,19 +243,23 @@ export function SellerTransferWhatsappSettings() {
                 {groups.map((g) => {
                   const active = g.group_jid === groupJid;
                   return (
-                    <button
+                    <Button
                       key={g.group_jid}
                       type="button"
+                      variant="ghost"
                       onClick={() => { setGroupJid(g.group_jid); saveCfg({ group_jid: g.group_jid }); }}
-                      className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors ${active ? "border-primary bg-primary/10" : "hover:bg-muted"}`}
+                      className={`flex h-auto w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors ${active ? "border-primary bg-primary/10" : "hover:bg-muted"}`}
                     >
                       <span className="truncate">{g.contact_name || "Grupo sem nome"}</span>
                       {active && <span className="shrink-0 text-xs font-medium text-primary">Selecionado</span>}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
               <p className="text-xs text-muted-foreground">O número do Comercial precisa estar dentro do grupo.</p>
+            </TabsContent>
+            <TabsContent value="message">
+              <TransferMessageEditor templates={templates} onChange={(channel: TransferMessageChannel, text) => setTemplates((previous) => ({ ...previous, [channel]: text }))} onSave={saveTexts} saving={savingTexts} dirty={textsDirty} />
             </TabsContent>
           </Tabs>
         )}
