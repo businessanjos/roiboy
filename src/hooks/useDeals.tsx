@@ -315,7 +315,7 @@ export function useDeals(pipelineId?: string | null) {
       console.error('Error fetching deals:', error);
       toast({
         title: "Erro ao carregar negociações",
-        description: error.message,
+        description: friendlyLoadError(error),
         variant: "destructive",
       });
     } finally {
