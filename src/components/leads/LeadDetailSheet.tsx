@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useLeadDealCards } from "@/hooks/useLeadDealCards";
 import { useThreeCPlusOpen } from "@/hooks/useThreeCPlusOpen";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -87,6 +88,7 @@ interface Lead {
   notes: string | null;
   created_at: string;
   responsible_user_id: string | null;
+  responsible?: { name: string } | null;
   mql: string | null;
   canal: string | null;
   revenue_range: string | null;
@@ -140,9 +142,11 @@ export function LeadDetailSheet({
   // Admins ou usuários com acesso a Vendas podem gerenciar campos personalizados
   const canManageCustomFields = isAdmin || hasVendasAccess;
   const [lead, setLead] = useState<Lead | null>(null);
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [dealPresence, setDealPresence] = useState<DealPresence[]>([]);
+  const { data: dealCards, refetch: refetchDealCards } = useLeadDealCards(leadId, currentUser?.id, open);
+  const deals: Deal[] = dealCards?.deals || [];
+  const dealPresence: DealPresence[] = dealCards?.presence || [];
   const [requestedDealIds, setRequestedDealIds] = useState<string[]>([]);
+  useEffect(() => { setRequestedDealIds([]); }, [leadId, open]);
 
   const requestTransfer = async (dealId: string) => {
     const reason = window.prompt("Motivo do pedido de transferência (opcional):") ?? null;
@@ -155,6 +159,7 @@ export function LeadDetailSheet({
       return;
     }
     setRequestedDealIds((p) => [...p, dealId]);
+    void refetchDealCards();
     toast.success("Pedido enviado ao gestor. Você será avisado da decisão.");
     // Aviso no WhatsApp do gestor: não bloqueia o pedido se falhar.
     supabase.functions
@@ -228,7 +233,7 @@ export function LeadDetailSheet({
       // Fetch lead data
       const { data: leadData, error: leadError } = await supabase
         .from("leads")
-        .select("id, full_name, phone, email, emails, additional_phones, instagram, instagrams, source, status, notes, created_at, mql, canal, responsible_user_id, revenue_range")
+        .select("id, full_name, phone, email, emails, additional_phones, instagram, instagrams, source, status, notes, created_at, mql, canal, responsible_user_id, revenue_range, responsible:users!leads_responsible_user_id_fkey(name)")
         .eq("id", leadId)
         .single();
 
@@ -248,20 +253,9 @@ export function LeadDetailSheet({
       });
 
 
-      // Fetch associated deals (ignora negócios excluídos / soft-delete)
-      const { data: dealsData, error: dealsError } = await supabase
-        .from("deals")
-        .select("id, title, value, responsible_user_id, stage:deal_stages(name), responsible:users!deals_responsible_user_id_fkey(name)")
-        .eq("lead_id", leadId)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false });
-
+      const { data: refreshedCards, error: dealsError } = await refetchDealCards();
       if (dealsError) throw dealsError;
-      setDeals(dealsData || []);
-
-      // Presença de negócios (inclui os que o usuário não pode abrir, p/ evitar duplicidade)
-      const { data: presenceData } = await supabase.rpc("get_lead_deal_presence", { p_lead_id: leadId });
-      setDealPresence((presenceData as DealPresence[] | null) || []);
+      const dealsData = refreshedCards?.deals || [];
 
       // Espelhar Item da Venda + Origem da Venda do deal mais recente que tenha valor.
       // Resolve IDs dinamicamente por NOME para não quebrar se o campo for renomeado/recriado.
@@ -390,9 +384,9 @@ export function LeadDetailSheet({
               </SheetHeader>
 
               <div className="mt-6 space-y-6">
-                {/* Owner (dynamic from most recent deal) */}
+                {/* O proprietário do lead é independente do responsável pelo negócio. */}
                 {(() => {
-                  const ownerName = deals.length > 0 ? deals[0]?.responsible?.name : null;
+                  const ownerName = lead.responsible?.name;
                   return ownerName ? (
                     <div className="flex items-center gap-3">
                       <User className="h-4 w-4 text-muted-foreground" />
@@ -593,6 +587,11 @@ export function LeadDetailSheet({
                                   <p className="text-xs text-muted-foreground">
                                     {deal.stage?.name}
                                   </p>
+                                  {deal.responsible_user_id === currentUser?.id ? (
+                                    <Badge variant="secondary" className="mt-1">Está com você</Badge>
+                                  ) : deal.responsible?.name ? (
+                                    <p className="text-xs text-muted-foreground">Responsável: {deal.responsible.name}</p>
+                                  ) : null}
                                 </div>
                                 <div className="flex items-center gap-2">
                                   {deal.value > 0 && (
@@ -630,10 +629,10 @@ export function LeadDetailSheet({
                                     size="sm"
                                     variant="outline"
                                     className="h-7 text-xs"
-                                    disabled={requestedDealIds.includes(deal.id)}
+                                    disabled={requestedDealIds.includes(deal.id) || dealCards?.pendingIds.includes(deal.id)}
                                     onClick={() => requestTransfer(deal.id)}
                                   >
-                                    {requestedDealIds.includes(deal.id) ? "Pedido enviado" : "Solicitar transferência"}
+                                    {requestedDealIds.includes(deal.id) || dealCards?.pendingIds.includes(deal.id) ? "Aguardando decisão" : "Solicitar transferência"}
                                   </Button>
                                 </div>
                               </div>
