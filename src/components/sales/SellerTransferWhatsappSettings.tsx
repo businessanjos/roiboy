@@ -161,7 +161,19 @@ export function SellerTransferWhatsappSettings() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <p className="truncate font-medium">{u.name}</p>
-                          <p className="text-xs text-muted-foreground">{saved || "Sem WhatsApp cadastrado"}</p>
+                          <div className="mt-1 flex items-center gap-1.5">
+                            {saved ? (
+                              <>
+                                <Badge className="h-5 gap-1 rounded-full px-1.5 text-[10px] font-medium">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Ativo p/ envio
+                                </Badge>
+                                <span className="truncate text-xs text-muted-foreground">{formatPhoneE164(saved)}</span>
+                              </>
+                            ) : (
+                              <Badge variant="outline" className="h-5 rounded-full px-1.5 text-[10px] font-medium text-muted-foreground">Sem número</Badge>
+                            )}
+                          </div>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
                           <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setUserId(editing ? "" : u.id); setPhone(saved || ""); }}>
