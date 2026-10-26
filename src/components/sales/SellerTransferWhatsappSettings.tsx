@@ -1,18 +1,29 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, Plus, Trash2 } from "lucide-react";
+import { BellRing, CheckCircle2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const db = supabase as any;
+
+function formatPhoneE164(e164: string) {
+  const n = e164.replace(/\D/g, "");
+  if (n.startsWith("55") && n.length >= 12) {
+    const ddd = n.slice(2, 4);
+    const rest = n.slice(4);
+    return `+55 (${ddd}) ${rest.length > 8 ? rest.slice(0, 5) : rest.slice(0, 4)}${rest.length > 8 ? " " : ""}${rest.slice(rest.length > 8 ? 5 : 4)}`;
+  }
+  return e164;
+}
 
 function toE164(raw: string) {
   let n = raw.replace(/\D/g, "");
@@ -136,6 +147,9 @@ export function SellerTransferWhatsappSettings() {
                 <Label htmlFor="stw-private" className="text-sm font-medium">Avisar no WhatsApp de cada vendedor</Label>
                 <Switch id="stw-private" checked={priv} onCheckedChange={(v) => { setPriv(v); saveCfg({ notify_private: v }); }} />
               </div>
+              <p className="text-xs text-muted-foreground">
+                {(data?.users || []).filter((u: any) => phoneOf.has(u.id)).length} de {(data?.users || []).length} vendedores com número ativo para envio
+              </p>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-8" placeholder="Buscar vendedor" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -150,7 +164,19 @@ export function SellerTransferWhatsappSettings() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <p className="truncate font-medium">{u.name}</p>
-                          <p className="text-xs text-muted-foreground">{saved || "Sem WhatsApp cadastrado"}</p>
+                          <div className="mt-1 flex items-center gap-1.5">
+                            {saved ? (
+                              <>
+                                <Badge className="h-5 gap-1 rounded-full px-1.5 text-[10px] font-medium">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Ativo p/ envio
+                                </Badge>
+                                <span className="truncate text-xs text-muted-foreground">{formatPhoneE164(saved)}</span>
+                              </>
+                            ) : (
+                              <Badge variant="outline" className="h-5 rounded-full px-1.5 text-[10px] font-medium text-muted-foreground">Sem número</Badge>
+                            )}
+                          </div>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
                           <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setUserId(editing ? "" : u.id); setPhone(saved || ""); }}>
