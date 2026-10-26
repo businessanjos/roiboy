@@ -142,6 +142,21 @@ export function LeadDetailSheet({
   const [lead, setLead] = useState<Lead | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [dealPresence, setDealPresence] = useState<DealPresence[]>([]);
+  const [requestedDealIds, setRequestedDealIds] = useState<string[]>([]);
+
+  const requestTransfer = async (dealId: string) => {
+    const reason = window.prompt("Motivo do pedido de transferência (opcional):") ?? null;
+    if (reason === null) return;
+    const { error } = await (supabase as any).rpc("request_deal_transfer", { _deal_id: dealId, _reason: reason || null });
+    if (error) {
+      const msg = String(error.message || "");
+      if (msg.includes("pendente")) setRequestedDealIds((p) => [...p, dealId]);
+      toast.error(msg || "Não foi possível enviar o pedido");
+      return;
+    }
+    setRequestedDealIds((p) => [...p, dealId]);
+    toast.success("Pedido enviado ao gestor. Você será avisado da decisão.");
+  };
   const [loading, setLoading] = useState(false);
   const [customFields, setCustomFields] = useState<LeadCustomField[]>([]);
   
@@ -602,10 +617,21 @@ export function LeadDetailSheet({
                                       .join(" · ")}
                                   </p>
                                 </div>
-                                <Badge variant="secondary" className="shrink-0 gap-1">
-                                  <Lock className="h-3 w-3" />
-                                  Com outro responsável
-                                </Badge>
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                  <Badge variant="secondary" className="gap-1">
+                                    <Lock className="h-3 w-3" />
+                                    Com outro responsável
+                                  </Badge>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs"
+                                    disabled={requestedDealIds.includes(deal.id)}
+                                    onClick={() => requestTransfer(deal.id)}
+                                  >
+                                    {requestedDealIds.includes(deal.id) ? "Pedido enviado" : "Solicitar transferência"}
+                                  </Button>
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
