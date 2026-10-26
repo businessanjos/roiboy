@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     if (r.status !== "pending") return json({ ok: true, skipped: "decided" });
 
     const [{ data: deal }, { data: owner }, { data: recipients }] = await Promise.all([
-      supabase.from("deals").select("title, stage:deal_stages(name)").eq("id", r.deal_id).maybeSingle(),
+      supabase.from("deals").select("title, value, created_at, stage:deal_stages(name), pipeline:pipelines(name)").eq("id", r.deal_id).maybeSingle(),
       r.current_owner_id
         ? supabase.from("users").select("name").eq("id", r.current_owner_id).maybeSingle()
         : Promise.resolve({ data: null }),
@@ -116,17 +116,17 @@ Deno.serve(async (req) => {
     const s = await getSender(supabase, r.account_id);
     if (!s) return json({ ok: false, sent: 0, reason: "WhatsApp do Comercial desconectado" });
 
-    const lines = [
-      "*Pedido de transferência de negócio*",
-      `${me.name} pediu: *${deal?.title || "Negócio"}*`,
-      `Etapa: ${(deal as any)?.stage?.name || "—"} · Hoje com: ${owner?.name || "Sem responsável"}`,
-    ];
-    if (r.reason) lines.push(`Motivo: "${r.reason}"`);
-    const linkText = [
-      "",
-      `Aprovar: ${APP_URL}/transferencia/${r.id}?d=sim`,
-      `Recusar: ${APP_URL}/transferencia/${r.id}?d=nao`,
-    ].join("\n");
+    const text = buildMessage({
+      requester: me.name,
+      title: deal?.title || "Negócio",
+      pipeline: (deal as any)?.pipeline?.name,
+      stage: (deal as any)?.stage?.name,
+      owner: owner?.name || "Sem responsável",
+      value: (deal as any)?.value,
+      createdAt: (deal as any)?.created_at,
+      reason: r.reason,
+    });
+    const linkText = `\n\nAprovar: ${APP_URL}/transferencia/${r.id}?d=sim\nRecusar: ${APP_URL}/transferencia/${r.id}?d=nao`;
 
     let sent = 0;
     for (const rec of recipients) {
@@ -135,15 +135,12 @@ Deno.serve(async (req) => {
       const okMenu = await post(s, "/send/menu", {
         number,
         type: "button",
-        text: lines.join("\n"),
-        choices: [`Aprovar|dtr:approve:${r.id}`, `Recusar|dtr:reject:${r.id}`],
-        footerText: "ROY APP",
+        text,
+        choices: [`✅ Aprovar|dtr:approve:${r.id}`, `❌ Recusar|dtr:reject:${r.id}`],
+        footerText: "ROY APP · Comercial",
       });
-      // Links sempre, pois botões nem sempre aparecem em todos os aparelhos.
-      const okText = await post(s, "/send/text", {
-        number,
-        text: okMenu ? `Se os botões não aparecerem, use os links:${linkText}` : lines.join("\n") + "\n" + linkText,
-      });
+      // Links só se o envio com botões falhar.
+      const okText = okMenu ? true : await post(s, "/send/text", { number, text: text + linkText });
       if (okMenu || okText) sent++;
     }
     return json({ ok: true, sent });
