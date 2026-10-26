@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search } from "lucide-react";
+import { Search, X, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { TransferMessageEditor } from "./TransferMessageEditor";
 import { DEFAULT_TRANSFER_TEMPLATES, validateTransferTemplate, type TransferMessageChannel } from "@/lib/transferMessageTemplate";
@@ -48,6 +48,7 @@ export function SellerTransferWhatsappSettings() {
   const [search, setSearch] = useState("");
   const [groupSearch, setGroupSearch] = useState("");
   const [tab, setTab] = useState("sellers");
+  const [showRemoved, setShowRemoved] = useState(false);
   const [templates, setTemplates] = useState({ ...DEFAULT_TRANSFER_TEMPLATES });
   const [savingTexts, setSavingTexts] = useState(false);
 
@@ -88,8 +89,10 @@ export function SellerTransferWhatsappSettings() {
 
   const phoneOf = new Map((data?.phones || []).map((p) => [p.user_id, p.phone_e164]));
   const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const excludedIds = new Set<string>(((data?.cfg?.excluded_user_ids || []) as string[]));
   const sellers = (data?.users || []).filter((u) => norm(u.name).includes(norm(search)));
-  const groups = (data?.groups || []).filter((g) => norm(g.contact_name || "").includes(norm(groupSearch)));
+  const visibleSellers = sellers.filter((u) => !excludedIds.has(u.id));
+  const removedSellers = sellers.filter((u) => excludedIds.has(u.id));
   const refresh = () => qc.invalidateQueries({ queryKey: ["seller-transfer-whatsapp", accountId] });
   const savedTemplates = { private: data?.cfg?.private_message_template || DEFAULT_TRANSFER_TEMPLATES.private, group: data?.cfg?.group_message_template || DEFAULT_TRANSFER_TEMPLATES.group };
   const textsDirty = templates.private !== savedTemplates.private || templates.group !== savedTemplates.group;

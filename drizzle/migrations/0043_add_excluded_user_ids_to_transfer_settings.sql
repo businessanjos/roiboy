@@ -1,0 +1,2 @@
+ALTER TABLE public.sales_transfer_whatsapp_settings ADD COLUMN IF NOT EXISTS excluded_user_ids uuid[] NOT NULL DEFAULT '{}';
+COMMENT ON COLUMN public.sales_transfer_whatsapp_settings.excluded_user_ids IS 'Vendedores escondidos da lista de aviso por escolha do gestor';

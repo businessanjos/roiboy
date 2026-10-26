@@ -24205,6 +24205,7 @@ export type Database = {
       sales_transfer_whatsapp_settings: {
         Row: {
           account_id: string
+          excluded_user_ids: string[]
           group_jid: string | null
           group_message_template: string | null
           group_name: string | null
@@ -24215,6 +24216,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          excluded_user_ids?: string[]
           group_jid?: string | null
           group_message_template?: string | null
           group_name?: string | null
@@ -24225,6 +24227,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          excluded_user_ids?: string[]
           group_jid?: string | null
           group_message_template?: string | null
           group_name?: string | null
