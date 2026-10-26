@@ -1,18 +1,29 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, Plus, Trash2 } from "lucide-react";
+import { BellRing, CheckCircle2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const db = supabase as any;
+
+function formatPhoneE164(e164: string) {
+  const n = e164.replace(/\D/g, "");
+  if (n.startsWith("55") && n.length >= 12) {
+    const ddd = n.slice(2, 4);
+    const rest = n.slice(4);
+    return `+55 (${ddd}) ${rest.length > 8 ? rest.slice(0, 5) : rest.slice(0, 4)}${rest.length > 8 ? " " : ""}${rest.slice(rest.length > 8 ? 5 : 4)}`;
+  }
+  return e164;
+}
 
 function toE164(raw: string) {
   let n = raw.replace(/\D/g, "");
