@@ -25,6 +25,16 @@ describe("profile gate", () => {
     expect(isRouteBlockedByProfile("/sales-team/spiffs", perms, false)).toBe(false);
   });
 
+  it("Darlan pode acompanhar pedidos com Leads liberado mesmo sem acesso ao Ranking", () => {
+    const perms = [none("comercial", "ranking"), view("comercial", "leads")];
+    expect(isRouteBlockedByProfile("/sales-team/transfer-requests", perms, false)).toBe(false);
+    expect(isRouteBlockedByProfile("/sales-team", perms, false)).toBe(true);
+  });
+
+  it("a fila preserva a negação explícita de acesso a Leads", () => {
+    expect(isRouteBlockedByProfile("/sales-team/transfer-requests", [none("comercial", "leads")], false)).toBe(true);
+  });
+
   it("pipeline só bloqueia quando abertos, ganhos e perdidos estão sem acesso", () => {
     const partial = [none("comercial", "deals_open"), none("comercial", "deals_won")];
     expect(isRouteBlockedByProfile("/pipeline", partial, false)).toBe(false);
