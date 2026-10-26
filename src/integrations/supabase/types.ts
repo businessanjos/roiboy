@@ -30357,6 +30357,13 @@ export type Database = {
         }
         Returns: string
       }
+      list_deal_transfer_managers: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       mi_tier_ticket_range: { Args: { _tier: string }; Returns: number[] }
       next_digital_contract_number: {
         Args: { p_account_id: string }
@@ -30588,6 +30595,10 @@ export type Database = {
           _token: string
         }
         Returns: boolean
+      }
+      set_deal_transfer_whatsapp_recipient: {
+        Args: { _phone: string; _user_id: string }
+        Returns: undefined
       }
       settle_installment_from_import: {
         Args: { p_payment_status?: string; p_row_id: string }

@@ -281,6 +281,13 @@
       "when": 1793020631037,
       "tag": "0039_deal_transfer_whatsapp",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793020754509,
+      "tag": "0040_deal_transfer_whatsapp_recipient_rpcs",
+      "breakpoints": true
     }
   ]
 }
