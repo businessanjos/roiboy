@@ -14,6 +14,7 @@ interface Props {
   variables?: Record<string, string>;
   replaceVariables?: (text: string, vars: Record<string, string>) => string;
   signText?: (text: string) => string;
+  messageOnly?: boolean;
 }
 
 function MediaBlock({ item }: { item: PlaybookItem }) {
@@ -67,7 +68,7 @@ function MediaBlock({ item }: { item: PlaybookItem }) {
   }
 }
 
-export function PlaybookSequencePreview({ steps, items, variables = {}, replaceVariables, signText }: Props) {
+export function PlaybookSequencePreview({ steps, items, variables = {}, replaceVariables, signText, messageOnly = false }: Props) {
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const resolved = steps
     .map((st, i) => ({ step: st, item: itemById.get(st.playbook_item_id), index: i }))
@@ -147,18 +148,18 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
               const isMedia = item.content_type !== "text";
               return (
                 <div key={`${item.id}-${pos}`}>
-                  <div className="my-1.5 flex justify-center">
+                  {!messageOnly && <div className="my-1.5 flex justify-center">
                     <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] shadow-sm" style={{ background: wa("chip"), color: wa("meta") }}>
                       {pos === 0 ? <><Zap className="h-3 w-3" /> instantâneo ao clicar</> : <><Timer className="h-3 w-3" /> aguarda {step.delay_seconds}s</>}
                     </span>
-                  </div>
+                  </div>}
                   <div
                     className="relative ml-auto w-fit min-w-[110px] max-w-[85%] rounded-lg rounded-tr-none px-2 pb-1 pt-1.5 text-[13px] shadow-sm"
                     style={{ background: wa("bubble-out"), color: wa("bubble-out-foreground") }}
                   >
-                    <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-wide" style={{ color: wa("meta") }}>
+                    {!messageOnly && <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-wide" style={{ color: wa("meta") }}>
                       {index + 1} · {item.name}
-                    </p>
+                    </p>}
                     {isMedia && <div className="mb-1"><MediaBlock item={item} /></div>}
                     {text && <p className="whitespace-pre-wrap break-words leading-snug">{applyWhatsAppFormatting(text, `t-${pos}`)}</p>}
                     {isMedia && caption && <p className="whitespace-pre-wrap break-words leading-snug">{applyWhatsAppFormatting(caption, `c-${pos}`)}</p>}

@@ -5,6 +5,7 @@
 // Cada notificação é enviada no máximo uma vez (transfer_whatsapp_sends).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { renderTransferMessage, type TransferMessageData } from "../_shared/transferMessageTemplate.ts";
 
 const APP_URL = "https://iamroy.app";
 const UUID_RE = /^[0-9a-f-]{36}$/i;
@@ -65,29 +66,28 @@ Deno.serve(async (req) => {
     ]);
 
     const isDeal = n.type === "deal_transferred";
-    const lines: string[] = [];
+    const messageData: TransferMessageData = { tipo: isDeal ? "negócio" : "lead", vendedor: firstName(seller?.name), link: "" };
     let link = "";
     if (isDeal) {
       const { data: d } = await supabase.from("deals")
         .select("title, value, stage:deal_stages(name), pipeline:pipelines(name), lead:leads(full_name, source)")
         .eq("id", n.source_id).maybeSingle();
-      lines.push(`📌 *Negócio:* ${d?.title || "Negócio"}`);
-      if ((d as any)?.lead?.full_name) lines.push(`👤 *Lead:* ${(d as any).lead.full_name}`);
-      if ((d as any)?.pipeline?.name) lines.push(`🧭 *Funil:* ${(d as any).pipeline.name}`);
-      if ((d as any)?.stage?.name) lines.push(`📍 *Etapa:* ${(d as any).stage.name}`);
-      if (d?.value && Number(d.value) > 0) lines.push(`💰 *Valor:* ${brl(Number(d.value))}`);
-      if ((d as any)?.lead?.source) lines.push(`📣 *Origem:* ${(d as any).lead.source}`);
+      messageData.negocio = d?.title || "Negócio";
+      messageData.lead = (d as any)?.lead?.full_name;
+      messageData.funil = (d as any)?.pipeline?.name;
+      messageData.etapa = (d as any)?.stage?.name;
+      messageData.valor = d?.value && Number(d.value) > 0 ? brl(Number(d.value)) : undefined;
+      messageData.origem = (d as any)?.lead?.source;
       link = `${APP_URL}/sales/pipeline?deal=${n.source_id}`;
     } else {
       const { data: l } = await supabase.from("leads").select("full_name, source").eq("id", n.source_id).maybeSingle();
-      lines.push(`👤 *Lead:* ${l?.full_name || "Lead"}`);
-      if (l?.source) lines.push(`📣 *Origem:* ${l.source}`);
+      messageData.lead = l?.full_name || "Lead";
+      messageData.origem = l?.source;
       link = `${APP_URL}/leads?lead=${n.source_id}`;
     }
     const by = firstName(actor?.name);
-    if (by) lines.push(`🔁 *Transferido por:* ${by}`);
-    const what = isDeal ? "negócio" : "lead";
-    const footer = ["", `Abrir no ROY: ${link}`];
+    messageData.transferido_por = by;
+    messageData.link = link;
 
     const s = await getSender(supabase, n.account_id);
     if (!s) return json({ ok: false, reason: "WhatsApp do Comercial desconectado" });
@@ -97,12 +97,12 @@ Deno.serve(async (req) => {
       const { data: ph } = await supabase.from("sales_user_whatsapp_phones").select("phone_e164").eq("user_id", n.user_id).maybeSingle();
       const number = String(ph?.phone_e164 || "").replace(/\D/g, "");
       if (number.length >= 10) {
-        const text = [`🎯 *Novo ${what} para você${firstName(seller?.name) ? ", " + firstName(seller?.name) : ""}!*`, "", ...lines, ...footer].join("\n");
+        const text = renderTransferMessage("private", cfg.private_message_template, messageData);
         result.private = await sendText(s, number, text);
       }
     }
     if (cfg.notify_group && cfg.group_jid) {
-      const text = [`🔔 *${firstName(seller?.name) || "Vendedor"}* recebeu um novo ${what}`, "", ...lines, ...footer].join("\n");
+      const text = renderTransferMessage("group", cfg.group_message_template, messageData);
       result.group = await sendText(s, cfg.group_jid, text);
     }
     await supabase.from("transfer_whatsapp_sends").update({ result }).eq("notification_id", id);
