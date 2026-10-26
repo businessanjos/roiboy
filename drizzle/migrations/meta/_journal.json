@@ -267,6 +267,13 @@
       "when": 1793019724770,
       "tag": "0037_deal_transfer_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793019767338,
+      "tag": "0038_deal_transfer_decision_link_fix",
+      "breakpoints": true
     }
   ]
 }
