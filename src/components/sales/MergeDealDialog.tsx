@@ -32,6 +32,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { MergedDealData } from "@/hooks/useDealMerge";
+import { selectMergeDirection, selectMergeValue } from "@/lib/dealMergeSelection";
 
 interface MergeDealDialogProps {
   open: boolean;
@@ -74,6 +75,7 @@ export function MergeDealDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const [targetDeal, setTargetDeal] = useState<Deal | null>(null);
   const [merging, setMerging] = useState(false);
+  const [keepDeal, setKeepDeal] = useState<MergeChoice | null>(null);
   const [activitiesCount, setActivitiesCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
   const [loadingCounts, setLoadingCounts] = useState(false);
@@ -178,6 +180,7 @@ export function MergeDealDialog({
 
   const handleSelectTarget = (deal: Deal) => {
     setTargetDeal(deal);
+    setKeepDeal(null);
     setSearchQuery("");
     fetchMergeCounts(sourceDeal.id);
   };
@@ -187,25 +190,26 @@ export function MergeDealDialog({
   };
 
   const handleMerge = async () => {
-    if (!targetDeal) return;
+    if (!targetDeal || !keepDeal) return;
 
     setMerging(true);
     try {
       // Build merged data based on choices
       const mergedData: MergedDealData = {
-        title: choices.title === "source" ? sourceDeal.title : targetDeal.title,
-        value: choices.value === "source" ? sourceDeal.value : targetDeal.value,
-        probability: choices.probability === "source" ? sourceDeal.probability : targetDeal.probability,
-        expected_close_date: choices.expected_close_date === "source" ? sourceDeal.expected_close_date : targetDeal.expected_close_date,
-        source: choices.source === "source" ? sourceDeal.source : targetDeal.source,
-        responsible_user_id: choices.responsible_user_id === "source" ? sourceDeal.responsible_user_id : targetDeal.responsible_user_id,
+        title: selectMergeValue(sourceDeal.title, targetDeal.title, choices.title),
+        value: selectMergeValue(sourceDeal.value, targetDeal.value, choices.value),
+        probability: selectMergeValue(sourceDeal.probability, targetDeal.probability, choices.probability),
+        expected_close_date: selectMergeValue(sourceDeal.expected_close_date, targetDeal.expected_close_date, choices.expected_close_date),
+        source: selectMergeValue(sourceDeal.source, targetDeal.source, choices.source),
+        responsible_user_id: selectMergeValue(sourceDeal.responsible_user_id, targetDeal.responsible_user_id, choices.responsible_user_id),
         // Merge tags
         tags: [...new Set([...sourceDeal.tags, ...targetDeal.tags])],
         // Concatenate notes
         notes: mergeNotes(sourceDeal.notes, targetDeal.notes),
       };
 
-      const success = await onMerge(sourceDeal.id, targetDeal.id, mergedData, sourceDeal.title);
+      const { removed, kept } = selectMergeDirection(sourceDeal, targetDeal, keepDeal);
+      const success = await onMerge(removed.id, kept.id, mergedData, removed.title);
       if (success) {
         onOpenChange(false);
       }
@@ -224,6 +228,7 @@ export function MergeDealDialog({
   const resetDialog = () => {
     setSearchQuery("");
     setTargetDeal(null);
+    setKeepDeal(null);
     setActivitiesCount(0);
     setTasksCount(0);
     setChoices({
@@ -324,12 +329,32 @@ export function MergeDealDialog({
 
         {/* Comparison view */}
         {targetDeal && (
-          <ScrollArea className="max-h-[60vh]">
+          <ScrollArea className="h-[60vh]">
             <div className="space-y-4 pr-4">
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">Qual negócio e lead devem ficar?</legend>
+                <RadioGroup value={keepDeal ?? ""} onValueChange={(v) => {
+                  const keep = v as MergeChoice;
+                  setKeepDeal(keep);
+                  setChoices({ title: keep, value: keep, probability: keep, expected_close_date: keep, source: keep, responsible_user_id: keep });
+                  void fetchMergeCounts(keep === "source" ? targetDeal.id : sourceDeal.id);
+                }} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(["source", "target"] as const).map((side) => {
+                    const item = side === "source" ? sourceDeal : targetDeal;
+                    return <Label key={side} htmlFor={`keep-${side}`} className={cn("flex items-start gap-2 border rounded-md p-3 cursor-pointer min-w-0", keepDeal === side && "border-primary bg-primary/5")}>
+                      <RadioGroupItem id={`keep-${side}`} value={side} className="mt-1" />
+                      <span className="min-w-0 space-y-1"><span className="block text-sm font-medium break-words">{item.title}</span>
+                        <span className="block text-xs text-muted-foreground">Lead: {getContactName(item)} · {item.lead?.phone || item.contact_phone || "Sem telefone"}</span>
+                        <span className="block text-xs text-muted-foreground">Criado em {format(new Date(item.created_at), "dd/MM/yyyy HH:mm")} · {item.status === "lost" ? "Perdido" : item.status === "won" ? "Ganho" : "Em aberto"}</span>
+                      </span>
+                    </Label>;
+                  })}
+                </RadioGroup>
+              </fieldset>
               {/* Deal headers */}
               <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
                 <div className="p-3 border rounded-lg bg-destructive/5">
-                  <p className="text-xs text-muted-foreground mb-1">Será excluído</p>
+                  <p className="text-xs text-muted-foreground mb-1">{keepDeal === "source" ? "Será mantido" : keepDeal === "target" ? "Será arquivado" : "Negócio atual"}</p>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="text-xs bg-destructive/10 text-destructive">
@@ -346,7 +371,7 @@ export function MergeDealDialog({
                 <GitMerge className="h-5 w-5 text-muted-foreground" />
                 
                 <div className="p-3 border rounded-lg bg-primary/5">
-                  <p className="text-xs text-muted-foreground mb-1">Será mantido</p>
+                  <p className="text-xs text-muted-foreground mb-1">{keepDeal === "target" ? "Será mantido" : keepDeal === "source" ? "Será arquivado" : "Negócio encontrado"}</p>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="text-xs bg-primary/10 text-primary">
@@ -471,7 +496,7 @@ export function MergeDealDialog({
           </Button>
           <Button
             onClick={handleMerge}
-            disabled={!targetDeal || merging}
+            disabled={!targetDeal || !keepDeal || merging}
             className="bg-primary"
           >
             {merging ? "Mesclando..." : "Mesclar Negócios"}
