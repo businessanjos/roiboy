@@ -295,6 +295,13 @@
       "when": 1793036631205,
       "tag": "0041_reversible_deal_merge",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793045828838,
+      "tag": "0042_transfer_whatsapp_message_templates",
+      "breakpoints": true
     }
   ]
 }

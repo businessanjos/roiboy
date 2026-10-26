@@ -24206,25 +24206,31 @@ export type Database = {
         Row: {
           account_id: string
           group_jid: string | null
+          group_message_template: string | null
           group_name: string | null
           notify_group: boolean
           notify_private: boolean
+          private_message_template: string | null
           updated_at: string
         }
         Insert: {
           account_id: string
           group_jid?: string | null
+          group_message_template?: string | null
           group_name?: string | null
           notify_group?: boolean
           notify_private?: boolean
+          private_message_template?: string | null
           updated_at?: string
         }
         Update: {
           account_id?: string
           group_jid?: string | null
+          group_message_template?: string | null
           group_name?: string | null
           notify_group?: boolean
           notify_private?: boolean
+          private_message_template?: string | null
           updated_at?: string
         }
         Relationships: []

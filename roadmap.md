@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Aviso ao vendedor: texto editável salvo por conta, prévia no celular das sequências, privado/grupo e exemplo lead/negócio; preservar envios e acessos.
 - [x] Mesclagem: destino obrigatório independente dos campos, RPC atômica preservando RLS, arquivamento e desfazer protegido; 7 testes passaram, escolhas conferidas autenticadas com gravações bloqueadas, build OK. Sem mesclagem real ou publicação; docs/deal-merge-review-2026-10-26.md.
 - [ ] Renata: desfazer mesclagem anterior aguarda dados originais recuperáveis ou confirmação da correção manual específica; negócio de origem foi excluído definitivamente pela versão antiga, sem snapshot. Nenhum dado real alterado.
 - [x] Transferências Darlan: fila acompanha acesso a Leads em vez de herdar Ranking/Gestão, incluída no menu SDR; RLS dos próprios pedidos e controles de gestor preservados. 58 testes passaram e build OK; conferência autenticada como Darlan indisponível por restrição de acesso de teste.
