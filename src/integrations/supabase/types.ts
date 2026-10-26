@@ -24202,6 +24202,33 @@ export type Database = {
           },
         ]
       }
+      sales_transfer_whatsapp_settings: {
+        Row: {
+          account_id: string
+          group_jid: string | null
+          group_name: string | null
+          notify_group: boolean
+          notify_private: boolean
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          group_jid?: string | null
+          group_name?: string | null
+          notify_group?: boolean
+          notify_private?: boolean
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          group_jid?: string | null
+          group_name?: string | null
+          notify_group?: boolean
+          notify_private?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sales_user_ote: {
         Row: {
           account_id: string
@@ -24245,6 +24272,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sales_user_whatsapp_phones: {
+        Row: {
+          account_id: string
+          phone_e164: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          phone_e164: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          phone_e164?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       score_snapshots: {
         Row: {
@@ -26357,6 +26405,24 @@ export type Database = {
           id?: string
           is_active?: boolean
           updated_at?: string
+        }
+        Relationships: []
+      }
+      transfer_whatsapp_sends: {
+        Row: {
+          created_at: string
+          notification_id: string
+          result: Json | null
+        }
+        Insert: {
+          created_at?: string
+          notification_id: string
+          result?: Json | null
+        }
+        Update: {
+          created_at?: string
+          notification_id?: string
+          result?: Json | null
         }
         Relationships: []
       }

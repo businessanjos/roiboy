@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { DealTransferWhatsappRecipients } from "@/components/sales/DealTransferWhatsappRecipients";
+import { SellerTransferWhatsappSettings } from "@/components/sales/SellerTransferWhatsappSettings";
 
 interface Req {
   id: string;
@@ -128,7 +129,12 @@ export default function DealTransferRequests() {
             {isManager ? "Aprove ou recuse os pedidos dos vendedores." : "Acompanhe seus pedidos de transferência."}
           </p>
         </div>
-        {isManager && <DealTransferWhatsappRecipients />}
+        {isManager && (
+          <div className="flex flex-wrap items-center gap-1">
+            <SellerTransferWhatsappSettings />
+            <DealTransferWhatsappRecipients />
+          </div>
+        )}
       </div>
       <Card>
         <CardHeader>
