@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       });
       const { data: u } = await userClient.auth.getUser();
       if (!u?.user) return json({ error: "Não autenticado" }, 401);
-      const { data: isMgr } = await supabase.rpc("can_manage_spiff_payments", { _user_id: u.user.id } as any);
+      const { data: isMgr } = await supabase.rpc("can_manage_spiff_payments", { _auth_user_id: u.user.id } as any);
       const { data: me } = await supabase.from("users").select("account_id").eq("auth_user_id", u.user.id).maybeSingle();
       if (!isMgr || !me) return json({ error: "Apenas gestores" }, 403);
       let number = String(body?.phone || "").replace(/\D/g, "");
