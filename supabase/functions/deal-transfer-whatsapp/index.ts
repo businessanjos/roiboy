@@ -36,9 +36,10 @@ async function post(s: { host: string; token: string }, path: string, body: unkn
 }
 
 function buildMessage(d: {
-  requester: string; title: string; pipeline?: string | null; stage?: string | null; owner: string;
+  requester: string; title: string; pipeline?: string | null; stage?: string | null;
   value?: number | null; createdAt?: string | null; reason?: string | null; sample?: boolean;
 }) {
+  const firstName = (n: string) => (n || "").trim().split(/\s+/)[0] || "Alguém";
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const date = d.createdAt
     ? new Date(d.createdAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
@@ -46,14 +47,13 @@ function buildMessage(d: {
   const lines = [
     `🔄 *Solicitação de transferência${d.sample ? " (exemplo)" : ""}*`,
     "",
-    `*${d.requester}* solicitou a responsabilidade pelo negócio abaixo:`,
+    `*${firstName(d.requester)}* solicitou a responsabilidade pelo negócio abaixo:`,
     "",
     `📌 *Negócio:* ${d.title}`,
   ];
   if (d.pipeline) lines.push(`🧭 *Funil:* ${d.pipeline}`);
   if (d.stage) lines.push(`📍 *Etapa:* ${d.stage}`);
   if (d.value && Number(d.value) > 0) lines.push(`💰 *Valor:* ${brl(Number(d.value))}`);
-  lines.push(`👤 *Responsável atual:* ${d.owner}`);
   if (date) lines.push(`📅 *Criado em:* ${date}`);
   if (d.reason) lines.push("", `💬 *Motivo:* _${d.reason}_`);
   lines.push("", "Deseja aprovar a transferência?");
@@ -90,7 +90,6 @@ Deno.serve(async (req) => {
         title: "[ORG-BP] Vanessa Fonseca",
         pipeline: "Closer",
         stage: "Novo Lead",
-        owner: "Jonathan Marcato",
         value: 18000,
         createdAt: new Date(Date.now() - 86400000).toISOString(),
         reason: "Cliente já falou comigo pelo Instagram",
