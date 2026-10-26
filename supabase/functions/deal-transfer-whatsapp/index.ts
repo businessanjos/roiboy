@@ -130,11 +130,8 @@ Deno.serve(async (req) => {
     if (!me || me.id !== r.requester_id) return json({ error: "Não autorizado" }, 403);
     if (r.status !== "pending") return json({ ok: true, skipped: "decided" });
 
-    const [{ data: deal }, { data: owner }, { data: recipients }] = await Promise.all([
+    const [{ data: deal }, { data: recipients }] = await Promise.all([
       supabase.from("deals").select("title, value, created_at, stage:deal_stages(name), pipeline:pipelines(name)").eq("id", r.deal_id).maybeSingle(),
-      r.current_owner_id
-        ? supabase.from("users").select("name").eq("id", r.current_owner_id).maybeSingle()
-        : Promise.resolve({ data: null }),
       supabase.from("deal_transfer_whatsapp_recipients").select("user_id, phone_e164").eq("account_id", r.account_id),
     ]);
     if (!recipients?.length) return json({ ok: true, sent: 0, reason: "Nenhum gestor com WhatsApp cadastrado" });
@@ -146,7 +143,6 @@ Deno.serve(async (req) => {
       title: deal?.title || "Negócio",
       pipeline: (deal as any)?.pipeline?.name,
       stage: (deal as any)?.stage?.name,
-      owner: owner?.name || "Sem responsável",
       value: (deal as any)?.value,
       createdAt: (deal as any)?.created_at,
       reason: r.reason,
