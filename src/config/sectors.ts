@@ -1,5 +1,6 @@
 import {
   History,
+  ArrowRightLeft,
   ScrollText,
   LayoutDashboard,
   Users,
@@ -225,6 +226,7 @@ export const sectors: Sector[] = [
       { to: "/sales-dashboard", icon: LayoutDashboard, label: "Dashboard" },
       { to: "/pipeline", icon: TrendingUp, label: "Pipeline", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/leads", icon: UserPlus, label: "Leads", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/sales-team/transfer-requests", icon: ArrowRightLeft, label: "Transferências", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/sales-calendar", icon: CalendarDays, label: "Calendário" },
       { to: "/sales-scripts", icon: ScrollText, label: "Script de Vendas" },
