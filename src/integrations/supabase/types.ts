@@ -7476,6 +7476,48 @@ export type Database = {
           },
         ]
       }
+      deal_transfer_requests: {
+        Row: {
+          account_id: string
+          created_at: string
+          current_owner_id: string | null
+          deal_id: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          reason: string | null
+          requester_id: string
+          status: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          current_owner_id?: string | null
+          deal_id: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          reason?: string | null
+          requester_id: string
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          current_owner_id?: string | null
+          deal_id?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          reason?: string | null
+          requester_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           account_id: string
@@ -29937,6 +29979,10 @@ export type Database = {
       }
       contract_is_mvp: { Args: { _contract_id: string }; Returns: boolean }
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
+      decide_deal_transfer: {
+        Args: { _approve: boolean; _note?: string; _request_id: string }
+        Returns: Json
+      }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
       delete_admission_doc_attachment: {
         Args: { _doc_id: string; _path: string; _token: string }
@@ -30352,6 +30398,10 @@ export type Database = {
       replicate_user_access: {
         Args: { _source: string; _targets: string[] }
         Returns: number
+      }
+      request_deal_transfer: {
+        Args: { _deal_id: string; _reason?: string }
+        Returns: string
       }
       request_integration_access: {
         Args: { _platform: string; _reason?: string }
