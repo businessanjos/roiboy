@@ -144,6 +144,7 @@ export default function DealTransferRequests() {
           )}
         </CardContent>
       </Card>
+      {history.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Histórico</CardTitle>
