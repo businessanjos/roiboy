@@ -7187,6 +7187,48 @@ export type Database = {
           },
         ]
       }
+      deal_merge_actions: {
+        Row: {
+          account_id: string
+          actor_id: string
+          after_state: Json
+          before_state: Json
+          copied_field_ids: string[]
+          created_at: string
+          id: string
+          note_id: string | null
+          source_deal_id: string
+          target_deal_id: string
+          undone_at: string | null
+        }
+        Insert: {
+          account_id: string
+          actor_id: string
+          after_state: Json
+          before_state: Json
+          copied_field_ids?: string[]
+          created_at?: string
+          id?: string
+          note_id?: string | null
+          source_deal_id: string
+          target_deal_id: string
+          undone_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          actor_id?: string
+          after_state?: Json
+          before_state?: Json
+          copied_field_ids?: string[]
+          created_at?: string
+          id?: string
+          note_id?: string | null
+          source_deal_id?: string
+          target_deal_id?: string
+          undone_at?: string | null
+        }
+        Relationships: []
+      }
       deal_operation_briefings: {
         Row: {
           account_id: string
@@ -30003,6 +30045,10 @@ export type Database = {
       }
       contract_is_mvp: { Args: { _contract_id: string }; Returns: boolean }
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
+      deal_merge_state: {
+        Args: { p_source: string; p_target: string }
+        Returns: Json
+      }
       decide_deal_transfer: {
         Args: { _approve: boolean; _note?: string; _request_id: string }
         Returns: Json
@@ -30363,6 +30409,10 @@ export type Database = {
           id: string
           name: string
         }[]
+      }
+      merge_deals_reversible: {
+        Args: { p_data: Json; p_source: string; p_target: string }
+        Returns: string
       }
       mi_tier_ticket_range: { Args: { _tier: string }; Returns: number[] }
       next_digital_contract_number: {
@@ -30743,6 +30793,7 @@ export type Database = {
       }
       unaccent: { Args: { "": string }; Returns: string }
       unaccent_immutable: { Args: { p_text: string }; Returns: string }
+      undo_deal_merge: { Args: { p_action: string }; Returns: string }
       use_coupon: {
         Args: {
           p_account_id: string
