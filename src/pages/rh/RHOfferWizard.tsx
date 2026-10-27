@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Save, Sparkles, ExternalLink, Copy, Plus, X, Loader2, Wand2, Eye, Upload, Image as ImageIcon, Trash2, LayoutTemplate } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Save, Sparkles, ExternalLink, Copy, Plus, X, Loader2, Wand2, Eye, Upload, Image as ImageIcon, Trash2, LayoutTemplate, ArrowUp, ArrowDown, RotateCcw, Pencil, Settings2 } from "lucide-react";
+import { OfferLetterView, type Offer as PreviewOffer } from "@/pages/public/PublicJobOffer";
+import { useOfferContentSettings } from "@/hooks/useOfferContentSettings";
+import { KpiPacksEditorDialog, OfferDefaultsDialog } from "@/components/rh/offers/OfferContentSettingsDialogs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -62,6 +65,7 @@ type Form = {
   next_steps: string;
   signer_name: string;
   signer_role: string;
+  custom_sections: { id: string; title: string; body: string }[];
   accent_color: string;
   cover_image_url: string;
   candidate_photo_url: string;
@@ -78,7 +82,7 @@ const EMPTY: Form = {
   start_date: "", offer_expires_at: "",
   work_schedule: { rules: [{ days: ["mon","tue","wed","thu","fri"], start_time: "09:00", end_time: "18:00", lunch_minutes: 60 }] },
   hero_headline: "", company_intro: "", role_pitch: "", next_steps: "",
-  signer_name: "", signer_role: "",
+  signer_name: "", signer_role: "", custom_sections: [],
   accent_color: "#6366F1", cover_image_url: "", candidate_photo_url: "",
   is_template: false, template_name: "",
 };
@@ -90,6 +94,8 @@ Nosso time é movido por curiosidade, alta performance e proximidade com o clien
 const DEFAULT_NEXT_STEPS = `Se essa proposta fizer sentido para você, basta clicar em "Aceitar oferta" no final desta página. Nosso time entrará em contato em até 24h com os próximos passos: assinatura de contrato, exames admissionais e preparação do seu primeiro dia.
 
 Caso tenha qualquer dúvida, responda este e-mail ou fale diretamente com a pessoa que enviou esta carta.`;
+
+const SYSTEM_TEXT_DEFAULTS = { company_intro: DEFAULT_COMPANY_INTRO, next_steps: DEFAULT_NEXT_STEPS };
 
 export default function RHOfferWizard() {
   const { id } = useParams();
@@ -113,6 +119,10 @@ export default function RHOfferWizard() {
   const inFlightRef = useRef(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  const [kpiEditorOpen, setKpiEditorOpen] = useState(false);
+  const [defaultsOpen, setDefaultsOpen] = useState(false);
+  const { settings: contentSettings, isLoading: settingsLoading, save: saveOfferSettings } = useOfferContentSettings();
 
   const openPreview = async () => {
     let token = savedToken;
@@ -164,6 +174,7 @@ export default function RHOfferWizard() {
         next_steps: data.next_steps || "",
         signer_name: data.signer_name || "",
         signer_role: data.signer_role || "",
+        custom_sections: (((data as any).custom_sections as any[]) || []).map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
         accent_color: data.accent_color || "#6366F1",
         cover_image_url: data.cover_image_url || "",
         // Ao clonar, a nova offer não é modelo; ao editar, mantém flag
@@ -219,6 +230,74 @@ export default function RHOfferWizard() {
     const merged = [...form.success_metrics, ...metrics.filter((m) => !existing.has(m.label.trim().toLowerCase()))];
     set("success_metrics", merged);
   };
+  const addSection = () => set("custom_sections", [...form.custom_sections, { id: crypto.randomUUID(), title: "", body: "" }]);
+  const removeSection = (i: number) => set("custom_sections", form.custom_sections.filter((_, idx) => idx !== i));
+  const updateSection = (i: number, key: "title" | "body", v: string) =>
+    set("custom_sections", form.custom_sections.map((b, idx) => (idx === i ? { ...b, [key]: v } : b)));
+  const moveSection = (i: number, dir: -1 | 1) => {
+    const arr = [...form.custom_sections];
+    const j = i + dir;
+    if (j < 0 || j >= arr.length) return;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    set("custom_sections", arr);
+  };
+
+  // Padrões da conta (fallback: textos originais do sistema)
+  const defaultCompanyIntro = contentSettings.company_intro ?? DEFAULT_COMPANY_INTRO;
+  const defaultNextSteps = contentSettings.next_steps ?? DEFAULT_NEXT_STEPS;
+  const saveContentSettings = (patch: Parameters<typeof saveOfferSettings>[0]) => saveOfferSettings(patch);
+
+  // Carta nova: já vem com os textos padrão da conta
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (prefilledRef.current || isEdit || templateId || settingsLoading) return;
+    prefilledRef.current = true;
+    setForm((f) => ({
+      ...f,
+      company_intro: f.company_intro || defaultCompanyIntro,
+      next_steps: f.next_steps || defaultNextSteps,
+      signer_name: f.signer_name || contentSettings.signer_name || "",
+      signer_role: f.signer_role || contentSettings.signer_role || "",
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsLoading, isEdit, templateId]);
+
+  const showSidePreview = step >= 4;
+  const livePreviewOffer = useMemo<PreviewOffer>(() => ({
+    id: recordId || "preview",
+    public_token: savedToken || "preview",
+    candidate_name: form.candidate_name || "Candidato",
+    position_title: form.position_title,
+    department: form.department || null,
+    seniority: form.seniority || null,
+    work_model: form.work_model || null,
+    contract_type: form.contract_type || null,
+    unit: form.unit || null,
+    reports_to: form.reports_to || null,
+    salary_amount: form.salary_amount ? Number(form.salary_amount) : null,
+    salary_currency: form.salary_currency,
+    salary_note: form.salary_note || null,
+    variable_compensation: form.variable_compensation || null,
+    benefits: form.benefits,
+    benefit_values: form.benefit_values,
+    perks: form.perks.filter((p) => p.title.trim()),
+    success_metrics: form.success_metrics.filter((m) => m.label.trim()),
+    start_date: form.start_date || null,
+    offer_expires_at: form.offer_expires_at || null,
+    work_schedule: form.work_schedule,
+    hero_headline: form.hero_headline || null,
+    company_intro: form.company_intro || defaultCompanyIntro,
+    role_pitch: form.role_pitch || null,
+    next_steps: form.next_steps || defaultNextSteps,
+    signer_name: form.signer_name || null,
+    signer_role: form.signer_role || null,
+    status: "draft",
+    responded_at: null,
+    first_viewed_at: null,
+    view_count: 0,
+    candidate_photo_url: form.candidate_photo_url || null,
+    custom_sections: form.custom_sections,
+  }), [form, recordId, savedToken, defaultCompanyIntro, defaultNextSteps]);
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const handlePhotoUpload = async (file: File) => {
@@ -283,9 +362,10 @@ export default function RHOfferWizard() {
       offer_expires_at: form.offer_expires_at || null,
       work_schedule: form.work_schedule?.rules?.some((r) => r.days?.length) ? form.work_schedule : null,
       hero_headline: form.hero_headline || null,
-      company_intro: form.company_intro || DEFAULT_COMPANY_INTRO,
+      company_intro: form.company_intro || defaultCompanyIntro,
       role_pitch: form.role_pitch || null,
-      next_steps: form.next_steps || DEFAULT_NEXT_STEPS,
+      next_steps: form.next_steps || defaultNextSteps,
+      custom_sections: form.custom_sections.filter((b) => b.title.trim() || b.body.trim()),
       signer_name: form.signer_name || null,
       signer_role: form.signer_role || null,
       accent_color: form.accent_color,
@@ -421,7 +501,7 @@ export default function RHOfferWizard() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className={cn("p-6 mx-auto space-y-6", showSidePreview ? "max-w-4xl lg:max-w-7xl" : "max-w-4xl")}>
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate("/rh/offers")}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
@@ -475,6 +555,8 @@ export default function RHOfferWizard() {
         </div>
       </div>
 
+      <div className={cn(showSidePreview && "lg:grid lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-6 lg:items-start")}>
+      <div className="space-y-6 min-w-0">
       <Card>
         <CardHeader>
           <CardTitle>{STEPS[step - 1].title}</CardTitle>
@@ -668,6 +750,11 @@ export default function RHOfferWizard() {
 
           {step === 4 && (
             <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button type="button" size="sm" variant="ghost" className="gap-1 text-xs" onClick={() => setDefaultsOpen(true)}>
+                  <Settings2 className="h-3.5 w-3.5" /> Textos padrão
+                </Button>
+              </div>
               <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-dashed border-indigo-300 bg-indigo-50/50 dark:bg-indigo-950/20">
                 <div className="text-sm">
                   <p className="font-medium text-indigo-900 dark:text-indigo-200">Preencher com IA</p>
@@ -683,8 +770,13 @@ export default function RHOfferWizard() {
                 <Input value={form.hero_headline} onChange={(e) => set("hero_headline", e.target.value)} placeholder={`Ex.: ${form.candidate_name || "Mariana"}, esta proposta é para você.`} />
               </div>
               <div>
-                <Label>Sobre a Eternum</Label>
-                <OfferRichTextarea rows={6} value={form.company_intro} onChange={(v) => set("company_intro", v)} placeholder={DEFAULT_COMPANY_INTRO} />
+                <div className="flex items-center justify-between">
+                  <Label>Sobre a Eternum</Label>
+                  <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1" onClick={() => set("company_intro", defaultCompanyIntro)}>
+                    <RotateCcw className="h-3 w-3" /> Usar padrão
+                  </Button>
+                </div>
+                <OfferRichTextarea rows={6} value={form.company_intro} onChange={(v) => set("company_intro", v)} placeholder={defaultCompanyIntro} />
               </div>
               <div>
                 <Label>Sobre a vaga / Pitch</Label>
@@ -697,14 +789,19 @@ export default function RHOfferWizard() {
                     <Label className="text-base">Como o sucesso será medido</Label>
                     <p className="text-xs text-muted-foreground">Métricas/KPIs claros que esta pessoa será avaliada. Aparecem com destaque na carta.</p>
                   </div>
-                  <Button type="button" size="sm" variant="outline" onClick={addMetric} className="gap-1">
-                    <Plus className="h-3.5 w-3.5" /> Adicionar métrica
-                  </Button>
+                  <div className="flex gap-2 shrink-0">
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setKpiEditorOpen(true)} className="gap-1 text-xs">
+                      <Pencil className="h-3.5 w-3.5" /> Editar sugestões
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={addMetric} className="gap-1">
+                      <Plus className="h-3.5 w-3.5" /> Adicionar métrica
+                    </Button>
+                  </div>
                 </div>
                 {/* Sugestões inteligentes baseadas no cargo/departamento */}
                 {(() => {
-                  const packs = suggestKpis(form.position_title, form.department);
-                  if (!form.position_title.trim()) {
+                  const packs = suggestKpis(form.position_title, form.department, contentSettings.kpi_packs);
+                  if (!form.position_title.trim() && !contentSettings.kpi_packs) {
                     return (
                       <p className="text-xs text-muted-foreground italic">
                         Preencha o cargo no passo 2 para receber sugestões inteligentes de KPIs.
@@ -792,9 +889,42 @@ export default function RHOfferWizard() {
                   </div>
                 ))}
               </div>
+
+              {/* Blocos extras */}
+              <div className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label className="text-base">Blocos extras</Label>
+                    <p className="text-xs text-muted-foreground">Seções livres que aparecem na carta antes de "Próximos passos".</p>
+                  </div>
+                  <Button type="button" size="sm" variant="outline" onClick={addSection} className="gap-1">
+                    <Plus className="h-3.5 w-3.5" /> Adicionar bloco
+                  </Button>
+                </div>
+                {form.custom_sections.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">Ex.: "Seu primeiro mês", "Nossa cultura", "Plano de carreira".</p>
+                )}
+                {form.custom_sections.map((b, i) => (
+                  <div key={b.id} className="rounded-md border bg-muted/30 p-3 space-y-2">
+                    <div className="flex gap-2">
+                      <Input value={b.title} onChange={(e) => updateSection(i, "title", e.target.value)} placeholder="Título do bloco" />
+                      <Button type="button" size="icon" variant="ghost" disabled={i === 0} onClick={() => moveSection(i, -1)} title="Subir"><ArrowUp className="h-4 w-4" /></Button>
+                      <Button type="button" size="icon" variant="ghost" disabled={i === form.custom_sections.length - 1} onClick={() => moveSection(i, 1)} title="Descer"><ArrowDown className="h-4 w-4" /></Button>
+                      <Button type="button" size="icon" variant="ghost" className="text-danger" onClick={() => removeSection(i)} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                    <OfferRichTextarea rows={4} value={b.body} onChange={(v) => updateSection(i, "body", v)} placeholder="Texto do bloco" />
+                  </div>
+                ))}
+              </div>
+
               <div>
-                <Label>Próximos passos</Label>
-                <OfferRichTextarea rows={4} value={form.next_steps} onChange={(v) => set("next_steps", v)} placeholder={DEFAULT_NEXT_STEPS} />
+                <div className="flex items-center justify-between">
+                  <Label>Próximos passos</Label>
+                  <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1" onClick={() => set("next_steps", defaultNextSteps)}>
+                    <RotateCcw className="h-3 w-3" /> Usar padrão
+                  </Button>
+                </div>
+                <OfferRichTextarea rows={4} value={form.next_steps} onChange={(v) => set("next_steps", v)} placeholder={defaultNextSteps} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -1016,6 +1146,50 @@ export default function RHOfferWizard() {
           <Button variant="ghost" onClick={() => navigate("/rh/offers")}>Concluir</Button>
         )}
       </div>
+      </div>
+
+      {showSidePreview && (
+        <aside className="hidden lg:block sticky top-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium flex items-center gap-2"><Eye className="h-4 w-4" /> Prévia da carta</p>
+            <span className="text-xs text-muted-foreground">atualiza enquanto você digita</span>
+          </div>
+          <div className="rounded-lg border overflow-hidden h-[calc(100vh-8rem)] overflow-y-auto bg-muted">
+            <div style={{ width: 1000, zoom: 0.44 }}>
+              <OfferLetterView offer={livePreviewOffer} preview />
+            </div>
+          </div>
+        </aside>
+      )}
+      </div>
+
+      {showSidePreview && (
+        <Button type="button" variant="outline" className="lg:hidden fixed bottom-20 right-4 z-40 gap-2 shadow-lg" onClick={() => setMobilePreviewOpen(true)}>
+          <Eye className="h-4 w-4" /> Ver prévia
+        </Button>
+      )}
+      <Dialog open={mobilePreviewOpen} onOpenChange={setMobilePreviewOpen}>
+        <DialogContent className="max-w-3xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-4 py-3 border-b"><DialogTitle>Prévia da carta</DialogTitle></DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            <OfferLetterView offer={livePreviewOffer} preview />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <KpiPacksEditorDialog
+        open={kpiEditorOpen}
+        onOpenChange={setKpiEditorOpen}
+        current={contentSettings.kpi_packs}
+        onSave={(packs) => saveContentSettings({ kpi_packs: packs })}
+      />
+      <OfferDefaultsDialog
+        open={defaultsOpen}
+        onOpenChange={setDefaultsOpen}
+        current={contentSettings}
+        systemDefaults={SYSTEM_TEXT_DEFAULTS}
+        onSave={(v) => saveContentSettings(v)}
+      />
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">

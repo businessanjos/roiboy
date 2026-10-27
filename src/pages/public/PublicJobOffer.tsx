@@ -15,7 +15,7 @@ import clientesFoto from "@/assets/eternum/clientes.jpg.asset.json";
 import { renderOfferRichInline } from "@/components/rh/offers/OfferRichTextarea";
 import { computeWeeklyHours, formatWeeklyHours, scheduleRuleSummaries, normalizeSchedule } from "@/components/rh/offers/WorkScheduleField";
 
-type Offer = {
+export type Offer = {
   id: string;
   public_token: string;
   candidate_name: string;
@@ -48,6 +48,7 @@ type Offer = {
   first_viewed_at: string | null;
   view_count: number;
   candidate_photo_url: string | null;
+  custom_sections?: { id: string; title: string; body: string }[] | null;
 };
 
 // Paleta Eternum
@@ -65,12 +66,6 @@ export default function PublicJobOffer() {
   const { token } = useParams();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
-  const [responding, setResponding] = useState(false);
-  const [response, setResponse] = useState<"accept" | "decline" | null>(null);
-  const [message, setMessage] = useState("");
-  const [acceptEmail, setAcceptEmail] = useState("");
-  const [acceptPhone, setAcceptPhone] = useState("");
-  const { toast } = useToast();
 
   useEffect(() => {
     (async () => {
@@ -78,15 +73,46 @@ export default function PublicJobOffer() {
       const { data } = await (supabase as any).rpc("get_job_offer_by_token", { _token: token });
       if (data) {
         setOffer(data as any);
-        setAcceptEmail(((data as any).candidate_email as string) || "");
-        setAcceptPhone(((data as any).candidate_phone as string) || "");
       }
       setLoading(false);
     })();
   }, [token]);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: BG }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: GOLD }} />
+      </div>
+    );
+  }
+
+  if (!offer) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: BG, fontFamily: SANS }}>
+        <div className="text-center max-w-md space-y-3" style={{ color: CARD }}>
+          <XCircle className="h-12 w-12 mx-auto opacity-60" />
+          <h1 className="text-xl font-semibold" style={{ fontFamily: SERIF }}>Offer não encontrada</h1>
+          <p className="text-sm opacity-70">O link expirou ou foi removido.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <OfferLetterView offer={offer} onOfferChange={setOffer} />;
+}
+
+export function OfferLetterView({ offer, onOfferChange, preview = false }: { offer: Offer; onOfferChange?: (o: Offer) => void; preview?: boolean }) {
+  const [responding, setResponding] = useState(false);
+  const [response, setResponse] = useState<"accept" | "decline" | null>(null);
+  const [message, setMessage] = useState("");
+  const [acceptEmail, setAcceptEmail] = useState(((offer as any).candidate_email as string) || "");
+  const [acceptPhone, setAcceptPhone] = useState(((offer as any).candidate_phone as string) || "");
+  const { toast } = useToast();
+  const setOffer = (o: Offer) => onOfferChange?.(o);
+
   const respond = async (status: "accepted" | "declined") => {
     if (!offer) return;
+    if (preview) { toast({ title: "Isto é só uma prévia" }); return; }
     const patch: any = { status, responded_at: new Date().toISOString(), response_message: message || null };
     if (status === "accepted") {
       const email = acceptEmail.trim();
@@ -117,26 +143,6 @@ export default function PublicJobOffer() {
     setResponding(false);
     setResponse(null);
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: BG }}>
-        <Loader2 className="h-8 w-8 animate-spin" style={{ color: GOLD }} />
-      </div>
-    );
-  }
-
-  if (!offer) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: BG, fontFamily: SANS }}>
-        <div className="text-center max-w-md space-y-3" style={{ color: CARD }}>
-          <XCircle className="h-12 w-12 mx-auto opacity-60" />
-          <h1 className="text-xl font-semibold" style={{ fontFamily: SERIF }}>Offer não encontrada</h1>
-          <p className="text-sm opacity-70">O link expirou ou foi removido.</p>
-        </div>
-      </div>
-    );
-  }
 
   const isResolved = offer.status === "accepted" || offer.status === "declined";
   const firstName = (offer.candidate_name || "").split(" ")[0] || offer.candidate_name;
@@ -543,6 +549,19 @@ export default function PublicJobOffer() {
             </div>
           </div>
         </section>
+
+        {/* BLOCOS PERSONALIZADOS */}
+        {(offer.custom_sections || []).filter((b) => b.title?.trim() || b.body?.trim()).map((b) => (
+          <section key={b.id}>
+            {b.title?.trim() && <SectionLabel>{b.title}</SectionLabel>}
+            <p
+              className="text-[15px] md:text-base leading-relaxed whitespace-pre-line"
+              style={{ fontFamily: SERIF, color: "#e8dcc0", fontWeight: 300 }}
+            >
+              {renderOfferRichInline(b.body || "", GOLD)}
+            </p>
+          </section>
+        ))}
 
         {/* PRÓXIMOS PASSOS */}
         {offer.next_steps && (

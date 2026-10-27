@@ -13640,6 +13640,7 @@ export type Database = {
           cover_image_url: string | null
           created_at: string
           created_by: string | null
+          custom_sections: Json
           department: string | null
           first_viewed_at: string | null
           hero_headline: string | null
@@ -13688,6 +13689,7 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
+          custom_sections?: Json
           department?: string | null
           first_viewed_at?: string | null
           hero_headline?: string | null
@@ -13736,6 +13738,7 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
+          custom_sections?: Json
           department?: string | null
           first_viewed_at?: string | null
           hero_headline?: string | null
@@ -14327,6 +14330,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hr_offer_content_settings: {
+        Row: {
+          account_id: string
+          company_intro: string | null
+          kpi_packs: Json | null
+          next_steps: string | null
+          signer_name: string | null
+          signer_role: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          company_intro?: string | null
+          kpi_packs?: Json | null
+          next_steps?: string | null
+          signer_name?: string | null
+          signer_role?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          company_intro?: string | null
+          kpi_packs?: Json | null
+          next_steps?: string | null
+          signer_name?: string | null
+          signer_role?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       hr_partners: {
         Row: {
