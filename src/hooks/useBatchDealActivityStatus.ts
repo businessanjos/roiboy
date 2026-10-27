@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, isBefore } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
@@ -107,10 +107,12 @@ export function useBatchDealActivityStatus(deals: DealActivityInput[]) {
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: true,
     enabled: dealRefs.length > 0,
+    placeholderData: keepPreviousData,
   });
 
-  const getStatus = (dealId: string): ActivityStatus => {
-    return data?.[dealId] ?? EMPTY_STATUS;
+  /** Returns undefined while this deal's status hasn't loaded yet, so cards can show a neutral color. */
+  const getStatus = (dealId: string): ActivityStatus | undefined => {
+    return data?.[dealId];
   };
 
   return { statusMap: data ?? {}, getStatus, isLoading, isFetching };

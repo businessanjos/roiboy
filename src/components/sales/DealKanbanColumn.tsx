@@ -16,7 +16,7 @@ interface DealKanbanColumnProps {
   faturamentoMap?: Record<string, string>;
   itemVendaMap?: Record<string, { name: string; color: string | null }>;
   isDragActive?: boolean;
-  activityStatusGetter?: (dealId: string) => ActivityStatus;
+  activityStatusGetter?: (dealId: string) => ActivityStatus | undefined;
   showActivityCounts?: boolean;
   fullWidth?: boolean;
 }
