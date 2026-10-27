@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowRightLeft, Check, X, Inbox } from "lucide-react";
+import { ArrowRightLeft, Check, X, Inbox, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -52,17 +52,22 @@ export default function DealTransferRequests() {
       const list = (reqs || []) as Req[];
       const userIds = [...new Set(list.flatMap((r) => [r.requester_id, r.current_owner_id]).filter(Boolean))] as string[];
       const dealIds = [...new Set(list.map((r) => r.deal_id))];
-      const [{ data: users }, { data: deals }] = await Promise.all([
+      const [{ data: users }, { data: deals }, { data: sends }] = await Promise.all([
         userIds.length ? supabase.from("users").select("id, name").in("id", userIds) : Promise.resolve({ data: [] as any[] }),
         dealIds.length ? supabase.from("deals").select("id, title").in("id", dealIds) : Promise.resolve({ data: [] as any[] }),
+        dealIds.length
+          ? (supabase as any).rpc("get_deal_transfer_whatsapp_status", { _deal_ids: dealIds })
+          : Promise.resolve({ data: [] as any[] }),
       ]);
       const uName = new Map((users || []).map((u: any) => [u.id, u.name]));
       const dTitle = new Map((deals || []).map((d: any) => [d.id, d.title]));
+      const sendMap = new Map((sends || []).map((s: any) => [s.deal_id, s]));
       return list.map((r) => ({
         ...r,
         requester: uName.get(r.requester_id) || "—",
         owner: r.current_owner_id ? uName.get(r.current_owner_id) || "—" : "Sem responsável",
         title: dTitle.get(r.deal_id) || "Negócio",
+        send: r.status === "approved" ? sendMap.get(r.deal_id) || null : null,
       }));
     },
   });
@@ -94,6 +99,23 @@ export default function DealTransferRequests() {
           </p>
           {r.reason && <p className="text-sm mt-1">“{r.reason}”</p>}
           {r.decision_note && <p className="text-xs text-muted-foreground mt-1">Observação: {r.decision_note}</p>}
+          {r.status === "approved" && (() => {
+            const res = r.send?.result || {};
+            const parts = [res.private && "no privado", res.group && "no grupo do time"].filter(Boolean);
+            const sentAt = r.send?.sent_at
+              ? new Date(r.send.sent_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+              : "";
+            return parts.length ? (
+              <p className="text-xs mt-1.5 flex items-center gap-1 text-primary">
+                <MessageCircle className="h-3.5 w-3.5" />
+                Aviso no WhatsApp enviado para <strong>{r.send.recipient_name || "vendedor"}</strong> {parts.join(" e ")} · {sentAt}
+              </p>
+            ) : (
+              <p className="text-xs mt-1.5 flex items-center gap-1 text-muted-foreground">
+                <MessageCircle className="h-3.5 w-3.5" /> Aviso no WhatsApp não enviado
+              </p>
+            );
+          })()}
         </div>
         <Badge variant={STATUS[r.status]?.variant || "outline"}>{STATUS[r.status]?.label || r.status}</Badge>
       </div>

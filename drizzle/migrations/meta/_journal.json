@@ -316,6 +316,13 @@
       "when": 1793107298344,
       "tag": "0044_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793123242789,
+      "tag": "0045_deal_transfer_whatsapp_status",
+      "breakpoints": true
     }
   ]
 }

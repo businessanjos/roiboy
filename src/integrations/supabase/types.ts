@@ -30275,6 +30275,15 @@ export type Database = {
           total_activities: number
         }[]
       }
+      get_deal_transfer_whatsapp_status: {
+        Args: { _deal_ids: string[] }
+        Returns: {
+          deal_id: string
+          recipient_name: string
+          result: Json
+          sent_at: string
+        }[]
+      }
       get_default_reassignment_user: {
         Args: { _inactive_user_id: string }
         Returns: string
