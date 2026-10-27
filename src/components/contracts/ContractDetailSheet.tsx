@@ -1,3 +1,4 @@
+import { useContractCatalog } from "@/hooks/useContractCatalog";
 import { useContractTypes } from "@/hooks/useContractTypes";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -179,6 +180,7 @@ const formatCurrency = (value: number) => {
 
 export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate, initialTab = "details" }: ContractDetailSheetProps) {
   const { labels: CONTRACT_TYPES } = useContractTypes();
+  const { options: reasonOptions, labels: reasonLabels } = useContractCatalog("loss_reason");
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -554,16 +556,16 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate, in
                       <SelectValue placeholder="Selecione o motivo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {CANCELLATION_REASONS.map((reason) => (
+                      {reasonOptions.map((reason) => (
                         <SelectItem key={reason.value} value={reason.value}>
-                          {reason.label}
+                          {reason.description ? `${reason.label} – ${reason.description}` : reason.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 ) : (
                   <p className="text-sm font-medium text-destructive">
-                    {CANCELLATION_REASONS.find(r => r.value === contract.cancellation_reason)?.label || contract.cancellation_reason || "—"}
+                    {reasonLabels[contract.cancellation_reason as string] || CANCELLATION_REASONS.find(r => r.value === contract.cancellation_reason)?.label || contract.cancellation_reason || "—"}
                   </p>
                 )}
               </div>
