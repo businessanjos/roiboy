@@ -1,4 +1,6 @@
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import { formatMillionsHint } from "@/lib/formatMillions";
+import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -366,7 +368,7 @@ export function ClientsRevenueListDialog({
                                 .toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium truncate">{r.full_name}</span>
+                          <Link to={`/clients/${r.client_id}`} className="font-medium truncate hover:underline">{r.full_name}</Link>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
@@ -382,7 +384,10 @@ export function ClientsRevenueListDialog({
                           {r.product_name}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-semibold whitespace-nowrap">{brl(r.period_total)}</TableCell>
+                      <TableCell className="text-right font-semibold whitespace-nowrap">
+                        {brl(r.period_total)}
+                        <span className="block text-[10px] font-normal text-muted-foreground/70">{formatMillionsHint(r.period_total)}</span>
+                      </TableCell>
                       <TableCell className="text-right text-muted-foreground whitespace-nowrap">
                         {r.last_month_revenue > 0 ? brl(r.last_month_revenue) : "—"}
                         {r.last_month && r.last_month !== bounds.to && (
