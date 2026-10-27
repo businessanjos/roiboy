@@ -157,8 +157,7 @@ const CONTRACT_TYPES = [
 function normalizeContractType(raw?: string | null): string {
   const v = (raw || "").trim().toLowerCase();
   if (CONTRACT_TYPES.some((t) => t.value === v)) return v;
-  if (v === "upsell" || v === "migracao") return "compra";
-  return "compra";
+  return v || "compra";
 }
 
 export function ClientContracts({ clientId }: ClientContractsProps) {
@@ -780,6 +779,11 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
+                    {formData.contract_type && !CONTRACT_TYPES.some((t) => t.value === formData.contract_type) && (
+                      <SelectItem value={formData.contract_type}>
+                        {formData.contract_type.charAt(0).toUpperCase() + formData.contract_type.slice(1)}
+                      </SelectItem>
+                    )}
                     {CONTRACT_TYPES.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
