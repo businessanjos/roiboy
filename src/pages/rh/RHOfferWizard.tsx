@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Save, Sparkles, ExternalLink, Copy, Plus, X, Loader2, Wand2, Eye, Upload, Image as ImageIcon, Trash2, LayoutTemplate } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Save, Sparkles, ExternalLink, Copy, Plus, X, Loader2, Wand2, Eye, Upload, Image as ImageIcon, Trash2, LayoutTemplate, ArrowUp, ArrowDown, RotateCcw, Pencil, Settings2 } from "lucide-react";
+import { OfferLetterView, type Offer as PreviewOffer } from "@/pages/public/PublicJobOffer";
+import { useOfferContentSettings } from "@/hooks/useOfferContentSettings";
+import { KpiPacksEditorDialog, OfferDefaultsDialog } from "@/components/rh/offers/OfferContentSettingsDialogs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -62,6 +65,7 @@ type Form = {
   next_steps: string;
   signer_name: string;
   signer_role: string;
+  custom_sections: { id: string; title: string; body: string }[];
   accent_color: string;
   cover_image_url: string;
   candidate_photo_url: string;
@@ -78,7 +82,7 @@ const EMPTY: Form = {
   start_date: "", offer_expires_at: "",
   work_schedule: { rules: [{ days: ["mon","tue","wed","thu","fri"], start_time: "09:00", end_time: "18:00", lunch_minutes: 60 }] },
   hero_headline: "", company_intro: "", role_pitch: "", next_steps: "",
-  signer_name: "", signer_role: "",
+  signer_name: "", signer_role: "", custom_sections: [],
   accent_color: "#6366F1", cover_image_url: "", candidate_photo_url: "",
   is_template: false, template_name: "",
 };
@@ -113,6 +117,10 @@ export default function RHOfferWizard() {
   const inFlightRef = useRef(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  const [kpiEditorOpen, setKpiEditorOpen] = useState(false);
+  const [defaultsOpen, setDefaultsOpen] = useState(false);
+  const { settings: contentSettings, isLoading: settingsLoading, save: saveOfferSettings } = useOfferContentSettings();
 
   const openPreview = async () => {
     let token = savedToken;
@@ -164,6 +172,7 @@ export default function RHOfferWizard() {
         next_steps: data.next_steps || "",
         signer_name: data.signer_name || "",
         signer_role: data.signer_role || "",
+        custom_sections: (((data as any).custom_sections as any[]) || []).map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
         accent_color: data.accent_color || "#6366F1",
         cover_image_url: data.cover_image_url || "",
         // Ao clonar, a nova offer não é modelo; ao editar, mantém flag
@@ -219,6 +228,74 @@ export default function RHOfferWizard() {
     const merged = [...form.success_metrics, ...metrics.filter((m) => !existing.has(m.label.trim().toLowerCase()))];
     set("success_metrics", merged);
   };
+  const addSection = () => set("custom_sections", [...form.custom_sections, { id: crypto.randomUUID(), title: "", body: "" }]);
+  const removeSection = (i: number) => set("custom_sections", form.custom_sections.filter((_, idx) => idx !== i));
+  const updateSection = (i: number, key: "title" | "body", v: string) =>
+    set("custom_sections", form.custom_sections.map((b, idx) => (idx === i ? { ...b, [key]: v } : b)));
+  const moveSection = (i: number, dir: -1 | 1) => {
+    const arr = [...form.custom_sections];
+    const j = i + dir;
+    if (j < 0 || j >= arr.length) return;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    set("custom_sections", arr);
+  };
+
+  // Padrões da conta (fallback: textos originais do sistema)
+  const defaultCompanyIntro = contentSettings.company_intro ?? DEFAULT_COMPANY_INTRO;
+  const defaultNextSteps = contentSettings.next_steps ?? DEFAULT_NEXT_STEPS;
+  const saveContentSettings = (patch: Parameters<typeof saveOfferSettings>[0]) => saveOfferSettings(patch);
+
+  // Carta nova: já vem com os textos padrão da conta
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (prefilledRef.current || isEdit || templateId || settingsLoading) return;
+    prefilledRef.current = true;
+    setForm((f) => ({
+      ...f,
+      company_intro: f.company_intro || defaultCompanyIntro,
+      next_steps: f.next_steps || defaultNextSteps,
+      signer_name: f.signer_name || contentSettings.signer_name || "",
+      signer_role: f.signer_role || contentSettings.signer_role || "",
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsLoading, isEdit, templateId]);
+
+  const showSidePreview = step >= 4;
+  const livePreviewOffer = useMemo<PreviewOffer>(() => ({
+    id: recordId || "preview",
+    public_token: savedToken || "preview",
+    candidate_name: form.candidate_name || "Candidato",
+    position_title: form.position_title,
+    department: form.department || null,
+    seniority: form.seniority || null,
+    work_model: form.work_model || null,
+    contract_type: form.contract_type || null,
+    unit: form.unit || null,
+    reports_to: form.reports_to || null,
+    salary_amount: form.salary_amount ? Number(form.salary_amount) : null,
+    salary_currency: form.salary_currency,
+    salary_note: form.salary_note || null,
+    variable_compensation: form.variable_compensation || null,
+    benefits: form.benefits,
+    benefit_values: form.benefit_values,
+    perks: form.perks.filter((p) => p.title.trim()),
+    success_metrics: form.success_metrics.filter((m) => m.label.trim()),
+    start_date: form.start_date || null,
+    offer_expires_at: form.offer_expires_at || null,
+    work_schedule: form.work_schedule,
+    hero_headline: form.hero_headline || null,
+    company_intro: form.company_intro || defaultCompanyIntro,
+    role_pitch: form.role_pitch || null,
+    next_steps: form.next_steps || defaultNextSteps,
+    signer_name: form.signer_name || null,
+    signer_role: form.signer_role || null,
+    status: "draft",
+    responded_at: null,
+    first_viewed_at: null,
+    view_count: 0,
+    candidate_photo_url: form.candidate_photo_url || null,
+    custom_sections: form.custom_sections,
+  }), [form, recordId, savedToken, defaultCompanyIntro, defaultNextSteps]);
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const handlePhotoUpload = async (file: File) => {
@@ -283,9 +360,10 @@ export default function RHOfferWizard() {
       offer_expires_at: form.offer_expires_at || null,
       work_schedule: form.work_schedule?.rules?.some((r) => r.days?.length) ? form.work_schedule : null,
       hero_headline: form.hero_headline || null,
-      company_intro: form.company_intro || DEFAULT_COMPANY_INTRO,
+      company_intro: form.company_intro || defaultCompanyIntro,
       role_pitch: form.role_pitch || null,
-      next_steps: form.next_steps || DEFAULT_NEXT_STEPS,
+      next_steps: form.next_steps || defaultNextSteps,
+      custom_sections: form.custom_sections.filter((b) => b.title.trim() || b.body.trim()),
       signer_name: form.signer_name || null,
       signer_role: form.signer_role || null,
       accent_color: form.accent_color,
