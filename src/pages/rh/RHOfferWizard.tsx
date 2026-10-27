@@ -421,7 +421,7 @@ export default function RHOfferWizard() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className={cn("p-6 mx-auto space-y-6", showSidePreview ? "max-w-4xl lg:max-w-7xl" : "max-w-4xl")}>
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate("/rh/offers")}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
@@ -475,6 +475,8 @@ export default function RHOfferWizard() {
         </div>
       </div>
 
+      <div className={cn(showSidePreview && "lg:grid lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-6 lg:items-start")}>
+      <div className="space-y-6 min-w-0">
       <Card>
         <CardHeader>
           <CardTitle>{STEPS[step - 1].title}</CardTitle>
@@ -668,6 +670,11 @@ export default function RHOfferWizard() {
 
           {step === 4 && (
             <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button type="button" size="sm" variant="ghost" className="gap-1 text-xs" onClick={() => setDefaultsOpen(true)}>
+                  <Settings2 className="h-3.5 w-3.5" /> Textos padrão
+                </Button>
+              </div>
               <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-dashed border-indigo-300 bg-indigo-50/50 dark:bg-indigo-950/20">
                 <div className="text-sm">
                   <p className="font-medium text-indigo-900 dark:text-indigo-200">Preencher com IA</p>
@@ -683,8 +690,13 @@ export default function RHOfferWizard() {
                 <Input value={form.hero_headline} onChange={(e) => set("hero_headline", e.target.value)} placeholder={`Ex.: ${form.candidate_name || "Mariana"}, esta proposta é para você.`} />
               </div>
               <div>
-                <Label>Sobre a Eternum</Label>
-                <OfferRichTextarea rows={6} value={form.company_intro} onChange={(v) => set("company_intro", v)} placeholder={DEFAULT_COMPANY_INTRO} />
+                <div className="flex items-center justify-between">
+                  <Label>Sobre a Eternum</Label>
+                  <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1" onClick={() => set("company_intro", defaultCompanyIntro)}>
+                    <RotateCcw className="h-3 w-3" /> Usar padrão
+                  </Button>
+                </div>
+                <OfferRichTextarea rows={6} value={form.company_intro} onChange={(v) => set("company_intro", v)} placeholder={defaultCompanyIntro} />
               </div>
               <div>
                 <Label>Sobre a vaga / Pitch</Label>
@@ -697,14 +709,19 @@ export default function RHOfferWizard() {
                     <Label className="text-base">Como o sucesso será medido</Label>
                     <p className="text-xs text-muted-foreground">Métricas/KPIs claros que esta pessoa será avaliada. Aparecem com destaque na carta.</p>
                   </div>
-                  <Button type="button" size="sm" variant="outline" onClick={addMetric} className="gap-1">
-                    <Plus className="h-3.5 w-3.5" /> Adicionar métrica
-                  </Button>
+                  <div className="flex gap-2 shrink-0">
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setKpiEditorOpen(true)} className="gap-1 text-xs">
+                      <Pencil className="h-3.5 w-3.5" /> Editar sugestões
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={addMetric} className="gap-1">
+                      <Plus className="h-3.5 w-3.5" /> Adicionar métrica
+                    </Button>
+                  </div>
                 </div>
                 {/* Sugestões inteligentes baseadas no cargo/departamento */}
                 {(() => {
-                  const packs = suggestKpis(form.position_title, form.department);
-                  if (!form.position_title.trim()) {
+                  const packs = suggestKpis(form.position_title, form.department, contentSettings.kpi_packs);
+                  if (!form.position_title.trim() && !contentSettings.kpi_packs) {
                     return (
                       <p className="text-xs text-muted-foreground italic">
                         Preencha o cargo no passo 2 para receber sugestões inteligentes de KPIs.
@@ -792,9 +809,42 @@ export default function RHOfferWizard() {
                   </div>
                 ))}
               </div>
+
+              {/* Blocos extras */}
+              <div className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label className="text-base">Blocos extras</Label>
+                    <p className="text-xs text-muted-foreground">Seções livres que aparecem na carta antes de "Próximos passos".</p>
+                  </div>
+                  <Button type="button" size="sm" variant="outline" onClick={addSection} className="gap-1">
+                    <Plus className="h-3.5 w-3.5" /> Adicionar bloco
+                  </Button>
+                </div>
+                {form.custom_sections.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">Ex.: "Seu primeiro mês", "Nossa cultura", "Plano de carreira".</p>
+                )}
+                {form.custom_sections.map((b, i) => (
+                  <div key={b.id} className="rounded-md border bg-muted/30 p-3 space-y-2">
+                    <div className="flex gap-2">
+                      <Input value={b.title} onChange={(e) => updateSection(i, "title", e.target.value)} placeholder="Título do bloco" />
+                      <Button type="button" size="icon" variant="ghost" disabled={i === 0} onClick={() => moveSection(i, -1)} title="Subir"><ArrowUp className="h-4 w-4" /></Button>
+                      <Button type="button" size="icon" variant="ghost" disabled={i === form.custom_sections.length - 1} onClick={() => moveSection(i, 1)} title="Descer"><ArrowDown className="h-4 w-4" /></Button>
+                      <Button type="button" size="icon" variant="ghost" className="text-danger" onClick={() => removeSection(i)} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                    <OfferRichTextarea rows={4} value={b.body} onChange={(v) => updateSection(i, "body", v)} placeholder="Texto do bloco" />
+                  </div>
+                ))}
+              </div>
+
               <div>
-                <Label>Próximos passos</Label>
-                <OfferRichTextarea rows={4} value={form.next_steps} onChange={(v) => set("next_steps", v)} placeholder={DEFAULT_NEXT_STEPS} />
+                <div className="flex items-center justify-between">
+                  <Label>Próximos passos</Label>
+                  <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1" onClick={() => set("next_steps", defaultNextSteps)}>
+                    <RotateCcw className="h-3 w-3" /> Usar padrão
+                  </Button>
+                </div>
+                <OfferRichTextarea rows={4} value={form.next_steps} onChange={(v) => set("next_steps", v)} placeholder={defaultNextSteps} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
