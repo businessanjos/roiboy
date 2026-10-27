@@ -7,7 +7,7 @@ import { useUserSectorAccess } from "@/hooks/useUserSectorAccess";
  * para que liberar alguém não exija alterar código.
  */
 export const RH_ALLOWED_EMAILS = [
-  "m.quintana@me.com",
+  "m.quintana@me.com", "jonathanmarcato@anjosbusiness.com",
   "coachevertonsantos@gmail.com",
   "rh@anjosbusiness.com.br",
   "diessica@consultoria-luma.com",

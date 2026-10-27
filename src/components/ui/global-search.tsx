@@ -67,7 +67,7 @@ export function openGlobalSearch() {
 
 /** RH é restrito por allowlist de e-mail (mesma regra de /rh). */
 const RH_ALLOWED_EMAILS = [
-  "m.quintana@me.com",
+  "m.quintana@me.com", "jonathanmarcato@anjosbusiness.com",
   "coachevertonsantos@gmail.com",
   "rh@anjosbusiness.com.br",
   "diessica@consultoria-luma.com",
