@@ -1453,6 +1453,23 @@ export default function Leads() {
                           <div className="flex items-center gap-1.5 overflow-hidden">
                             <span className="font-medium text-sm line-clamp-2 break-words sm:truncate sm:max-w-[150px]">{lead.full_name}</span>
                             {getStatusBadge(lead.status)}
+                            {(() => {
+                              const mqlInfo = parseLeadMql(lead.mql);
+                              if (!mqlInfo) return null;
+                              return (
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-[10px] flex-shrink-0",
+                                    mqlInfo.isMql
+                                      ? "border-success/30 bg-success/15 text-success-strong"
+                                      : "border-muted-foreground/30 text-muted-foreground"
+                                  )}
+                                >
+                                  {mqlInfo.label}
+                                </Badge>
+                              );
+                            })()}
                             {customFields.slice(0, 1).map(field => {
                               const value = fieldValues[lead.id]?.[field.id];
                               if (value === undefined || value === null) return null;
@@ -1485,6 +1502,14 @@ export default function Leads() {
                             {lead.source && (
                               <Badge variant="outline" className="text-[10px] flex-shrink-0 hidden sm:inline-flex">
                                 {LEAD_SOURCES.find((s) => s.value === lead.source)?.label || lead.source}
+                              </Badge>
+                            )}
+                            {clientRevenueMap[lead.id] != null && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] flex-shrink-0 border-success/30 bg-success/10 text-success-strong"
+                              >
+                                {formatBRLCompact(clientRevenueMap[lead.id])}/mês
                               </Badge>
                             )}
                           </div>
