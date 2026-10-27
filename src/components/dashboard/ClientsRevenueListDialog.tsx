@@ -1,3 +1,4 @@
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -127,12 +128,17 @@ export function ClientsRevenueListDialog({
         const batch = ids.slice(i, i + BATCH);
         historyPromises.push(
           (async () => {
-            const { data } = await supabase
-              .from("client_revenue_history")
-              .select("client_id, month, revenue")
-              .eq("account_id", accountId!)
-              .in("client_id", batch);
-            return data || [];
+            const { data, error } = await fetchAllRows<any>((from, to) =>
+              supabase
+                .from("client_revenue_history")
+                .select("client_id, month, revenue")
+                .eq("account_id", accountId!)
+                .in("client_id", batch)
+                .order("id", { ascending: true })
+                .range(from, to),
+            );
+            if (error) throw error;
+            return data;
           })()
         );
         productsPromises.push(
