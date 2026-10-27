@@ -753,7 +753,7 @@ export default function RHOfferWizard() {
 
           {step === 3 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div id="edit-salary" className={cn("grid grid-cols-1 md:grid-cols-3 gap-4", flash("edit-salary"))}>
                 <div>
                   <Label>Moeda</Label>
                   <Select value={form.salary_currency} onValueChange={(v) => set("salary_currency", v)}>
