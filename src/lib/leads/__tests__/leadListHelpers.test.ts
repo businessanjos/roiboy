@@ -25,3 +25,12 @@ describe("formatBRLCompact", () => {
     expect(formatBRLCompact(45000)).toMatch(/45/);
   });
 });
+
+import { formatLeadRevenueRange } from "../leadListHelpers";
+describe("formatLeadRevenueRange", () => {
+  it("encurta faixas informadas pelo lead", () => {
+    expect(formatLeadRevenueRange("Entre 20 e 30 mil reais")).toBe("20–30 mil");
+    expect(formatLeadRevenueRange("Abaixo de 20 mil")).toBe("Abaixo de 20 mil");
+    expect(formatLeadRevenueRange(null)).toBeNull();
+  });
+});
