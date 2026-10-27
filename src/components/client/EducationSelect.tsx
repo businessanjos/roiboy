@@ -33,6 +33,15 @@ export function EducationSelect({
 }: EducationSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const { options: customOptions, addOption } = useEducationOptions();
+
+  const customNames = useMemo(() => customOptions.map((o) => o.name), [customOptions]);
+  const allKnown = useMemo(
+    () => [...FAVORITE_EDUCATION_OPTIONS, ...OTHER_EDUCATION_OPTIONS, ...customNames],
+    [customNames],
+  );
 
   const filter = (list: string[]) => {
     const q = strip(query.trim());
@@ -40,25 +49,52 @@ export function EducationSelect({
     return list.filter((o) => strip(o).includes(q));
   };
 
-  const favorites = useMemo(() => filter(FAVORITE_EDUCATION_OPTIONS), [query]);
-  const others = useMemo(() => filter(OTHER_EDUCATION_OPTIONS), [query]);
+  const favorites = useMemo(() => filter(FAVORITE_EDUCATION_OPTIONS), [query, allKnown]);
+  // Formações cadastradas pelo time primeiro, depois as padrão restantes.
+  const customFiltered = useMemo(() => filter(customNames), [query, customNames]);
+  const others = useMemo(() => {
+    const rest = OTHER_EDUCATION_OPTIONS.filter((o) => !customNames.includes(o));
+    return filter(rest);
+  }, [query, customNames]);
 
   // Valor legado fora da lista: mostra sugestão de conversão (ou aviso simples)
   const isKnown = useMemo(() => {
     if (!value) return true;
-    return [...FAVORITE_EDUCATION_OPTIONS, ...OTHER_EDUCATION_OPTIONS].includes(value);
-  }, [value]);
+    return allKnown.includes(value);
+  }, [value, allKnown]);
 
   const suggestion = useMemo(() => {
     if (!value || isKnown) return null;
     return normalizeEducation(value);
   }, [value, isKnown]);
 
+  const exactMatch = useMemo(() => {
+    const q = strip(query.trim());
+    if (!q) return true;
+    return allKnown.some((o) => strip(o) === q);
+  }, [query, allKnown]);
 
   const select = (v: string) => {
     onChange(v);
     setQuery("");
+    setAddError(null);
     setOpen(false);
+  };
+
+  const handleAdd = async () => {
+    const clean = query.trim();
+    if (!clean || creating) return;
+    setCreating(true);
+    setAddError(null);
+    try {
+      const saved = await addOption(clean);
+      if (saved) select(saved);
+      else setAddError("Não foi possível adicionar. Tente novamente.");
+    } catch {
+      setAddError("Não foi possível adicionar. Tente novamente.");
+    } finally {
+      setCreating(false);
+    }
   };
 
   const renderItem = (opt: string) => (
