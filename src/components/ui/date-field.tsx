@@ -66,9 +66,6 @@ export const DateField = React.forwardRef<HTMLInputElement, Props>(
             locale={ptBR}
             selected={selected}
             defaultMonth={selected}
-            captionLayout="dropdown-buttons"
-            fromYear={1930}
-            toYear={new Date().getFullYear() + 10}
             disabled={(d) => (minD ? d < minD : false) || (maxD ? d > maxD : false)}
             onSelect={(d) => { emit(d ? format(d, "yyyy-MM-dd") : ""); setOpen(false); }}
             initialFocus
