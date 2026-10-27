@@ -1,6 +1,30 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { CheckCircle2, XCircle, MapPin, Briefcase, Calendar, Gift, ArrowRight, Loader2, Sparkles, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, MapPin, Briefcase, Calendar, Gift, ArrowRight, Loader2, Sparkles, Clock, Laptop, Car, Plane, Home, Users, GraduationCap, HeartPulse, Shield, Star, Target, Coffee, Smartphone, Building2, Wallet, Award } from "lucide-react";
+
+export const OFFER_DETAIL_ICONS: Record<string, { label: string; Icon: React.ComponentType<{ className?: string }> }> = {
+  briefcase: { label: "Maleta", Icon: Briefcase },
+  laptop: { label: "Notebook", Icon: Laptop },
+  smartphone: { label: "Celular", Icon: Smartphone },
+  map: { label: "Local", Icon: MapPin },
+  building: { label: "Empresa", Icon: Building2 },
+  home: { label: "Casa", Icon: Home },
+  calendar: { label: "Calendário", Icon: Calendar },
+  clock: { label: "Relógio", Icon: Clock },
+  users: { label: "Equipe", Icon: Users },
+  graduation: { label: "Formação", Icon: GraduationCap },
+  health: { label: "Saúde", Icon: HeartPulse },
+  shield: { label: "Segurança", Icon: Shield },
+  wallet: { label: "Dinheiro", Icon: Wallet },
+  gift: { label: "Presente", Icon: Gift },
+  car: { label: "Carro", Icon: Car },
+  plane: { label: "Viagem", Icon: Plane },
+  coffee: { label: "Café", Icon: Coffee },
+  target: { label: "Meta", Icon: Target },
+  award: { label: "Prêmio", Icon: Award },
+  star: { label: "Estrela", Icon: Star },
+  sparkles: { label: "Brilho", Icon: Sparkles },
+};
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,7 +72,7 @@ export type Offer = {
   first_viewed_at: string | null;
   view_count: number;
   candidate_photo_url: string | null;
-  custom_sections?: { id: string; title: string; body: string; kind?: "detail" }[] | null;
+  custom_sections?: { id: string; title: string; body: string; kind?: "detail"; icon?: string }[] | null;
 };
 
 // Paleta Eternum
@@ -285,9 +309,11 @@ export function OfferLetterView({ offer, onOfferChange, preview = false, onSecti
         onClickCapture={onSectionClick ? (e) => {
           const sec = (e.target as HTMLElement).closest("main > section") as HTMLElement | null;
           if (!sec) return;
+          const label = sec.querySelector("h2")?.textContent?.trim() || "";
+          if (!label && !sec.dataset.blockId && !sec.dataset.edit) return;
           e.preventDefault();
           e.stopPropagation();
-          onSectionClick({ label: sec.querySelector("h2")?.textContent?.trim() || "", blockId: sec.dataset.blockId });
+          onSectionClick({ label: sec.dataset.edit || label, blockId: sec.dataset.blockId });
         } : undefined}
         title={onSectionClick ? "Clique em um bloco para editar" : undefined}
       >
@@ -369,7 +395,7 @@ export function OfferLetterView({ offer, onOfferChange, preview = false, onSecti
               );
             })()}
             {(offer.custom_sections || []).filter((b) => b.kind === "detail" && (b.title?.trim() || b.body?.trim())).map((b) => (
-              <DetailCard key={b.id} icon={<Briefcase className="h-4 w-4" />} label={b.title} value={b.body} />
+              <DetailCard key={b.id} icon={(() => { const I = (OFFER_DETAIL_ICONS[b.icon || ""] || OFFER_DETAIL_ICONS.briefcase).Icon; return <I className="h-4 w-4" />; })()} label={b.title} value={b.body} />
             ))}
           </div>
         </section>
@@ -591,7 +617,7 @@ export function OfferLetterView({ offer, onOfferChange, preview = false, onSecti
 
         {/* ASSINATURA */}
         {(offer.signer_name || offer.signer_role) && (
-          <section className="text-center py-8" style={{ borderTop: `1px solid ${GOLD}30` }}>
+          <section data-edit="signer" className="text-center py-8" style={{ borderTop: `1px solid ${GOLD}30` }}>
             <p className="text-sm italic opacity-70" style={{ fontFamily: SERIF }}>Com você na construção,</p>
             <p className="text-2xl mt-3" style={{ fontFamily: SERIF, color: GOLD_SOFT, fontWeight: 300 }}>
               {offer.signer_name}
