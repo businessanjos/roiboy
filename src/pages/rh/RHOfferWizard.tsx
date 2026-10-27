@@ -650,7 +650,7 @@ export default function RHOfferWizard() {
         </CardHeader>
         <CardContent className="space-y-4">
           {step === 1 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div id="edit-candidate" className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", flash("edit-candidate"))}>
               <div className="md:col-span-2">
                 <Label>Nome completo *</Label>
                 <Input value={form.candidate_name} onChange={(e) => set("candidate_name", e.target.value)} placeholder="Ex.: Mariana Souza" />
@@ -778,7 +778,7 @@ export default function RHOfferWizard() {
                 <Label>Remuneração variável</Label>
                 <OfferRichTextarea rows={2} value={form.variable_compensation} onChange={(v) => set("variable_compensation", v)} placeholder="Ex.: PLR semestral atrelada a metas..." />
               </div>
-              <div>
+              <div id="edit-benefits" className={flash("edit-benefits")}>
                 <Label className="mb-2 block">Benefícios</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {JOB_BENEFITS.map((b) => (
@@ -893,7 +893,7 @@ export default function RHOfferWizard() {
                 <OfferRichTextarea rows={6} value={form.role_pitch} onChange={(v) => set("role_pitch", v)} placeholder="Por que esse papel é estratégico, o que a pessoa vai fazer, com quem vai trabalhar, como o sucesso será medido..." />
               </div>
 
-              <div className="space-y-3 p-4 rounded-lg border border-dashed border-warning bg-warning/40 dark:bg-warning/10">
+              <div id="edit-metrics" className={cn("space-y-3 p-4 rounded-lg border border-dashed border-warning bg-warning/40 dark:bg-warning/10", flash("edit-metrics"))}>
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <Label className="text-base">Como o sucesso será medido</Label>
@@ -1060,7 +1060,7 @@ export default function RHOfferWizard() {
           )}
 
           {step === 5 && (
-            <div className="space-y-6">
+            <div id="edit-design" className={cn("space-y-6", flash("edit-design"))}>
               <div>
                 <Label className="mb-3 block">Cor de destaque</Label>
                 <div className="flex flex-wrap gap-2">
