@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { formatEducationName } from "@/lib/educationOptions";
 
 /** Formações extras cadastradas pela conta (fora da lista padrão do código). */
 export function useEducationOptions() {
@@ -13,10 +14,11 @@ export function useEducationOptions() {
     enabled: !!accountId,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
+      if (!accountId) return [];
       const { data, error } = await supabase
         .from("education_options")
         .select("id, name")
-        .eq("account_id", accountId!)
+        .eq("account_id", accountId)
         .order("name");
       if (error) throw error;
       return (data || []) as { id: string; name: string }[];
@@ -24,7 +26,7 @@ export function useEducationOptions() {
   });
 
   const addOption = async (name: string): Promise<string | null> => {
-    const clean = name.trim();
+    const clean = formatEducationName(name);
     if (!clean || !accountId) return null;
     const { data, error } = await supabase
       .from("education_options")
