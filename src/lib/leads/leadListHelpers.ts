@@ -28,3 +28,11 @@ export function formatBRLCompact(value: number): string {
     maximumFractionDigits: 1,
   }).format(value);
 }
+
+/** Faixa de faturamento informada pelo lead (ex.: "Entre 20 e 30 mil reais" -> "20–30 mil"). */
+export function formatLeadRevenueRange(range: string | null | undefined): string | null {
+  const raw = (range || "").trim();
+  if (!raw) return null;
+  if (raw === "acima_5m") return "Acima de 5 mi";
+  return raw.replace(/\s*reais\s*$/i, "").replace(/^Entre (\S+) e (\S+)/i, "$1–$2");
+}
