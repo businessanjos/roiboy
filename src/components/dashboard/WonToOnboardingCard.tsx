@@ -39,8 +39,8 @@ export function WonToOnboardingCard({ accountId, monthsBack = 6 }: Props) {
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1 text-xs">
-            <p className="font-semibold">Tempo médio entre Deal Ganho e Onboarding concluído</p>
-            <p>Mede o intervalo entre <code>deals.won_at</code> e a primeira conclusão de item do checklist nas etapas <strong>Onboarding com Consultor</strong> ou <strong>Onboarding de ferramentas</strong>.</p>
+            <p className="font-semibold">Tempo médio entre Deal Ganho e início do Onboarding</p>
+            <p>Mede o intervalo entre o negócio ganho (<code>deals.won_at</code>) e a data de início do onboarding do cliente (<code>onboarding_started_at</code>).</p>
             {data && (
               <ul className="pt-1 space-y-0.5">
                 <li>Mediana: <strong>{data.median_days != null ? `${data.median_days.toFixed(1)}d` : "—"}</strong></li>
