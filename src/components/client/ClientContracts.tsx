@@ -1,3 +1,4 @@
+import { useContractTypes } from "@/hooks/useContractTypes";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseLocalDate } from "@/lib/dateUtils";
@@ -146,21 +147,14 @@ const PAYMENT_METHODS = [
   { value: "cheque", label: "Cheque" },
 ];
 
-const CONTRACT_TYPES = [
-  { value: "compra", label: "Contrato de Compra" },
-  { value: "renovacao", label: "Renovação" },
-  { value: "confissao_divida", label: "Confissão de Dívida" },
-  { value: "termo_congelamento", label: "Termo de Congelamento" },
-  { value: "distrato", label: "Distrato" },
-];
 
 function normalizeContractType(raw?: string | null): string {
   const v = (raw || "").trim().toLowerCase();
-  if (CONTRACT_TYPES.some((t) => t.value === v)) return v;
   return v || "compra";
 }
 
 export function ClientContracts({ clientId }: ClientContractsProps) {
+  const { options: CONTRACT_TYPES, labels: CONTRACT_TYPE_LABELS } = useContractTypes();
   const { linkedClientIds, linkedClients, hasLinkedClients } = useLinkedClients(clientId);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1008,7 +1002,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-normal">
-                        {CONTRACT_TYPES.find(t => t.value === normalizeContractType(contract.contract_type))?.label || "Compra"}
+                        {CONTRACT_TYPE_LABELS[normalizeContractType(contract.contract_type)] || contract.contract_type || "Compra"}
                       </Badge>
                     </TableCell>
                     <TableCell>

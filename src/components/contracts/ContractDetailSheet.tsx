@@ -1,3 +1,4 @@
+import { useContractTypes } from "@/hooks/useContractTypes";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,14 +112,6 @@ const CONTRACT_STATUS_CONFIG: Record<string, { label: string; icon: typeof Check
   dropout_7d: { label: "Desistência 7D", icon: XCircle, className: "border-pink-500 text-pink-600 bg-pink-50" },
 };
 
-const CONTRACT_TYPES: Record<string, string> = {
-  compra: "Compra",
-  renovacao: "Renovação",
-  migracao: "Migração",
-  confissao_divida: "Confissão de Dívida",
-  termo_congelamento: "Termo de Congelamento",
-  distrato: "Distrato",
-};
 
 const PAYMENT_TYPES = [
   { value: "a_vista", label: "À Vista" },
@@ -185,6 +178,7 @@ const formatCurrency = (value: number) => {
 };
 
 export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate, initialTab = "details" }: ContractDetailSheetProps) {
+  const { labels: CONTRACT_TYPES } = useContractTypes();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);

@@ -1,3 +1,4 @@
+import { useContractTypes } from "@/hooks/useContractTypes";
 import { ListPagination } from "@/components/ui/list-pagination";
 import type { PageSize } from "@/hooks/usePagedList";
 import { fetchAllRows } from "@/lib/fetchAllRows";
@@ -163,14 +164,6 @@ const CONTRACT_STATUS_CONFIG: Record<string, { label: string; icon: typeof Check
   dropout_7d: { label: "Desistência 7D", icon: XCircle, className: "border-pink-500 text-pink-600 bg-pink-50" },
 };
 
-const CONTRACT_TYPES: Record<string, string> = {
-  compra: "Compra",
-  renovacao: "Renovação",
-  migracao: "Migração",
-  confissao_divida: "Confissão de Dívida",
-  termo_congelamento: "Termo de Congelamento",
-  distrato: "Distrato",
-};
 
 const PAYMENT_TYPES = [
   { value: "a_vista", label: "À Vista" },
@@ -246,6 +239,7 @@ const ContractTableRow = memo(function ContractTableRow({
   onDelete,
   onConciliateSuccess,
 }: ContractRowProps) {
+  const { labels: CONTRACT_TYPES } = useContractTypes();
   const statusConfig = CONTRACT_STATUS_CONFIG[contract.status] || CONTRACT_STATUS_CONFIG.active;
   const StatusIcon = statusConfig.icon;
 
@@ -369,6 +363,7 @@ interface Client {
 }
 
 export default function Contracts() {
+  const { labels: CONTRACT_TYPES } = useContractTypes();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
