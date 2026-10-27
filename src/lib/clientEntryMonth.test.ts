@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pickEntryMonth, isOnOrAfterEntry } from "../clientEntryMonth";
+import { pickEntryMonth, isOnOrAfterEntry } from "./clientEntryMonth";
 
 describe("clientEntryMonth", () => {
   it("usa o primeiro contrato quando não há onboarding nem data no cadastro", () => {
