@@ -1,4 +1,6 @@
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import { formatMillionsHint } from "@/lib/formatMillions";
+import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,6 +48,8 @@ interface Props {
   productLabel?: string;
   periodFilter: string;
   customRange?: DateRange;
+  /** Overrides the period (e.g. a single clicked month). */
+  rangeOverride?: { from: string; to: string; label: string } | null;
 }
 
 const brl = (v: number) =>
@@ -96,14 +100,19 @@ export function ClientsRevenueListDialog({
   productLabel,
   periodFilter,
   customRange,
+  rangeOverride,
 }: Props) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: "period_total", desc: true });
 
-  const bounds = useMemo(() => periodBounds(periodFilter, customRange), [periodFilter, customRange]);
+  const bounds = useMemo(
+    () => rangeOverride ?? periodBounds(periodFilter, customRange),
+    [periodFilter, customRange, rangeOverride],
+  );
+  const rangeText = bounds.from === bounds.to ? monthLabel(bounds.from) : `${monthLabel(bounds.from)} a ${monthLabel(bounds.to)}`;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["clients-revenue-list-dialog", accountId, clientIds?.join(",")],
+    queryKey: ["clients-revenue-list-dialog", accountId, clientIds?.join(","), bounds.from, bounds.to],
     enabled: open && !!accountId,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
@@ -252,11 +261,17 @@ export function ClientsRevenueListDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] p-0 w-[calc(100vw-3rem)]">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-lg">Clientes com faturamento informado</DialogTitle>
+          <DialogTitle className="text-lg">Clientes com faturamento informado · {rangeOverride?.label ?? rangeText}</DialogTitle>
           <DialogDescription>
             {productLabel ? `Produto: ${productLabel}` : "Todos os produtos"} · {" "}
-            {filtered.length} cliente(s) · total no período {brl(totals)}
+            {filtered.filter((r) => r.period_total > 0).length} cliente(s) com valor no período · total {brl(totals)}{" "}
+            <span className="text-muted-foreground/70">({formatMillionsHint(totals) || "—"})</span>
           </DialogDescription>
+          <p className="text-xs text-muted-foreground mt-1">
+            Origem: soma dos faturamentos mensais lançados na ficha de cada cliente (Perfil do Negócio › Histórico de
+            Faturamento) ou importados por planilha, de {rangeText}. Entram apenas clientes com contrato ativo ou
+            pendente{productLabel ? " do produto selecionado" : ""}. Clique no nome para abrir a ficha.
+          </p>
         </DialogHeader>
         <div className="px-6 pb-2">
           <div className="relative">
@@ -353,7 +368,7 @@ export function ClientsRevenueListDialog({
                                 .toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium truncate">{r.full_name}</span>
+                          <Link to={`/clients/${r.client_id}`} className="font-medium truncate hover:underline">{r.full_name}</Link>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
@@ -369,7 +384,10 @@ export function ClientsRevenueListDialog({
                           {r.product_name}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-semibold whitespace-nowrap">{brl(r.period_total)}</TableCell>
+                      <TableCell className="text-right font-semibold whitespace-nowrap">
+                        {brl(r.period_total)}
+                        <span className="block text-[10px] font-normal text-muted-foreground/70">{formatMillionsHint(r.period_total)}</span>
+                      </TableCell>
                       <TableCell className="text-right text-muted-foreground whitespace-nowrap">
                         {r.last_month_revenue > 0 ? brl(r.last_month_revenue) : "—"}
                         {r.last_month && r.last_month !== bounds.to && (
