@@ -24,13 +24,30 @@ import { OfferRichTextarea } from "@/components/rh/offers/OfferRichTextarea";
 import WorkScheduleField, { validateSchedule, normalizeSchedule, type WorkSchedule } from "@/components/rh/offers/WorkScheduleField";
 
 const STEPS = [
-  { id: 1, title: "Candidato" },
-  { id: 2, title: "Posição" },
-  { id: 3, title: "Remuneração" },
-  { id: 4, title: "Conteúdo" },
-  { id: 5, title: "Design" },
-  { id: 6, title: "Revisão" },
+  { id: 1, title: "Candidato", hint: "Quem vai receber a proposta." },
+  { id: 2, title: "Posição", hint: "Cargo, contratação, datas e jornada." },
+  { id: 3, title: "Remuneração", hint: "Salário, benefícios e diferenciais." },
+  { id: 4, title: "Conteúdo", hint: "Textos, métricas de sucesso e fechamento." },
+  { id: 5, title: "Design", hint: "Cor e capa da carta." },
+  { id: 6, title: "Revisão", hint: "Confira, salve e gere o link." },
 ];
+
+function WizardSection({ id, title, description, actions, children, className }: {
+  id?: string; title: string; description?: string; actions?: React.ReactNode; children: React.ReactNode; className?: string;
+}) {
+  return (
+    <section id={id} className={cn("space-y-4 border-t pt-6 first:border-t-0 first:pt-0", className)}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold">{title}</h3>
+          {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+        </div>
+        {actions && <div className="flex items-center gap-1 shrink-0">{actions}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 const ACCENT_PALETTE = [
   "#6366F1", "#8B5CF6", "#EC4899", "#F43F5E",
@@ -646,21 +663,23 @@ export default function RHOfferWizard() {
       <div className={cn(showSidePreview && "lg:grid lg:gap-6 lg:items-start", showSidePreview && (previewLarge ? "lg:grid-cols-[minmax(0,1fr)_760px]" : "lg:grid-cols-[minmax(0,1fr)_580px]"))}>
       <div className="space-y-6 min-w-0">
       <Card>
-        <CardHeader>
-          <CardTitle>{STEPS[step - 1].title}</CardTitle>
+        <CardHeader className="pb-4 border-b">
+          <p className="text-xs font-medium text-muted-foreground">Etapa {step} de {STEPS.length}</p>
+          <CardTitle className="text-lg">{STEPS[step - 1].title}</CardTitle>
+          <p className="text-sm text-muted-foreground">{STEPS[step - 1].hint}</p>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {step === 1 && (
             <div id="edit-candidate" className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", flash("edit-candidate"))}>
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 space-y-1.5">
                 <Label>Nome completo *</Label>
                 <Input value={form.candidate_name} onChange={(e) => set("candidate_name", e.target.value)} placeholder="Ex.: Mariana Souza" />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>E-mail</Label>
                 <Input type="email" value={form.candidate_email} onChange={(e) => set("candidate_email", e.target.value)} />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>Telefone</Label>
                 <Input value={form.candidate_phone} onChange={(e) => set("candidate_phone", e.target.value)} />
               </div>
@@ -668,102 +687,113 @@ export default function RHOfferWizard() {
           )}
 
           {step === 2 && (
-            <div id="edit-details" className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", flash("edit-details"))}>
-              <div className="md:col-span-2">
-                <Label>Cargo *</Label>
-                <Input value={form.position_title} onChange={(e) => set("position_title", e.target.value)} placeholder="Ex.: Customer Success Analyst" />
-              </div>
-              <div>
-                <Label>Departamento</Label>
-                <Input value={form.department} onChange={(e) => set("department", e.target.value)} />
-              </div>
-              <div>
-                <Label>Senioridade</Label>
-                <Select value={form.seniority} onValueChange={(v) => set("seniority", v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(JOB_SENIORITY_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Modelo de trabalho</Label>
-                <Select value={form.work_model} onValueChange={(v) => set("work_model", v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(WORK_MODEL_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Tipo de contratação</Label>
-                <Select value={form.contract_type} onValueChange={(v) => set("contract_type", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(CONTRACT_TYPE_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Unidade / Cidade</Label>
-                <Input value={form.unit} onChange={(e) => set("unit", e.target.value)} placeholder="Ex.: São Paulo / Remoto" />
-              </div>
-              <div>
-                <Label>Reporta-se a</Label>
-                <Input value={form.reports_to} onChange={(e) => set("reports_to", e.target.value)} />
-              </div>
-              <div>
-                <Label>Data de início</Label>
-                <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
-              </div>
-              <div>
-                <Label>Validade da proposta</Label>
-                <Input type="date" value={form.offer_expires_at} onChange={(e) => set("offer_expires_at", e.target.value)} />
-              </div>
-              <div className="md:col-span-2">
+            <div id="edit-details" className={cn("space-y-6", flash("edit-details"))}>
+              <WizardSection title="Função">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2 space-y-1.5">
+                    <Label>Cargo *</Label>
+                    <Input value={form.position_title} onChange={(e) => set("position_title", e.target.value)} placeholder="Ex.: Customer Success Analyst" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Departamento</Label>
+                    <Input value={form.department} onChange={(e) => set("department", e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Senioridade</Label>
+                    <Select value={form.seniority} onValueChange={(v) => set("seniority", v)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(JOB_SENIORITY_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Reporta-se a</Label>
+                    <Input value={form.reports_to} onChange={(e) => set("reports_to", e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Unidade / Cidade</Label>
+                    <Input value={form.unit} onChange={(e) => set("unit", e.target.value)} placeholder="Ex.: São Paulo / Remoto" />
+                  </div>
+                </div>
+              </WizardSection>
+
+              <WizardSection title="Contratação e datas">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Modelo de trabalho</Label>
+                    <Select value={form.work_model} onValueChange={(v) => set("work_model", v)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(WORK_MODEL_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Tipo de contratação</Label>
+                    <Select value={form.contract_type} onValueChange={(v) => set("contract_type", v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(CONTRACT_TYPE_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Data de início</Label>
+                    <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Validade da proposta</Label>
+                    <Input type="date" value={form.offer_expires_at} onChange={(e) => set("offer_expires_at", e.target.value)} />
+                  </div>
+                </div>
+              </WizardSection>
+
+              <WizardSection title="Jornada de trabalho">
                 <WorkScheduleField
                   value={form.work_schedule}
                   onChange={(v) => set("work_schedule", v)}
                 />
-              </div>
-              <div className="md:col-span-2 space-y-3 rounded-lg border p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <Label className="text-base">Quadros extras em "Detalhes da posição"</Label>
-                    <p className="text-xs text-muted-foreground">Ex.: "Equipamentos: notebook e celular", "Período de experiência: 90 dias".</p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button type="button" size="sm" variant="ghost" disabled={!detailsUndo.canUndo} onClick={undoDetails} className="gap-1 text-xs">
-                      <Undo2 className="h-3.5 w-3.5" /> Desfazer
+              </WizardSection>
+
+              <WizardSection
+                title={`Quadros extras em "Detalhes da posição"`}
+                description={`Ex.: "Equipamentos: notebook e celular", "Experiência: 90 dias".`}
+                actions={
+                  <>
+                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8" disabled={!detailsUndo.canUndo} onClick={undoDetails} title="Desfazer">
+                      <Undo2 className="h-3.5 w-3.5" />
                     </Button>
                     <Button type="button" size="sm" variant="outline" onClick={addDetail} className="gap-1">
-                      <Plus className="h-3.5 w-3.5" /> Adicionar quadro
+                      <Plus className="h-3.5 w-3.5" /> Quadro
                     </Button>
-                  </div>
-                </div>
+                  </>
+                }
+              >
                 {form.extra_details.map((d, i) => (
-                  <div key={d.id} className="flex flex-col sm:flex-row gap-2">
+                  <div key={d.id} className="flex flex-col sm:flex-row gap-2 rounded-lg border p-2">
                     <Select value={d.icon || "briefcase"} onValueChange={(v) => { detailsUndo.snapshot(form.extra_details); updateDetail(i, "icon", v); }}>
-                      <SelectTrigger className="sm:w-36 shrink-0" title="Ícone do quadro"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="sm:w-36 shrink-0 h-9" title="Ícone do quadro"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {Object.entries(OFFER_DETAIL_ICONS).map(([k, { label, Icon }]) => (
                           <SelectItem key={k} value={k}><span className="inline-flex items-center gap-2"><Icon className="h-4 w-4" /> {label}</span></SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input className="sm:w-1/3" value={d.title} onChange={(e) => updateDetail(i, "title", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Título (ex.: Equipamentos)" />
-                    <Input value={d.body} onChange={(e) => updateDetail(i, "body", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Conteúdo" />
-                    <Button type="button" size="icon" variant="ghost" className="text-danger shrink-0" onClick={() => removeDetail(i)} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
+                    <Input className="sm:w-1/3 h-9" value={d.title} onChange={(e) => updateDetail(i, "title", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Título" />
+                    <Input className="h-9" value={d.body} onChange={(e) => updateDetail(i, "body", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Conteúdo" />
+                    <Button type="button" size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-danger shrink-0" onClick={() => removeDetail(i)} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
-              </div>
+              </WizardSection>
             </div>
           )}
 
           {step === 3 && (
-            <div className="space-y-4">
-              <div id="edit-salary" className={cn("grid grid-cols-1 md:grid-cols-3 gap-4", flash("edit-salary"))}>
-                <div>
+            <div className="space-y-6">
+              <WizardSection id="edit-salary" className={flash("edit-salary")} title="Salário">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
                   <Label>Moeda</Label>
                   <Select value={form.salary_currency} onValueChange={(v) => set("salary_currency", v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -774,22 +804,23 @@ export default function RHOfferWizard() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 space-y-1.5">
                   <Label>Valor mensal</Label>
                   <Input type="number" step="0.01" value={form.salary_amount} onChange={(e) => set("salary_amount", e.target.value)} placeholder="0,00" />
                 </div>
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>Observação sobre salário</Label>
                 <Input value={form.salary_note} onChange={(e) => set("salary_note", e.target.value)} placeholder="Ex.: revisado após 6 meses" />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>Remuneração variável</Label>
                 <OfferRichTextarea rows={2} value={form.variable_compensation} onChange={(v) => set("variable_compensation", v)} placeholder="Ex.: PLR semestral atrelada a metas..." />
               </div>
-              <div id="edit-benefits" className={flash("edit-benefits")}>
-                <Label className="mb-2 block">Benefícios</Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              </WizardSection>
+
+              <WizardSection id="edit-benefits" className={flash("edit-benefits")} title="Benefícios" description="Marque os incluídos e, se quiser, informe valores.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2.5">
                   {JOB_BENEFITS.map((b) => (
                     <label key={b} className="flex items-center gap-2 text-sm cursor-pointer">
                       <Checkbox checked={form.benefits.includes(b)} onCheckedChange={() => toggleBenefit(b)} />
@@ -806,16 +837,14 @@ export default function RHOfferWizard() {
                   const editable = form.benefits.filter((b) => inputKind(b) !== "none");
                   if (editable.length === 0) return null;
                   return (
-                    <div className="mt-4 space-y-2 rounded-lg border bg-muted/30 p-3">
-                      <p className="text-xs text-muted-foreground">
-                        Preencha as informações abaixo (opcional). Deixe em branco para não exibir na carta.
-                      </p>
+                    <div className="space-y-2 rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">Valores (opcional — em branco não aparece na carta)</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {editable.map((b) => {
                           const kind = inputKind(b);
                           return (
                             <div key={b} className="flex items-center gap-2">
-                              <Label className="text-xs w-40 shrink-0 truncate" title={b}>{b}</Label>
+                              <Label className="text-xs w-36 shrink-0 truncate font-normal" title={b}>{b}</Label>
                               {kind === "money" ? (
                                 <div className="relative flex-1">
                                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
@@ -844,114 +873,112 @@ export default function RHOfferWizard() {
                     </div>
                   );
                 })()}
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Perks personalizados</Label>
+              </WizardSection>
+
+              <WizardSection
+                title="Perks personalizados"
+                description="Diferenciais além dos benefícios padrão."
+                actions={
                   <Button type="button" size="sm" variant="outline" onClick={addPerk} className="gap-1">
-                    <Plus className="h-3 w-3" /> Adicionar
+                    <Plus className="h-3.5 w-3.5" /> Perk
                   </Button>
-                </div>
-                <div className="space-y-2">
-                  {form.perks.map((p, i) => (
-                    <div key={i} className="flex gap-2 items-start p-3 rounded-lg border bg-muted/30">
-                      <div className="flex-1 space-y-2">
-                        <Input placeholder="Título (ex.: Equipamento próprio)" value={p.title} onChange={(e) => updatePerk(i, "title", e.target.value)} />
-                        <Input placeholder="Descrição curta" value={p.description} onChange={(e) => updatePerk(i, "description", e.target.value)} />
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={() => removePerk(i)}><X className="h-4 w-4" /></Button>
+                }
+              >
+                {form.perks.map((p, i) => (
+                  <div key={i} className="flex gap-2 items-start rounded-lg border p-3">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2">
+                      <Input className="h-9" placeholder="Título (ex.: Equipamento)" value={p.title} onChange={(e) => updatePerk(i, "title", e.target.value)} />
+                      <Input className="h-9" placeholder="Descrição curta" value={p.description} onChange={(e) => updatePerk(i, "description", e.target.value)} />
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-danger" onClick={() => removePerk(i)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </WizardSection>
             </div>
           )}
 
           {step === 4 && (
-            <div className="space-y-4">
-              <div className="flex justify-end">
-                <Button type="button" size="sm" variant="ghost" className="gap-1 text-xs" onClick={() => setDefaultsOpen(true)}>
-                  <Settings2 className="h-3.5 w-3.5" /> Textos padrão
-                </Button>
-              </div>
-              <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-dashed border-indigo-300 bg-indigo-50/50 dark:bg-indigo-950/20">
-                <div className="text-sm">
-                  <p className="font-medium text-indigo-900 dark:text-indigo-200">Preencher com IA</p>
-                  <p className="text-xs text-muted-foreground">Gera headline, intro, pitch e próximos passos com base nos dados já informados.</p>
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+                <p className="text-xs text-muted-foreground">Gere headline, intro, pitch e próximos passos a partir dos dados já preenchidos.</p>
+                <div className="flex gap-1">
+                  <Button type="button" size="sm" variant="ghost" className="gap-1 text-xs" onClick={() => setDefaultsOpen(true)}>
+                    <Settings2 className="h-3.5 w-3.5" /> Textos padrão
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={fillWithAI} disabled={aiLoading} className="gap-1.5">
+                    {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                    {aiLoading ? "Gerando…" : "Preencher com IA"}
+                  </Button>
                 </div>
-                <Button type="button" size="sm" onClick={fillWithAI} disabled={aiLoading} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white">
-                  {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                  {aiLoading ? "Gerando…" : "Preencher com IA"}
-                </Button>
               </div>
-              <div>
+
+              <WizardSection title="Textos da carta" description="Capa, apresentação da empresa e da vaga.">
+              <div className="space-y-1.5">
                 <Label>Headline da capa</Label>
                 <Input value={form.hero_headline} onChange={(e) => set("hero_headline", e.target.value)} placeholder={`Ex.: ${form.candidate_name || "Mariana"}, esta proposta é para você.`} />
               </div>
-              <div id="edit-intro" className={flash("edit-intro")}>
+              <div id="edit-intro" className={cn("space-y-1.5", flash("edit-intro"))}>
                 <div className="flex items-center justify-between">
                   <Label>Sobre a Eternum</Label>
                   <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1" onClick={() => set("company_intro", defaultCompanyIntro)}>
                     <RotateCcw className="h-3 w-3" /> Usar padrão
                   </Button>
                 </div>
-                <OfferRichTextarea rows={6} value={form.company_intro} onChange={(v) => set("company_intro", v)} placeholder={defaultCompanyIntro} />
+                <OfferRichTextarea rows={5} value={form.company_intro} onChange={(v) => set("company_intro", v)} placeholder={defaultCompanyIntro} />
               </div>
-              <div id="edit-pitch" className={flash("edit-pitch")}>
+              <div id="edit-pitch" className={cn("space-y-1.5", flash("edit-pitch"))}>
                 <Label>Sobre a vaga / Pitch</Label>
-                <OfferRichTextarea rows={6} value={form.role_pitch} onChange={(v) => set("role_pitch", v)} placeholder="Por que esse papel é estratégico, o que a pessoa vai fazer, com quem vai trabalhar, como o sucesso será medido..." />
+                <OfferRichTextarea rows={5} value={form.role_pitch} onChange={(v) => set("role_pitch", v)} placeholder="Por que esse papel é estratégico, o que a pessoa vai fazer, com quem vai trabalhar..." />
               </div>
+              </WizardSection>
 
-              <div id="edit-metrics" className={cn("space-y-3 p-4 rounded-lg border border-dashed border-warning bg-warning/40 dark:bg-warning/10", flash("edit-metrics"))}>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <Label className="text-base">Como o sucesso será medido</Label>
-                    <p className="text-xs text-muted-foreground">Métricas/KPIs claros que esta pessoa será avaliada. Aparecem com destaque na carta.</p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setKpiEditorOpen(true)} className="gap-1 text-xs">
-                      <Pencil className="h-3.5 w-3.5" /> Editar sugestões
+              <WizardSection
+                id="edit-metrics"
+                className={flash("edit-metrics")}
+                title="Como o sucesso será medido"
+                description="Clique nas sugestões para adicionar ou remover. Aparecem com destaque na carta."
+                actions={
+                  <>
+                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => setKpiEditorOpen(true)} title="Editar sugestões">
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button type="button" size="sm" variant="ghost" disabled={!metricsUndo.canUndo} onClick={undoMetrics} className="gap-1 text-xs">
-                      <Undo2 className="h-3.5 w-3.5" /> Desfazer
+                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8" disabled={!metricsUndo.canUndo} onClick={undoMetrics} title="Desfazer">
+                      <Undo2 className="h-3.5 w-3.5" />
                     </Button>
                     <Button type="button" size="sm" variant="outline" onClick={addMetric} className="gap-1">
-                      <Plus className="h-3.5 w-3.5" /> Adicionar métrica
+                      <Plus className="h-3.5 w-3.5" /> Métrica
                     </Button>
-                  </div>
-                </div>
-                {/* Sugestões inteligentes baseadas no cargo/departamento */}
+                  </>
+                }
+              >
                 {(() => {
                   const packs = suggestKpis(form.position_title, form.department, contentSettings.kpi_packs);
                   if (!form.position_title.trim() && !contentSettings.kpi_packs) {
                     return (
-                      <p className="text-xs text-muted-foreground italic">
-                        Preencha o cargo no passo 2 para receber sugestões inteligentes de KPIs.
+                      <p className="text-xs text-muted-foreground">
+                        Preencha o cargo na etapa 2 para receber sugestões.
                       </p>
                     );
                   }
                   return (
                     <div className="space-y-3">
                       {packs.map((p) => (
-                        <div key={p.pack} className="rounded-md border bg-background/60 p-3">
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2">
-                              <Sparkles className="h-3.5 w-3.5 text-warning" />
-                              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                Sugestões · {p.pack}
-                              </span>
-                            </div>
+                        <div key={p.pack} className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Sugestões · {p.pack}
+                            </span>
                             <Button
                               type="button"
                               size="sm"
-                              variant="ghost"
-                              className="h-7 px-2 text-xs"
+                              variant="link"
+                              className="h-6 px-0 text-xs"
                               onClick={() => applyAllFromPack(p.metrics)}
                             >
                               Adicionar todas
                             </Button>
                           </div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-1.5">
                             {p.metrics.map((m, idx) => {
                               const already = form.success_metrics.some(
                                 (x) => x.label.trim().toLowerCase() === m.label.trim().toLowerCase()
@@ -962,16 +989,15 @@ export default function RHOfferWizard() {
                                   type="button"
                                   onClick={() => addSuggestedMetric(m)}
                                   className={cn(
-                                    "group text-left rounded-full border px-3 py-1.5 text-xs transition-all",
+                                    "text-left rounded-full border px-2.5 py-1 text-xs transition-colors",
                                     already
-                                      ? "border-success bg-success-soft text-success-strong hover:opacity-80 dark:bg-success/20"
-                                      : "border-warning/60 hover:border-warning hover:bg-warning-soft dark:hover:bg-warning/20"
+                                      ? "border-primary bg-primary/10 text-foreground"
+                                      : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
                                   )}
                                   title={already ? "Clique para remover" : `${m.target} · ${m.horizon}`}
                                 >
-                                  {already ? <Check className="inline h-3 w-3 mr-1" /> : <Plus className="inline h-3 w-3 mr-1" />}
-                                  <span className="font-medium">{m.label}</span>
-                                  <span className="ml-1 text-muted-foreground">· {m.target}</span>
+                                  {already ? <Check className="inline h-3 w-3 mr-1 text-primary" /> : <Plus className="inline h-3 w-3 mr-1" />}
+                                  {m.label}
                                 </button>
                               );
                             })}
@@ -982,71 +1008,78 @@ export default function RHOfferWizard() {
                   );
                 })()}
 
-                {form.success_metrics.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic">
-                    Clique nas sugestões acima ou adicione manualmente. Ex.: NPS ≥ 70 em 6 meses · Reduzir churn em 20%.
-                  </p>
-                )}
-                {form.success_metrics.map((m, i) => (
-                  <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_180px_auto] gap-2 items-start">
-                    <Input
-                      placeholder="Métrica (ex.: NPS, Churn, Receita)"
-                      value={m.label}
-                      onChange={(e) => updateMetric(i, "label", e.target.value)}
-                      onFocus={() => metricsUndo.snapshot(form.success_metrics)}
-                    />
-                    <Input
-                      placeholder="Meta (ex.: ≥ 70, -20%, R$ 1M)"
-                      value={m.target}
-                      onChange={(e) => updateMetric(i, "target", e.target.value)}
-                      onFocus={() => metricsUndo.snapshot(form.success_metrics)}
-                    />
-                    <Input
-                      placeholder="Prazo (ex.: 6 meses)"
-                      value={m.horizon}
-                      onChange={(e) => updateMetric(i, "horizon", e.target.value)}
-                      onFocus={() => metricsUndo.snapshot(form.success_metrics)}
-                    />
-                    <Button type="button" size="icon" variant="ghost" onClick={() => removeMetric(i)} className="text-danger">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                <div className="space-y-2 pt-2">
+                  <p className="text-xs font-medium text-muted-foreground">Na carta ({form.success_metrics.length})</p>
+                  {form.success_metrics.length === 0 && (
+                    <p className="rounded-md border border-dashed px-3 py-4 text-center text-xs text-muted-foreground">
+                      Nenhuma métrica ainda. Ex.: NPS ≥ 70 em 6 meses.
+                    </p>
+                  )}
+                  {form.success_metrics.length > 0 && (
+                    <div className="hidden md:grid grid-cols-[1fr_140px_140px_32px] gap-2 px-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                      <span>Métrica</span><span>Meta</span><span>Prazo</span><span />
+                    </div>
+                  )}
+                  {form.success_metrics.map((m, i) => (
+                    <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_140px_140px_32px] gap-2 items-center">
+                      <Input
+                        className="h-9"
+                        placeholder="Métrica (ex.: NPS)"
+                        value={m.label}
+                        onChange={(e) => updateMetric(i, "label", e.target.value)}
+                        onFocus={() => metricsUndo.snapshot(form.success_metrics)}
+                      />
+                      <Input
+                        className="h-9"
+                        placeholder="Meta"
+                        value={m.target}
+                        onChange={(e) => updateMetric(i, "target", e.target.value)}
+                        onFocus={() => metricsUndo.snapshot(form.success_metrics)}
+                      />
+                      <Input
+                        className="h-9"
+                        placeholder="Prazo"
+                        value={m.horizon}
+                        onChange={(e) => updateMetric(i, "horizon", e.target.value)}
+                        onFocus={() => metricsUndo.snapshot(form.success_metrics)}
+                      />
+                      <Button type="button" size="icon" variant="ghost" onClick={() => removeMetric(i)} className="h-8 w-8 text-muted-foreground hover:text-danger" title="Remover">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </WizardSection>
 
-              {/* Blocos extras */}
-              <div className="space-y-3 rounded-lg border p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <Label className="text-base">Blocos extras</Label>
-                    <p className="text-xs text-muted-foreground">Seções livres que aparecem na carta antes de "Próximos passos".</p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button type="button" size="sm" variant="ghost" disabled={!sectionsUndo.canUndo} onClick={undoSections} className="gap-1 text-xs">
-                      <Undo2 className="h-3.5 w-3.5" /> Desfazer
+              <WizardSection
+                title="Blocos extras"
+                description={`Seções livres antes de "Próximos passos". Ex.: Seu primeiro mês, Nossa cultura.`}
+                actions={
+                  <>
+                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8" disabled={!sectionsUndo.canUndo} onClick={undoSections} title="Desfazer">
+                      <Undo2 className="h-3.5 w-3.5" />
                     </Button>
                     <Button type="button" size="sm" variant="outline" onClick={addSection} className="gap-1">
-                      <Plus className="h-3.5 w-3.5" /> Adicionar bloco
+                      <Plus className="h-3.5 w-3.5" /> Bloco
                     </Button>
-                  </div>
-                </div>
-                {form.custom_sections.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic">Ex.: "Seu primeiro mês", "Nossa cultura", "Plano de carreira".</p>
-                )}
+                  </>
+                }
+              >
                 {form.custom_sections.map((b, i) => (
-                  <div key={b.id} id={`edit-block-${b.id}`} className={cn("rounded-md border bg-muted/30 p-3 space-y-2", flash(`edit-block-${b.id}`))}>
-                    <div className="flex gap-2">
-                      <Input value={b.title} onChange={(e) => updateSection(i, "title", e.target.value)} onFocus={() => sectionsUndo.snapshot(form.custom_sections)} placeholder="Título do bloco" />
-                      <Button type="button" size="icon" variant="ghost" disabled={i === 0} onClick={() => moveSection(i, -1)} title="Subir"><ArrowUp className="h-4 w-4" /></Button>
-                      <Button type="button" size="icon" variant="ghost" disabled={i === form.custom_sections.length - 1} onClick={() => moveSection(i, 1)} title="Descer"><ArrowDown className="h-4 w-4" /></Button>
-                      <Button type="button" size="icon" variant="ghost" className="text-danger" onClick={() => removeSection(i)} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
+                  <div key={b.id} id={`edit-block-${b.id}`} className={cn("rounded-lg border p-3 space-y-2", flash(`edit-block-${b.id}`))}>
+                    <div className="flex gap-1 items-center">
+                      <Input className="h-9" value={b.title} onChange={(e) => updateSection(i, "title", e.target.value)} onFocus={() => sectionsUndo.snapshot(form.custom_sections)} placeholder="Título do bloco" />
+                      <Button type="button" size="icon" variant="ghost" className="h-8 w-8" disabled={i === 0} onClick={() => moveSection(i, -1)} title="Subir"><ArrowUp className="h-4 w-4" /></Button>
+                      <Button type="button" size="icon" variant="ghost" className="h-8 w-8" disabled={i === form.custom_sections.length - 1} onClick={() => moveSection(i, 1)} title="Descer"><ArrowDown className="h-4 w-4" /></Button>
+                      <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-danger" onClick={() => removeSection(i)} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <OfferRichTextarea rows={4} value={b.body} onChange={(v) => updateSection(i, "body", v)} placeholder="Texto do bloco" />
+                    <OfferRichTextarea rows={3} value={b.body} onChange={(v) => updateSection(i, "body", v)} placeholder="Texto do bloco" />
                   </div>
                 ))}
-              </div>
+              </WizardSection>
 
-              <div id="edit-next-steps" className={flash("edit-next-steps")}>
+              <WizardSection title="Fechamento" description="Próximos passos e quem assina a carta.">
+              <div id="edit-next-steps" className={cn("space-y-1.5", flash("edit-next-steps"))}>
                 <div className="flex items-center justify-between">
                   <Label>Próximos passos</Label>
                   <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1" onClick={() => set("next_steps", defaultNextSteps)}>
@@ -1056,30 +1089,30 @@ export default function RHOfferWizard() {
                 <OfferRichTextarea rows={4} value={form.next_steps} onChange={(v) => set("next_steps", v)} placeholder={defaultNextSteps} />
               </div>
               <div id="edit-signer" className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", flash("edit-signer"))}>
-                <div>
+                <div className="space-y-1.5">
                   <Label>Quem assina</Label>
                   <Input value={form.signer_name} onChange={(e) => set("signer_name", e.target.value)} placeholder="Ex.: Marina Quintana" />
                 </div>
-                <div>
+                <div className="space-y-1.5">
                   <Label>Cargo de quem assina</Label>
                   <Input value={form.signer_role} onChange={(e) => set("signer_role", e.target.value)} placeholder="Ex.: Head de Pessoas" />
                 </div>
               </div>
+              </WizardSection>
             </div>
           )}
 
           {step === 5 && (
             <div id="edit-design" className={cn("space-y-6", flash("edit-design"))}>
-              <div>
-                <Label className="mb-3 block">Cor de destaque</Label>
-                <div className="flex flex-wrap gap-2">
+              <WizardSection title="Cor de destaque" description="Usada em títulos, botões e na capa.">
+                <div className="flex flex-wrap items-center gap-2">
                   {ACCENT_PALETTE.map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => set("accent_color", c)}
                       className={cn(
-                        "w-10 h-10 rounded-full border-2 transition-all",
+                        "w-9 h-9 rounded-full border-2 transition-all",
                         form.accent_color === c ? "border-foreground scale-110 ring-2 ring-offset-2 ring-foreground/20" : "border-transparent"
                       )}
                       style={{ background: c }}
@@ -1089,118 +1122,78 @@ export default function RHOfferWizard() {
                     type="color"
                     value={form.accent_color}
                     onChange={(e) => set("accent_color", e.target.value)}
-                    className="w-10 h-10 p-1 cursor-pointer"
+                    className="w-9 h-9 p-1 cursor-pointer"
                   />
                 </div>
-              </div>
-              <div>
-                <Label>Imagem de capa (URL)</Label>
-                <Input value={form.cover_image_url} onChange={(e) => set("cover_image_url", e.target.value)} placeholder="https://..." />
-                <p className="text-xs text-muted-foreground mt-1">Opcional. Aparece atrás da headline na capa.</p>
-              </div>
+              </WizardSection>
 
-              {/* Foto personalizada do candidato */}
-              <div className="rounded-xl border-2 border-dashed p-5 space-y-4 bg-gradient-to-br from-warning/40 to-transparent dark:from-warning/10">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-warning" />
-                      <Label className="text-base font-semibold">Foto do candidato com o uniforme</Label>
-                      <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-warning/15 text-warning-strong">Opcional</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Quando o candidato abrir o link, vai se ver vestindo a Eternum. Impacto instantâneo.
-                    </p>
-                  </div>
-                  {form.candidate_photo_url && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => set("candidate_photo_url", "")} className="text-danger gap-1">
-                      <Trash2 className="h-3.5 w-3.5" /> Remover
-                    </Button>
-                  )}
+              <WizardSection title="Capa" description="Imagem de fundo e foto do candidato (ambas opcionais).">
+                <div className="space-y-1.5">
+                  <Label>Imagem de capa (URL)</Label>
+                  <Input value={form.cover_image_url} onChange={(e) => set("cover_image_url", e.target.value)} placeholder="https://..." />
                 </div>
-
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 rounded-lg border p-3">
                   {form.candidate_photo_url ? (
                     <div
-                      className="relative w-28 h-36 rounded-lg overflow-hidden ring-2 ring-warning/40 shadow-lg shrink-0"
+                      className="w-20 h-24 rounded-md overflow-hidden border shrink-0"
                       style={{ backgroundImage: `url(${form.candidate_photo_url})`, backgroundSize: "cover", backgroundPosition: "center top" }}
                     />
                   ) : (
-                    <div className="w-28 h-36 rounded-lg bg-muted/40 flex items-center justify-center shrink-0 border">
-                      <ImageIcon className="h-7 w-7 text-muted-foreground/50" />
+                    <div className="w-20 h-24 rounded-md bg-muted/40 flex items-center justify-center shrink-0 border">
+                      <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
                     </div>
                   )}
-                  <div className="flex-1 space-y-2">
-                    <label className={cn(
-                      "flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed cursor-pointer transition-all",
-                      "hover:border-warning hover:bg-warning/50 dark:hover:bg-warning/20",
-                      uploadingPhoto && "opacity-60 pointer-events-none"
-                    )}>
-                      {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                      <span className="text-sm font-medium">
-                        {uploadingPhoto ? "Enviando..." : form.candidate_photo_url ? "Trocar foto" : "Enviar foto (JPG/PNG, até 8MB)"}
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f); e.target.value = ""; }}
-                      />
-                    </label>
-                    <p className="text-[11px] text-muted-foreground">
-                      💡 Dica: foto vertical de corpo até a cintura, fundo neutro, sorriso natural. A foto do uniforme da Eternum fica linda na capa.
-                    </p>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <p className="text-sm font-medium">Foto do candidato com o uniforme</p>
+                    <p className="text-xs text-muted-foreground">Vertical, até a cintura, fundo neutro. JPG/PNG até 8MB.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <label className={cn(
+                        "inline-flex items-center gap-2 h-8 px-3 rounded-md border text-sm cursor-pointer hover:bg-muted",
+                        uploadingPhoto && "opacity-60 pointer-events-none"
+                      )}>
+                        {uploadingPhoto ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                        {uploadingPhoto ? "Enviando..." : form.candidate_photo_url ? "Trocar foto" : "Enviar foto"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f); e.target.value = ""; }}
+                        />
+                      </label>
+                      {form.candidate_photo_url && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => set("candidate_photo_url", "")} className="text-danger gap-1 h-8">
+                          <Trash2 className="h-3.5 w-3.5" /> Remover
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Preview Hero */}
-              <div className="rounded-xl overflow-hidden border">
-                <div
-                  className="relative min-h-[280px] flex items-center text-white"
-                  style={{
-                    background: form.cover_image_url
-                      ? `linear-gradient(135deg, ${form.accent_color}DD, ${form.accent_color}99), url(${form.cover_image_url}) center/cover`
-                      : `linear-gradient(135deg, ${form.accent_color}, ${form.accent_color}99)`,
-                  }}
-                >
-                  <div className={cn("flex-1 p-10", form.candidate_photo_url && "pr-4")}>
-                    <p className="text-xs uppercase tracking-widest opacity-80 mb-2">Carta-Proposta</p>
-                    <h2 className="text-3xl font-bold leading-tight">
-                      {form.hero_headline || `${form.candidate_name || "Nome do candidato"}, esta proposta é para você.`}
-                    </h2>
-                    <p className="mt-3 opacity-90">{form.position_title || "Cargo"}</p>
-                  </div>
-                  {form.candidate_photo_url && (
-                    <div
-                      className="hidden sm:block h-[280px] w-[220px] shrink-0 self-stretch"
-                      style={{
-                        backgroundImage: `url(${form.candidate_photo_url})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center top",
-                        maskImage: "linear-gradient(to left, black 70%, transparent 100%)",
-                        WebkitMaskImage: "linear-gradient(to left, black 70%, transparent 100%)",
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
+              </WizardSection>
             </div>
           )}
 
           {step === 6 && (
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-muted/40 space-y-2 text-sm">
-                <div><strong>Candidato:</strong> {form.candidate_name} {form.candidate_email && `• ${form.candidate_email}`}</div>
-                <div><strong>Cargo:</strong> {form.position_title} {form.seniority && `• ${JOB_SENIORITY_LABELS[form.seniority as keyof typeof JOB_SENIORITY_LABELS]}`}</div>
-                {form.work_model && <div><strong>Modelo:</strong> {WORK_MODEL_LABELS[form.work_model as keyof typeof WORK_MODEL_LABELS]}</div>}
-                {form.salary_amount && <div><strong>Salário:</strong> {form.salary_currency} {Number(form.salary_amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>}
-                <div><strong>Benefícios:</strong> {form.benefits.length} selecionados</div>
-                <div><strong>Perks:</strong> {form.perks.filter(p => p.title.trim()).length}</div>
-              </div>
+            <div className="space-y-6">
+              <WizardSection title="Resumo" description="Confira os principais dados antes de gerar.">
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  {[
+                    ["Candidato", [form.candidate_name, form.candidate_email].filter(Boolean).join(" • ")],
+                    ["Cargo", [form.position_title, form.seniority && JOB_SENIORITY_LABELS[form.seniority as keyof typeof JOB_SENIORITY_LABELS]].filter(Boolean).join(" • ")],
+                    ["Modelo", form.work_model ? WORK_MODEL_LABELS[form.work_model as keyof typeof WORK_MODEL_LABELS] : ""],
+                    ["Salário", form.salary_amount ? `${form.salary_currency} ${Number(form.salary_amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""],
+                    ["Benefícios", `${form.benefits.length} selecionados`],
+                    ["Perks", String(form.perks.filter(p => p.title.trim()).length)],
+                  ].map(([k, v]) => (
+                    <div key={k} className="border-b pb-2">
+                      <dt className="text-xs text-muted-foreground">{k}</dt>
+                      <dd className="font-medium truncate">{v || "—"}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </WizardSection>
 
-              {/* Salvar como modelo */}
-              <div className="rounded-xl border-2 border-dashed border-warning/60 p-4 bg-gradient-to-br from-warning/40 to-transparent dark:from-warning/10 space-y-3">
+              <WizardSection title="Modelo reutilizável">
+              <div className="rounded-lg border p-4 space-y-3">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <Checkbox
                     checked={form.is_template}
@@ -1208,12 +1201,9 @@ export default function RHOfferWizard() {
                     className="mt-0.5"
                   />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <LayoutTemplate className="h-4 w-4 text-warning" />
-                      <span className="text-sm font-semibold">Salvar esta offer como modelo</span>
-                    </div>
+                    <span className="text-sm font-medium">Salvar esta offer como modelo</span>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Modelos aparecem na tela de offers e podem ser reaproveitados em 1 clique para o próximo candidato. Os dados pessoais (nome, e-mail, foto, data) ficam em branco na nova offer.
+                      Reaproveite em 1 clique no próximo candidato. Dados pessoais ficam em branco.
                     </p>
                   </div>
                 </label>
@@ -1224,11 +1214,11 @@ export default function RHOfferWizard() {
                       value={form.template_name}
                       onChange={(e) => set("template_name", e.target.value)}
                       placeholder={form.position_title ? `Ex.: ${form.position_title} – padrão` : "Ex.: CS Júnior – padrão Eternum"}
-                      className="bg-background"
                     />
                   </div>
                 )}
               </div>
+              </WizardSection>
 
               {savedToken && (
                 <div className="p-4 rounded-lg border bg-success-soft dark:bg-success/30 space-y-2">
@@ -1263,16 +1253,17 @@ export default function RHOfferWizard() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={() => setStep(Math.max(1, step - 1))} disabled={step === 1}>
+      <div className="sticky bottom-0 z-10 -mx-1 flex items-center justify-between gap-3 rounded-lg border bg-background/95 px-3 py-2.5 shadow-sm backdrop-blur">
+        <Button variant="ghost" onClick={() => setStep(Math.max(1, step - 1))} disabled={step === 1}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Anterior
         </Button>
+        <span className="text-xs text-muted-foreground">Etapa {step} de {STEPS.length}</span>
         {step < STEPS.length ? (
           <Button onClick={goNext} className={cn(!canNext() && "opacity-60")}>
             Próximo <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         ) : (
-          <Button variant="ghost" onClick={() => navigate("/rh/offers")}>Concluir</Button>
+          <Button variant="outline" onClick={() => navigate("/rh/offers")}>Concluir</Button>
         )}
       </div>
       </div>
