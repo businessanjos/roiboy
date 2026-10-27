@@ -228,11 +228,11 @@ export default function Leads() {
   });
   const effectiveDealPipelineId =
     dealPipelineId ||
-    stages.find((s) => s.id === dealFormData.stage_id)?.pipeline_id ||
+    (stages.find((s) => s.id === dealFormData.stage_id) as any)?.pipeline_id ||
     pipelines[0]?.id ||
     "";
   const dealPipelineStages = stages
-    .filter((s) => s.pipeline_id === effectiveDealPipelineId)
+    .filter((s: any) => s.pipeline_id === effectiveDealPipelineId)
     .sort((a, b) => a.display_order - b.display_order);
 
   // Load products when deal-form step is active
@@ -1935,7 +1935,7 @@ export default function Leads() {
                   onValueChange={(v) => {
                     setDealPipelineId(v);
                     const first = stages
-                      .filter((s) => s.pipeline_id === v)
+                      .filter((s: any) => s.pipeline_id === v)
                       .sort((a, b) => a.display_order - b.display_order)[0];
                     setDealFormData((prev) => ({ ...prev, stage_id: first?.id || "" }));
                   }}
