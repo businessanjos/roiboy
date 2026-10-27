@@ -12,6 +12,7 @@ import { ClientsRevenueListDialog } from "./ClientsRevenueListDialog";
 import { ClientsMissingRevenueDialog } from "./ClientsMissingRevenueDialog";
 import { Button } from "@/components/ui/button";
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import { formatMillionsHint, formatAxisMillions } from "@/lib/formatMillions";
 
 interface Props {
   accountId?: string;
@@ -64,6 +65,11 @@ function periodBounds(periodFilter: string, customRange?: DateRange): { from: st
 export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, productLabel, periodFilter, customRange }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [missingOpen, setMissingOpen] = useState(false);
+  const [rangeOverride, setRangeOverride] = useState<{ from: string; to: string; label: string } | null>(null);
+  const openDetails = (r: { from: string; to: string; label: string } | null) => {
+    setRangeOverride(r);
+    setDialogOpen(true);
+  };
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-clients-revenue-history", accountId],
     enabled: !!accountId,
@@ -136,6 +142,7 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
       yearTotal,
       lastMonthTotal,
       lastMonthLabel: monthLabel(lastMonth),
+      lastMonthKey: lastMonth,
       thisMonthTotal,
       thisMonthLabel: monthLabel(thisMonth),
       periodTotal,
@@ -303,7 +310,10 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
                         return (
                           <div className="rounded-md border bg-popover px-3 py-2 shadow-md">
                             <p className="text-xs font-medium text-foreground mb-1">{label}</p>
-                            <p className="text-sm font-semibold text-primary">{brl(p.total)}</p>
+                            <p className="text-sm font-semibold text-primary">
+                              {brl(p.total)} <span className="text-xs font-normal text-muted-foreground/70">{formatMillionsHint(p.total)}</span>
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">Clique para ver os clientes</p>
                             <p className="text-xs text-muted-foreground mt-1">
                               {p.clients} cliente(s) com faturamento
                             </p>
@@ -319,7 +329,16 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
                         );
                       }}
                     />
-                    <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    <Bar
+                      dataKey="total"
+                      fill="hsl(var(--primary))"
+                      radius={[4, 4, 0, 0]}
+                      className="cursor-pointer"
+                      onClick={(d: any) => {
+                        const m = d?.payload?.month ?? d?.month;
+                        if (m) openDetails({ from: m, to: m, label: monthLabel(m) });
+                      }}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -335,6 +354,7 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
         productLabel={productLabel}
         periodFilter={periodFilter}
         customRange={customRange}
+        rangeOverride={rangeOverride}
       />
     </Card>
   );
