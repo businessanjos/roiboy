@@ -37,6 +37,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardChartEmptyState } from "./DashboardChartEmptyState";
+import { useContractCatalog } from "@/hooks/useContractCatalog";
 
 interface Props {
   accountId?: string | null;
@@ -109,6 +110,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
   const startStr = periodStart.toISOString().slice(0, 10);
   const endStr = periodEnd.toISOString().slice(0, 10);
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
+  const { labels: statusLabels } = useContractCatalog("contract_status");
 
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-churn-renewal-segment", accountId, startStr, endStr],
@@ -436,7 +438,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
                         <Badge variant={EVENT_VARIANT[e.kind]}>{EVENT_LABEL[e.kind]}</Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{formatDate(e.date)}</TableCell>
-                      <TableCell className="text-muted-foreground">{e.status || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{(e.status && statusLabels[e.status]) || e.status || "—"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
