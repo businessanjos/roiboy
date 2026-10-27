@@ -120,6 +120,10 @@ export default function RoyZapp() {
   const conversationReturn = getZappConversationReturn(navigationLocation.state);
   const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
   const [searchParams, setSearchParams] = useSearchParams();
+  // Keep history state in a ref so the callback identity stays stable;
+  // location.state is a fresh object after each replaceState and would loop effects.
+  const navigationStateRef = useRef(navigationLocation.state);
+  navigationStateRef.current = navigationLocation.state;
   const replaceSearchParams = useCallback((update: (params: URLSearchParams) => void) => {
     setSearchParams(
       (prev) => {
@@ -127,9 +131,9 @@ export default function RoyZapp() {
         update(next);
         return next;
       },
-      { replace: true, state: navigationLocation.state },
+      { replace: true, state: navigationStateRef.current },
     );
-  }, [setSearchParams, navigationLocation.state]);
+  }, [setSearchParams]);
   
   // Get sector and integrationId from URL if provided
   const sectorFromUrl = searchParams.get('sector') as SectorId | null;
