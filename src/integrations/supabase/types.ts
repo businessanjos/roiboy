@@ -6184,6 +6184,102 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_catalog_history: {
+        Row: {
+          account_id: string
+          action: string
+          after_data: Json | null
+          before_data: Json | null
+          changed_by: string | null
+          changed_by_name: string | null
+          created_at: string
+          id: string
+          list_key: string
+          undo_of: string | null
+          undone_at: string | null
+          value: string
+        }
+        Insert: {
+          account_id: string
+          action: string
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          id?: string
+          list_key: string
+          undo_of?: string | null
+          undone_at?: string | null
+          value: string
+        }
+        Update: {
+          account_id?: string
+          action?: string
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          id?: string
+          list_key?: string
+          undo_of?: string | null
+          undone_at?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
+      contract_catalog_options: {
+        Row: {
+          account_id: string
+          color: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          is_builtin: boolean
+          label: string
+          list_key: string
+          metric_bucket: string | null
+          updated_at: string
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          account_id: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_builtin?: boolean
+          label: string
+          list_key: string
+          metric_bucket?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          account_id?: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_builtin?: boolean
+          label?: string
+          list_key?: string
+          metric_bucket?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       contract_company_defaults: {
         Row: {
           account_id: string
