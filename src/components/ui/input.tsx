@@ -1,9 +1,11 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { DateField } from "@/components/ui/date-field";
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
+    if (type === "date") return <DateField ref={ref} className={className} {...props} />;
     return (
       <input
         type={type}

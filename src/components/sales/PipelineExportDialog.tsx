@@ -1,3 +1,4 @@
+import { DateField } from "@/components/ui/date-field";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -697,8 +698,8 @@ export function PipelineExportDialog({
                 <div className="col-span-2 grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">De</Label>
-                    <input
-                      type="date"
+                    <DateField
+                      
                       value={filterDateFrom}
                       onChange={(e) => setFilterDateFrom(e.target.value)}
                       className="flex h-8 w-full rounded-xl border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -706,8 +707,8 @@ export function PipelineExportDialog({
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Até</Label>
-                    <input
-                      type="date"
+                    <DateField
+                      
                       value={filterDateTo}
                       onChange={(e) => setFilterDateTo(e.target.value)}
                       className="flex h-8 w-full rounded-xl border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
