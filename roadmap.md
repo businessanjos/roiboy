@@ -29,3 +29,4 @@
 - [x] Sequências salvas no Playbook com envio em segundo plano
 
 - [x] Renovações: BRL alinhado entre tabela/detalhes/gráfico, indicadores sobre filtros, agrupamento pela base de data e vencidos por ano; 4 testes passaram e tela autenticada confirmou Financeiro R$ 5.470.000 e filtro Renovado 18/18, 100%, perdas zero. Build OK; sem mudanças em dados ou publicação. Motivos ausentes e contratos sem desfecho preservados.
+- [x] Ficha do lead: selo de status (Aberto/Ganho/Perdido) no canto de cada cartão de negócio, inclusive nos travados; helper compartilhado `getDealStatusBadge` com 3 testes e build OK, cartão autenticado conferido com screenshot. Sem alteração de dados, permissões ou publicação.
