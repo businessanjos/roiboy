@@ -94,6 +94,7 @@ export function ContractDialog({
   clientName,
   onSuccess,
 }: ContractDialogProps) {
+  const { options: contractStatusOptions, labels: contractStatusLabels } = useContractCatalog("contract_status");
   const { options: CONTRACT_TYPES, labels: CONTRACT_TYPE_LABELS } = useContractTypes();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
