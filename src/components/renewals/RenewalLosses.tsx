@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent, CheckCircle2, XCircle, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search, Download } from "lucide-react";
 import { canSeeAllSequenceRuns } from "@/lib/zappSequenceHistoryAccess";
 import { useToast } from "@/hooks/use-toast";
@@ -263,7 +263,16 @@ function computeRange(period: string, from: string, to: string, today: Date): { 
 export function RenewalLosses() {
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
-  const [selectedReason, setSelectedReason] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedReason = searchParams.get("motivo");
+  const [reasonSearch, setReasonSearch] = useState("");
+  const setSelectedReason = (r: string | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (r) next.set("motivo", r); else next.delete("motivo");
+    setSearchParams(next, { replace: true });
+    if (!r) setReasonSearch("");
+  };
   const [items, setItems] = useState<ExpiredContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterPeriod, setFilterPeriod] = useState("90");
@@ -555,6 +564,12 @@ export function RenewalLosses() {
     ? losses.filter(l => (l.loss_reason || "Não informado") === selectedReason)
         .sort((a, b) => b.renewal_value - a.renewal_value)
     : [];
+  const reasonQuery = reasonSearch.trim().toLowerCase();
+  const reasonVisibleItems = reasonQuery
+    ? reasonDetailItems.filter(l =>
+        [l.client_name, l.product_name, l.responsible_name, l.loss_notes]
+          .some(v => (v || "").toLowerCase().includes(reasonQuery)))
+    : reasonDetailItems;
   const reasonDetailTotal = reasonDetailItems.reduce((s, l) => s + l.renewal_value, 0);
 
   // Ranking by consultant — apenas responsáveis de CS/CX (exclui Financeiro, Administrativo, etc.)
@@ -869,11 +884,28 @@ export function RenewalLosses() {
                 <div className="font-semibold">{(reasonDetailTotal / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
               </div>
             </div>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={reasonSearch}
+                onChange={(e) => setReasonSearch(e.target.value)}
+                placeholder="Buscar cliente, produto, consultora ou observação"
+                className="pl-8"
+              />
+            </div>
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {reasonDetailItems.map(l => (
-                <div key={l.id} className="rounded-md border p-3 text-sm space-y-1">
+              {reasonVisibleItems.length === 0 && (
+                <p className="py-6 text-center text-sm text-muted-foreground">Nenhum resultado para a busca.</p>
+              )}
+              {reasonVisibleItems.map(l => (
+                <button
+                  type="button"
+                  key={l.id}
+                  onClick={() => navigate(`/clients/${l.client_id}`)}
+                  className="block w-full rounded-md border p-3 text-left text-sm space-y-1 hover:bg-muted/50 transition-colors"
+                >
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link to={`/clients/${l.client_id}`} className="font-medium hover:underline">{l.client_name}</Link>
+                    <span className="font-medium">{l.client_name}</span>
                     {l.product_name && (
                       <Badge style={{ backgroundColor: l.product_color || "#6b7280" }} className="text-primary-foreground border-0">{l.product_name}</Badge>
                     )}
@@ -884,7 +916,7 @@ export function RenewalLosses() {
                     {l.resolved_at && <> · Registrado: {new Date(l.resolved_at).toLocaleDateString("pt-BR")}</>}
                   </div>
                   {l.loss_notes && <p className="text-xs whitespace-pre-wrap">{l.loss_notes}</p>}
-                </div>
+                </button>
               ))}
             </div>
           </DialogContent>
