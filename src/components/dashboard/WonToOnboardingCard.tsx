@@ -39,13 +39,13 @@ export function WonToOnboardingCard({ accountId, monthsBack = 6 }: Props) {
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1 text-xs">
-            <p className="font-semibold">Tempo médio entre Deal Ganho e início do Onboarding</p>
-            <p>Mede o intervalo entre o negócio ganho (<code>deals.won_at</code>) e a data de início do onboarding do cliente (<code>onboarding_started_at</code>).</p>
+            <p className="font-semibold">Tempo entre a venda e o início do onboarding</p>
+            <p>Conta quantos dias se passam desde o dia em que o negócio foi marcado como ganho até o dia em que o onboarding do cliente começou. Considera os últimos 6 meses.</p>
             {data && (
               <ul className="pt-1 space-y-0.5">
-                <li>Mediana: <strong>{data.median_days != null ? `${data.median_days.toFixed(1)}d` : "—"}</strong></li>
-                <li>Mín: <strong>{data.min_days != null ? `${data.min_days.toFixed(1)}d` : "—"}</strong> · Máx: <strong>{data.max_days != null ? `${data.max_days.toFixed(1)}d` : "—"}</strong></li>
-                <li>Amostra: <strong>{data.sample_count}</strong></li>
+                <li>Metade dos clientes começa em até <strong>{data.median_days != null ? `${data.median_days.toFixed(1).replace(".", ",")} dias` : "—"}</strong></li>
+                <li>Mais rápido: <strong>{data.min_days != null ? `${data.min_days.toFixed(1).replace(".", ",")} dias` : "—"}</strong> · Mais demorado: <strong>{data.max_days != null ? `${data.max_days.toFixed(1).replace(".", ",")} dias` : "—"}</strong></li>
+                <li>Clientes considerados: <strong>{data.sample_count}</strong></li>
               </ul>
             )}
           </div>
