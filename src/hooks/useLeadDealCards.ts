@@ -13,7 +13,7 @@ export function useLeadDealCards(leadId: string | null, userId: string | undefin
       if (!leadId || !userId) return { deals: [], presence: [], pendingIds: [] as string[] };
       const [{ data: deals, error }, { data: presence, error: presenceError }] = await Promise.all([
         supabase.from("deals")
-          .select("id, title, value, responsible_user_id, stage:deal_stages(name), responsible:users!deals_responsible_user_id_fkey(name)")
+          .select("id, title, status, value, responsible_user_id, stage:deal_stages(name), responsible:users!deals_responsible_user_id_fkey(name)")
           .eq("lead_id", leadId).is("deleted_at", null).order("created_at", { ascending: false }),
         supabase.rpc("get_lead_deal_presence", { p_lead_id: leadId }),
       ]);
