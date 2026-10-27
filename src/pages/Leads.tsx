@@ -93,6 +93,7 @@ import { useLeadDuplicateDetection, LeadDuplicateMatch } from "@/hooks/useLeadDu
 import { LeadDuplicateAlert } from "@/components/leads/LeadDuplicateAlert";
 import { usePagedList } from "@/hooks/usePagedList";
 import { ListPagination } from "@/components/ui/list-pagination";
+import { usePipelines } from "@/hooks/usePipelines";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -210,6 +211,16 @@ export default function Leads() {
   // Products for "Item da Venda"
   const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const { pipelines } = usePipelines();
+  const [dealPipelineId, setDealPipelineId] = useState<string>("");
+  const effectiveDealPipelineId =
+    dealPipelineId ||
+    stages.find((s) => s.id === dealFormData.stage_id)?.pipeline_id ||
+    pipelines[0]?.id ||
+    "";
+  const dealPipelineStages = stages
+    .filter((s) => s.pipeline_id === effectiveDealPipelineId)
+    .sort((a, b) => a.display_order - b.display_order);
 
   // Get deals for the current lead
   const getLeadDeals = useCallback((leadId: string) => {
@@ -341,6 +352,7 @@ export default function Leads() {
   };
 
   const resetForm = () => {
+    setDealPipelineId("");
     setFormData({
       full_name: "",
       phone: "",
@@ -512,6 +524,7 @@ export default function Leads() {
           value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
           notes: dealFormData.notes || undefined,
           product_id: productId,
+          pipeline_id: effectiveDealPipelineId || undefined,
         });
 
         if (deal) {
@@ -533,6 +546,7 @@ export default function Leads() {
           notes: dealFormData.notes || leadForDeal.notes || undefined,
           source: leadForDeal.source || undefined,
           product_id: productId,
+          pipeline_id: effectiveDealPipelineId || undefined,
         });
 
         if (deal) {
@@ -1914,6 +1928,29 @@ export default function Leads() {
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label>Funil</Label>
+                <Select
+                  value={effectiveDealPipelineId}
+                  onValueChange={(v) => {
+                    setDealPipelineId(v);
+                    const first = stages
+                      .filter((s) => s.pipeline_id === v)
+                      .sort((a, b) => a.display_order - b.display_order)[0];
+                    setDealFormData((prev) => ({ ...prev, stage_id: first?.id || "" }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o funil" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pipelines.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="deal_value">Valor (R$)</Label>
@@ -1935,7 +1972,7 @@ export default function Leads() {
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {stages.sort((a, b) => a.display_order - b.display_order).map((stage) => (
+                      {dealPipelineStages.map((stage) => (
                         <SelectItem key={stage.id} value={stage.id}>
                           <div className="flex items-center gap-2">
                             <div 
