@@ -154,6 +154,12 @@ const CONTRACT_TYPES = [
   { value: "distrato", label: "Distrato" },
 ];
 
+function normalizeContractType(raw?: string | null): string {
+  const v = (raw || "").trim().toLowerCase();
+  if (CONTRACT_TYPES.some((t) => t.value === v)) return v;
+  return v || "compra";
+}
+
 export function ClientContracts({ clientId }: ClientContractsProps) {
   const { linkedClientIds, linkedClients, hasLinkedClients } = useLinkedClients(clientId);
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -319,7 +325,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       start_date: nextDay,
       end_date: "",
       value: contract.value.toString(),
-      contract_type: contract.contract_type || "compra",
+      contract_type: normalizeContractType(contract.contract_type),
       payment_type: parsed.type,
       installments: parsed.installments,
       payment_method: parsed.method,
@@ -339,7 +345,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       start_date: contract.start_date,
       end_date: contract.end_date || "",
       value: contract.value.toString(),
-      contract_type: contract.contract_type || "compra",
+      contract_type: normalizeContractType(contract.contract_type),
       payment_type: parsed.type,
       installments: parsed.installments,
       payment_method: parsed.method,
@@ -773,6 +779,11 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
+                    {formData.contract_type && !CONTRACT_TYPES.some((t) => t.value === formData.contract_type) && (
+                      <SelectItem value={formData.contract_type}>
+                        {formData.contract_type.charAt(0).toUpperCase() + formData.contract_type.slice(1)}
+                      </SelectItem>
+                    )}
                     {CONTRACT_TYPES.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -997,7 +1008,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-normal">
-                        {CONTRACT_TYPES.find(t => t.value === contract.contract_type)?.label || "Compra"}
+                        {CONTRACT_TYPES.find(t => t.value === normalizeContractType(contract.contract_type))?.label || "Compra"}
                       </Badge>
                     </TableCell>
                     <TableCell>
