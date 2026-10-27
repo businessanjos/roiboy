@@ -1093,7 +1093,7 @@ export default function Dashboard() {
             accountId={currentUser?.account_id}
             clientIds={
               gestaoProductFilter === "all"
-                ? undefined
+                ? clients.map((c: any) => c.id)
                 : clients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds)).map((c: any) => c.id)
             }
             totalClients={
