@@ -642,8 +642,10 @@ export function RenewalLosses() {
             disabled={loading || sortedItems.length === 0}
             onClick={async () => {
               const XLSX = await import("xlsx");
-              const outcomeLabel = (o: string | null) =>
-                o === "renewed" ? "Renovado" : o === "lost" ? "Cancelou" : o === "negotiating" ? "Em negociação" : "Pendente";
+              const outcomeLabel = (i: ExpiredContract) => {
+                const k = statusKey(i);
+                return k ? STATUS_META[k].label : "Pendente";
+              };
               const rows = sortedItems.map((i) => ({
                 Cliente: i.client_name,
                 Consultora: i.responsible_name || "",
@@ -651,7 +653,7 @@ export function RenewalLosses() {
                 "Valor Renovação": i.renewal_value,
                 "Venceu em": i.end_date ? formatLocalDate(i.end_date) : "",
                 "Data renovação": i.resolved_at ? new Date(i.resolved_at).toLocaleDateString("pt-BR") : "",
-                Status: outcomeLabel(i.outcome),
+                Status: outcomeLabel(i),
                 Motivo: i.loss_reason || "",
                 Observação: i.loss_notes || "",
               }));
@@ -933,10 +935,10 @@ export function RenewalLosses() {
                   <TableHead className="text-center">
                     <MultiSelectHeader
                       label="Status"
-                      options={["renewed", "lost"]}
+                      options={STATUS_KEYS}
                       selected={filterStatus}
                       onChange={setFilterStatus}
-                      formatLabel={(v) => v === "renewed" ? "Renovados" : "Perdidos"}
+                      formatLabel={(v) => STATUS_META[v as StatusKey]?.label || v}
                     />
                   </TableHead>
                   <TableHead className="text-center">
@@ -1019,15 +1021,10 @@ export function RenewalLosses() {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-center">
-                      {item.outcome === "renewed" ? (
-                        <Badge className="bg-success-soft text-success-strong dark:bg-success/30 dark:text-success">
-                          ✅ Renovado
-                        </Badge>
-                      ) : item.outcome === "lost" ? (
-                        <Badge className="bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger">
-                          ❌ Cancelou
-                        </Badge>
-                      ) : null}
+                      {(() => {
+                        const k = statusKey(item);
+                        return k ? <Badge className={STATUS_META[k].className}>{STATUS_META[k].label}</Badge> : null;
+                      })()}
                     </TableCell>
                     <TableCell className="text-center text-xs text-muted-foreground">
                       {item.loss_reason || "—"}
@@ -1065,7 +1062,7 @@ export function RenewalLosses() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Motivo da perda</label>
+              <label className="text-sm font-medium">Motivo</label>
               <Select value={editReason} onValueChange={setEditReason}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o motivo..." />
@@ -1093,7 +1090,7 @@ export function RenewalLosses() {
             </Button>
             <Button variant="destructive" onClick={() => handleSaveOutcome("lost")} disabled={saving || !editReason}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Registrar Perda
+              Registrar Não Renovado
             </Button>
           </DialogFooter>
         </DialogContent>
