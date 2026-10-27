@@ -108,15 +108,30 @@ export function ClientsRevenueListDialog({
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const allowedIds = clientIds && clientIds.length > 0 ? clientIds : null;
-      let clientQuery = supabase
-        .from("clients")
-        .select("id, full_name, logo_url")
-        .eq("account_id", accountId!);
+      let clientsData: { id: string; full_name: string; logo_url: string | null }[] = [];
       if (allowedIds) {
-        clientQuery = clientQuery.in("id", allowedIds);
+        for (let i = 0; i < allowedIds.length; i += 200) {
+          const { data, error } = await supabase
+            .from("clients")
+            .select("id, full_name, logo_url")
+            .eq("account_id", accountId!)
+            .in("id", allowedIds.slice(i, i + 200));
+          if (error) throw error;
+          clientsData.push(...((data ?? []) as any));
+        }
+      } else {
+        const { data, error } = await fetchAllRows<any>((from, to) =>
+          supabase
+            .from("clients")
+            .select("id, full_name, logo_url")
+            .eq("account_id", accountId!)
+            .order("id", { ascending: true })
+            .range(from, to),
+        );
+        if (error) throw error;
+        clientsData = data as any;
       }
-      const { data: clientsData, error: clientsError } = await clientQuery.order("full_name", { ascending: true });
-      if (clientsError) throw clientsError;
+      clientsData.sort((a, b) => (a.full_name || "").localeCompare(b.full_name || "", "pt-BR"));
 
       const ids = (clientsData ?? []).map((c) => c.id);
       if (ids.length === 0) return [];
