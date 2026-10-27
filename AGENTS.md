@@ -37,3 +37,4 @@
 - Renewal presentation uses shared BRL aggregation and the selected date basis over the table-filtered rows; expiry visibility follows the selected years. Why: chart, details, export and summary must not disagree or hide prior-year pending contracts.
 
 - Contract types come from `useContractTypes` (fixed built-ins plus account-scoped `contract_type_options`, deactivated not deleted). Why: managers add types without breaking labels of existing contracts.
+- Deal status labels and colors come from `getDealStatusBadge` (src/lib/sales/dealStatusBadge.ts), fed by the stored `deals.status`; lists must not invent their own wording. Why: one open/won/lost meaning everywhere and theme-token colors keep dark mode readable.

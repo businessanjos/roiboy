@@ -53,6 +53,7 @@ import { LeadCustomFieldsManager, LeadCustomField } from "@/components/custom-fi
 import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getDealStatusBadge } from "@/lib/sales/dealStatusBadge";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -97,6 +98,7 @@ interface Lead {
 interface Deal {
   id: string;
   title: string;
+  status?: string | null;
   value: number;
   stage?: { name: string } | null;
   responsible_user_id?: string | null;
@@ -574,71 +576,87 @@ export function LeadDetailSheet({
                     }
                     return (
                       <div className="space-y-2">
-                        {deals.map((deal) => (
-                          <Card
-                            key={deal.id}
-                            className={cn(onDealClick && "cursor-pointer hover:bg-muted/50")}
-                            onClick={() => onDealClick?.(deal)}
-                          >
-                            <CardContent className="p-3">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="font-medium text-sm">{deal.title}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {deal.stage?.name}
-                                  </p>
-                                  {deal.responsible_user_id === currentUser?.id ? (
-                                    <Badge variant="secondary" className="mt-1">Está com você</Badge>
-                                  ) : deal.responsible?.name ? (
-                                    <p className="text-xs text-muted-foreground">Responsável: {deal.responsible.name}</p>
-                                  ) : null}
+                        {deals.map((deal) => {
+                          const statusBadge = getDealStatusBadge(deal.status);
+                          return (
+                            <Card
+                              key={deal.id}
+                              className={cn(onDealClick && "cursor-pointer hover:bg-muted/50")}
+                              onClick={() => onDealClick?.(deal)}
+                            >
+                              <CardContent className="p-3">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-sm truncate">{deal.title}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {deal.stage?.name}
+                                    </p>
+                                    {deal.responsible_user_id === currentUser?.id ? (
+                                      <Badge variant="secondary" className="mt-1">Está com você</Badge>
+                                    ) : deal.responsible?.name ? (
+                                      <p className="text-xs text-muted-foreground">Responsável: {deal.responsible.name}</p>
+                                    ) : null}
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    {statusBadge && (
+                                      <Badge variant="outline" className={cn("shrink-0", statusBadge.className)}>
+                                        {statusBadge.label}
+                                      </Badge>
+                                    )}
+                                    {deal.value > 0 && (
+                                      <Badge variant="outline">
+                                        {new Intl.NumberFormat("pt-BR", {
+                                          style: "currency",
+                                          currency: "BRL",
+                                        }).format(deal.value)}
+                                      </Badge>
+                                    )}
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  {deal.value > 0 && (
-                                    <Badge variant="outline">
-                                      {new Intl.NumberFormat("pt-BR", {
-                                        style: "currency",
-                                        currency: "BRL",
-                                      }).format(deal.value)}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                        {lockedDeals.map((deal) => {
+                          const statusBadge = getDealStatusBadge(deal.status);
+                          return (
+                            <Card key={deal.id} className="border-dashed bg-muted/30">
+                              <CardContent className="p-3">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-sm truncate">{deal.title}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {[deal.stage_name, deal.responsible_name && `Responsável: ${deal.responsible_name}`]
+                                        .filter(Boolean)
+                                        .join(" · ")}
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-col items-end gap-1 shrink-0">
+                                    {statusBadge && (
+                                      <Badge variant="outline" className={cn("shrink-0", statusBadge.className)}>
+                                        {statusBadge.label}
+                                      </Badge>
+                                    )}
+                                    <Badge variant="secondary" className="gap-1">
+                                      <Lock className="h-3 w-3" />
+                                      Com outro responsável
                                     </Badge>
-                                  )}
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs"
+                                      disabled={requestedDealIds.includes(deal.id) || dealCards?.pendingIds.includes(deal.id)}
+                                      onClick={() => requestTransfer(deal.id)}
+                                    >
+                                      {requestedDealIds.includes(deal.id) || dealCards?.pendingIds.includes(deal.id) ? "Aguardando decisão" : "Solicitar transferência"}
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                        {lockedDeals.map((deal) => (
-                          <Card key={deal.id} className="border-dashed bg-muted/30">
-                            <CardContent className="p-3">
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="min-w-0">
-                                  <p className="font-medium text-sm truncate">{deal.title}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {[deal.stage_name, deal.responsible_name && `Responsável: ${deal.responsible_name}`]
-                                      .filter(Boolean)
-                                      .join(" · ")}
-                                  </p>
-                                </div>
-                                <div className="flex flex-col items-end gap-1 shrink-0">
-                                  <Badge variant="secondary" className="gap-1">
-                                    <Lock className="h-3 w-3" />
-                                    Com outro responsável
-                                  </Badge>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 text-xs"
-                                    disabled={requestedDealIds.includes(deal.id) || dealCards?.pendingIds.includes(deal.id)}
-                                    onClick={() => requestTransfer(deal.id)}
-                                  >
-                                    {requestedDealIds.includes(deal.id) || dealCards?.pendingIds.includes(deal.id) ? "Aguardando decisão" : "Solicitar transferência"}
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                       </div>
                     );
                   })()}
