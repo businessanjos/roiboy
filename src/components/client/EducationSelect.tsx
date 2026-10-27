@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown, GraduationCap, Search, X } from "lucide-react";
+import { Check, ChevronsUpDown, GraduationCap, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,6 +10,7 @@ import {
   OTHER_EDUCATION_OPTIONS,
   normalizeEducation,
 } from "@/lib/educationOptions";
+import { useEducationOptions } from "@/hooks/useEducationOptions";
 
 interface EducationSelectProps {
   value?: string | null;
