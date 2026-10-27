@@ -15,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent, CheckCircle2, XCircle, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search, Download } from "lucide-react";
+import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent, CheckCircle2, XCircle, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search, Download, PieChart as PieChartIcon } from "lucide-react";
 import { canSeeAllSequenceRuns } from "@/lib/zappSequenceHistoryAccess";
 import { useToast } from "@/hooks/use-toast";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
@@ -267,6 +267,7 @@ export function RenewalLosses() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedReason = searchParams.get("motivo");
   const [reasonSearch, setReasonSearch] = useState("");
+  const [hoveredReason, setHoveredReason] = useState<number | null>(null);
   const setSelectedReason = (r: string | null) => {
     const next = new URLSearchParams(searchParams);
     if (r) next.set("motivo", r); else next.delete("motivo");
@@ -560,6 +561,7 @@ export function RenewalLosses() {
     reasonCounts[r] = (reasonCounts[r] || 0) + 1;
   });
   const reasonPieData = Object.entries(reasonCounts).map(([name, value]) => ({ name, value }));
+  const reasonTotal = reasonPieData.reduce((s, r) => s + r.value, 0);
   const reasonDetailItems = selectedReason
     ? losses.filter(l => (l.loss_reason || "Não informado") === selectedReason)
         .sort((a, b) => b.renewal_value - a.renewal_value)
