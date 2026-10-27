@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } fro
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useLeadClientRevenue } from "@/hooks/useLeadClientRevenue";
-import { parseLeadMql, formatBRLCompact } from "@/lib/leads/leadListHelpers";
+import { parseLeadMql, formatBRLCompact, formatLeadRevenueRange } from "@/lib/leads/leadListHelpers";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
@@ -1510,6 +1510,11 @@ export default function Leads() {
                                 className="text-[10px] flex-shrink-0 border-success/30 bg-success/10 text-success-strong"
                               >
                                 {formatBRLCompact(clientRevenueMap[lead.id])}/mês
+                              </Badge>
+                            )}
+                            {clientRevenueMap[lead.id] == null && formatLeadRevenueRange((lead as any).revenue_range) && (
+                              <Badge variant="outline" className="text-[10px] flex-shrink-0 border-success/30 bg-success/10 text-success-strong" title="Faturamento informado pelo lead">
+                                {formatLeadRevenueRange((lead as any).revenue_range)}
                               </Badge>
                             )}
                           </div>

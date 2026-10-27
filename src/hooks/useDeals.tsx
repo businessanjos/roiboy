@@ -162,6 +162,8 @@ export function useDeals(pipelineId?: string | null) {
   // a previous paginated fetch is still in flight.
   const stagesFetchIdRef = useRef(0);
   const dealsFetchIdRef = useRef(0);
+  const dealsSilentRetryRef = useRef(0);
+  const fetchDealsRef = useRef<() => void>(() => {});
   const currentPipelineIdRef = useRef<string | null | undefined>(pipelineId);
   useEffect(() => {
     currentPipelineIdRef.current = pipelineId;
@@ -310,9 +312,19 @@ export function useDeals(pipelineId?: string | null) {
       }));
 
       setDeals(formattedDeals);
+      dealsSilentRetryRef.current = 0;
     } catch (error: any) {
       if (fetchId !== dealsFetchIdRef.current) return;
       console.error('Error fetching deals:', error);
+      const msg = String(error?.message || '').toLowerCase();
+      const transient = msg.includes('fetch') || msg.includes('network') || msg.includes('load failed') || msg.includes('timeout') || msg.includes('timed out');
+      // Falhas momentâneas de rede: tenta de novo em silêncio antes de alertar.
+      if (transient && dealsSilentRetryRef.current < 3) {
+        dealsSilentRetryRef.current += 1;
+        setTimeout(() => fetchDealsRef.current(), 4000 * dealsSilentRetryRef.current);
+        return;
+      }
+      dealsSilentRetryRef.current = 0;
       toast({
         title: "Erro ao carregar negociações",
         description: friendlyLoadError(error),
@@ -324,6 +336,7 @@ export function useDeals(pipelineId?: string | null) {
       }
     }
   }, [currentUser?.account_id, pipelineId, toast]);
+  fetchDealsRef.current = fetchDeals;
 
   // Clear previous pipeline's data immediately on pipeline switch so the UI
   // never renders stale cross-pipeline deals while the new fetch is in flight.
