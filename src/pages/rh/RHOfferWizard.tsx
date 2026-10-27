@@ -95,6 +95,8 @@ const DEFAULT_NEXT_STEPS = `Se essa proposta fizer sentido para você, basta cli
 
 Caso tenha qualquer dúvida, responda este e-mail ou fale diretamente com a pessoa que enviou esta carta.`;
 
+const SYSTEM_TEXT_DEFAULTS = { company_intro: DEFAULT_COMPANY_INTRO, next_steps: DEFAULT_NEXT_STEPS };
+
 export default function RHOfferWizard() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
