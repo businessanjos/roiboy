@@ -892,6 +892,19 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
             )}
+            {gestaoViewMode === "operacoes" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0"
+                onClick={() => navigate("/contracts?status=active")}
+              >
+                Contratos abertos
+                {typeof contractStats?.active === "number" && (
+                  <Badge variant="secondary" className="ml-2">{contractStats.active}</Badge>
+                )}
+              </Button>
+            )}
             {gestaoPeriodFilter === "custom" && (
               <Popover open={gestaoDatePickerOpen} onOpenChange={setGestaoDatePickerOpen}>
                 <PopoverTrigger asChild>

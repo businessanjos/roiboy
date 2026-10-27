@@ -530,6 +530,18 @@ export default function Contracts() {
     fetchFinancialData();
   }, []);
 
+  // Atalho do painel: /contracts?status=active aplica o filtro de status
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam) {
+      setStatusFilter(statusParam);
+      const next = new URLSearchParams(searchParams);
+      next.delete('status');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   // Handle query params for opening new contract dialog from pipeline
   useEffect(() => {
     const newContract = searchParams.get('newContract');
