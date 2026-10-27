@@ -110,7 +110,7 @@ export function ClientsRevenueListDialog({
   const rangeText = bounds.from === bounds.to ? monthLabel(bounds.from) : `${monthLabel(bounds.from)} a ${monthLabel(bounds.to)}`;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["clients-revenue-list-dialog", accountId, clientIds?.join(",")],
+    queryKey: ["clients-revenue-list-dialog", accountId, clientIds?.join(","), bounds.from, bounds.to],
     enabled: open && !!accountId,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
@@ -259,11 +259,17 @@ export function ClientsRevenueListDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] p-0 w-[calc(100vw-3rem)]">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-lg">Clientes com faturamento informado</DialogTitle>
+          <DialogTitle className="text-lg">Clientes com faturamento informado · {rangeOverride?.label ?? rangeText}</DialogTitle>
           <DialogDescription>
             {productLabel ? `Produto: ${productLabel}` : "Todos os produtos"} · {" "}
-            {filtered.length} cliente(s) · total no período {brl(totals)}
+            {filtered.filter((r) => r.period_total > 0).length} cliente(s) com valor no período · total {brl(totals)}{" "}
+            <span className="text-muted-foreground/70">({formatMillionsHint(totals) || "—"})</span>
           </DialogDescription>
+          <p className="text-xs text-muted-foreground mt-1">
+            Origem: soma dos faturamentos mensais lançados na ficha de cada cliente (Perfil do Negócio › Histórico de
+            Faturamento) ou importados por planilha, de {rangeText}. Entram apenas clientes com contrato ativo ou
+            pendente{productLabel ? " do produto selecionado" : ""}. Clique no nome para abrir a ficha.
+          </p>
         </DialogHeader>
         <div className="px-6 pb-2">
           <div className="relative">
