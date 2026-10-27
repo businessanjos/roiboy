@@ -765,10 +765,10 @@ export function RenewalLosses() {
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [
                       formatCurrency(value),
-                      name === "lost" ? "Perdido" : "Renovado"
+                      name === "lost" ? "Não renovado" : "Renovado"
                     ]}
                   />
-                  <Legend formatter={(v) => v === "lost" ? "Perdido" : "Renovado"} />
+                  <Legend formatter={(v) => v === "lost" ? "Não renovado" : "Renovado"} />
                   <Bar dataKey="renewed" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="lost" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
