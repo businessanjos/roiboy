@@ -1219,6 +1219,14 @@ export default function LeadsTab() {
                           {lead.phone && (
                             <span className="truncate max-w-[90px]">{lead.phone}</span>
                           )}
+                          {clientRevenueMap[lead.id] != null && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] px-1 py-0 flex-shrink-0 border-success/30 bg-success/10 text-success-strong"
+                            >
+                              {formatBRLCompact(clientRevenueMap[lead.id])}/mês
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       
