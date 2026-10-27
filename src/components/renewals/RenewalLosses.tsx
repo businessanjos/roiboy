@@ -15,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent, CheckCircle2, XCircle, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search, Download } from "lucide-react";
+import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent, CheckCircle2, XCircle, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search, Download, PieChart as PieChartIcon } from "lucide-react";
 import { canSeeAllSequenceRuns } from "@/lib/zappSequenceHistoryAccess";
 import { useToast } from "@/hooks/use-toast";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
@@ -267,6 +267,7 @@ export function RenewalLosses() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedReason = searchParams.get("motivo");
   const [reasonSearch, setReasonSearch] = useState("");
+  const [hoveredReason, setHoveredReason] = useState<number | null>(null);
   const setSelectedReason = (r: string | null) => {
     const next = new URLSearchParams(searchParams);
     if (r) next.set("motivo", r); else next.delete("motivo");
@@ -560,6 +561,7 @@ export function RenewalLosses() {
     reasonCounts[r] = (reasonCounts[r] || 0) + 1;
   });
   const reasonPieData = Object.entries(reasonCounts).map(([name, value]) => ({ name, value }));
+  const reasonTotal = reasonPieData.reduce((s, r) => s + r.value, 0);
   const reasonDetailItems = selectedReason
     ? losses.filter(l => (l.loss_reason || "Não informado") === selectedReason)
         .sort((a, b) => b.renewal_value - a.renewal_value)
@@ -801,58 +803,99 @@ export function RenewalLosses() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Motivos de Perda</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <PieChartIcon className="h-4 w-4" />
+              Motivos de Perda
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {reasonPieData.length > 0 ? (
               <div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie
-                      data={reasonPieData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                      className="cursor-pointer"
-                      onClick={(d: any) => d?.name && setSelectedReason(d.name)}
-                    >
-                      {reasonPieData.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip
-                      formatter={(value: number, name: string) => {
-                        const total = reasonPieData.reduce((s, r) => s + r.value, 0);
-                        const pct = total > 0 ? ((value / total) * 100).toFixed(0) : "0";
-                        return [`${value} (${pct}%)`, name];
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <ul className="mt-2 space-y-1">
+                <div className="relative">
+                  <ResponsiveContainer width="100%" height={240}>
+                    <PieChart>
+                      <Pie
+                        data={reasonPieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={54}
+                        outerRadius={92}
+                        paddingAngle={2}
+                        cornerRadius={4}
+                        dataKey="value"
+                        nameKey="name"
+                        stroke="none"
+                        className="cursor-pointer outline-none"
+                        onClick={(d: any) => d?.name && setSelectedReason(d.name)}
+                        onMouseEnter={(_: any, i: number) => setHoveredReason(i)}
+                        onMouseLeave={() => setHoveredReason(null)}
+                      >
+                        {reasonPieData.map((_, i) => (
+                          <Cell
+                            key={i}
+                            fill={PIE_COLORS[i % PIE_COLORS.length]}
+                            opacity={hoveredReason === null || hoveredReason === i ? 1 : 0.35}
+                            style={{ transition: "opacity 150ms ease" }}
+                          />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        cursor={false}
+                        content={({ active, payload }: any) => {
+                          if (!active || !payload?.length) return null;
+                          const p = payload[0];
+                          const pct = reasonTotal > 0 ? ((p.value / reasonTotal) * 100).toFixed(0) : "0";
+                          return (
+                            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-popover px-2.5 py-1.5 text-xs shadow-lg">
+                              <span
+                                className="h-2 w-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: p.payload?.fill || p.color }}
+                              />
+                              <span className="font-medium text-popover-foreground">{p.name}</span>
+                              <span className="tabular-nums text-muted-foreground">
+                                {p.value} ({pct}%)
+                              </span>
+                            </div>
+                          );
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl font-semibold tabular-nums text-foreground">{reasonTotal}</span>
+                    <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      contratos
+                    </span>
+                  </div>
+                </div>
+                <ul className="mt-3 space-y-0.5">
                   {[...reasonPieData]
                     .sort((a, b) => b.value - a.value)
-                    .map((entry, i) => {
+                    .map((entry) => {
                       const colorIdx = reasonPieData.indexOf(entry);
-                      const total = reasonPieData.reduce((s, r) => s + r.value, 0);
-                      const pct = total > 0 ? ((entry.value / total) * 100).toFixed(0) : "0";
+                      const pct = reasonTotal > 0 ? ((entry.value / reasonTotal) * 100).toFixed(0) : "0";
                       return (
-                        <li key={i}>
+                        <li key={entry.name}>
                           <button
                             type="button"
                             onClick={() => setSelectedReason(entry.name)}
-                            className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-xs hover:bg-muted"
+                            onMouseEnter={() => setHoveredReason(colorIdx)}
+                            onMouseLeave={() => setHoveredReason(null)}
+                            className={cn(
+                              "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-muted",
+                              hoveredReason === colorIdx && "bg-muted"
+                            )}
                           >
-                          <span
-                            className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
-                            style={{ backgroundColor: PIE_COLORS[colorIdx % PIE_COLORS.length] }}
-                          />
-                          <span className="flex-1 truncate">{entry.name}</span>
-                          <span className="text-muted-foreground tabular-nums">
-                            {entry.value} ({pct}%)
-                          </span>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                            <span
+                              className="h-2.5 w-2.5 shrink-0 rounded-full"
+                              style={{ backgroundColor: PIE_COLORS[colorIdx % PIE_COLORS.length] }}
+                            />
+                            <span className="flex-1 truncate font-medium text-foreground">{entry.name}</span>
+                            <span className="shrink-0 tabular-nums text-muted-foreground">{entry.value}</span>
+                            <span className="w-10 shrink-0 text-right tabular-nums text-muted-foreground/70">
+                              {pct}%
+                            </span>
+                            <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                           </button>
                         </li>
                       );
