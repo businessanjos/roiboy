@@ -180,6 +180,7 @@ const formatCurrency = (value: number) => {
 
 export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate, initialTab = "details" }: ContractDetailSheetProps) {
   const { labels: CONTRACT_TYPES } = useContractTypes();
+  const { options: reasonOptions, labels: reasonLabels } = useContractCatalog("loss_reason");
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);

@@ -265,6 +265,13 @@ function computeRange(period: string, from: string, to: string, today: Date): { 
 
 export function RenewalLosses() {
   const { currentUser } = useCurrentUser();
+  const { options: lossReasonItems } = useContractCatalog("loss_reason");
+  const lossReasonOptions = lossReasonItems.length ? lossReasonItems.map((r) => r.label) : LOSS_REASONS;
+  const { items: renewalStatusItems } = useContractCatalog("renewal_status");
+  const statusMeta = { ...STATUS_META } as Record<StatusKey, { label: string; className: string }>;
+  renewalStatusItems.forEach((it) => {
+    if (it.value in statusMeta) statusMeta[it.value as StatusKey] = { label: it.label, className: it.color ? CATALOG_COLOR_CLASSES[it.color] : STATUS_META[it.value as StatusKey].className };
+  });
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
