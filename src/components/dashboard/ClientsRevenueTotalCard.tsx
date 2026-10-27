@@ -215,9 +215,17 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-lg border p-4 bg-muted/30">
-                <p className="text-xs text-muted-foreground">Total no ano</p>
-                <p className="text-2xl font-bold text-primary">{brl(stats.yearTotal)}</p>
+              <button
+                type="button"
+                onClick={() => openDetails({ from: `${new Date().getFullYear()}-01`, to: monthKey(new Date()), label: "Total no ano" })}
+                className="text-left rounded-lg border p-4 bg-muted/30 hover:bg-muted/60 hover:border-primary/40 transition-colors"
+                title="Ver de onde vem esse valor"
+              >
+                <p className="text-xs text-muted-foreground flex items-center justify-between">Total no ano <Eye className="h-3 w-3" /></p>
+                <p className="text-2xl font-bold text-primary">
+                  {brl(stats.yearTotal)}{" "}
+                  <span className="text-sm font-normal text-muted-foreground/70">{formatMillionsHint(stats.yearTotal)}</span>
+                </p>
                 {stats.yoyDelta !== null && (
                   <p
                     className={`text-xs mt-1 flex items-center gap-1 ${
@@ -228,10 +236,18 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
                     {stats.yoyDelta.toFixed(1)}% vs ano anterior
                   </p>
                 )}
-              </div>
-              <div className="rounded-lg border p-4 bg-muted/30">
-                <p className="text-xs text-muted-foreground">Último mês ({stats.lastMonthLabel})</p>
-                <p className="text-2xl font-bold">{brl(stats.lastMonthTotal)}</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => openDetails({ from: stats.lastMonthKey, to: stats.lastMonthKey, label: `Último mês (${stats.lastMonthLabel})` })}
+                className="text-left rounded-lg border p-4 bg-muted/30 hover:bg-muted/60 hover:border-primary/40 transition-colors"
+                title="Ver de onde vem esse valor"
+              >
+                <p className="text-xs text-muted-foreground flex items-center justify-between">Último mês ({stats.lastMonthLabel}) <Eye className="h-3 w-3" /></p>
+                <p className="text-2xl font-bold">
+                  {brl(stats.lastMonthTotal)}{" "}
+                  <span className="text-sm font-normal text-muted-foreground/70">{formatMillionsHint(stats.lastMonthTotal)}</span>
+                </p>
                 {stats.momDelta !== null && (
                   <p
                     className={`text-xs mt-1 flex items-center gap-1 ${
@@ -242,18 +258,28 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
                     {stats.momDelta.toFixed(1)}% vs mês anterior
                   </p>
                 )}
-              </div>
-              <div className="rounded-lg border p-4 bg-muted/30">
-                <p className="text-xs text-muted-foreground">Período filtrado ({stats.periodLabel})</p>
-                <p className="text-2xl font-bold">{brl(stats.periodTotal)}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Mês atual ({stats.thisMonthLabel}): {brl(stats.thisMonthTotal)}
+              </button>
+              <button
+                type="button"
+                onClick={() => openDetails(null)}
+                className="text-left rounded-lg border p-4 bg-muted/30 hover:bg-muted/60 hover:border-primary/40 transition-colors"
+                title="Ver de onde vem esse valor"
+              >
+                <p className="text-xs text-muted-foreground flex items-center justify-between">Período filtrado ({stats.periodLabel}) <Eye className="h-3 w-3" /></p>
+                <p className="text-2xl font-bold">
+                  {brl(stats.periodTotal)}{" "}
+                  <span className="text-sm font-normal text-muted-foreground/70">{formatMillionsHint(stats.periodTotal)}</span>
                 </p>
-              </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Mês atual ({stats.thisMonthLabel}): {brl(stats.thisMonthTotal)}{" "}
+                  <span className="text-muted-foreground/70">{formatMillionsHint(stats.thisMonthTotal)}</span>
+                </p>
+              </button>
             </div>
 
             {stats.chart.length > 0 && (
               <div className="h-56">
+                <p className="text-[11px] text-muted-foreground/70 mb-1">Valores em milhões (mi) · clique numa barra para ver os clientes do mês</p>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.chart} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                     <CartesianGrid className="stroke-muted" vertical={false} stroke="hsl(var(--hairline))" />
@@ -262,7 +288,8 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
                       tick={{ fontSize: 11 }}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`}
+                      width={56}
+                      tickFormatter={(v) => formatAxisMillions(Number(v))}
                     />
                     <RTooltip
                       content={({ active, payload, label }) => {
