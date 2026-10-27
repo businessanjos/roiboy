@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, Save, Sparkles, ExternalLink, Copy, Plus, X, Loader2, Wand2, Eye, Upload, Image as ImageIcon, Trash2, LayoutTemplate, ArrowUp, ArrowDown, RotateCcw, Pencil, Settings2, Undo2 } from "lucide-react";
-import { OfferLetterView, type Offer as PreviewOffer } from "@/pages/public/PublicJobOffer";
+import { OfferLetterView, OFFER_DETAIL_ICONS, type Offer as PreviewOffer } from "@/pages/public/PublicJobOffer";
 import { useOfferContentSettings } from "@/hooks/useOfferContentSettings";
 import { KpiPacksEditorDialog, OfferDefaultsDialog } from "@/components/rh/offers/OfferContentSettingsDialogs";
 import { useUndoHistory } from "@/hooks/useUndoHistory";
@@ -67,7 +67,7 @@ type Form = {
   signer_name: string;
   signer_role: string;
   custom_sections: { id: string; title: string; body: string }[];
-  extra_details: { id: string; title: string; body: string }[];
+  extra_details: { id: string; title: string; body: string; icon?: string }[];
   accent_color: string;
   cover_image_url: string;
   candidate_photo_url: string;
@@ -177,7 +177,7 @@ export default function RHOfferWizard() {
         signer_name: data.signer_name || "",
         signer_role: data.signer_role || "",
         custom_sections: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind !== "detail").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
-        extra_details: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "detail").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
+        extra_details: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "detail").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "briefcase" })),
         accent_color: data.accent_color || "#6366F1",
         cover_image_url: data.cover_image_url || "",
         // Ao clonar, a nova offer não é modelo; ao editar, mantém flag
@@ -318,14 +318,15 @@ export default function RHOfferWizard() {
     if (l.includes("sucesso")) return focusAnchor(4, "edit-metrics");
     if (l.includes("próximos")) return focusAnchor(4, "edit-next-steps");
     if (l.includes("comunidade")) return focusAnchor(5, "edit-design");
+    if (l === "signer") return focusAnchor(4, "edit-signer");
     focusAnchor(1, "edit-candidate");
   };
   const detailsUndo = useUndoHistory<Form["extra_details"]>();
   const addDetail = () => {
     detailsUndo.snapshot(form.extra_details);
-    set("extra_details", [...form.extra_details, { id: crypto.randomUUID(), title: "", body: "" }]);
+    set("extra_details", [...form.extra_details, { id: crypto.randomUUID(), title: "", body: "", icon: "briefcase" }]);
   };
-  const updateDetail = (i: number, key: "title" | "body", v: string) =>
+  const updateDetail = (i: number, key: "title" | "body" | "icon", v: string) =>
     set("extra_details", form.extra_details.map((d, idx) => (idx === i ? { ...d, [key]: v } : d)));
   const removeDetail = (i: number) => {
     detailsUndo.snapshot(form.extra_details);
@@ -742,6 +743,14 @@ export default function RHOfferWizard() {
                 </div>
                 {form.extra_details.map((d, i) => (
                   <div key={d.id} className="flex flex-col sm:flex-row gap-2">
+                    <Select value={d.icon || "briefcase"} onValueChange={(v) => { detailsUndo.snapshot(form.extra_details); updateDetail(i, "icon", v); }}>
+                      <SelectTrigger className="sm:w-36 shrink-0" title="Ícone do quadro"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(OFFER_DETAIL_ICONS).map(([k, { label, Icon }]) => (
+                          <SelectItem key={k} value={k}><span className="inline-flex items-center gap-2"><Icon className="h-4 w-4" /> {label}</span></SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Input className="sm:w-1/3" value={d.title} onChange={(e) => updateDetail(i, "title", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Título (ex.: Equipamentos)" />
                     <Input value={d.body} onChange={(e) => updateDetail(i, "body", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Conteúdo" />
                     <Button type="button" size="icon" variant="ghost" className="text-danger shrink-0" onClick={() => removeDetail(i)} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
@@ -1046,7 +1055,7 @@ export default function RHOfferWizard() {
                 </div>
                 <OfferRichTextarea rows={4} value={form.next_steps} onChange={(v) => set("next_steps", v)} placeholder={defaultNextSteps} />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div id="edit-signer" className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", flash("edit-signer"))}>
                 <div>
                   <Label>Quem assina</Label>
                   <Input value={form.signer_name} onChange={(e) => set("signer_name", e.target.value)} placeholder="Ex.: Marina Quintana" />
