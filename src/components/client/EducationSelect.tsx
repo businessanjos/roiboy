@@ -166,9 +166,17 @@ export function EducationSelect({
           </div>
           <ScrollArea className="max-h-[280px]">
             <div className="p-1">
-              {favorites.length > 0 && (
+              {customFiltered.length > 0 && (
                 <>
                   <p className="px-2 py-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Adicionadas pelo time
+                  </p>
+                  {customFiltered.map(renderItem)}
+                </>
+              )}
+              {favorites.length > 0 && (
+                <>
+                  <p className="px-2 py-1 mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
                     Área da saúde
                   </p>
                   {favorites.map(renderItem)}
@@ -182,10 +190,28 @@ export function EducationSelect({
                   {others.map(renderItem)}
                 </>
               )}
-              {favorites.length === 0 && others.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">
+              {favorites.length === 0 && others.length === 0 && customFiltered.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-3">
                   Nenhuma formação encontrada
                 </p>
+              )}
+              {query.trim() && !exactMatch && (
+                <div className="p-1 pt-2 border-t mt-1">
+                  <button
+                    type="button"
+                    disabled={creating}
+                    onClick={handleAdd}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm text-primary hover:bg-accent transition-colors disabled:opacity-60"
+                  >
+                    <Plus className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">
+                      {creating ? "Adicionando..." : <>Adicionar "{query.trim()}"</>}
+                    </span>
+                  </button>
+                  {addError && (
+                    <p className="px-2 py-1 text-[11px] text-destructive">{addError}</p>
+                  )}
+                </div>
               )}
             </div>
           </ScrollArea>
