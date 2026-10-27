@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown, GraduationCap, Search, X } from "lucide-react";
+import { Check, ChevronsUpDown, GraduationCap, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,6 +10,7 @@ import {
   OTHER_EDUCATION_OPTIONS,
   normalizeEducation,
 } from "@/lib/educationOptions";
+import { useEducationOptions } from "@/hooks/useEducationOptions";
 
 interface EducationSelectProps {
   value?: string | null;
@@ -32,6 +33,15 @@ export function EducationSelect({
 }: EducationSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const { options: customOptions, addOption } = useEducationOptions();
+
+  const customNames = useMemo(() => customOptions.map((o) => o.name), [customOptions]);
+  const allKnown = useMemo(
+    () => [...FAVORITE_EDUCATION_OPTIONS, ...OTHER_EDUCATION_OPTIONS, ...customNames],
+    [customNames],
+  );
 
   const filter = (list: string[]) => {
     const q = strip(query.trim());
@@ -39,25 +49,52 @@ export function EducationSelect({
     return list.filter((o) => strip(o).includes(q));
   };
 
-  const favorites = useMemo(() => filter(FAVORITE_EDUCATION_OPTIONS), [query]);
-  const others = useMemo(() => filter(OTHER_EDUCATION_OPTIONS), [query]);
+  const favorites = useMemo(() => filter(FAVORITE_EDUCATION_OPTIONS), [query, allKnown]);
+  // Formações cadastradas pelo time primeiro, depois as padrão restantes.
+  const customFiltered = useMemo(() => filter(customNames), [query, customNames]);
+  const others = useMemo(() => {
+    const rest = OTHER_EDUCATION_OPTIONS.filter((o) => !customNames.includes(o));
+    return filter(rest);
+  }, [query, customNames]);
 
   // Valor legado fora da lista: mostra sugestão de conversão (ou aviso simples)
   const isKnown = useMemo(() => {
     if (!value) return true;
-    return [...FAVORITE_EDUCATION_OPTIONS, ...OTHER_EDUCATION_OPTIONS].includes(value);
-  }, [value]);
+    return allKnown.includes(value);
+  }, [value, allKnown]);
 
   const suggestion = useMemo(() => {
     if (!value || isKnown) return null;
     return normalizeEducation(value);
   }, [value, isKnown]);
 
+  const exactMatch = useMemo(() => {
+    const q = strip(query.trim());
+    if (!q) return true;
+    return allKnown.some((o) => strip(o) === q);
+  }, [query, allKnown]);
 
   const select = (v: string) => {
     onChange(v);
     setQuery("");
+    setAddError(null);
     setOpen(false);
+  };
+
+  const handleAdd = async () => {
+    const clean = query.trim();
+    if (!clean || creating) return;
+    setCreating(true);
+    setAddError(null);
+    try {
+      const saved = await addOption(clean);
+      if (saved) select(saved);
+      else setAddError("Não foi possível adicionar. Tente novamente.");
+    } catch {
+      setAddError("Não foi possível adicionar. Tente novamente.");
+    } finally {
+      setCreating(false);
+    }
   };
 
   const renderItem = (opt: string) => (
@@ -129,9 +166,17 @@ export function EducationSelect({
           </div>
           <ScrollArea className="max-h-[280px]">
             <div className="p-1">
-              {favorites.length > 0 && (
+              {customFiltered.length > 0 && (
                 <>
                   <p className="px-2 py-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Adicionadas pelo time
+                  </p>
+                  {customFiltered.map(renderItem)}
+                </>
+              )}
+              {favorites.length > 0 && (
+                <>
+                  <p className="px-2 py-1 mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
                     Área da saúde
                   </p>
                   {favorites.map(renderItem)}
@@ -145,10 +190,28 @@ export function EducationSelect({
                   {others.map(renderItem)}
                 </>
               )}
-              {favorites.length === 0 && others.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">
+              {favorites.length === 0 && others.length === 0 && customFiltered.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-3">
                   Nenhuma formação encontrada
                 </p>
+              )}
+              {query.trim() && !exactMatch && (
+                <div className="p-1 pt-2 border-t mt-1">
+                  <button
+                    type="button"
+                    disabled={creating}
+                    onClick={handleAdd}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm text-primary hover:bg-accent transition-colors disabled:opacity-60"
+                  >
+                    <Plus className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">
+                      {creating ? "Adicionando..." : <>Adicionar "{query.trim()}"</>}
+                    </span>
+                  </button>
+                  {addError && (
+                    <p className="px-2 py-1 text-[11px] text-destructive">{addError}</p>
+                  )}
+                </div>
               )}
             </div>
           </ScrollArea>
