@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 type ProductBreakdown = { id: string; name: string; color: string | null; count: number };
-type EventInfo = { id: string; title: string; scheduled_at: string | null; participants: number };
+type EventInfo = { id: string; title: string; scheduled_at: string | null; participants: number; attended: number };
 type LastEventGroup = {
   events: EventInfo[];
   rangeStart: string | null;
@@ -206,12 +206,19 @@ export function LastEventAttendanceCard() {
 
         if (!cancelled) {
           setData({
-            events: cluster.map((e) => ({
-              id: e.id,
-              title: e.title,
-              scheduled_at: e.scheduled_at,
-              participants: partsByEvent.get(e.id)?.length ?? 0,
-            })),
+            events: cluster.map((e) => {
+              const rows = partsByEvent.get(e.id) ?? [];
+              const counted = hasAttended
+                ? rows.filter((p) => p.rsvp_status === "attended")
+                : rows.filter((p) => p.rsvp_status === "confirmed");
+              return {
+                id: e.id,
+                title: e.title,
+                scheduled_at: e.scheduled_at,
+                participants: rows.length,
+                attended: counted.length,
+              };
+            }),
             rangeStart,
             rangeEnd,
             attended: totalUniqueAttended,
