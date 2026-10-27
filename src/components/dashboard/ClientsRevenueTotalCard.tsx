@@ -9,6 +9,7 @@ import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip as RTooltip, 
 import { DollarSign, Eye, Info, TrendingDown, TrendingUp } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { ClientsRevenueListDialog } from "./ClientsRevenueListDialog";
+import { ClientsMissingRevenueDialog } from "./ClientsMissingRevenueDialog";
 import { Button } from "@/components/ui/button";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 
@@ -62,6 +63,7 @@ function periodBounds(periodFilter: string, customRange?: DateRange): { from: st
 
 export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, productLabel, periodFilter, customRange }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [missingOpen, setMissingOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-clients-revenue-history", accountId],
     enabled: !!accountId,
@@ -127,6 +129,8 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
 
     const clientsWithData = new Set(rows.map((r) => r.client_id)).size;
     const missingClients = totalClients != null ? Math.max(0, totalClients - clientsWithData) : null;
+    const withData = new Set(rows.map((r) => r.client_id));
+    const missingIds = (clientIds ?? []).filter((id) => !withData.has(id));
 
     return {
       yearTotal,
@@ -142,12 +146,14 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
       clientsWithData,
       totalClients,
       missingClients,
+      missingIds,
       hasData: rows.length > 0,
     };
-  }, [data, allowed, periodFilter, customRange, totalClients]);
+  }, [data, allowed, clientIds, periodFilter, customRange, totalClients]);
 
   return (
     <Card className="shadow-card">
+      <ClientsMissingRevenueDialog open={missingOpen} onOpenChange={setMissingOpen} clientIds={stats.missingIds} />
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
@@ -171,7 +177,14 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
               {stats.totalClients != null ? stats.totalClients : stats.clientsWithData} cliente(s) com faturamento
               informado
               {stats.missingClients != null && stats.missingClients > 0 && (
-                <> · <span className="text-warning font-medium">{stats.missingClients} sem preenchimento</span></>
+                <> · <button
+                    type="button"
+                    onClick={() => setMissingOpen(true)}
+                    className="text-warning font-medium underline underline-offset-2 hover:opacity-80"
+                    title="Ver quem está sem preenchimento"
+                  >
+                    {stats.missingClients} sem preenchimento
+                  </button></>
               )}
             </CardDescription>
           </div>
