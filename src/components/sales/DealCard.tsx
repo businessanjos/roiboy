@@ -302,10 +302,10 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               )} />
               {activityStatus.pendingCount > 0 && (
                 <span className={cn(
-                  "absolute -top-1 -right-1 text-[7px] rounded-full h-3 w-3 flex items-center justify-center font-bold",
+                  "absolute -top-1.5 left-3 text-[8px] leading-none rounded-full h-3.5 min-w-[14px] px-[3px] flex items-center justify-center font-bold tabular-nums ring-1 ring-background z-10",
                   activityStatus.hasOverdue ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
                 )}>
-                  {activityStatus.pendingCount}
+                  {activityStatus.pendingCount > 99 ? "99+" : activityStatus.pendingCount}
                 </span>
               )}
             </Button>
