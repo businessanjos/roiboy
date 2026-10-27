@@ -10,6 +10,7 @@ import { DollarSign, Eye, Info, TrendingDown, TrendingUp } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { ClientsRevenueListDialog } from "./ClientsRevenueListDialog";
 import { Button } from "@/components/ui/button";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 interface Props {
   accountId?: string;
@@ -66,13 +67,17 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
     enabled: !!accountId,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("client_revenue_history")
-        .select("client_id, month, revenue")
-        .eq("account_id", accountId!)
-        .order("month", { ascending: true });
+      const { data, error } = await fetchAllRows<{ client_id: string; month: string; revenue: number }>((from, to) =>
+        supabase
+          .from("client_revenue_history")
+          .select("client_id, month, revenue")
+          .eq("account_id", accountId!)
+          .order("month", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
       if (error) throw error;
-      return (data ?? []) as { client_id: string; month: string; revenue: number }[];
+      return data as { client_id: string; month: string; revenue: number }[];
     },
   });
 
