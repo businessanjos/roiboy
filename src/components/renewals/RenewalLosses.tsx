@@ -706,7 +706,7 @@ export function RenewalLosses() {
             </div>
             <div>
               <p className="text-2xl font-bold">{formatCurrency(totalLostValue)}</p>
-              <p className="text-xs text-muted-foreground">Valor perdido</p>
+              <p className="text-xs text-muted-foreground">Valor não renovado</p>
             </div>
           </CardContent>
         </Card>
@@ -902,7 +902,7 @@ export function RenewalLosses() {
                 <div className="font-semibold">{reasonDetailItems.length}</div>
               </div>
               <div className="rounded-md border p-2">
-                <div className="text-xs text-muted-foreground">Valor perdido</div>
+                <div className="text-xs text-muted-foreground">Valor não renovado</div>
                 <div className="font-semibold">{formatCurrency(reasonDetailTotal)}</div>
               </div>
             </div>
