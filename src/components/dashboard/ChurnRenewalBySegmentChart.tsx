@@ -11,9 +11,9 @@ const METRIC_HELP: { label: string; color: string; formula: string; detail: stri
   {
     label: "Churn %",
     color: "hsl(var(--danger))",
-    formula: "cancelamentos no período ÷ base ativa no início do período × 100",
+    formula: "cancelamentos no período ÷ contratos ativos durante o período × 100",
     detail:
-      "Base inicial = contratos ativos hoje + saídas do período − entradas do período. Contam como cancelamento os contratos com status encerrado/cancelado e data de saída dentro do período.",
+      "Contratos ativos durante o período = base ativa no início + contratos iniciados no período. Assim todo contrato cancelado entra no denominador e o índice nunca passa de 100%. Contam como cancelamento os contratos com data de cancelamento dentro do período.",
   },
   {
     label: "Renovação %",
@@ -180,7 +180,17 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
         const status = String(c.status ?? "").toLowerCase();
         const bucket = bucketFor(c.product_id ?? null);
 
-        if (status === "active") bucket.ativos++;
+        // Base ativa no início do período: contrato já existia e ainda não tinha
+        // terminado/cancelado antes do início (rascunhos não contam).
+        // Se foi cancelado dentro/depois do início do período, estava vivo até
+        // o cancelamento — entra na base mesmo com end_date antigo (dado desatualizado).
+        const startedBefore = !c.start_date || c.start_date <= startStr;
+        const cancelledDate = c.cancelled_at ? c.cancelled_at.slice(0, 10) : null;
+        const endBeforeStart = cancelledDate
+          ? cancelledDate < startStr
+          : !!(c.end_date && c.end_date < startStr);
+        if (status !== "draft" && startedBefore && !endBeforeStart) bucket.ativos++;
+
         if (inPeriodTs(c.cancelled_at)) {
           bucket.cancelamentos++;
           bucket.events.push({
@@ -192,7 +202,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
             status,
           });
         }
-        if (inPeriodDate(c.start_date)) bucket.novos++;
+        if (status !== "draft" && inPeriodDate(c.start_date)) bucket.novos++;
 
         if (inPeriodDate(c.end_date) && !INACTIVE_STATUSES.includes(status)) {
           bucket.vencidos++;
@@ -234,7 +244,10 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
 
       const result: (SegmentRow & { color: string | null })[] = [];
       for (const [segment, b] of buckets.entries()) {
-        const base = Math.max(0, b.ativos + b.cancelamentos - b.novos);
+        // Denominador = contratos ativos em algum momento do período
+        // (base no início + iniciados no período). Todo cancelado esteve ativo
+        // no período, então o churn nunca ultrapassa 100%.
+        const base = b.ativos + b.novos;
         if (base === 0 && b.vencidos === 0 && b.cancelamentos === 0) continue;
         result.push({
           segment,
