@@ -42,6 +42,7 @@ export function LastEventAttendanceCard() {
   const accountId = currentUser?.account_id;
   const [data, setData] = useState<LastEventGroup | null>(null);
   const [loading, setLoading] = useState(true);
+  const [eventsOpen, setEventsOpen] = useState(false);
 
   useEffect(() => {
     if (!accountId) return;
@@ -280,6 +281,7 @@ export function LastEventAttendanceCard() {
     : "";
 
   return (
+    <>
     <Card className="shadow-card border-l-4 border-l-primary">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
