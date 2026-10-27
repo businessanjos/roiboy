@@ -33,3 +33,5 @@
 - Deal merges choose the survivor independently of field values and use RLS-preserving transactional RPCs with soft deletion, snapshots, and guarded undo for the original actor. Why: preserve the selected lead, avoid partial merges, and never overwrite later changes during reversal.
 - Transfer WhatsApp notices to sellers are dispatched from the notifications insert trigger to `transfer-whatsapp-notify`, deduplicated per notification and gated by account settings (private and/or group). Why: every transfer path triggers it once without client calls.
 - Transfer notice templates are account-scoped nullable settings rendered by the same pure helper in the sender and editor; the editor reuses PlaybookSequencePreview in message-only mode. Why: preview and outgoing text stay consistent without changing recipients, permissions or dispatch rules.
+
+- Renewal presentation uses shared BRL aggregation and the selected date basis over the table-filtered rows; expiry visibility follows the selected years. Why: chart, details, export and summary must not disagree or hide prior-year pending contracts.

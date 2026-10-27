@@ -27,3 +27,5 @@
 
 - [x] Auditoria de largura mobile (deslocamento lateral): 139 rotas × 320/393/440/1440, interações (Mais, diálogos, buscas, RoyZapp, ir/voltar, teclado reduzido); causa raiz no shell + 40 telas; teste de inventário e roteiro em scripts/qa; docs/mobile-width-audit.md. iPhone físico não verificado.
 - [x] Sequências salvas no Playbook com envio em segundo plano
+
+- [ ] Renovações: alinhar BRL entre tabela/detalhes/gráfico, indicadores com filtros, mês com base de data e vencidos por ano; preservar desfechos e motivos existentes.

@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 import { saveRenewalOutcome } from "@/lib/renewalOutcomes";
+import { renewalReferenceDate, summarizeRenewals } from "@/lib/renewalAnalytics";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { fetchInChunks } from "@/lib/fetchInChunks";
 import { usePagedList } from "@/hooks/usePagedList";
@@ -397,9 +398,7 @@ export function RenewalLosses() {
       // falling back to the contract end_date when there is no resolution date.
       const inPeriod = (item: ExpiredContract) => {
         if (isAllPeriod) return true;
-        const ref = dateBasis === "end"
-          ? parseLocalDate(item.end_date)
-          : (item.resolved_at ? new Date(item.resolved_at) : parseLocalDate(item.end_date));
+        const ref = renewalReferenceDate(item, dateBasis);
         if (!ref) return false;
         if (rangeStart && ref.getTime() < rangeStart.getTime()) return false;
         if (rangeEnd && ref.getTime() > rangeEnd.getTime()) return false;
@@ -533,26 +532,25 @@ export function RenewalLosses() {
     }
   };
 
-  // Analytics - no more has_new_contract, only explicit outcomes
-  const losses = items.filter(i => i.outcome === "lost");
-  const renewed = items.filter(i => i.outcome === "renewed");
-  const totalLostValue = losses.reduce((s, i) => s + i.renewal_value, 0);
-  const totalRenewedValue = renewed.reduce((s, i) => s + i.renewal_value, 0);
-  const renewalRate = items.length > 0 ? (renewed.length / items.length) * 100 : 0;
+  const uniqueConsultoras = [...new Set(items.map(c => c.responsible_name).filter(Boolean))] as string[];
+  const uniqueProdutos = [...new Set(items.map(c => c.product_name).filter(Boolean))] as string[];
+  const motivoOf = (i: ExpiredContract) => i.outcome === "lost" ? (i.loss_reason || "Não informado") : null;
+  const uniqueMotivos = [...new Set(items.map(motivoOf).filter(Boolean))] as string[];
 
-  // Monthly chart data
-  const monthlyData: Record<string, { month: string; lost: number; renewed: number }> = {};
-  items.forEach(item => {
-    const d = item.resolved_at ? new Date(item.resolved_at) : parseLocalDate(item.end_date);
-    if (!d || isNaN(d.getTime())) return;
-
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = `${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-    if (!monthlyData[key]) monthlyData[key] = { month: label, lost: 0, renewed: 0 };
-    if (item.outcome === "lost") monthlyData[key].lost += item.renewal_value / 100;
-    else if (item.outcome === "renewed") monthlyData[key].renewed += item.renewal_value / 100;
+  const filteredItems = items.filter(i => {
+    if (searchClient.trim() && !i.client_name.toLowerCase().includes(searchClient.trim().toLowerCase())) return false;
+    if (filterConsultora.length > 0 && (!i.responsible_name || !filterConsultora.includes(i.responsible_name))) return false;
+    if (filterProduto.length > 0 && (!i.product_name || !filterProduto.includes(i.product_name))) return false;
+    if (filterStatus.length > 0) {
+      const k = statusKey(i);
+      if (!k || !filterStatus.includes(k)) return false;
+    }
+    const m = motivoOf(i);
+    if (filterMotivo.length > 0 && (!m || !filterMotivo.includes(m))) return false;
+    return true;
   });
-  const monthlyChartData = Object.keys(monthlyData).sort().map(k => monthlyData[k]);
+
+  const { losses, renewed, totalLostValue, totalRenewedValue, renewalRate, monthlyChartData } = summarizeRenewals(filteredItems, dateBasis);
 
   // Reasons pie
   const reasonCounts: Record<string, number> = {};
@@ -576,7 +574,7 @@ export function RenewalLosses() {
 
   // Ranking by consultant — apenas responsáveis de CS/CX (exclui Financeiro, Administrativo, etc.)
   const consultantStats: Record<string, { name: string; lost: number; renewed: number; lostValue: number }> = {};
-  items.forEach(item => {
+  filteredItems.forEach(item => {
     const uid = item.responsible_user_id;
     if (!uid || !csUserIds.has(uid)) return;
     const name = item.responsible_name || "Sem consultora";
@@ -590,24 +588,6 @@ export function RenewalLosses() {
   });
   const consultantRanking = Object.values(consultantStats).sort((a, b) => b.lostValue - a.lostValue);
 
-
-  const uniqueConsultoras = [...new Set(items.map(c => c.responsible_name).filter(Boolean))] as string[];
-  const uniqueProdutos = [...new Set(items.map(c => c.product_name).filter(Boolean))] as string[];
-  const motivoOf = (i: ExpiredContract) => i.outcome === "lost" ? (i.loss_reason || "Não informado") : null;
-  const uniqueMotivos = [...new Set(items.map(motivoOf).filter(Boolean))] as string[];
-
-  const filteredItems = items.filter(i => {
-    if (searchClient.trim() && !i.client_name.toLowerCase().includes(searchClient.trim().toLowerCase())) return false;
-    if (filterConsultora.length > 0 && (!i.responsible_name || !filterConsultora.includes(i.responsible_name))) return false;
-    if (filterProduto.length > 0 && (!i.product_name || !filterProduto.includes(i.product_name))) return false;
-    if (filterStatus.length > 0) {
-      const k = statusKey(i);
-      if (!k || !filterStatus.includes(k)) return false;
-    }
-    const m = motivoOf(i);
-    if (filterMotivo.length > 0 && (!m || !filterMotivo.includes(m))) return false;
-    return true;
-  });
 
   const sortedItems = [...filteredItems].sort((a, b) => {
     if (!sortKey) return 0;
@@ -758,7 +738,7 @@ export function RenewalLosses() {
               <Users className="h-5 w-5 text-warning dark:text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{renewed.length} / {items.length}</p>
+              <p className="text-2xl font-bold">{renewed.length} / {filteredItems.length}</p>
               <p className="text-xs text-muted-foreground">Renovados / Total resolvidos</p>
             </div>
 
@@ -784,7 +764,7 @@ export function RenewalLosses() {
                   <YAxis fontSize={12} tickFormatter={(v) => `R$${v}`} />
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [
-                      `R$ ${(value * 100).toLocaleString("pt-BR")}`,
+                      formatCurrency(value),
                       name === "lost" ? "Perdido" : "Renovado"
                     ]}
                   />
@@ -923,7 +903,7 @@ export function RenewalLosses() {
               </div>
               <div className="rounded-md border p-2">
                 <div className="text-xs text-muted-foreground">Valor perdido</div>
-                <div className="font-semibold">{(reasonDetailTotal / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+                <div className="font-semibold">{formatCurrency(reasonDetailTotal)}</div>
               </div>
             </div>
             <div className="relative">
@@ -951,7 +931,7 @@ export function RenewalLosses() {
                     {l.product_name && (
                       <Badge style={{ backgroundColor: l.product_color || "#6b7280" }} className="text-primary-foreground border-0">{l.product_name}</Badge>
                     )}
-                    <span className="ml-auto tabular-nums font-medium">{(l.renewal_value / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                    <span className="ml-auto tabular-nums font-medium">{formatCurrency(l.renewal_value)}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Consultora: {l.responsible_name || "—"} · Vencimento: {formatLocalDate(l.end_date)}
