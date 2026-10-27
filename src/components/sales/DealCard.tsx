@@ -286,7 +286,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               variant="ghost"
               size="icon"
               className={cn(
-                "h-5 w-5 relative",
+                "h-5 relative", activityStatus.pendingCount > 0 ? "w-auto px-0.5" : "w-5",
                 activityStatus.pendingCount > 0 ? "hover:bg-primary/10" : "hover:bg-muted"
               )}
               onClick={(e) => {
@@ -302,7 +302,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               )} />
               {activityStatus.pendingCount > 0 && (
                 <span className={cn(
-                  "absolute -top-1.5 left-3 text-[8px] leading-none rounded-full h-3.5 min-w-[14px] px-[3px] flex items-center justify-center font-bold tabular-nums ring-1 ring-background z-10",
+                  "ml-0.5 text-[8px] leading-none rounded-full h-3.5 min-w-[14px] px-[3px] inline-flex items-center justify-center font-bold tabular-nums",
                   activityStatus.hasOverdue ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
                 )}>
                   {activityStatus.pendingCount > 99 ? "99+" : activityStatus.pendingCount}
