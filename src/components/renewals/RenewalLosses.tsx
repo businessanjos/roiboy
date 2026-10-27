@@ -93,6 +93,7 @@ interface ExpiredContract {
   responsible_name: string | null;
   responsible_user_id: string | null;
   outcome: string | null;
+  contract_status: string | null;
   outcome_id: string | null;
   loss_reason: string | null;
   loss_notes: string | null;
@@ -653,7 +654,7 @@ export function RenewalLosses() {
         )}
         <p className="text-xs text-muted-foreground self-center">
           {dateBasis === "resolved"
-            ? "Período pela data em que a consultora registrou o status (Renovado / Cancelou)."
+            ? "Período pela data em que a consultora registrou o status (Renovado / Não renovado)."
             : "Período pela data de vencimento do contrato."}
         </p>
         {canSeeAllSequenceRuns(currentUser as any) && (
@@ -1014,7 +1015,7 @@ export function RenewalLosses() {
                             <p className="text-xs leading-relaxed">
                               {item.has_new_contract
                                 ? "Classificado automaticamente como Renovado: existe um contrato de produto de renovação (REN.) para este cliente. A data de renovação usa o início desse contrato."
-                                : `Classificado manualmente: a consultora registrou o desfecho "${item.outcome === "renewed" ? "Renovado" : "Cancelou"}" em ${item.resolved_at ? new Date(item.resolved_at).toLocaleDateString("pt-BR") : "—"}.`}
+                                : `Classificado manualmente: a consultora registrou o desfecho "${item.outcome === "renewed" ? "Renovado" : "Não renovado"}" em ${item.resolved_at ? new Date(item.resolved_at).toLocaleDateString("pt-BR") : "—"}.`}
                             </p>
                           </TooltipContent>
                         </Tooltip>
