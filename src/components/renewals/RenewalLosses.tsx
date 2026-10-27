@@ -706,7 +706,7 @@ export function RenewalLosses() {
             </div>
             <div>
               <p className="text-2xl font-bold">{formatCurrency(totalLostValue)}</p>
-              <p className="text-xs text-muted-foreground">Valor perdido</p>
+              <p className="text-xs text-muted-foreground">Valor não renovado</p>
             </div>
           </CardContent>
         </Card>
@@ -765,10 +765,10 @@ export function RenewalLosses() {
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [
                       formatCurrency(value),
-                      name === "lost" ? "Perdido" : "Renovado"
+                      name === "lost" ? "Não renovado" : "Renovado"
                     ]}
                   />
-                  <Legend formatter={(v) => v === "lost" ? "Perdido" : "Renovado"} />
+                  <Legend formatter={(v) => v === "lost" ? "Não renovado" : "Renovado"} />
                   <Bar dataKey="renewed" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="lost" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -902,7 +902,7 @@ export function RenewalLosses() {
                 <div className="font-semibold">{reasonDetailItems.length}</div>
               </div>
               <div className="rounded-md border p-2">
-                <div className="text-xs text-muted-foreground">Valor perdido</div>
+                <div className="text-xs text-muted-foreground">Valor não renovado</div>
                 <div className="font-semibold">{formatCurrency(reasonDetailTotal)}</div>
               </div>
             </div>
@@ -957,9 +957,9 @@ export function RenewalLosses() {
                 <TableRow>
                   <TableHead>Consultora</TableHead>
                   <TableHead className="text-center">Renovadas</TableHead>
-                  <TableHead className="text-center">Perdidas</TableHead>
+                  <TableHead className="text-center">Não Renovadas</TableHead>
                   <TableHead className="text-center">Taxa Renovação</TableHead>
-                  <TableHead className="text-right">Valor Perdido</TableHead>
+                  <TableHead className="text-right">Valor Não Renovado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
