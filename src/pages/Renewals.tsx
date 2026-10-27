@@ -765,7 +765,7 @@ export default function Renewals() {
                       onValueChange={(val) => handleOutcomeChange(contract, val)}
                     >
                       <SelectTrigger className={cn(
-                        "h-8 w-[116px] lg:w-[128px] text-xs mx-auto",
+                        "h-8 w-[132px] lg:w-[140px] text-xs mx-auto",
                         outcomeMap[contract.id]?.outcome === "renewed" && "border-success text-success-strong dark:text-success",
                         outcomeMap[contract.id]?.outcome === "negotiating" && "border-info text-info-strong dark:text-info",
                         outcomeMap[contract.id]?.outcome === "lost" && "border-danger text-danger-strong dark:text-danger",
