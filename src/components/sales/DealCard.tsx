@@ -31,7 +31,7 @@ interface DealCardProps {
 
 const DEFAULT_ACTIVITY_STATUS: ActivityStatus = { pendingCount: 0, hasOverdue: false, totalActivities: 0, nextDueDate: null };
 
-export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel, itemVendaColor, activityStatus = DEFAULT_ACTIVITY_STATUS, showActivityCounts = false }: DealCardProps) {
+export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel, itemVendaColor, activityStatus: activityStatusProp, showActivityCounts = false }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
   
   const { openZappConversation, loading: zappLoading } = useZappNavigationContext();
@@ -128,7 +128,11 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
   const timeBadge = getTimeBadgeStyle();
 
   // Activity status indicator (vermelho atrasada / verde hoje / laranja futura / amarelo sem atividade)
-  const statusIndicator = getDealActivityIndicator(activityStatus);
+  const activityStatus = activityStatusProp ?? DEFAULT_ACTIVITY_STATUS;
+  // Enquanto o status ainda não carregou, usa tom neutro (evita "flash" amarelo).
+  const statusIndicator = activityStatusProp
+    ? getDealActivityIndicator(activityStatusProp)
+    : { bgColor: "bg-muted", label: "Carregando atividades" };
 
 
   return (
