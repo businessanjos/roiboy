@@ -827,15 +827,14 @@ export function RenewalLosses() {
                         stroke="none"
                         className="cursor-pointer outline-none"
                         onClick={(d: any) => d?.name && setSelectedReason(d.name)}
-                        onMouseEnter={(_: any, i: number) => setHoveredReason(i)}
-                        onMouseLeave={() => setHoveredReason(null)}
+                        isAnimationActive={false}
                       >
                         {reasonPieData.map((_, i) => (
                           <Cell
                             key={i}
                             fill={PIE_COLORS[i % PIE_COLORS.length]}
-                            opacity={hoveredReason === null || hoveredReason === i ? 1 : 0.35}
-                            style={{ transition: "opacity 150ms ease" }}
+                            opacity={hoveredReason === null || hoveredReason === i ? 1 : 0.55}
+                            style={{ transition: "opacity 300ms ease-out" }}
                           />
                         ))}
                       </Pie>
