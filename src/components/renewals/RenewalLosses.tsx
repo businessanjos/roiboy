@@ -957,9 +957,9 @@ export function RenewalLosses() {
                 <TableRow>
                   <TableHead>Consultora</TableHead>
                   <TableHead className="text-center">Renovadas</TableHead>
-                  <TableHead className="text-center">Perdidas</TableHead>
+                  <TableHead className="text-center">Não Renovadas</TableHead>
                   <TableHead className="text-center">Taxa Renovação</TableHead>
-                  <TableHead className="text-right">Valor Perdido</TableHead>
+                  <TableHead className="text-right">Valor Não Renovado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
