@@ -1068,139 +1068,28 @@ export default function RHOfferWizard() {
             </div>
           )}
 
-          {step === 5 && (
-            <div id="edit-design" className={cn("space-y-6", flash("edit-design"))}>
-              <div>
-                <Label className="mb-3 block">Cor de destaque</Label>
-                <div className="flex flex-wrap gap-2">
-                  {ACCENT_PALETTE.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => set("accent_color", c)}
-                      className={cn(
-                        "w-10 h-10 rounded-full border-2 transition-all",
-                        form.accent_color === c ? "border-foreground scale-110 ring-2 ring-offset-2 ring-foreground/20" : "border-transparent"
-                      )}
-                      style={{ background: c }}
-                    />
+PLACEHOLDER_STEP5
+            <div className="space-y-6">
+              <WizardSection title="Resumo" description="Confira os principais dados antes de gerar.">
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  {[
+                    ["Candidato", [form.candidate_name, form.candidate_email].filter(Boolean).join(" • ")],
+                    ["Cargo", [form.position_title, form.seniority && JOB_SENIORITY_LABELS[form.seniority as keyof typeof JOB_SENIORITY_LABELS]].filter(Boolean).join(" • ")],
+                    ["Modelo", form.work_model ? WORK_MODEL_LABELS[form.work_model as keyof typeof WORK_MODEL_LABELS] : ""],
+                    ["Salário", form.salary_amount ? `${form.salary_currency} ${Number(form.salary_amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""],
+                    ["Benefícios", `${form.benefits.length} selecionados`],
+                    ["Perks", String(form.perks.filter(p => p.title.trim()).length)],
+                  ].map(([k, v]) => (
+                    <div key={k} className="border-b pb-2">
+                      <dt className="text-xs text-muted-foreground">{k}</dt>
+                      <dd className="font-medium truncate">{v || "—"}</dd>
+                    </div>
                   ))}
-                  <Input
-                    type="color"
-                    value={form.accent_color}
-                    onChange={(e) => set("accent_color", e.target.value)}
-                    className="w-10 h-10 p-1 cursor-pointer"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Imagem de capa (URL)</Label>
-                <Input value={form.cover_image_url} onChange={(e) => set("cover_image_url", e.target.value)} placeholder="https://..." />
-                <p className="text-xs text-muted-foreground mt-1">Opcional. Aparece atrás da headline na capa.</p>
-              </div>
+                </dl>
+              </WizardSection>
 
-              {/* Foto personalizada do candidato */}
-              <div className="rounded-xl border-2 border-dashed p-5 space-y-4 bg-gradient-to-br from-warning/40 to-transparent dark:from-warning/10">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-warning" />
-                      <Label className="text-base font-semibold">Foto do candidato com o uniforme</Label>
-                      <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-warning/15 text-warning-strong">Opcional</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Quando o candidato abrir o link, vai se ver vestindo a Eternum. Impacto instantâneo.
-                    </p>
-                  </div>
-                  {form.candidate_photo_url && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => set("candidate_photo_url", "")} className="text-danger gap-1">
-                      <Trash2 className="h-3.5 w-3.5" /> Remover
-                    </Button>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4">
-                  {form.candidate_photo_url ? (
-                    <div
-                      className="relative w-28 h-36 rounded-lg overflow-hidden ring-2 ring-warning/40 shadow-lg shrink-0"
-                      style={{ backgroundImage: `url(${form.candidate_photo_url})`, backgroundSize: "cover", backgroundPosition: "center top" }}
-                    />
-                  ) : (
-                    <div className="w-28 h-36 rounded-lg bg-muted/40 flex items-center justify-center shrink-0 border">
-                      <ImageIcon className="h-7 w-7 text-muted-foreground/50" />
-                    </div>
-                  )}
-                  <div className="flex-1 space-y-2">
-                    <label className={cn(
-                      "flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed cursor-pointer transition-all",
-                      "hover:border-warning hover:bg-warning/50 dark:hover:bg-warning/20",
-                      uploadingPhoto && "opacity-60 pointer-events-none"
-                    )}>
-                      {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                      <span className="text-sm font-medium">
-                        {uploadingPhoto ? "Enviando..." : form.candidate_photo_url ? "Trocar foto" : "Enviar foto (JPG/PNG, até 8MB)"}
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f); e.target.value = ""; }}
-                      />
-                    </label>
-                    <p className="text-[11px] text-muted-foreground">
-                      💡 Dica: foto vertical de corpo até a cintura, fundo neutro, sorriso natural. A foto do uniforme da Eternum fica linda na capa.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Preview Hero */}
-              <div className="rounded-xl overflow-hidden border">
-                <div
-                  className="relative min-h-[280px] flex items-center text-white"
-                  style={{
-                    background: form.cover_image_url
-                      ? `linear-gradient(135deg, ${form.accent_color}DD, ${form.accent_color}99), url(${form.cover_image_url}) center/cover`
-                      : `linear-gradient(135deg, ${form.accent_color}, ${form.accent_color}99)`,
-                  }}
-                >
-                  <div className={cn("flex-1 p-10", form.candidate_photo_url && "pr-4")}>
-                    <p className="text-xs uppercase tracking-widest opacity-80 mb-2">Carta-Proposta</p>
-                    <h2 className="text-3xl font-bold leading-tight">
-                      {form.hero_headline || `${form.candidate_name || "Nome do candidato"}, esta proposta é para você.`}
-                    </h2>
-                    <p className="mt-3 opacity-90">{form.position_title || "Cargo"}</p>
-                  </div>
-                  {form.candidate_photo_url && (
-                    <div
-                      className="hidden sm:block h-[280px] w-[220px] shrink-0 self-stretch"
-                      style={{
-                        backgroundImage: `url(${form.candidate_photo_url})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center top",
-                        maskImage: "linear-gradient(to left, black 70%, transparent 100%)",
-                        WebkitMaskImage: "linear-gradient(to left, black 70%, transparent 100%)",
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 6 && (
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-muted/40 space-y-2 text-sm">
-                <div><strong>Candidato:</strong> {form.candidate_name} {form.candidate_email && `• ${form.candidate_email}`}</div>
-                <div><strong>Cargo:</strong> {form.position_title} {form.seniority && `• ${JOB_SENIORITY_LABELS[form.seniority as keyof typeof JOB_SENIORITY_LABELS]}`}</div>
-                {form.work_model && <div><strong>Modelo:</strong> {WORK_MODEL_LABELS[form.work_model as keyof typeof WORK_MODEL_LABELS]}</div>}
-                {form.salary_amount && <div><strong>Salário:</strong> {form.salary_currency} {Number(form.salary_amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>}
-                <div><strong>Benefícios:</strong> {form.benefits.length} selecionados</div>
-                <div><strong>Perks:</strong> {form.perks.filter(p => p.title.trim()).length}</div>
-              </div>
-
-              {/* Salvar como modelo */}
-              <div className="rounded-xl border-2 border-dashed border-warning/60 p-4 bg-gradient-to-br from-warning/40 to-transparent dark:from-warning/10 space-y-3">
+              <WizardSection title="Modelo reutilizável">
+              <div className="rounded-lg border p-4 space-y-3">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <Checkbox
                     checked={form.is_template}
@@ -1208,12 +1097,9 @@ export default function RHOfferWizard() {
                     className="mt-0.5"
                   />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <LayoutTemplate className="h-4 w-4 text-warning" />
-                      <span className="text-sm font-semibold">Salvar esta offer como modelo</span>
-                    </div>
+                    <span className="text-sm font-medium">Salvar esta offer como modelo</span>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Modelos aparecem na tela de offers e podem ser reaproveitados em 1 clique para o próximo candidato. Os dados pessoais (nome, e-mail, foto, data) ficam em branco na nova offer.
+                      Reaproveite em 1 clique no próximo candidato. Dados pessoais ficam em branco.
                     </p>
                   </div>
                 </label>
@@ -1224,11 +1110,11 @@ export default function RHOfferWizard() {
                       value={form.template_name}
                       onChange={(e) => set("template_name", e.target.value)}
                       placeholder={form.position_title ? `Ex.: ${form.position_title} – padrão` : "Ex.: CS Júnior – padrão Eternum"}
-                      className="bg-background"
                     />
                   </div>
                 )}
               </div>
+              </WizardSection>
 
               {savedToken && (
                 <div className="p-4 rounded-lg border bg-success-soft dark:bg-success/30 space-y-2">
@@ -1263,16 +1149,17 @@ export default function RHOfferWizard() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={() => setStep(Math.max(1, step - 1))} disabled={step === 1}>
+      <div className="sticky bottom-0 z-10 -mx-1 flex items-center justify-between gap-3 rounded-lg border bg-background/95 px-3 py-2.5 shadow-sm backdrop-blur">
+        <Button variant="ghost" onClick={() => setStep(Math.max(1, step - 1))} disabled={step === 1}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Anterior
         </Button>
+        <span className="text-xs text-muted-foreground">Etapa {step} de {STEPS.length}</span>
         {step < STEPS.length ? (
           <Button onClick={goNext} className={cn(!canNext() && "opacity-60")}>
             Próximo <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         ) : (
-          <Button variant="ghost" onClick={() => navigate("/rh/offers")}>Concluir</Button>
+          <Button variant="outline" onClick={() => navigate("/rh/offers")}>Concluir</Button>
         )}
       </div>
       </div>
