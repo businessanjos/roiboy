@@ -274,7 +274,7 @@ export function ClientsRevenueListDialog({
           <p className="text-xs text-muted-foreground mt-1">
             Origem: soma dos faturamentos mensais lançados na ficha de cada cliente (Perfil do Negócio › Histórico de
             Faturamento) ou importados por planilha, de {rangeText}. Entram apenas clientes com contrato ativo ou
-            pendente{productLabel ? " do produto selecionado" : ""}. Clique no nome para abrir a ficha.
+            pendente{productLabel ? " do produto selecionado" : ""}. Só contam os meses a partir da entrada de cada mentorado. Clique no nome para abrir a ficha.
           </p>
         </DialogHeader>
         <div className="px-6 pb-2">
