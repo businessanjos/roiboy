@@ -4,12 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarCheck, Users, ArrowRight } from "lucide-react";
+import { CalendarCheck, Users, ArrowRight, ListChecks } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 type ProductBreakdown = { id: string; name: string; color: string | null; count: number };
-type EventInfo = { id: string; title: string; scheduled_at: string | null; participants: number };
+type EventInfo = { id: string; title: string; scheduled_at: string | null; participants: number; attended: number };
 type LastEventGroup = {
   events: EventInfo[];
   rangeStart: string | null;
@@ -40,6 +42,7 @@ export function LastEventAttendanceCard() {
   const accountId = currentUser?.account_id;
   const [data, setData] = useState<LastEventGroup | null>(null);
   const [loading, setLoading] = useState(true);
+  const [eventsOpen, setEventsOpen] = useState(false);
 
   useEffect(() => {
     if (!accountId) return;
@@ -206,12 +209,19 @@ export function LastEventAttendanceCard() {
 
         if (!cancelled) {
           setData({
-            events: cluster.map((e) => ({
-              id: e.id,
-              title: e.title,
-              scheduled_at: e.scheduled_at,
-              participants: partsByEvent.get(e.id)?.length ?? 0,
-            })),
+            events: cluster.map((e) => {
+              const rows = partsByEvent.get(e.id) ?? [];
+              const counted = hasAttended
+                ? rows.filter((p) => p.rsvp_status === "attended")
+                : rows.filter((p) => p.rsvp_status === "confirmed");
+              return {
+                id: e.id,
+                title: e.title,
+                scheduled_at: e.scheduled_at,
+                participants: rows.length,
+                attended: counted.length,
+              };
+            }),
             rangeStart,
             rangeEnd,
             attended: totalUniqueAttended,
@@ -271,6 +281,7 @@ export function LastEventAttendanceCard() {
     : "";
 
   return (
+    <>
     <Card className="shadow-card border-l-4 border-l-primary">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
@@ -319,21 +330,31 @@ export function LastEventAttendanceCard() {
         </div>
 
         <div className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-            Eventos incluídos
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Eventos incluídos
+            </p>
+            <button
+              type="button"
+              onClick={() => setEventsOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+            >
+              <ListChecks className="h-3.5 w-3.5" />
+              Ver todos com detalhes
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
             {data.events.map((e) => (
-              <Link
+              <button
                 key={e.id}
-                to={`/events/${e.id}`}
+                type="button"
+                onClick={() => setEventsOpen(true)}
                 className="inline-flex items-center gap-2 text-xs rounded-md border bg-muted/30 hover:bg-muted px-2.5 py-1.5 transition"
               >
                 <span className="font-medium">{e.title}</span>
                 <span className="text-muted-foreground">·</span>
                 <span className="text-muted-foreground">{e.participants}</span>
-                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-              </Link>
+              </button>
             ))}
           </div>
         </div>
@@ -367,5 +388,52 @@ export function LastEventAttendanceCard() {
         </div>
       </CardContent>
     </Card>
+
+    <Dialog open={eventsOpen} onOpenChange={setEventsOpen}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Eventos do agrupamento</DialogTitle>
+          <DialogDescription>
+            {data.events.length} evento{data.events.length > 1 ? "s" : ""} presencial{data.events.length > 1 ? "is" : ""}
+            {dateLabel ? ` · ${dateLabel}` : ""} · {data.attended} presentes de {data.totalParticipants} convidados
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="max-h-[60vh] pr-3">
+          <div className="space-y-2">
+            {data.events.map((e) => {
+              const pct = e.participants > 0 ? Math.round((e.attended / e.participants) * 100) : 0;
+              return (
+                <Link
+                  key={e.id}
+                  to={`/events/${e.id}`}
+                  onClick={() => setEventsOpen(false)}
+                  className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 hover:bg-muted p-3 transition"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{e.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {e.scheduled_at
+                        ? format(new Date(e.scheduled_at), "dd 'de' MMMM yyyy 'às' HH:mm", { locale: ptBR })
+                        : "Data não definida"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="text-right">
+                      <p className="text-sm font-bold">{e.attended}<span className="text-muted-foreground font-normal">/{e.participants}</span></p>
+                      <p className="text-[10px] text-muted-foreground">presentes</p>
+                    </div>
+                    <Badge variant={pct >= 70 ? "default" : "secondary"} className="text-xs">
+                      {pct}%
+                    </Badge>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

@@ -1345,16 +1345,11 @@ export default function Dashboard() {
 
 
 
-          {/* Comparecimento no último evento presencial + Tempo Ganho → Onboarding */}
-          {gestaoViewMode === "operacoes" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <LastEventAttendanceCard />
-              <WonToOnboardingCard accountId={currentUser?.account_id} monthsBack={6} />
-            </div>
-          )}
+          {/* Comparecimento no último evento presencial (largura total) */}
+          {gestaoViewMode === "operacoes" && <LastEventAttendanceCard />}
 
           {/* Status Cards - Single Row */}
-          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-7" : "md:grid-cols-3"}`}>
+          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-4 xl:grid-cols-8" : "md:grid-cols-3"}`}>
             {/* Total de Clientes (oculto no modo operações) */}
             {gestaoViewMode !== "operacoes" && (
             <Card className="shadow-card border-l-4 border-l-primary">
@@ -1474,6 +1469,11 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Tempo Ganho → Onboarding */}
+            {gestaoViewMode === "operacoes" && (
+              <WonToOnboardingCard accountId={currentUser?.account_id} monthsBack={6} />
+            )}
            </div>
 
           {/* Historical Chart */}
