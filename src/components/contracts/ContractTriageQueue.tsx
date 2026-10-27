@@ -1,3 +1,4 @@
+import { useContractTypes } from "@/hooks/useContractTypes";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,14 +102,6 @@ const CONTRACT_STATUS_CONFIG: Record<
   },
 };
 
-const CONTRACT_TYPES: Record<string, string> = {
-  compra: "Compra",
-  renovacao: "Renovação",
-  migracao: "Migração",
-  confissao_divida: "Confissão de Dívida",
-  termo_congelamento: "Termo de Congelamento",
-  distrato: "Distrato",
-};
 
 interface Contract {
   id: string;
@@ -166,6 +159,7 @@ export function ContractTriageQueue({
   dateRangeStart,
   dateRangeEnd,
 }: ContractTriageQueueProps) {
+  const { labels: CONTRACT_TYPES } = useContractTypes();
   const navigate = useNavigate();
   const { isAdmin } = usePermissions();
   const { currentUser } = useCurrentUser();

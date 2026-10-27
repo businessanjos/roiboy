@@ -1,3 +1,4 @@
+import { useContractTypes } from "@/hooks/useContractTypes";
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseLocalDate } from "@/lib/dateUtils";
@@ -46,13 +47,6 @@ const PAYMENT_METHODS = [
   { value: "cheque", label: "Cheque" },
 ];
 
-const CONTRACT_TYPES = [
-  { value: "compra", label: "Contrato de Compra" },
-  { value: "renovacao", label: "Renovação" },
-  { value: "confissao_divida", label: "Confissão de Dívida" },
-  { value: "termo_congelamento", label: "Termo de Congelamento" },
-  { value: "distrato", label: "Distrato" },
-];
 
 const CONTRACT_STATUSES = [
   { value: "active", label: "Ativo" },
@@ -99,6 +93,7 @@ export function ContractDialog({
   clientName,
   onSuccess,
 }: ContractDialogProps) {
+  const { options: CONTRACT_TYPES, labels: CONTRACT_TYPE_LABELS } = useContractTypes();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -381,7 +376,7 @@ export function ContractDialog({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <Badge variant="outline" className="text-xs">
-                            {CONTRACT_TYPES.find(t => t.value === contract.contract_type)?.label || "Compra"}
+                            {CONTRACT_TYPE_LABELS[contract.contract_type] || contract.contract_type || "Compra"}
                           </Badge>
                           <Badge className={`text-xs ${status.className}`}>
                             {status.label}

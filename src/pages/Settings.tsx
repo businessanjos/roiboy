@@ -20,6 +20,7 @@ import { PlanUsageCard } from "@/components/plan";
 import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
 import { TechProjectsTokensManager } from "@/components/settings/TechProjectsTokensManager";
 import { CompaniesManager } from "@/components/settings/CompaniesManager";
+import { ContractTypesManager } from "@/components/settings/ContractTypesManager";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { AIKnowledgeManager } from "@/components/settings/ai-knowledge/AIKnowledgeManager";
 
@@ -53,6 +54,8 @@ export default function Settings() {
         return canManageTeam ? <TeamManager /> : null;
       case "companies":
         return canEditSettings ? <CompaniesManager /> : null;
+      case "contract-types":
+        return canEditSettings ? <ContractTypesManager /> : null;
       case "ai-knowledge":
         return canEditSettings ? <AIKnowledgeManager /> : null;
       case "sectors":
