@@ -6306,6 +6306,36 @@ export type Database = {
           },
         ]
       }
+      contract_type_options: {
+        Row: {
+          account_id: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          label: string
+          value: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          label: string
+          value: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          label?: string
+          value?: string
+        }
+        Relationships: []
+      }
       contratadas: {
         Row: {
           account_id: string

@@ -309,6 +309,13 @@
       "when": 1793047295848,
       "tag": "0043_add_excluded_user_ids_to_transfer_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793107298344,
+      "tag": "0044_migration",
+      "breakpoints": true
     }
   ]
 }
