@@ -48,7 +48,7 @@ export type Offer = {
   first_viewed_at: string | null;
   view_count: number;
   candidate_photo_url: string | null;
-  custom_sections?: { id: string; title: string; body: string }[] | null;
+  custom_sections?: { id: string; title: string; body: string; kind?: "detail" }[] | null;
 };
 
 // Paleta Eternum
@@ -101,7 +101,7 @@ export default function PublicJobOffer() {
   return <OfferLetterView offer={offer} onOfferChange={setOffer} />;
 }
 
-export function OfferLetterView({ offer, onOfferChange, preview = false }: { offer: Offer; onOfferChange?: (o: Offer) => void; preview?: boolean }) {
+export function OfferLetterView({ offer, onOfferChange, preview = false, onSectionClick }: { offer: Offer; onOfferChange?: (o: Offer) => void; preview?: boolean; onSectionClick?: (target: { label: string; blockId?: string }) => void }) {
   const [responding, setResponding] = useState(false);
   const [response, setResponse] = useState<"accept" | "decline" | null>(null);
   const [message, setMessage] = useState("");
@@ -280,7 +280,17 @@ export function OfferLetterView({ offer, onOfferChange, preview = false }: { off
       </header>
 
       {/* CORPO */}
-      <main className="max-w-4xl mx-auto px-5 sm:px-6 py-12 sm:py-16 md:py-24 space-y-12 sm:space-y-16 md:space-y-20">
+      <main
+        className={`max-w-4xl mx-auto px-5 sm:px-6 py-12 sm:py-16 md:py-24 space-y-12 sm:space-y-16 md:space-y-20${onSectionClick ? " [&>section]:cursor-pointer [&>section]:rounded-xl [&>section]:transition-shadow [&>section:hover]:ring-2 [&>section:hover]:ring-[#C9A96E] [&>section:hover]:ring-offset-8 [&>section:hover]:ring-offset-transparent" : ""}`}
+        onClickCapture={onSectionClick ? (e) => {
+          const sec = (e.target as HTMLElement).closest("main > section") as HTMLElement | null;
+          if (!sec) return;
+          e.preventDefault();
+          e.stopPropagation();
+          onSectionClick({ label: sec.querySelector("h2")?.textContent?.trim() || "", blockId: sec.dataset.blockId });
+        } : undefined}
+        title={onSectionClick ? "Clique em um bloco para editar" : undefined}
+      >
         {/* SOBRE A ETERNUM */}
         <section>
           <SectionLabel>A Eternum</SectionLabel>
@@ -358,6 +368,9 @@ export function OfferLetterView({ offer, onOfferChange, preview = false }: { off
                 />
               );
             })()}
+            {(offer.custom_sections || []).filter((b) => b.kind === "detail" && (b.title?.trim() || b.body?.trim())).map((b) => (
+              <DetailCard key={b.id} icon={<Briefcase className="h-4 w-4" />} label={b.title} value={b.body} />
+            ))}
           </div>
         </section>
 
@@ -551,8 +564,8 @@ export function OfferLetterView({ offer, onOfferChange, preview = false }: { off
         </section>
 
         {/* BLOCOS PERSONALIZADOS */}
-        {(offer.custom_sections || []).filter((b) => b.title?.trim() || b.body?.trim()).map((b) => (
-          <section key={b.id}>
+        {(offer.custom_sections || []).filter((b) => b.kind !== "detail" && (b.title?.trim() || b.body?.trim())).map((b) => (
+          <section key={b.id} data-block-id={b.id}>
             {b.title?.trim() && <SectionLabel>{b.title}</SectionLabel>}
             <p
               className="text-[15px] md:text-base leading-relaxed whitespace-pre-line"

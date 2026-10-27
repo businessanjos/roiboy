@@ -67,6 +67,7 @@ type Form = {
   signer_name: string;
   signer_role: string;
   custom_sections: { id: string; title: string; body: string }[];
+  extra_details: { id: string; title: string; body: string }[];
   accent_color: string;
   cover_image_url: string;
   candidate_photo_url: string;
@@ -83,7 +84,7 @@ const EMPTY: Form = {
   start_date: "", offer_expires_at: "",
   work_schedule: { rules: [{ days: ["mon","tue","wed","thu","fri"], start_time: "09:00", end_time: "18:00", lunch_minutes: 60 }] },
   hero_headline: "", company_intro: "", role_pitch: "", next_steps: "",
-  signer_name: "", signer_role: "", custom_sections: [],
+  signer_name: "", signer_role: "", custom_sections: [], extra_details: [],
   accent_color: "#6366F1", cover_image_url: "", candidate_photo_url: "",
   is_template: false, template_name: "",
 };
@@ -175,7 +176,8 @@ export default function RHOfferWizard() {
         next_steps: data.next_steps || "",
         signer_name: data.signer_name || "",
         signer_role: data.signer_role || "",
-        custom_sections: (((data as any).custom_sections as any[]) || []).map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
+        custom_sections: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind !== "detail").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
+        extra_details: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "detail").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
         accent_color: data.accent_color || "#6366F1",
         cover_image_url: data.cover_image_url || "",
         // Ao clonar, a nova offer não é modelo; ao editar, mantém flag
@@ -292,7 +294,44 @@ export default function RHOfferWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsLoading, isEdit, templateId]);
 
-  const showSidePreview = step >= 4;
+  const showSidePreview = step >= 2;
+  const [previewLarge, setPreviewLarge] = useState(false);
+  const [flashAnchor, setFlashAnchor] = useState<string | null>(null);
+  const focusAnchor = (targetStep: number, anchor: string) => {
+    setStep(targetStep);
+    setFlashAnchor(anchor);
+    setTimeout(() => {
+      document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+    setTimeout(() => setFlashAnchor(null), 1800);
+  };
+  const flash = (anchor: string) => cn("scroll-mt-24 rounded-lg transition-shadow", flashAnchor === anchor && "ring-2 ring-primary ring-offset-4 ring-offset-background");
+  const handlePreviewSectionClick = ({ label, blockId }: { label: string; blockId?: string }) => {
+    setMobilePreviewOpen(false);
+    const l = label.toLowerCase();
+    if (blockId) return focusAnchor(4, `edit-block-${blockId}`);
+    if (l.includes("eternum") && !l.includes("comunidade")) return focusAnchor(4, "edit-intro");
+    if (l.includes("convite")) return focusAnchor(4, "edit-pitch");
+    if (l.includes("detalhes")) return focusAnchor(2, "edit-details");
+    if (l.includes("remunera")) return focusAnchor(3, "edit-salary");
+    if (l.includes("oferecemos") || l.includes("perks")) return focusAnchor(3, "edit-benefits");
+    if (l.includes("sucesso")) return focusAnchor(4, "edit-metrics");
+    if (l.includes("próximos")) return focusAnchor(4, "edit-next-steps");
+    if (l.includes("comunidade")) return focusAnchor(5, "edit-design");
+    focusAnchor(1, "edit-candidate");
+  };
+  const detailsUndo = useUndoHistory<Form["extra_details"]>();
+  const addDetail = () => {
+    detailsUndo.snapshot(form.extra_details);
+    set("extra_details", [...form.extra_details, { id: crypto.randomUUID(), title: "", body: "" }]);
+  };
+  const updateDetail = (i: number, key: "title" | "body", v: string) =>
+    set("extra_details", form.extra_details.map((d, idx) => (idx === i ? { ...d, [key]: v } : d)));
+  const removeDetail = (i: number) => {
+    detailsUndo.snapshot(form.extra_details);
+    set("extra_details", form.extra_details.filter((_, idx) => idx !== i));
+  };
+  const undoDetails = () => { const prev = detailsUndo.pop(); if (prev) set("extra_details", prev); };
   const livePreviewOffer = useMemo<PreviewOffer>(() => ({
     id: recordId || "preview",
     public_token: savedToken || "preview",
@@ -326,7 +365,7 @@ export default function RHOfferWizard() {
     first_viewed_at: null,
     view_count: 0,
     candidate_photo_url: form.candidate_photo_url || null,
-    custom_sections: form.custom_sections,
+    custom_sections: [...form.custom_sections, ...form.extra_details.map((d) => ({ ...d, kind: "detail" as const }))],
   }), [form, recordId, savedToken, defaultCompanyIntro, defaultNextSteps]);
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -413,7 +452,7 @@ export default function RHOfferWizard() {
       company_intro: form.company_intro || defaultCompanyIntro,
       role_pitch: form.role_pitch || null,
       next_steps: form.next_steps || defaultNextSteps,
-      custom_sections: form.custom_sections.filter((b) => b.title.trim() || b.body.trim()),
+      custom_sections: [...form.custom_sections, ...form.extra_details.map((d) => ({ ...d, kind: "detail" as const }))].filter((b) => b.title.trim() || b.body.trim()),
       signer_name: form.signer_name || null,
       signer_role: form.signer_role || null,
       accent_color: form.accent_color,
@@ -549,7 +588,7 @@ export default function RHOfferWizard() {
   };
 
   return (
-    <div className={cn("p-6 mx-auto space-y-6", showSidePreview ? "max-w-4xl lg:max-w-7xl" : "max-w-4xl")}>
+    <div className={cn("p-6 mx-auto space-y-6", showSidePreview ? "max-w-4xl lg:max-w-[1600px]" : "max-w-4xl")}>
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate("/rh/offers")}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
@@ -603,7 +642,7 @@ export default function RHOfferWizard() {
         </div>
       </div>
 
-      <div className={cn(showSidePreview && "lg:grid lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-6 lg:items-start")}>
+      <div className={cn(showSidePreview && "lg:grid lg:gap-6 lg:items-start", showSidePreview && (previewLarge ? "lg:grid-cols-[minmax(0,1fr)_760px]" : "lg:grid-cols-[minmax(0,1fr)_580px]"))}>
       <div className="space-y-6 min-w-0">
       <Card>
         <CardHeader>
@@ -611,7 +650,7 @@ export default function RHOfferWizard() {
         </CardHeader>
         <CardContent className="space-y-4">
           {step === 1 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div id="edit-candidate" className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", flash("edit-candidate"))}>
               <div className="md:col-span-2">
                 <Label>Nome completo *</Label>
                 <Input value={form.candidate_name} onChange={(e) => set("candidate_name", e.target.value)} placeholder="Ex.: Mariana Souza" />
@@ -628,7 +667,7 @@ export default function RHOfferWizard() {
           )}
 
           {step === 2 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div id="edit-details" className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", flash("edit-details"))}>
               <div className="md:col-span-2">
                 <Label>Cargo *</Label>
                 <Input value={form.position_title} onChange={(e) => set("position_title", e.target.value)} placeholder="Ex.: Customer Success Analyst" />
@@ -686,12 +725,35 @@ export default function RHOfferWizard() {
                   onChange={(v) => set("work_schedule", v)}
                 />
               </div>
+              <div className="md:col-span-2 space-y-3 rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label className="text-base">Quadros extras em "Detalhes da posição"</Label>
+                    <p className="text-xs text-muted-foreground">Ex.: "Equipamentos: notebook e celular", "Período de experiência: 90 dias".</p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button type="button" size="sm" variant="ghost" disabled={!detailsUndo.canUndo} onClick={undoDetails} className="gap-1 text-xs">
+                      <Undo2 className="h-3.5 w-3.5" /> Desfazer
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={addDetail} className="gap-1">
+                      <Plus className="h-3.5 w-3.5" /> Adicionar quadro
+                    </Button>
+                  </div>
+                </div>
+                {form.extra_details.map((d, i) => (
+                  <div key={d.id} className="flex flex-col sm:flex-row gap-2">
+                    <Input className="sm:w-1/3" value={d.title} onChange={(e) => updateDetail(i, "title", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Título (ex.: Equipamentos)" />
+                    <Input value={d.body} onChange={(e) => updateDetail(i, "body", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Conteúdo" />
+                    <Button type="button" size="icon" variant="ghost" className="text-danger shrink-0" onClick={() => removeDetail(i)} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
           {step === 3 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div id="edit-salary" className={cn("grid grid-cols-1 md:grid-cols-3 gap-4", flash("edit-salary"))}>
                 <div>
                   <Label>Moeda</Label>
                   <Select value={form.salary_currency} onValueChange={(v) => set("salary_currency", v)}>
@@ -716,7 +778,7 @@ export default function RHOfferWizard() {
                 <Label>Remuneração variável</Label>
                 <OfferRichTextarea rows={2} value={form.variable_compensation} onChange={(v) => set("variable_compensation", v)} placeholder="Ex.: PLR semestral atrelada a metas..." />
               </div>
-              <div>
+              <div id="edit-benefits" className={flash("edit-benefits")}>
                 <Label className="mb-2 block">Benefícios</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {JOB_BENEFITS.map((b) => (
@@ -817,7 +879,7 @@ export default function RHOfferWizard() {
                 <Label>Headline da capa</Label>
                 <Input value={form.hero_headline} onChange={(e) => set("hero_headline", e.target.value)} placeholder={`Ex.: ${form.candidate_name || "Mariana"}, esta proposta é para você.`} />
               </div>
-              <div>
+              <div id="edit-intro" className={flash("edit-intro")}>
                 <div className="flex items-center justify-between">
                   <Label>Sobre a Eternum</Label>
                   <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1" onClick={() => set("company_intro", defaultCompanyIntro)}>
@@ -826,12 +888,12 @@ export default function RHOfferWizard() {
                 </div>
                 <OfferRichTextarea rows={6} value={form.company_intro} onChange={(v) => set("company_intro", v)} placeholder={defaultCompanyIntro} />
               </div>
-              <div>
+              <div id="edit-pitch" className={flash("edit-pitch")}>
                 <Label>Sobre a vaga / Pitch</Label>
                 <OfferRichTextarea rows={6} value={form.role_pitch} onChange={(v) => set("role_pitch", v)} placeholder="Por que esse papel é estratégico, o que a pessoa vai fazer, com quem vai trabalhar, como o sucesso será medido..." />
               </div>
 
-              <div className="space-y-3 p-4 rounded-lg border border-dashed border-warning bg-warning/40 dark:bg-warning/10">
+              <div id="edit-metrics" className={cn("space-y-3 p-4 rounded-lg border border-dashed border-warning bg-warning/40 dark:bg-warning/10", flash("edit-metrics"))}>
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <Label className="text-base">Como o sucesso será medido</Label>
@@ -963,7 +1025,7 @@ export default function RHOfferWizard() {
                   <p className="text-xs text-muted-foreground italic">Ex.: "Seu primeiro mês", "Nossa cultura", "Plano de carreira".</p>
                 )}
                 {form.custom_sections.map((b, i) => (
-                  <div key={b.id} className="rounded-md border bg-muted/30 p-3 space-y-2">
+                  <div key={b.id} id={`edit-block-${b.id}`} className={cn("rounded-md border bg-muted/30 p-3 space-y-2", flash(`edit-block-${b.id}`))}>
                     <div className="flex gap-2">
                       <Input value={b.title} onChange={(e) => updateSection(i, "title", e.target.value)} onFocus={() => sectionsUndo.snapshot(form.custom_sections)} placeholder="Título do bloco" />
                       <Button type="button" size="icon" variant="ghost" disabled={i === 0} onClick={() => moveSection(i, -1)} title="Subir"><ArrowUp className="h-4 w-4" /></Button>
@@ -975,7 +1037,7 @@ export default function RHOfferWizard() {
                 ))}
               </div>
 
-              <div>
+              <div id="edit-next-steps" className={flash("edit-next-steps")}>
                 <div className="flex items-center justify-between">
                   <Label>Próximos passos</Label>
                   <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1" onClick={() => set("next_steps", defaultNextSteps)}>
@@ -998,7 +1060,7 @@ export default function RHOfferWizard() {
           )}
 
           {step === 5 && (
-            <div className="space-y-6">
+            <div id="edit-design" className={cn("space-y-6", flash("edit-design"))}>
               <div>
                 <Label className="mb-3 block">Cor de destaque</Label>
                 <div className="flex flex-wrap gap-2">
@@ -1210,11 +1272,19 @@ export default function RHOfferWizard() {
         <aside className="hidden lg:block sticky top-4">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium flex items-center gap-2"><Eye className="h-4 w-4" /> Prévia da carta</p>
-            <span className="text-xs text-muted-foreground">atualiza enquanto você digita</span>
+            <div className="flex items-center gap-1">
+              <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setPreviewLarge((v) => !v)}>
+                {previewLarge ? "Reduzir" : "Ampliar"}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => setMobilePreviewOpen(true)}>
+                <ExternalLink className="h-3.5 w-3.5" /> Tela cheia
+              </Button>
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground mb-2">Clique em qualquer bloco da prévia para editar ao lado.</p>
           <div className="rounded-lg border overflow-hidden h-[calc(100vh-8rem)] overflow-y-auto bg-muted">
-            <div style={{ width: 1000, zoom: 0.44 }}>
-              <OfferLetterView offer={livePreviewOffer} preview />
+            <div style={{ width: 1000, zoom: previewLarge ? 0.76 : 0.58 }}>
+              <OfferLetterView offer={livePreviewOffer} preview onSectionClick={handlePreviewSectionClick} />
             </div>
           </div>
         </aside>
@@ -1227,10 +1297,10 @@ export default function RHOfferWizard() {
         </Button>
       )}
       <Dialog open={mobilePreviewOpen} onOpenChange={setMobilePreviewOpen}>
-        <DialogContent className="max-w-3xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+        <DialogContent className="max-w-5xl w-[95vw] h-[92vh] p-0 overflow-hidden flex flex-col">
           <DialogHeader className="px-4 py-3 border-b"><DialogTitle>Prévia da carta</DialogTitle></DialogHeader>
           <div className="flex-1 overflow-y-auto">
-            <OfferLetterView offer={livePreviewOffer} preview />
+            <OfferLetterView offer={livePreviewOffer} preview onSectionClick={handlePreviewSectionClick} />
           </div>
         </DialogContent>
       </Dialog>
