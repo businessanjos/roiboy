@@ -38,3 +38,4 @@
 
 - Contract types, contract statuses, renewal statuses and loss reasons come from `useContractCatalog` (built-ins in `src/lib/contracts/contractCatalog.ts` plus account overrides/custom rows in `contract_catalog_options`, every change logged in `contract_catalog_history` with undo). Why: managers customize lists with audit while old records keep their labels.
 - Deal status labels and colors come from `getDealStatusBadge` (src/lib/sales/dealStatusBadge.ts), fed by the stored `deals.status`; lists must not invent their own wording. Why: one open/won/lost meaning everywhere and theme-token colors keep dark mode readable.
+- Education dropdowns use a bounded native scroll region, keep the add action outside the list, and portal into an enclosing dialog when present. Why: all options and creation remain reachable under viewport constraints and modal scroll locks.

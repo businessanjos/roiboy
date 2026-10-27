@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Check, ChevronsUpDown, GraduationCap, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import {
   FAVORITE_EDUCATION_OPTIONS,
@@ -35,6 +34,8 @@ export function EducationSelect({
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const { options: customOptions, addOption } = useEducationOptions();
 
   const customNames = useMemo(() => customOptions.map((o) => o.name), [customOptions]);
@@ -98,12 +99,13 @@ export function EducationSelect({
   };
 
   const renderItem = (opt: string) => (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       key={opt}
       onClick={() => select(opt)}
       className={cn(
-        "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm hover:bg-accent transition-colors",
+        "h-auto w-full justify-start gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal",
         value === opt && "bg-accent/60",
       )}
     >
@@ -115,15 +117,19 @@ export function EducationSelect({
       >
         {value === opt && <Check className="h-3 w-3" />}
       </span>
-      <span className="truncate">{opt}</span>
-    </button>
+      <span className="min-w-0 break-words">{opt}</span>
+    </Button>
   );
 
   return (
     <div className="space-y-1">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={(nextOpen) => {
+        if (nextOpen) setPortalContainer(triggerRef.current?.closest<HTMLElement>('[role="dialog"]') ?? null);
+        setOpen(nextOpen);
+      }}>
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             type="button"
             variant="outline"
             role="combobox"
@@ -142,8 +148,13 @@ export function EducationSelect({
             <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[280px] p-0" align="start">
-          <div className="p-2 border-b">
+        <PopoverContent
+          portalContainer={portalContainer}
+          className="flex w-[min(280px,calc(100vw-1rem))] max-h-[var(--radix-popover-content-available-height)] flex-col overflow-hidden p-0"
+          collisionPadding={8}
+          align="start"
+        >
+          <div className="shrink-0 p-2 border-b">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
@@ -164,7 +175,11 @@ export function EducationSelect({
               )}
             </div>
           </div>
-          <ScrollArea className="max-h-[280px]">
+          <div
+            role="region"
+            aria-label="Lista de formações"
+            className="min-h-0 max-h-[280px] flex-1 overflow-y-auto overscroll-contain touch-pan-y"
+          >
             <div className="p-1">
               {customFiltered.length > 0 && (
                 <>
@@ -195,28 +210,29 @@ export function EducationSelect({
                   Nenhuma formação encontrada
                 </p>
               )}
-              {query.trim() && !exactMatch && (
-                <div className="p-1 pt-2 border-t mt-1">
-                  <button
+            </div>
+          </div>
+          {query.trim() && !exactMatch && (
+                <div className="shrink-0 p-2 border-t">
+                  <Button
                     type="button"
+                    variant="ghost"
                     disabled={creating}
                     onClick={handleAdd}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm text-primary hover:bg-accent transition-colors disabled:opacity-60"
+                    className="h-auto w-full justify-start gap-2 whitespace-normal px-2 py-1.5 text-left text-sm text-primary"
                   >
                     <Plus className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">
+                    <span className="min-w-0 break-words">
                       {creating ? "Adicionando..." : <>Adicionar "{query.trim()}"</>}
                     </span>
-                  </button>
+                  </Button>
                   {addError && (
                     <p className="px-2 py-1 text-[11px] text-destructive">{addError}</p>
                   )}
                 </div>
               )}
-            </div>
-          </ScrollArea>
           {value && (
-            <div className="p-2 border-t">
+            <div className="shrink-0 p-2 border-t">
               <button
                 type="button"
                 className="text-xs text-muted-foreground hover:text-foreground"
