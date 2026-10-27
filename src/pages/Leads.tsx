@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
+import { useLeadClientRevenue } from "@/hooks/useLeadClientRevenue";
+import { parseLeadMql, formatBRLCompact } from "@/lib/leads/leadListHelpers";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
@@ -133,6 +135,7 @@ export default function Leads() {
     refetch: refetchLeads,
   } = useLeads();
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal, fetchDeals } = useDeals();
+  const clientRevenueMap = useLeadClientRevenue(leads, currentUser?.account_id);
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const [phonePickerOpen, setPhonePickerOpen] = useState(false);
   const [phonePickerLead, setPhonePickerLead] = useState<Lead | null>(null);
