@@ -213,14 +213,6 @@ export default function Leads() {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const { pipelines } = usePipelines();
   const [dealPipelineId, setDealPipelineId] = useState<string>("");
-  const effectiveDealPipelineId =
-    dealPipelineId ||
-    stages.find((s) => s.id === dealFormData.stage_id)?.pipeline_id ||
-    pipelines[0]?.id ||
-    "";
-  const dealPipelineStages = stages
-    .filter((s) => s.pipeline_id === effectiveDealPipelineId)
-    .sort((a, b) => a.display_order - b.display_order);
 
   // Get deals for the current lead
   const getLeadDeals = useCallback((leadId: string) => {
@@ -234,6 +226,14 @@ export default function Leads() {
     stage_id: "",
     notes: "",
   });
+  const effectiveDealPipelineId =
+    dealPipelineId ||
+    stages.find((s) => s.id === dealFormData.stage_id)?.pipeline_id ||
+    pipelines[0]?.id ||
+    "";
+  const dealPipelineStages = stages
+    .filter((s) => s.pipeline_id === effectiveDealPipelineId)
+    .sort((a, b) => a.display_order - b.display_order);
 
   // Load products when deal-form step is active
   useEffect(() => {
