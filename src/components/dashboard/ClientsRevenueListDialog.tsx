@@ -46,6 +46,8 @@ interface Props {
   productLabel?: string;
   periodFilter: string;
   customRange?: DateRange;
+  /** Overrides the period (e.g. a single clicked month). */
+  rangeOverride?: { from: string; to: string; label: string } | null;
 }
 
 const brl = (v: number) =>
@@ -96,11 +98,16 @@ export function ClientsRevenueListDialog({
   productLabel,
   periodFilter,
   customRange,
+  rangeOverride,
 }: Props) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: "period_total", desc: true });
 
-  const bounds = useMemo(() => periodBounds(periodFilter, customRange), [periodFilter, customRange]);
+  const bounds = useMemo(
+    () => rangeOverride ?? periodBounds(periodFilter, customRange),
+    [periodFilter, customRange, rangeOverride],
+  );
+  const rangeText = bounds.from === bounds.to ? monthLabel(bounds.from) : `${monthLabel(bounds.from)} a ${monthLabel(bounds.to)}`;
 
   const { data, isLoading } = useQuery({
     queryKey: ["clients-revenue-list-dialog", accountId, clientIds?.join(",")],
