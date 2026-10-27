@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarCheck, Users, ArrowRight } from "lucide-react";
+import { CalendarCheck, Users, ArrowRight, ListChecks } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -326,21 +328,31 @@ export function LastEventAttendanceCard() {
         </div>
 
         <div className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-            Eventos incluídos
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Eventos incluídos
+            </p>
+            <button
+              type="button"
+              onClick={() => setEventsOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+            >
+              <ListChecks className="h-3.5 w-3.5" />
+              Ver todos com detalhes
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
             {data.events.map((e) => (
-              <Link
+              <button
                 key={e.id}
-                to={`/events/${e.id}`}
+                type="button"
+                onClick={() => setEventsOpen(true)}
                 className="inline-flex items-center gap-2 text-xs rounded-md border bg-muted/30 hover:bg-muted px-2.5 py-1.5 transition"
               >
                 <span className="font-medium">{e.title}</span>
                 <span className="text-muted-foreground">·</span>
                 <span className="text-muted-foreground">{e.participants}</span>
-                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-              </Link>
+              </button>
             ))}
           </div>
         </div>
