@@ -286,7 +286,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               variant="ghost"
               size="icon"
               className={cn(
-                "h-5 w-5 relative",
+                "h-5 relative", activityStatus.pendingCount > 0 ? "w-auto px-0.5" : "w-5",
                 activityStatus.pendingCount > 0 ? "hover:bg-primary/10" : "hover:bg-muted"
               )}
               onClick={(e) => {
