@@ -182,10 +182,13 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
 
         // Base ativa no início do período: contrato já existia e ainda não tinha
         // terminado/cancelado antes do início (rascunhos não contam).
+        // Se foi cancelado dentro/depois do início do período, estava vivo até
+        // o cancelamento — entra na base mesmo com end_date antigo (dado desatualizado).
         const startedBefore = !c.start_date || c.start_date <= startStr;
-        const endBeforeStart =
-          (c.end_date && c.end_date < startStr) ||
-          (c.cancelled_at && c.cancelled_at.slice(0, 10) < startStr);
+        const cancelledDate = c.cancelled_at ? c.cancelled_at.slice(0, 10) : null;
+        const endBeforeStart = cancelledDate
+          ? cancelledDate < startStr
+          : !!(c.end_date && c.end_date < startStr);
         if (status !== "draft" && startedBefore && !endBeforeStart) bucket.ativos++;
 
         if (inPeriodTs(c.cancelled_at)) {
