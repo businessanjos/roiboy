@@ -145,7 +145,20 @@ const PACKS: Pack[] = [
   },
 ];
 
-export function suggestKpis(title: string, department: string): { pack: string; metrics: KpiSuggestion[] }[] {
+export type EditableKpiPack = { id: string; name: string; metrics: KpiSuggestion[] };
+
+/** Cópia editável de todos os grupos padrão. */
+export function getDefaultKpiPacks(): EditableKpiPack[] {
+  return PACKS.map((p) => ({ id: p.id, name: p.name, metrics: p.metrics.map((m) => ({ ...m })) }));
+}
+
+export function suggestKpis(
+  title: string,
+  department: string,
+  customPacks?: EditableKpiPack[] | null,
+): { pack: string; metrics: KpiSuggestion[] }[] {
+  // Grupos personalizados pela conta: mostra todos, o usuário escolhe.
+  if (customPacks) return customPacks.filter((p) => p.metrics.length).map((p) => ({ pack: p.name, metrics: p.metrics }));
   const ctx = { title: title || "", department: department || "" };
   const matched = PACKS.filter((p) => p.id !== "generic" && p.match(ctx));
   const list = matched.length ? matched : [];
