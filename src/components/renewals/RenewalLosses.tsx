@@ -263,6 +263,7 @@ function computeRange(period: string, from: string, to: string, today: Date): { 
 export function RenewalLosses() {
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
+  const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [items, setItems] = useState<ExpiredContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterPeriod, setFilterPeriod] = useState("90");
@@ -550,6 +551,11 @@ export function RenewalLosses() {
     reasonCounts[r] = (reasonCounts[r] || 0) + 1;
   });
   const reasonPieData = Object.entries(reasonCounts).map(([name, value]) => ({ name, value }));
+  const reasonDetailItems = selectedReason
+    ? losses.filter(l => (l.loss_reason || "Não informado") === selectedReason)
+        .sort((a, b) => b.renewal_value - a.renewal_value)
+    : [];
+  const reasonDetailTotal = reasonDetailItems.reduce((s, l) => s + l.renewal_value, 0);
 
   // Ranking by consultant — apenas responsáveis de CS/CX (exclui Financeiro, Administrativo, etc.)
   const consultantStats: Record<string, { name: string; lost: number; renewed: number; lostValue: number }> = {};
@@ -793,6 +799,8 @@ export function RenewalLosses() {
                       cy="50%"
                       outerRadius={80}
                       dataKey="value"
+                      className="cursor-pointer"
+                      onClick={(d: any) => d?.name && setSelectedReason(d.name)}
                     >
                       {reasonPieData.map((_, i) => (
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
@@ -815,7 +823,12 @@ export function RenewalLosses() {
                       const total = reasonPieData.reduce((s, r) => s + r.value, 0);
                       const pct = total > 0 ? ((entry.value / total) * 100).toFixed(0) : "0";
                       return (
-                        <li key={i} className="flex items-center gap-2 text-xs">
+                        <li key={i}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReason(entry.name)}
+                            className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-xs hover:bg-muted"
+                          >
                           <span
                             className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
                             style={{ backgroundColor: PIE_COLORS[colorIdx % PIE_COLORS.length] }}
@@ -824,6 +837,8 @@ export function RenewalLosses() {
                           <span className="text-muted-foreground tabular-nums">
                             {entry.value} ({pct}%)
                           </span>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          </button>
                         </li>
                       );
                     })}
@@ -834,8 +849,46 @@ export function RenewalLosses() {
                 Nenhuma perda registrada
               </div>
             )}
+            {reasonPieData.length > 0 && (
+              <p className="mt-2 text-[11px] text-muted-foreground">Clique em um motivo para ver os detalhes.</p>
+            )}
           </CardContent>
         </Card>
+        <Dialog open={!!selectedReason} onOpenChange={(o) => !o && setSelectedReason(null)}>
+          <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Motivo: {selectedReason}</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-md border p-2">
+                <div className="text-xs text-muted-foreground">Contratos</div>
+                <div className="font-semibold">{reasonDetailItems.length}</div>
+              </div>
+              <div className="rounded-md border p-2">
+                <div className="text-xs text-muted-foreground">Valor perdido</div>
+                <div className="font-semibold">{(reasonDetailTotal / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {reasonDetailItems.map(l => (
+                <div key={l.id} className="rounded-md border p-3 text-sm space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link to={`/clients/${l.client_id}`} className="font-medium hover:underline">{l.client_name}</Link>
+                    {l.product_name && (
+                      <Badge style={{ backgroundColor: l.product_color || "#6b7280" }} className="text-primary-foreground border-0">{l.product_name}</Badge>
+                    )}
+                    <span className="ml-auto tabular-nums font-medium">{(l.renewal_value / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Consultora: {l.responsible_name || "—"} · Vencimento: {formatLocalDate(l.end_date)}
+                    {l.resolved_at && <> · Registrado: {new Date(l.resolved_at).toLocaleDateString("pt-BR")}</>}
+                  </div>
+                  {l.loss_notes && <p className="text-xs whitespace-pre-wrap">{l.loss_notes}</p>}
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Ranking by Consultant */}
