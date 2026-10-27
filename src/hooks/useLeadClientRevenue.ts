@@ -25,13 +25,19 @@ export function useLeadClientRevenue(
     }
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, current_revenue, phone_e164")
-        .eq("account_id", accountId)
-        .not("current_revenue", "is", null);
+      let data: Array<{ id: string; current_revenue: number | string | null; phone_e164: string | null }> | null = null;
+      // 1 retry: consultas longas podem falhar por instabilidade de rede
+      for (let attempt = 0; attempt < 2 && !data; attempt++) {
+        const res = await supabase
+          .from("clients")
+          .select("id, current_revenue, phone_e164")
+          .eq("account_id", accountId)
+          .not("current_revenue", "is", null);
+        if (!cancelled) data = res.error ? null : res.data;
+        if (!data && attempt === 0 && !cancelled) await new Promise((r) => setTimeout(r, 1500));
+      }
       if (cancelled) return;
-      if (error || !data) {
+      if (!data) {
         setRevenueMap({});
         return;
       }
