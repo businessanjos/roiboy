@@ -1016,6 +1016,50 @@ export default function RHOfferWizard() {
           <Button variant="ghost" onClick={() => navigate("/rh/offers")}>Concluir</Button>
         )}
       </div>
+      </div>
+
+      {showSidePreview && (
+        <aside className="hidden lg:block sticky top-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium flex items-center gap-2"><Eye className="h-4 w-4" /> Prévia da carta</p>
+            <span className="text-xs text-muted-foreground">atualiza enquanto você digita</span>
+          </div>
+          <div className="rounded-lg border overflow-hidden h-[calc(100vh-8rem)] overflow-y-auto bg-muted">
+            <div style={{ width: 1000, zoom: 0.44 }}>
+              <OfferLetterView offer={livePreviewOffer} preview />
+            </div>
+          </div>
+        </aside>
+      )}
+      </div>
+
+      {showSidePreview && (
+        <Button type="button" variant="outline" className="lg:hidden fixed bottom-20 right-4 z-40 gap-2 shadow-lg" onClick={() => setMobilePreviewOpen(true)}>
+          <Eye className="h-4 w-4" /> Ver prévia
+        </Button>
+      )}
+      <Dialog open={mobilePreviewOpen} onOpenChange={setMobilePreviewOpen}>
+        <DialogContent className="max-w-3xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-4 py-3 border-b"><DialogTitle>Prévia da carta</DialogTitle></DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            <OfferLetterView offer={livePreviewOffer} preview />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <KpiPacksEditorDialog
+        open={kpiEditorOpen}
+        onOpenChange={setKpiEditorOpen}
+        current={contentSettings.kpi_packs}
+        onSave={(packs) => saveContentSettings({ kpi_packs: packs })}
+      />
+      <OfferDefaultsDialog
+        open={defaultsOpen}
+        onOpenChange={setDefaultsOpen}
+        current={contentSettings}
+        systemDefaults={SYSTEM_TEXT_DEFAULTS}
+        onSave={(v) => saveContentSettings(v)}
+      />
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">
