@@ -1192,6 +1192,22 @@ export default function LeadsTab() {
                           <Badge className={`${statusInfo.color} text-white text-[9px] px-1 py-0 flex-shrink-0`}>
                             {statusInfo.label}
                           </Badge>
+                          {(() => {
+                            const mqlInfo = parseLeadMql(lead.mql);
+                            if (!mqlInfo) return null;
+                            return (
+                              <Badge
+                                variant="outline"
+                                className={
+                                  mqlInfo.isMql
+                                    ? "text-[9px] px-1 py-0 flex-shrink-0 border-success/30 bg-success/15 text-success-strong"
+                                    : "text-[9px] px-1 py-0 flex-shrink-0 border-muted-foreground/30 text-muted-foreground"
+                                }
+                              >
+                                {mqlInfo.label}
+                              </Badge>
+                            );
+                          })()}
                           {leadDeals.length > 0 && (
                             <Badge variant="outline" className="text-[9px] px-1 py-0 flex-shrink-0">
                               <DollarSign className="h-2.5 w-2.5" />
