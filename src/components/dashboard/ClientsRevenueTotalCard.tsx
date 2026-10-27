@@ -199,18 +199,20 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
               )}
             </CardDescription>
           </div>
-          <Badge variant="secondary">{stats.periodLabel}</Badge>
-          {stats.hasData && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1"
-              onClick={() => setDialogOpen(true)}
-            >
-              <Eye className="h-3.5 w-3.5" />
-              Ver clientes
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
+            <Badge variant="secondary">{stats.periodLabel}</Badge>
+            {stats.hasData && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1"
+                onClick={() => setDialogOpen(true)}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Ver clientes
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
