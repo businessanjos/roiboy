@@ -230,7 +230,8 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
         custom_status:task_statuses!internal_tasks_custom_status_id_fkey(id, name, color, is_completed_status),
         activity_type:activity_types!internal_tasks_activity_type_id_fkey(id, name, color)
       `)
-      .or(leadId ? `deal_id.eq.${dealId},lead_id.eq.${leadId}` : `deal_id.eq.${dealId}`)
+      // Só atividades do próprio negócio; o histórico do lead fica na ficha do lead.
+      .eq("deal_id", dealId)
       .order("created_at", { ascending: false });
 
     if (error) {
