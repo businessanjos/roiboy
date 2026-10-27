@@ -6,8 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import {
   FAVORITE_EDUCATION_OPTIONS,
-  OTHER_EDUCATION_OPTIONS,
-  normalizeEducation,
+  formatEducationName,
 } from "@/lib/educationOptions";
 import { useEducationOptions } from "@/hooks/useEducationOptions";
 
@@ -40,7 +39,7 @@ export function EducationSelect({
 
   const customNames = useMemo(() => customOptions.map((o) => o.name), [customOptions]);
   const allKnown = useMemo(
-    () => [...FAVORITE_EDUCATION_OPTIONS, ...OTHER_EDUCATION_OPTIONS, ...customNames],
+    () => [...FAVORITE_EDUCATION_OPTIONS, ...customNames],
     [customNames],
   );
 
@@ -51,23 +50,8 @@ export function EducationSelect({
   };
 
   const favorites = useMemo(() => filter(FAVORITE_EDUCATION_OPTIONS), [query, allKnown]);
-  // Formações cadastradas pelo time primeiro, depois as padrão restantes.
+  // Exibe apenas as formações da saúde e os nomes cadastrados pelo time.
   const customFiltered = useMemo(() => filter(customNames), [query, customNames]);
-  const others = useMemo(() => {
-    const rest = OTHER_EDUCATION_OPTIONS.filter((o) => !customNames.includes(o));
-    return filter(rest);
-  }, [query, customNames]);
-
-  // Valor legado fora da lista: mostra sugestão de conversão (ou aviso simples)
-  const isKnown = useMemo(() => {
-    if (!value) return true;
-    return allKnown.includes(value);
-  }, [value, allKnown]);
-
-  const suggestion = useMemo(() => {
-    if (!value || isKnown) return null;
-    return normalizeEducation(value);
-  }, [value, isKnown]);
 
   const exactMatch = useMemo(() => {
     const q = strip(query.trim());
@@ -83,7 +67,7 @@ export function EducationSelect({
   };
 
   const handleAdd = async () => {
-    const clean = query.trim();
+    const clean = formatEducationName(query);
     if (!clean || creating) return;
     setCreating(true);
     setAddError(null);
@@ -161,7 +145,8 @@ export function EducationSelect({
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar formação..."
+                placeholder="Buscar ou criar formação..."
+                aria-label="Nome da formação"
                 className="h-8 pl-8 pr-7"
               />
               {query && (
@@ -197,33 +182,25 @@ export function EducationSelect({
                   {favorites.map(renderItem)}
                 </>
               )}
-              {others.length > 0 && (
-                <>
-                  <p className="px-2 py-1 mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
-                    Outras formações
-                  </p>
-                  {others.map(renderItem)}
-                </>
-              )}
-              {favorites.length === 0 && others.length === 0 && customFiltered.length === 0 && (
+              {favorites.length === 0 && customFiltered.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-3">
                   Nenhuma formação encontrada
                 </p>
               )}
             </div>
           </div>
-          {query.trim() && !exactMatch && (
+          {(!query.trim() || !exactMatch) && (
                 <div className="shrink-0 p-2 border-t">
                   <Button
                     type="button"
                     variant="ghost"
-                    disabled={creating}
+                    disabled={creating || !query.trim()}
                     onClick={handleAdd}
                     className="h-auto w-full justify-start gap-2 whitespace-normal px-2 py-1.5 text-left text-sm text-primary"
                   >
                     <Plus className="h-3.5 w-3.5 shrink-0" />
                     <span className="min-w-0 break-words">
-                      {creating ? "Adicionando..." : <>Adicionar "{query.trim()}"</>}
+                      {creating ? "Adicionando..." : query.trim() ? <>Adicionar "{formatEducationName(query)}"</> : "Adicionar formação"}
                     </span>
                   </Button>
                   {addError && (
@@ -247,26 +224,6 @@ export function EducationSelect({
           )}
         </PopoverContent>
       </Popover>
-      {suggestion ? (
-        <button
-          type="button"
-          onClick={() => onChange(suggestion)}
-          className="text-[11px] text-warning hover:underline text-left block"
-        >
-          Valor fora do padrão. Converter para "{suggestion}"?
-        </button>
-      ) : (
-        !isKnown && (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="text-[11px] text-warning hover:underline text-left block"
-          >
-            "{value}" está fora do padrão. Clique para escolher uma formação da lista.
-          </button>
-        )
-      )}
-
     </div>
   );
 }

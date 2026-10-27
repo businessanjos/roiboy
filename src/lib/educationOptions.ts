@@ -91,6 +91,12 @@ const strip = (v: string) =>
     .toLowerCase()
     .trim();
 
+/** Mantém o nome escolhido pelo usuário e padroniza apenas a inicial. */
+export function formatEducationName(raw: string): string {
+  const clean = raw.trim();
+  return clean.charAt(0).toLocaleUpperCase("pt-BR") + clean.slice(1);
+}
+
 /** Mapeia textos livres antigos (profissão, erros de digitação) para a formação padrão. */
 const ALIAS_MATCHERS: Array<{ test: RegExp; value: string }> = [
   { test: /biomedic|biomet(i|í)|bio-?medic/, value: "Biomedicina" },
