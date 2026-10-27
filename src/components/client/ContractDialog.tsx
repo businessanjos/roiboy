@@ -1,3 +1,4 @@
+import { useContractCatalog } from "@/hooks/useContractCatalog";
 import { useContractTypes } from "@/hooks/useContractTypes";
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -476,7 +477,7 @@ export function ContractDialog({
                   <SelectValue placeholder="Selecione o status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CONTRACT_STATUSES.map((option) => (
+                  {(contractStatusOptions.some(o => o.value === formData.status) || !formData.status ? contractStatusOptions : [...contractStatusOptions, { value: formData.status, label: contractStatusLabels[formData.status] || formData.status }]).map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>

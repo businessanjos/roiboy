@@ -1,3 +1,5 @@
+import { useContractCatalog } from "@/hooks/useContractCatalog";
+import { CATALOG_COLOR_CLASSES } from "@/lib/contracts/contractCatalog";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -670,7 +672,7 @@ export function RenewalLosses() {
               const XLSX = await import("xlsx");
               const outcomeLabel = (i: ExpiredContract) => {
                 const k = statusKey(i);
-                return k ? STATUS_META[k].label : "Pendente";
+                return k ? statusMeta[k].label : "Pendente";
               };
               const rows = sortedItems.map((i) => ({
                 Cliente: i.client_name,
@@ -1068,7 +1070,7 @@ export function RenewalLosses() {
                       options={STATUS_KEYS}
                       selected={filterStatus}
                       onChange={setFilterStatus}
-                      formatLabel={(v) => STATUS_META[v as StatusKey]?.label || v}
+                      formatLabel={(v) => statusMeta[v as StatusKey]?.label || v}
                     />
                   </TableHead>
                   <TableHead className="text-center">
@@ -1153,7 +1155,7 @@ export function RenewalLosses() {
                     <TableCell className="text-center">
                       {(() => {
                         const k = statusKey(item);
-                        return k ? <Badge className={STATUS_META[k].className}>{STATUS_META[k].label}</Badge> : null;
+                        return k ? <Badge className={statusMeta[k].className}>{statusMeta[k].label}</Badge> : null;
                       })()}
                     </TableCell>
                     <TableCell className="text-center text-xs text-muted-foreground">
@@ -1198,7 +1200,7 @@ export function RenewalLosses() {
                   <SelectValue placeholder="Selecione o motivo..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {LOSS_REASONS.map(r => (
+                  {lossReasonOptions.map(r => (
                     <SelectItem key={r} value={r}>{r}</SelectItem>
                   ))}
                 </SelectContent>
