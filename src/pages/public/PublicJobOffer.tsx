@@ -66,12 +66,6 @@ export default function PublicJobOffer() {
   const { token } = useParams();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
-  const [responding, setResponding] = useState(false);
-  const [response, setResponse] = useState<"accept" | "decline" | null>(null);
-  const [message, setMessage] = useState("");
-  const [acceptEmail, setAcceptEmail] = useState("");
-  const [acceptPhone, setAcceptPhone] = useState("");
-  const { toast } = useToast();
 
   useEffect(() => {
     (async () => {
@@ -79,8 +73,6 @@ export default function PublicJobOffer() {
       const { data } = await (supabase as any).rpc("get_job_offer_by_token", { _token: token });
       if (data) {
         setOffer(data as any);
-        setAcceptEmail(((data as any).candidate_email as string) || "");
-        setAcceptPhone(((data as any).candidate_phone as string) || "");
       }
       setLoading(false);
     })();
