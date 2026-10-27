@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLeads, Lead } from "@/hooks/useLeads";
+import { useLeadClientRevenue } from "@/hooks/useLeadClientRevenue";
+import { parseLeadMql, formatBRLCompact } from "@/lib/leads/leadListHelpers";
 import { useDeals, Deal } from "@/hooks/useDeals";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -130,6 +132,7 @@ export default function LeadsTab() {
   const { users: salesUsers, loading: usersLoading } = useSectorUsers({ sectorId: "vendas" });
   const { duplicates: leadDuplicates, checkDuplicates: checkLeadDuplicates, clearDuplicates: clearLeadDuplicates } = useLeadDuplicateDetection();
   const { currentUser } = useCurrentUser();
+  const clientRevenueMap = useLeadClientRevenue(leads, currentUser?.account_id);
 
   // Phone picker state for leads with multiple phones
   const [phonePickerOpen, setPhonePickerOpen] = useState(false);
