@@ -11,9 +11,9 @@ const METRIC_HELP: { label: string; color: string; formula: string; detail: stri
   {
     label: "Churn %",
     color: "hsl(var(--danger))",
-    formula: "cancelamentos no período ÷ base ativa no início do período × 100",
+    formula: "cancelamentos no período ÷ contratos ativos durante o período × 100",
     detail:
-      "Base inicial = contratos ativos hoje + saídas do período − entradas do período. Contam como cancelamento os contratos com status encerrado/cancelado e data de saída dentro do período.",
+      "Contratos ativos durante o período = base ativa no início + contratos iniciados no período. Assim todo contrato cancelado entra no denominador e o índice nunca passa de 100%. Contam como cancelamento os contratos com data de cancelamento dentro do período.",
   },
   {
     label: "Renovação %",
@@ -180,7 +180,14 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
         const status = String(c.status ?? "").toLowerCase();
         const bucket = bucketFor(c.product_id ?? null);
 
-        if (status === "active") bucket.ativos++;
+        // Base ativa no início do período: contrato já existia e ainda não tinha
+        // terminado/cancelado antes do início (rascunhos não contam).
+        const startedBefore = !c.start_date || c.start_date <= startStr;
+        const endBeforeStart =
+          (c.end_date && c.end_date < startStr) ||
+          (c.cancelled_at && c.cancelled_at.slice(0, 10) < startStr);
+        if (status !== "draft" && startedBefore && !endBeforeStart) bucket.ativos++;
+
         if (inPeriodTs(c.cancelled_at)) {
           bucket.cancelamentos++;
           bucket.events.push({
@@ -192,7 +199,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
             status,
           });
         }
-        if (inPeriodDate(c.start_date)) bucket.novos++;
+        if (status !== "draft" && inPeriodDate(c.start_date)) bucket.novos++;
 
         if (inPeriodDate(c.end_date) && !INACTIVE_STATUSES.includes(status)) {
           bucket.vencidos++;
