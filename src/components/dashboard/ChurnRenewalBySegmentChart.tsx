@@ -241,7 +241,10 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
 
       const result: (SegmentRow & { color: string | null })[] = [];
       for (const [segment, b] of buckets.entries()) {
-        const base = Math.max(0, b.ativos + b.cancelamentos - b.novos);
+        // Denominador = contratos ativos em algum momento do período
+        // (base no início + iniciados no período). Todo cancelado esteve ativo
+        // no período, então o churn nunca ultrapassa 100%.
+        const base = b.ativos + b.novos;
         if (base === 0 && b.vencidos === 0 && b.cancelamentos === 0) continue;
         result.push({
           segment,
