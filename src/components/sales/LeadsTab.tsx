@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLeads, Lead } from "@/hooks/useLeads";
+import { useLeadClientRevenue } from "@/hooks/useLeadClientRevenue";
+import { parseLeadMql, formatBRLCompact } from "@/lib/leads/leadListHelpers";
 import { useDeals, Deal } from "@/hooks/useDeals";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -130,6 +132,7 @@ export default function LeadsTab() {
   const { users: salesUsers, loading: usersLoading } = useSectorUsers({ sectorId: "vendas" });
   const { duplicates: leadDuplicates, checkDuplicates: checkLeadDuplicates, clearDuplicates: clearLeadDuplicates } = useLeadDuplicateDetection();
   const { currentUser } = useCurrentUser();
+  const clientRevenueMap = useLeadClientRevenue(leads, currentUser?.account_id);
 
   // Phone picker state for leads with multiple phones
   const [phonePickerOpen, setPhonePickerOpen] = useState(false);
@@ -1189,6 +1192,22 @@ export default function LeadsTab() {
                           <Badge className={`${statusInfo.color} text-white text-[9px] px-1 py-0 flex-shrink-0`}>
                             {statusInfo.label}
                           </Badge>
+                          {(() => {
+                            const mqlInfo = parseLeadMql(lead.mql);
+                            if (!mqlInfo) return null;
+                            return (
+                              <Badge
+                                variant="outline"
+                                className={
+                                  mqlInfo.isMql
+                                    ? "text-[9px] px-1 py-0 flex-shrink-0 border-success/30 bg-success/15 text-success-strong"
+                                    : "text-[9px] px-1 py-0 flex-shrink-0 border-muted-foreground/30 text-muted-foreground"
+                                }
+                              >
+                                {mqlInfo.label}
+                              </Badge>
+                            );
+                          })()}
                           {leadDeals.length > 0 && (
                             <Badge variant="outline" className="text-[9px] px-1 py-0 flex-shrink-0">
                               <DollarSign className="h-2.5 w-2.5" />
@@ -1199,6 +1218,14 @@ export default function LeadsTab() {
                         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
                           {lead.phone && (
                             <span className="truncate max-w-[90px]">{lead.phone}</span>
+                          )}
+                          {clientRevenueMap[lead.id] != null && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] px-1 py-0 flex-shrink-0 border-success/30 bg-success/10 text-success-strong"
+                            >
+                              {formatBRLCompact(clientRevenueMap[lead.id])}/mês
+                            </Badge>
                           )}
                         </div>
                       </div>

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
+import { useLeadClientRevenue } from "@/hooks/useLeadClientRevenue";
+import { parseLeadMql, formatBRLCompact } from "@/lib/leads/leadListHelpers";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
@@ -133,6 +135,7 @@ export default function Leads() {
     refetch: refetchLeads,
   } = useLeads();
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal, fetchDeals } = useDeals();
+  const clientRevenueMap = useLeadClientRevenue(leads, currentUser?.account_id);
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const [phonePickerOpen, setPhonePickerOpen] = useState(false);
   const [phonePickerLead, setPhonePickerLead] = useState<Lead | null>(null);
@@ -1450,6 +1453,23 @@ export default function Leads() {
                           <div className="flex items-center gap-1.5 overflow-hidden">
                             <span className="font-medium text-sm line-clamp-2 break-words sm:truncate sm:max-w-[150px]">{lead.full_name}</span>
                             {getStatusBadge(lead.status)}
+                            {(() => {
+                              const mqlInfo = parseLeadMql(lead.mql);
+                              if (!mqlInfo) return null;
+                              return (
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-[10px] flex-shrink-0",
+                                    mqlInfo.isMql
+                                      ? "border-success/30 bg-success/15 text-success-strong"
+                                      : "border-muted-foreground/30 text-muted-foreground"
+                                  )}
+                                >
+                                  {mqlInfo.label}
+                                </Badge>
+                              );
+                            })()}
                             {customFields.slice(0, 1).map(field => {
                               const value = fieldValues[lead.id]?.[field.id];
                               if (value === undefined || value === null) return null;
@@ -1482,6 +1502,14 @@ export default function Leads() {
                             {lead.source && (
                               <Badge variant="outline" className="text-[10px] flex-shrink-0 hidden sm:inline-flex">
                                 {LEAD_SOURCES.find((s) => s.value === lead.source)?.label || lead.source}
+                              </Badge>
+                            )}
+                            {clientRevenueMap[lead.id] != null && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] flex-shrink-0 border-success/30 bg-success/10 text-success-strong"
+                              >
+                                {formatBRLCompact(clientRevenueMap[lead.id])}/mês
                               </Badge>
                             )}
                           </div>
