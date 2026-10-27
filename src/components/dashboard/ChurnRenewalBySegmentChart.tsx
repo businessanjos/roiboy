@@ -347,7 +347,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
             >
               <BarChart
                 data={chartData}
-                margin={{ top: 16, right: 8, left: 0, bottom: 48 }}
+                margin={{ top: 16, right: 8, left: 0, bottom: 84 }}
                 onClick={(state: any) => {
                   const seg = state?.activePayload?.[0]?.payload?.segment;
                   if (seg) setSelectedSegment(seg);
@@ -357,10 +357,13 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
                 <XAxis
                   dataKey="segment"
                   tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) =>
+                    typeof value === "string" && value.length > 18 ? `${value.slice(0, 17)}…` : value
+                  }
                   interval={0}
                   angle={-25}
                   textAnchor="end"
-                  height={60}
+                  height={72}
                 />
                 <YAxis tick={{ fontSize: 11 }} unit="%" domain={[0, 100]} />
                 <ChartTooltip
