@@ -27,3 +27,5 @@
 
 - [x] Auditoria de largura mobile (deslocamento lateral): 139 rotas × 320/393/440/1440, interações (Mais, diálogos, buscas, RoyZapp, ir/voltar, teclado reduzido); causa raiz no shell + 40 telas; teste de inventário e roteiro em scripts/qa; docs/mobile-width-audit.md. iPhone físico não verificado.
 - [x] Sequências salvas no Playbook com envio em segundo plano
+
+- [x] Renovações: BRL alinhado entre tabela/detalhes/gráfico, indicadores sobre filtros, agrupamento pela base de data e vencidos por ano; 4 testes passaram e tela autenticada confirmou Financeiro R$ 5.470.000 e filtro Renovado 18/18, 100%, perdas zero. Build OK; sem mudanças em dados ou publicação. Motivos ausentes e contratos sem desfecho preservados.
