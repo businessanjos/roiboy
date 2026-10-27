@@ -330,6 +330,13 @@
       "when": 1793125297524,
       "tag": "0046_contract_catalog_options",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793127128853,
+      "tag": "0047_create_education_options",
+      "breakpoints": true
     }
   ]
 }

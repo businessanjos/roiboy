@@ -8466,6 +8466,30 @@ export type Database = {
           },
         ]
       }
+      education_options: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       email_queue: {
         Row: {
           account_id: string
