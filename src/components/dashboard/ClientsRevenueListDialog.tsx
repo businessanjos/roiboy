@@ -1,5 +1,6 @@
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { formatMillionsHint } from "@/lib/formatMillions";
+import { fetchClientEntryMonths, isOnOrAfterEntry } from "@/lib/clientEntryMonth";
 import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -38,6 +39,7 @@ interface ClientRevenueRow {
   period_total: number;
   last_month: string | null;
   last_month_revenue: number;
+  entry_month: string | null;
 }
 
 interface Props {
@@ -177,12 +179,13 @@ export function ClientsRevenueListDialog({
         );
       }
 
-      const [historyResults, productsResults] = await Promise.all([
+      const [historyResults, productsResults, entryMonths] = await Promise.all([
         Promise.all(historyPromises),
         Promise.all(productsPromises),
+        fetchClientEntryMonths(accountId!),
       ]);
 
-      const historyRows = historyResults.flat();
+      const historyRows = historyResults.flat().filter((r: any) => isOnOrAfterEntry(r.month, entryMonths[r.client_id]));
       const productRows = productsResults.flat();
 
       const periodTotalsByClient: Record<string, number> = {};
@@ -215,6 +218,7 @@ export function ClientsRevenueListDialog({
           period_total: periodTotalsByClient[c.id] || 0,
           last_month: last?.month || null,
           last_month_revenue: last?.revenue || 0,
+          entry_month: entryMonths[c.id] || null,
         };
       });
     },
@@ -368,7 +372,12 @@ export function ClientsRevenueListDialog({
                                 .toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <Link to={`/clients/${r.client_id}`} className="font-medium truncate hover:underline">{r.full_name}</Link>
+                          <div className="min-w-0">
+                            <Link to={`/clients/${r.client_id}`} className="block font-medium truncate hover:underline">{r.full_name}</Link>
+                            {r.entry_month && (
+                              <span className="block text-[10px] text-muted-foreground">Início: {monthLabel(r.entry_month)}</span>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">

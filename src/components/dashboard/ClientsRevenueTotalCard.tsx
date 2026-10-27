@@ -13,6 +13,7 @@ import { ClientsMissingRevenueDialog } from "./ClientsMissingRevenueDialog";
 import { Button } from "@/components/ui/button";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { formatMillionsHint, formatAxisMillions } from "@/lib/formatMillions";
+import { fetchClientEntryMonths, isOnOrAfterEntry } from "@/lib/clientEntryMonth";
 
 interface Props {
   accountId?: string;
@@ -71,7 +72,7 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
     setDialogOpen(true);
   };
   const { data, isLoading } = useQuery({
-    queryKey: ["dashboard-clients-revenue-history", accountId],
+    queryKey: ["dashboard-clients-revenue-history", accountId, "from-entry"],
     enabled: !!accountId,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
@@ -85,7 +86,10 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
           .range(from, to),
       );
       if (error) throw error;
-      return data as { client_id: string; month: string; revenue: number }[];
+      const entry = await fetchClientEntryMonths(accountId!);
+      return (data as { client_id: string; month: string; revenue: number }[]).filter((r) =>
+        isOnOrAfterEntry(r.month, entry[r.client_id]),
+      );
     },
   });
 
