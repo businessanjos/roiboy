@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Save, Sparkles, ExternalLink, Copy, Plus, X, Loader2, Wand2, Eye, Upload, Image as ImageIcon, Trash2, LayoutTemplate, ArrowUp, ArrowDown, RotateCcw, Pencil, Settings2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Save, Sparkles, ExternalLink, Copy, Plus, X, Loader2, Wand2, Eye, Upload, Image as ImageIcon, Trash2, LayoutTemplate, ArrowUp, ArrowDown, RotateCcw, Pencil, Settings2, Undo2 } from "lucide-react";
 import { OfferLetterView, type Offer as PreviewOffer } from "@/pages/public/PublicJobOffer";
 import { useOfferContentSettings } from "@/hooks/useOfferContentSettings";
 import { KpiPacksEditorDialog, OfferDefaultsDialog } from "@/components/rh/offers/OfferContentSettingsDialogs";
+import { useUndoHistory } from "@/hooks/useUndoHistory";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -216,30 +217,55 @@ export default function RHOfferWizard() {
   const removePerk = (i: number) => set("perks", form.perks.filter((_, idx) => idx !== i));
   const updatePerk = (i: number, key: "title" | "description", v: string) =>
     set("perks", form.perks.map((p, idx) => idx === i ? { ...p, [key]: v } : p));
-  const addMetric = () => set("success_metrics", [...form.success_metrics, { label: "", target: "", horizon: "" }]);
-  const removeMetric = (i: number) => set("success_metrics", form.success_metrics.filter((_, idx) => idx !== i));
+  const metricsUndo = useUndoHistory<Form["success_metrics"]>();
+  const addMetric = () => {
+    metricsUndo.snapshot(form.success_metrics);
+    set("success_metrics", [...form.success_metrics, { label: "", target: "", horizon: "" }]);
+  };
+  const removeMetric = (i: number) => {
+    metricsUndo.snapshot(form.success_metrics);
+    set("success_metrics", form.success_metrics.filter((_, idx) => idx !== i));
+  };
   const updateMetric = (i: number, key: "label" | "target" | "horizon", v: string) =>
     set("success_metrics", form.success_metrics.map((m, idx) => idx === i ? { ...m, [key]: v } : m));
   const addSuggestedMetric = (m: KpiSuggestion) => {
     const exists = form.success_metrics.some((x) => x.label.trim().toLowerCase() === m.label.trim().toLowerCase());
     if (exists) return;
+    metricsUndo.snapshot(form.success_metrics);
     set("success_metrics", [...form.success_metrics, { ...m }]);
   };
   const applyAllFromPack = (metrics: KpiSuggestion[]) => {
     const existing = new Set(form.success_metrics.map((x) => x.label.trim().toLowerCase()));
     const merged = [...form.success_metrics, ...metrics.filter((m) => !existing.has(m.label.trim().toLowerCase()))];
+    metricsUndo.snapshot(form.success_metrics);
     set("success_metrics", merged);
   };
-  const addSection = () => set("custom_sections", [...form.custom_sections, { id: crypto.randomUUID(), title: "", body: "" }]);
-  const removeSection = (i: number) => set("custom_sections", form.custom_sections.filter((_, idx) => idx !== i));
+  const undoMetrics = () => {
+    const prev = metricsUndo.pop();
+    if (prev) set("success_metrics", prev);
+  };
+  const sectionsUndo = useUndoHistory<Form["custom_sections"]>();
+  const addSection = () => {
+    sectionsUndo.snapshot(form.custom_sections);
+    set("custom_sections", [...form.custom_sections, { id: crypto.randomUUID(), title: "", body: "" }]);
+  };
+  const removeSection = (i: number) => {
+    sectionsUndo.snapshot(form.custom_sections);
+    set("custom_sections", form.custom_sections.filter((_, idx) => idx !== i));
+  };
   const updateSection = (i: number, key: "title" | "body", v: string) =>
     set("custom_sections", form.custom_sections.map((b, idx) => (idx === i ? { ...b, [key]: v } : b)));
   const moveSection = (i: number, dir: -1 | 1) => {
     const arr = [...form.custom_sections];
     const j = i + dir;
     if (j < 0 || j >= arr.length) return;
+    sectionsUndo.snapshot(form.custom_sections);
     [arr[i], arr[j]] = [arr[j], arr[i]];
     set("custom_sections", arr);
+  };
+  const undoSections = () => {
+    const prev = sectionsUndo.pop();
+    if (prev) set("custom_sections", prev);
   };
 
   // Padrões da conta (fallback: textos originais do sistema)
@@ -793,6 +819,9 @@ export default function RHOfferWizard() {
                     <Button type="button" size="sm" variant="ghost" onClick={() => setKpiEditorOpen(true)} className="gap-1 text-xs">
                       <Pencil className="h-3.5 w-3.5" /> Editar sugestões
                     </Button>
+                    <Button type="button" size="sm" variant="ghost" disabled={!metricsUndo.canUndo} onClick={undoMetrics} className="gap-1 text-xs">
+                      <Undo2 className="h-3.5 w-3.5" /> Desfazer
+                    </Button>
                     <Button type="button" size="sm" variant="outline" onClick={addMetric} className="gap-1">
                       <Plus className="h-3.5 w-3.5" /> Adicionar métrica
                     </Button>
@@ -872,16 +901,19 @@ export default function RHOfferWizard() {
                       placeholder="Métrica (ex.: NPS, Churn, Receita)"
                       value={m.label}
                       onChange={(e) => updateMetric(i, "label", e.target.value)}
+                      onFocus={() => metricsUndo.snapshot(form.success_metrics)}
                     />
                     <Input
                       placeholder="Meta (ex.: ≥ 70, -20%, R$ 1M)"
                       value={m.target}
                       onChange={(e) => updateMetric(i, "target", e.target.value)}
+                      onFocus={() => metricsUndo.snapshot(form.success_metrics)}
                     />
                     <Input
                       placeholder="Prazo (ex.: 6 meses)"
                       value={m.horizon}
                       onChange={(e) => updateMetric(i, "horizon", e.target.value)}
+                      onFocus={() => metricsUndo.snapshot(form.success_metrics)}
                     />
                     <Button type="button" size="icon" variant="ghost" onClick={() => removeMetric(i)} className="text-danger">
                       <X className="h-4 w-4" />
@@ -897,9 +929,14 @@ export default function RHOfferWizard() {
                     <Label className="text-base">Blocos extras</Label>
                     <p className="text-xs text-muted-foreground">Seções livres que aparecem na carta antes de "Próximos passos".</p>
                   </div>
-                  <Button type="button" size="sm" variant="outline" onClick={addSection} className="gap-1">
-                    <Plus className="h-3.5 w-3.5" /> Adicionar bloco
-                  </Button>
+                  <div className="flex gap-2 shrink-0">
+                    <Button type="button" size="sm" variant="ghost" disabled={!sectionsUndo.canUndo} onClick={undoSections} className="gap-1 text-xs">
+                      <Undo2 className="h-3.5 w-3.5" /> Desfazer
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={addSection} className="gap-1">
+                      <Plus className="h-3.5 w-3.5" /> Adicionar bloco
+                    </Button>
+                  </div>
                 </div>
                 {form.custom_sections.length === 0 && (
                   <p className="text-xs text-muted-foreground italic">Ex.: "Seu primeiro mês", "Nossa cultura", "Plano de carreira".</p>
@@ -907,7 +944,7 @@ export default function RHOfferWizard() {
                 {form.custom_sections.map((b, i) => (
                   <div key={b.id} className="rounded-md border bg-muted/30 p-3 space-y-2">
                     <div className="flex gap-2">
-                      <Input value={b.title} onChange={(e) => updateSection(i, "title", e.target.value)} placeholder="Título do bloco" />
+                      <Input value={b.title} onChange={(e) => updateSection(i, "title", e.target.value)} onFocus={() => sectionsUndo.snapshot(form.custom_sections)} placeholder="Título do bloco" />
                       <Button type="button" size="icon" variant="ghost" disabled={i === 0} onClick={() => moveSection(i, -1)} title="Subir"><ArrowUp className="h-4 w-4" /></Button>
                       <Button type="button" size="icon" variant="ghost" disabled={i === form.custom_sections.length - 1} onClick={() => moveSection(i, 1)} title="Descer"><ArrowDown className="h-4 w-4" /></Button>
                       <Button type="button" size="icon" variant="ghost" className="text-danger" onClick={() => removeSection(i)} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
