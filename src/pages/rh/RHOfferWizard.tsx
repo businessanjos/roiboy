@@ -24,13 +24,30 @@ import { OfferRichTextarea } from "@/components/rh/offers/OfferRichTextarea";
 import WorkScheduleField, { validateSchedule, normalizeSchedule, type WorkSchedule } from "@/components/rh/offers/WorkScheduleField";
 
 const STEPS = [
-  { id: 1, title: "Candidato" },
-  { id: 2, title: "Posição" },
-  { id: 3, title: "Remuneração" },
-  { id: 4, title: "Conteúdo" },
-  { id: 5, title: "Design" },
-  { id: 6, title: "Revisão" },
+  { id: 1, title: "Candidato", hint: "Quem vai receber a proposta." },
+  { id: 2, title: "Posição", hint: "Cargo, contratação, datas e jornada." },
+  { id: 3, title: "Remuneração", hint: "Salário, benefícios e diferenciais." },
+  { id: 4, title: "Conteúdo", hint: "Textos, métricas de sucesso e fechamento." },
+  { id: 5, title: "Design", hint: "Cor e capa da carta." },
+  { id: 6, title: "Revisão", hint: "Confira, salve e gere o link." },
 ];
+
+function WizardSection({ id, title, description, actions, children, className }: {
+  id?: string; title: string; description?: string; actions?: React.ReactNode; children: React.ReactNode; className?: string;
+}) {
+  return (
+    <section id={id} className={cn("space-y-4 border-t pt-6 first:border-t-0 first:pt-0", className)}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold">{title}</h3>
+          {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+        </div>
+        {actions && <div className="flex items-center gap-1 shrink-0">{actions}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 const ACCENT_PALETTE = [
   "#6366F1", "#8B5CF6", "#EC4899", "#F43F5E",
@@ -646,21 +663,23 @@ export default function RHOfferWizard() {
       <div className={cn(showSidePreview && "lg:grid lg:gap-6 lg:items-start", showSidePreview && (previewLarge ? "lg:grid-cols-[minmax(0,1fr)_760px]" : "lg:grid-cols-[minmax(0,1fr)_580px]"))}>
       <div className="space-y-6 min-w-0">
       <Card>
-        <CardHeader>
-          <CardTitle>{STEPS[step - 1].title}</CardTitle>
+        <CardHeader className="pb-4 border-b">
+          <p className="text-xs font-medium text-muted-foreground">Etapa {step} de {STEPS.length}</p>
+          <CardTitle className="text-lg">{STEPS[step - 1].title}</CardTitle>
+          <p className="text-sm text-muted-foreground">{STEPS[step - 1].hint}</p>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {step === 1 && (
             <div id="edit-candidate" className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", flash("edit-candidate"))}>
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 space-y-1.5">
                 <Label>Nome completo *</Label>
                 <Input value={form.candidate_name} onChange={(e) => set("candidate_name", e.target.value)} placeholder="Ex.: Mariana Souza" />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>E-mail</Label>
                 <Input type="email" value={form.candidate_email} onChange={(e) => set("candidate_email", e.target.value)} />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>Telefone</Label>
                 <Input value={form.candidate_phone} onChange={(e) => set("candidate_phone", e.target.value)} />
               </div>
@@ -668,102 +687,113 @@ export default function RHOfferWizard() {
           )}
 
           {step === 2 && (
-            <div id="edit-details" className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", flash("edit-details"))}>
-              <div className="md:col-span-2">
-                <Label>Cargo *</Label>
-                <Input value={form.position_title} onChange={(e) => set("position_title", e.target.value)} placeholder="Ex.: Customer Success Analyst" />
-              </div>
-              <div>
-                <Label>Departamento</Label>
-                <Input value={form.department} onChange={(e) => set("department", e.target.value)} />
-              </div>
-              <div>
-                <Label>Senioridade</Label>
-                <Select value={form.seniority} onValueChange={(v) => set("seniority", v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(JOB_SENIORITY_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Modelo de trabalho</Label>
-                <Select value={form.work_model} onValueChange={(v) => set("work_model", v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(WORK_MODEL_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Tipo de contratação</Label>
-                <Select value={form.contract_type} onValueChange={(v) => set("contract_type", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(CONTRACT_TYPE_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Unidade / Cidade</Label>
-                <Input value={form.unit} onChange={(e) => set("unit", e.target.value)} placeholder="Ex.: São Paulo / Remoto" />
-              </div>
-              <div>
-                <Label>Reporta-se a</Label>
-                <Input value={form.reports_to} onChange={(e) => set("reports_to", e.target.value)} />
-              </div>
-              <div>
-                <Label>Data de início</Label>
-                <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
-              </div>
-              <div>
-                <Label>Validade da proposta</Label>
-                <Input type="date" value={form.offer_expires_at} onChange={(e) => set("offer_expires_at", e.target.value)} />
-              </div>
-              <div className="md:col-span-2">
+            <div id="edit-details" className={cn("space-y-6", flash("edit-details"))}>
+              <WizardSection title="Função">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2 space-y-1.5">
+                    <Label>Cargo *</Label>
+                    <Input value={form.position_title} onChange={(e) => set("position_title", e.target.value)} placeholder="Ex.: Customer Success Analyst" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Departamento</Label>
+                    <Input value={form.department} onChange={(e) => set("department", e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Senioridade</Label>
+                    <Select value={form.seniority} onValueChange={(v) => set("seniority", v)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(JOB_SENIORITY_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Reporta-se a</Label>
+                    <Input value={form.reports_to} onChange={(e) => set("reports_to", e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Unidade / Cidade</Label>
+                    <Input value={form.unit} onChange={(e) => set("unit", e.target.value)} placeholder="Ex.: São Paulo / Remoto" />
+                  </div>
+                </div>
+              </WizardSection>
+
+              <WizardSection title="Contratação e datas">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Modelo de trabalho</Label>
+                    <Select value={form.work_model} onValueChange={(v) => set("work_model", v)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(WORK_MODEL_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Tipo de contratação</Label>
+                    <Select value={form.contract_type} onValueChange={(v) => set("contract_type", v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(CONTRACT_TYPE_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Data de início</Label>
+                    <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Validade da proposta</Label>
+                    <Input type="date" value={form.offer_expires_at} onChange={(e) => set("offer_expires_at", e.target.value)} />
+                  </div>
+                </div>
+              </WizardSection>
+
+              <WizardSection title="Jornada de trabalho">
                 <WorkScheduleField
                   value={form.work_schedule}
                   onChange={(v) => set("work_schedule", v)}
                 />
-              </div>
-              <div className="md:col-span-2 space-y-3 rounded-lg border p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <Label className="text-base">Quadros extras em "Detalhes da posição"</Label>
-                    <p className="text-xs text-muted-foreground">Ex.: "Equipamentos: notebook e celular", "Período de experiência: 90 dias".</p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button type="button" size="sm" variant="ghost" disabled={!detailsUndo.canUndo} onClick={undoDetails} className="gap-1 text-xs">
-                      <Undo2 className="h-3.5 w-3.5" /> Desfazer
+              </WizardSection>
+
+              <WizardSection
+                title={`Quadros extras em "Detalhes da posição"`}
+                description={`Ex.: "Equipamentos: notebook e celular", "Experiência: 90 dias".`}
+                actions={
+                  <>
+                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8" disabled={!detailsUndo.canUndo} onClick={undoDetails} title="Desfazer">
+                      <Undo2 className="h-3.5 w-3.5" />
                     </Button>
                     <Button type="button" size="sm" variant="outline" onClick={addDetail} className="gap-1">
-                      <Plus className="h-3.5 w-3.5" /> Adicionar quadro
+                      <Plus className="h-3.5 w-3.5" /> Quadro
                     </Button>
-                  </div>
-                </div>
+                  </>
+                }
+              >
                 {form.extra_details.map((d, i) => (
-                  <div key={d.id} className="flex flex-col sm:flex-row gap-2">
+                  <div key={d.id} className="flex flex-col sm:flex-row gap-2 rounded-lg border p-2">
                     <Select value={d.icon || "briefcase"} onValueChange={(v) => { detailsUndo.snapshot(form.extra_details); updateDetail(i, "icon", v); }}>
-                      <SelectTrigger className="sm:w-36 shrink-0" title="Ícone do quadro"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="sm:w-36 shrink-0 h-9" title="Ícone do quadro"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {Object.entries(OFFER_DETAIL_ICONS).map(([k, { label, Icon }]) => (
                           <SelectItem key={k} value={k}><span className="inline-flex items-center gap-2"><Icon className="h-4 w-4" /> {label}</span></SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input className="sm:w-1/3" value={d.title} onChange={(e) => updateDetail(i, "title", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Título (ex.: Equipamentos)" />
-                    <Input value={d.body} onChange={(e) => updateDetail(i, "body", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Conteúdo" />
-                    <Button type="button" size="icon" variant="ghost" className="text-danger shrink-0" onClick={() => removeDetail(i)} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
+                    <Input className="sm:w-1/3 h-9" value={d.title} onChange={(e) => updateDetail(i, "title", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Título" />
+                    <Input className="h-9" value={d.body} onChange={(e) => updateDetail(i, "body", e.target.value)} onFocus={() => detailsUndo.snapshot(form.extra_details)} placeholder="Conteúdo" />
+                    <Button type="button" size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-danger shrink-0" onClick={() => removeDetail(i)} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
-              </div>
+              </WizardSection>
             </div>
           )}
 
           {step === 3 && (
-            <div className="space-y-4">
-              <div id="edit-salary" className={cn("grid grid-cols-1 md:grid-cols-3 gap-4", flash("edit-salary"))}>
-                <div>
+            <div className="space-y-6">
+              <WizardSection id="edit-salary" className={flash("edit-salary")} title="Salário">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
                   <Label>Moeda</Label>
                   <Select value={form.salary_currency} onValueChange={(v) => set("salary_currency", v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -774,22 +804,23 @@ export default function RHOfferWizard() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 space-y-1.5">
                   <Label>Valor mensal</Label>
                   <Input type="number" step="0.01" value={form.salary_amount} onChange={(e) => set("salary_amount", e.target.value)} placeholder="0,00" />
                 </div>
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>Observação sobre salário</Label>
                 <Input value={form.salary_note} onChange={(e) => set("salary_note", e.target.value)} placeholder="Ex.: revisado após 6 meses" />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>Remuneração variável</Label>
                 <OfferRichTextarea rows={2} value={form.variable_compensation} onChange={(v) => set("variable_compensation", v)} placeholder="Ex.: PLR semestral atrelada a metas..." />
               </div>
-              <div id="edit-benefits" className={flash("edit-benefits")}>
-                <Label className="mb-2 block">Benefícios</Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              </WizardSection>
+
+              <WizardSection id="edit-benefits" className={flash("edit-benefits")} title="Benefícios" description="Marque os incluídos e, se quiser, informe valores.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2.5">
                   {JOB_BENEFITS.map((b) => (
                     <label key={b} className="flex items-center gap-2 text-sm cursor-pointer">
                       <Checkbox checked={form.benefits.includes(b)} onCheckedChange={() => toggleBenefit(b)} />
@@ -806,16 +837,14 @@ export default function RHOfferWizard() {
                   const editable = form.benefits.filter((b) => inputKind(b) !== "none");
                   if (editable.length === 0) return null;
                   return (
-                    <div className="mt-4 space-y-2 rounded-lg border bg-muted/30 p-3">
-                      <p className="text-xs text-muted-foreground">
-                        Preencha as informações abaixo (opcional). Deixe em branco para não exibir na carta.
-                      </p>
+                    <div className="space-y-2 rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">Valores (opcional — em branco não aparece na carta)</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {editable.map((b) => {
                           const kind = inputKind(b);
                           return (
                             <div key={b} className="flex items-center gap-2">
-                              <Label className="text-xs w-40 shrink-0 truncate" title={b}>{b}</Label>
+                              <Label className="text-xs w-36 shrink-0 truncate font-normal" title={b}>{b}</Label>
                               {kind === "money" ? (
                                 <div className="relative flex-1">
                                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
@@ -844,26 +873,27 @@ export default function RHOfferWizard() {
                     </div>
                   );
                 })()}
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Perks personalizados</Label>
+              </WizardSection>
+
+              <WizardSection
+                title="Perks personalizados"
+                description="Diferenciais além dos benefícios padrão."
+                actions={
                   <Button type="button" size="sm" variant="outline" onClick={addPerk} className="gap-1">
-                    <Plus className="h-3 w-3" /> Adicionar
+                    <Plus className="h-3.5 w-3.5" /> Perk
                   </Button>
-                </div>
-                <div className="space-y-2">
-                  {form.perks.map((p, i) => (
-                    <div key={i} className="flex gap-2 items-start p-3 rounded-lg border bg-muted/30">
-                      <div className="flex-1 space-y-2">
-                        <Input placeholder="Título (ex.: Equipamento próprio)" value={p.title} onChange={(e) => updatePerk(i, "title", e.target.value)} />
-                        <Input placeholder="Descrição curta" value={p.description} onChange={(e) => updatePerk(i, "description", e.target.value)} />
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={() => removePerk(i)}><X className="h-4 w-4" /></Button>
+                }
+              >
+                {form.perks.map((p, i) => (
+                  <div key={i} className="flex gap-2 items-start rounded-lg border p-3">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2">
+                      <Input className="h-9" placeholder="Título (ex.: Equipamento)" value={p.title} onChange={(e) => updatePerk(i, "title", e.target.value)} />
+                      <Input className="h-9" placeholder="Descrição curta" value={p.description} onChange={(e) => updatePerk(i, "description", e.target.value)} />
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-danger" onClick={() => removePerk(i)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </WizardSection>
             </div>
           )}
 
