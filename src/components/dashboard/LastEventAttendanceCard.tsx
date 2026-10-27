@@ -388,5 +388,52 @@ export function LastEventAttendanceCard() {
         </div>
       </CardContent>
     </Card>
+
+    <Dialog open={eventsOpen} onOpenChange={setEventsOpen}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Eventos do agrupamento</DialogTitle>
+          <DialogDescription>
+            {data.events.length} evento{data.events.length > 1 ? "s" : ""} presencial{data.events.length > 1 ? "is" : ""}
+            {dateLabel ? ` · ${dateLabel}` : ""} · {data.attended} presentes de {data.totalParticipants} convidados
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="max-h-[60vh] pr-3">
+          <div className="space-y-2">
+            {data.events.map((e) => {
+              const pct = e.participants > 0 ? Math.round((e.attended / e.participants) * 100) : 0;
+              return (
+                <Link
+                  key={e.id}
+                  to={`/events/${e.id}`}
+                  onClick={() => setEventsOpen(false)}
+                  className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 hover:bg-muted p-3 transition"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{e.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {e.scheduled_at
+                        ? format(new Date(e.scheduled_at), "dd 'de' MMMM yyyy 'às' HH:mm", { locale: ptBR })
+                        : "Data não definida"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="text-right">
+                      <p className="text-sm font-bold">{e.attended}<span className="text-muted-foreground font-normal">/{e.participants}</span></p>
+                      <p className="text-[10px] text-muted-foreground">presentes</p>
+                    </div>
+                    <Badge variant={pct >= 70 ? "default" : "secondary"} className="text-xs">
+                      {pct}%
+                    </Badge>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
