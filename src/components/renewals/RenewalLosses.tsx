@@ -30,16 +30,35 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from "recharts";
 
+// Lista única de motivos: a mesma usada no cadastro do contrato e no gráfico (sem "Outro").
 const LOSS_REASONS = [
   "Financeiro",
+  "Operacional/Financeiro",
   "Insatisfação com resultados",
-  "Concorrência",
+  "Falta de tempo / priorização",
+  "Mudança de momento do negócio",
   "Mudança de prioridade",
-  "Sem retorno / Ghosting",
-  "Mudou de cidade/país",
-  "Fechou a empresa",
-  "Outro",
+  "Não se adaptou ao formato",
+  "Cliente não retorna – Inadimplente",
+  "Problemas pessoais",
 ];
+
+type StatusKey = "renewed" | "not_renewed" | "cancelled" | "dropout_7d";
+const STATUS_KEYS: StatusKey[] = ["renewed", "not_renewed", "cancelled", "dropout_7d"];
+const STATUS_META: Record<StatusKey, { label: string; className: string }> = {
+  renewed: { label: "Renovado", className: "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success" },
+  not_renewed: { label: "Não renovado", className: "bg-muted text-foreground" },
+  cancelled: { label: "Cancelado", className: "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger" },
+  dropout_7d: { label: "Desistência 07 dias (Garantia)", className: "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning" },
+};
+const CANCELLED_CONTRACT_STATUSES = ["cancelled", "dismissed", "dismissal_termination"];
+function statusKey(i: { outcome: string | null; contract_status?: string | null }): StatusKey | null {
+  if (i.outcome === "renewed") return "renewed";
+  if (i.outcome !== "lost") return null;
+  if (i.contract_status === "dropout_7d") return "dropout_7d";
+  if (i.contract_status && CANCELLED_CONTRACT_STATUSES.includes(i.contract_status)) return "cancelled";
+  return "not_renewed";
+}
 
 // Visão completa dos Resultados de renovação (todos os consultores)
 const RENEWALS_FULL_ACCESS_USER_IDS = [
@@ -74,6 +93,7 @@ interface ExpiredContract {
   responsible_name: string | null;
   responsible_user_id: string | null;
   outcome: string | null;
+  contract_status: string | null;
   outcome_id: string | null;
   loss_reason: string | null;
   loss_notes: string | null;
@@ -352,6 +372,7 @@ export function RenewalLosses() {
           responsible_name: (c.clients as any)?.users?.name || null,
           responsible_user_id: (c.clients as any)?.responsible_user_id || null,
           outcome: outcome?.outcome || null,
+          contract_status: c.status || null,
           outcome_id: outcome?.id || null,
           loss_reason: outcome?.loss_reason || CONTRACT_REASON_LABELS[c.cancellation_reason] || c.cancellation_reason || null,
           loss_notes: outcome?.loss_notes || c.cancellation_justification || null,
@@ -549,17 +570,19 @@ export function RenewalLosses() {
 
   const uniqueConsultoras = [...new Set(items.map(c => c.responsible_name).filter(Boolean))] as string[];
   const uniqueProdutos = [...new Set(items.map(c => c.product_name).filter(Boolean))] as string[];
-  const uniqueMotivos = [...new Set(items.map(c => c.loss_reason).filter(Boolean))] as string[];
+  const motivoOf = (i: ExpiredContract) => i.outcome === "lost" ? (i.loss_reason || "Não informado") : null;
+  const uniqueMotivos = [...new Set(items.map(motivoOf).filter(Boolean))] as string[];
 
   const filteredItems = items.filter(i => {
     if (searchClient.trim() && !i.client_name.toLowerCase().includes(searchClient.trim().toLowerCase())) return false;
     if (filterConsultora.length > 0 && (!i.responsible_name || !filterConsultora.includes(i.responsible_name))) return false;
     if (filterProduto.length > 0 && (!i.product_name || !filterProduto.includes(i.product_name))) return false;
     if (filterStatus.length > 0) {
-      const outcome = i.outcome || "pending";
-      if (!filterStatus.includes(outcome)) return false;
+      const k = statusKey(i);
+      if (!k || !filterStatus.includes(k)) return false;
     }
-    if (filterMotivo.length > 0 && (!i.loss_reason || !filterMotivo.includes(i.loss_reason))) return false;
+    const m = motivoOf(i);
+    if (filterMotivo.length > 0 && (!m || !filterMotivo.includes(m))) return false;
     return true;
   });
 
@@ -631,7 +654,7 @@ export function RenewalLosses() {
         )}
         <p className="text-xs text-muted-foreground self-center">
           {dateBasis === "resolved"
-            ? "Período pela data em que a consultora registrou o status (Renovado / Cancelou)."
+            ? "Período pela data em que a consultora registrou o status (Renovado / Não renovado)."
             : "Período pela data de vencimento do contrato."}
         </p>
         {canSeeAllSequenceRuns(currentUser as any) && (
@@ -642,8 +665,10 @@ export function RenewalLosses() {
             disabled={loading || sortedItems.length === 0}
             onClick={async () => {
               const XLSX = await import("xlsx");
-              const outcomeLabel = (o: string | null) =>
-                o === "renewed" ? "Renovado" : o === "lost" ? "Cancelou" : o === "negotiating" ? "Em negociação" : "Pendente";
+              const outcomeLabel = (i: ExpiredContract) => {
+                const k = statusKey(i);
+                return k ? STATUS_META[k].label : "Pendente";
+              };
               const rows = sortedItems.map((i) => ({
                 Cliente: i.client_name,
                 Consultora: i.responsible_name || "",
@@ -651,7 +676,7 @@ export function RenewalLosses() {
                 "Valor Renovação": i.renewal_value,
                 "Venceu em": i.end_date ? formatLocalDate(i.end_date) : "",
                 "Data renovação": i.resolved_at ? new Date(i.resolved_at).toLocaleDateString("pt-BR") : "",
-                Status: outcomeLabel(i.outcome),
+                Status: outcomeLabel(i),
                 Motivo: i.loss_reason || "",
                 Observação: i.loss_notes || "",
               }));
@@ -933,10 +958,10 @@ export function RenewalLosses() {
                   <TableHead className="text-center">
                     <MultiSelectHeader
                       label="Status"
-                      options={["renewed", "lost"]}
+                      options={STATUS_KEYS}
                       selected={filterStatus}
                       onChange={setFilterStatus}
-                      formatLabel={(v) => v === "renewed" ? "Renovados" : "Perdidos"}
+                      formatLabel={(v) => STATUS_META[v as StatusKey]?.label || v}
                     />
                   </TableHead>
                   <TableHead className="text-center">
@@ -990,7 +1015,7 @@ export function RenewalLosses() {
                             <p className="text-xs leading-relaxed">
                               {item.has_new_contract
                                 ? "Classificado automaticamente como Renovado: existe um contrato de produto de renovação (REN.) para este cliente. A data de renovação usa o início desse contrato."
-                                : `Classificado manualmente: a consultora registrou o desfecho "${item.outcome === "renewed" ? "Renovado" : "Cancelou"}" em ${item.resolved_at ? new Date(item.resolved_at).toLocaleDateString("pt-BR") : "—"}.`}
+                                : `Classificado manualmente: a consultora registrou o desfecho "${item.outcome === "renewed" ? "Renovado" : "Não renovado"}" em ${item.resolved_at ? new Date(item.resolved_at).toLocaleDateString("pt-BR") : "—"}.`}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -1019,15 +1044,10 @@ export function RenewalLosses() {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-center">
-                      {item.outcome === "renewed" ? (
-                        <Badge className="bg-success-soft text-success-strong dark:bg-success/30 dark:text-success">
-                          ✅ Renovado
-                        </Badge>
-                      ) : item.outcome === "lost" ? (
-                        <Badge className="bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger">
-                          ❌ Cancelou
-                        </Badge>
-                      ) : null}
+                      {(() => {
+                        const k = statusKey(item);
+                        return k ? <Badge className={STATUS_META[k].className}>{STATUS_META[k].label}</Badge> : null;
+                      })()}
                     </TableCell>
                     <TableCell className="text-center text-xs text-muted-foreground">
                       {item.loss_reason || "—"}
@@ -1065,7 +1085,7 @@ export function RenewalLosses() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Motivo da perda</label>
+              <label className="text-sm font-medium">Motivo</label>
               <Select value={editReason} onValueChange={setEditReason}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o motivo..." />
@@ -1093,7 +1113,7 @@ export function RenewalLosses() {
             </Button>
             <Button variant="destructive" onClick={() => handleSaveOutcome("lost")} disabled={saving || !editReason}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Registrar Perda
+              Registrar Não Renovado
             </Button>
           </DialogFooter>
         </DialogContent>
