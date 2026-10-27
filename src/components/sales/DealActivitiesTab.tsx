@@ -354,9 +354,9 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
           <ListTodo className="h-3.5 w-3.5" />
           Atividades ({pendingTasks.length} pendentes)
         </h4>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap w-full min-w-0">
           <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
-            <SelectTrigger className="h-7 text-[11px] w-[170px]">
+            <SelectTrigger className="h-7 text-[11px] flex-1 min-w-[130px] max-w-[190px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

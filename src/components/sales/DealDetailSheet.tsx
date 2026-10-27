@@ -1888,21 +1888,21 @@ export function DealDetailSheet({
               <div className="space-y-3">
                 <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab} className="w-full">
                   <TabsList className="w-full grid grid-cols-4 h-[52px] sm:h-8">
-                    <TabsTrigger value="history" className="text-xs h-11 sm:h-7">
-                      <Clock className="h-3 w-3 mr-1" />
-                      Histórico
+                    <TabsTrigger value="history" className="text-xs h-11 sm:h-7 min-w-0 px-1">
+                      <Clock className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
+                      <span className="truncate">Histórico</span>
                     </TabsTrigger>
-                    <TabsTrigger value="activities" className="text-xs h-11 sm:h-7">
-                      <ListTodo className="h-3 w-3 mr-1" />
-                      Atividades
+                    <TabsTrigger value="activities" className="text-xs h-11 sm:h-7 min-w-0 px-1">
+                      <ListTodo className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
+                      <span className="truncate">Atividades</span>
                     </TabsTrigger>
-                    <TabsTrigger value="briefing" className="text-xs h-11 sm:h-7">
-                      <icons.ClipboardList className="h-3 w-3 mr-1" />
-                      Briefing Op.
+                    <TabsTrigger value="briefing" className="text-xs h-11 sm:h-7 min-w-0 px-1">
+                      <icons.ClipboardList className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
+                      <span className="truncate">Briefing Op.</span>
                     </TabsTrigger>
-                    <TabsTrigger value="contract" className="text-xs h-11 sm:h-7">
-                      <icons.FileSignature className="h-3 w-3 mr-1" />
-                      Contrato
+                    <TabsTrigger value="contract" className="text-xs h-11 sm:h-7 min-w-0 px-1">
+                      <icons.FileSignature className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
+                      <span className="truncate">Contrato</span>
                     </TabsTrigger>
                   </TabsList>
 
