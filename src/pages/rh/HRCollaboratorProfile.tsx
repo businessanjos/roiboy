@@ -41,7 +41,7 @@ import PdaDocumentsTab from "./components/pda/PdaDocumentsTab";
 import { POSITION_OPTIONS } from "@/lib/rh/pda";
 import { Wallet, History, Sparkles } from "lucide-react";
 
-const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com", "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com"];
+const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "jonathanmarcato@anjosbusiness.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com", "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com"];
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Ativo" },
