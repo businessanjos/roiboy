@@ -230,8 +230,12 @@ export default function RHOfferWizard() {
     set("success_metrics", form.success_metrics.map((m, idx) => idx === i ? { ...m, [key]: v } : m));
   const addSuggestedMetric = (m: KpiSuggestion) => {
     const exists = form.success_metrics.some((x) => x.label.trim().toLowerCase() === m.label.trim().toLowerCase());
-    if (exists) return;
     metricsUndo.snapshot(form.success_metrics);
+    if (exists) {
+      const key = m.label.trim().toLowerCase();
+      set("success_metrics", form.success_metrics.filter((x) => x.label.trim().toLowerCase() !== key));
+      return;
+    }
     set("success_metrics", [...form.success_metrics, { ...m }]);
   };
   const applyAllFromPack = (metrics: KpiSuggestion[]) => {
@@ -353,6 +357,24 @@ export default function RHOfferWizard() {
       return validateSchedule(form.work_schedule) === null;
     }
     return true;
+  };
+
+  const missingForNext = (): string | null => {
+    if (step === 1 && form.candidate_name.trim().length <= 1) return "Preencha o nome do candidato.";
+    if (step === 2) {
+      if (form.position_title.trim().length <= 1) return "Preencha o cargo.";
+      const err = validateSchedule(form.work_schedule);
+      if (err) return `Jornada de trabalho: ${err}`;
+    }
+    return null;
+  };
+  const goNext = () => {
+    const missing = missingForNext();
+    if (missing) {
+      toast({ title: "Falta preencher antes de avançar", description: missing, variant: "destructive" });
+      return;
+    }
+    setStep(step + 1);
   };
 
   const save = async (status: "draft" | "sent", opts: { silent?: boolean } = {}) => {
@@ -867,15 +889,14 @@ export default function RHOfferWizard() {
                                 <button
                                   key={idx}
                                   type="button"
-                                  disabled={already}
                                   onClick={() => addSuggestedMetric(m)}
                                   className={cn(
                                     "group text-left rounded-full border px-3 py-1.5 text-xs transition-all",
                                     already
-                                      ? "border-success bg-success-soft text-success-strong cursor-default dark:bg-success/20"
+                                      ? "border-success bg-success-soft text-success-strong hover:opacity-80 dark:bg-success/20"
                                       : "border-warning/60 hover:border-warning hover:bg-warning-soft dark:hover:bg-warning/20"
                                   )}
-                                  title={`${m.target} · ${m.horizon}`}
+                                  title={already ? "Clique para remover" : `${m.target} · ${m.horizon}`}
                                 >
                                   {already ? <Check className="inline h-3 w-3 mr-1" /> : <Plus className="inline h-3 w-3 mr-1" />}
                                   <span className="font-medium">{m.label}</span>
@@ -1176,7 +1197,7 @@ export default function RHOfferWizard() {
           <ArrowLeft className="h-4 w-4 mr-1" /> Anterior
         </Button>
         {step < STEPS.length ? (
-          <Button onClick={() => setStep(step + 1)} disabled={!canNext()}>
+          <Button onClick={goNext} className={cn(!canNext() && "opacity-60")}>
             Próximo <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         ) : (
