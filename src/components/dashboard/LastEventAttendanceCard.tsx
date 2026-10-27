@@ -62,15 +62,12 @@ export function LastEventAttendanceCard() {
           return;
         }
 
-        // Apenas estes títulos contam como "evento presencial" no card
-        const ALLOWED_TITLES = [
-          "EC - PRESENCIAL",
-          "EP - PRESENCIAL",
-          "CONSELHO | EVENTO PRESENCIAL EC",
-        ];
+        // Conta como "evento presencial" qualquer evento com modality presencial
+        // ou cujo título mencione "presencial" (títulos variam: "Eternum Club - PRESENCIAL",
+        // "Eternum Private | Encontro 3", "CLAX PRESENCIAL" etc.)
         const normalize = (s: string) => s.toUpperCase().replace(/\s+/g, " ").trim();
-        const isPresencial = (e: { title: string | null }) =>
-          ALLOWED_TITLES.includes(normalize(e.title || ""));
+        const isPresencial = (e: { title: string | null; modality: string | null }) =>
+          e.modality === "presencial" || normalize(e.title || "").includes("PRESENCIAL");
         const presenciais = evts.filter(isPresencial);
         if (presenciais.length === 0) {
           if (!cancelled) setData(null);
