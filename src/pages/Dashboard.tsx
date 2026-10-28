@@ -77,6 +77,7 @@ import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/co
 import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakdownDialog";
 import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttendanceCard";
 import { WonToOnboardingCard } from "@/components/dashboard/WonToOnboardingCard";
+import { StatusMetricCard } from "@/components/dashboard/StatusMetricCard";
 import { ClientsRevenueTotalCard } from "@/components/dashboard/ClientsRevenueTotalCard";
 import { EditableGoal } from "@/components/dashboard/EditableGoal";
 import { DashboardMapTab } from "@/components/dashboard/DashboardMapTab";
@@ -612,6 +613,22 @@ export default function Dashboard() {
       clientInGroup(c.product_ids, productClientsOpen.memberIds),
     );
   }, [productClientsOpen, educationScopedClients]);
+
+  // Distribuição por produto exibida na dica do cartão "Ativos".
+  // Usa exatamente a mesma conta dos cartões "Clientes por Produto" acima.
+  const activeProductRows = useMemo(
+    () =>
+      productsWithClients
+        .map((g) => ({
+          label: g.name,
+          value: educationScopedClients.filter((c: any) =>
+            clientInGroup(c.product_ids, g.memberIds),
+          ).length,
+        }))
+        .filter((row) => row.value > 0)
+        .sort((a, b) => b.value - a.value),
+    [productsWithClients, educationScopedClients],
+  );
 
   const gestaoFilteredClients = useMemo(() => {
     if (gestaoProductFilter === "all") return educationScopedClients;
