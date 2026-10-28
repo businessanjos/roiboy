@@ -106,8 +106,8 @@ export function ClientListDialog({
           )}
         </div>
 
-        <div className="relative mt-3 min-h-0 flex-1">
-          <div className="h-full overflow-y-auto px-3 pb-5">
+        <div className="relative mt-3">
+          <div className="max-h-[52vh] overflow-y-auto px-3 pb-5">
           {people.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">{emptyLabel}</p>
           ) : (
