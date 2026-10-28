@@ -1,3 +1,4 @@
+import { inferLossReason } from "@/lib/renewals/inferLossReason";
 import { useContractCatalog } from "@/hooks/useContractCatalog";
 import { CATALOG_COLOR_CLASSES } from "@/lib/contracts/contractCatalog";
 import { useEffect, useState, useCallback } from "react";
