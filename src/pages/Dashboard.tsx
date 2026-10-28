@@ -951,13 +951,13 @@ export default function Dashboard() {
 
           {/* Filters - aligned with tabs (hidden on Mapa which has its own filters) */}
           {dashboardTab !== "mapa" && (
-          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto overflow-x-auto pb-1 scrollbar-thin">
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto lg:min-w-0 lg:flex-1 lg:justify-end overflow-x-auto pb-1 scrollbar-thin">
             <div className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0">
               <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="text-xs sm:text-sm font-medium hidden xs:inline">Filtros:</span>
             </div>
             <Select value={gestaoProductFilter} onValueChange={setGestaoProductFilter}>
-              <SelectTrigger className="w-[130px] sm:w-[160px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0">
+              <SelectTrigger className="w-[150px] sm:w-[190px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0">
                 <SelectValue placeholder="Produtos" />
               </SelectTrigger>
               <SelectContent>
