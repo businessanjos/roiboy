@@ -757,19 +757,26 @@ export function RenewalLosses() {
           <CardContent>
             {monthlyChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={monthlyChartData}>
-                  <CartesianGrid className="opacity-30" stroke="hsl(var(--hairline))" />
-                  <XAxis dataKey="month" fontSize={12} />
-                  <YAxis fontSize={12} tickFormatter={(v) => `R$${v}`} />
+                <BarChart data={monthlyChartData} margin={{ top: 8, right: 12, left: 4, bottom: 4 }} barCategoryGap="24%">
+                  <CartesianGrid className="opacity-30" stroke="hsl(var(--hairline))" vertical={false} />
+                  <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} dy={6} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis
+                    fontSize={11}
+                    width={52}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: "hsl(var(--muted-foreground))" }}
+                    tickFormatter={(v) => formatAxisMillions(Number(v))}
+                  />
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [
                       formatCurrency(value),
                       name === "lost" ? "Não renovado" : "Renovado"
                     ]}
                   />
-                  <Legend formatter={(v) => v === "lost" ? "Não renovado" : "Renovado"} />
-                  <Bar dataKey="renewed" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="lost" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  <Legend formatter={(v) => v === "lost" ? "Não renovado" : "Renovado"} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                  <Bar dataKey="renewed" stackId="a" fill="hsl(var(--success))" radius={[0, 0, 0, 0]} maxBarSize={48} />
+                  <Bar dataKey="lost" stackId="a" fill="hsl(var(--danger))" radius={[4, 4, 0, 0]} maxBarSize={48} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
