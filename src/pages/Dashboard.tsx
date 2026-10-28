@@ -383,6 +383,10 @@ export default function Dashboard() {
     let periodEnd: Date = now;
     
     switch (gestaoPeriodFilter) {
+      case "all":
+        // "Todo o período" começa antes do primeiro contrato da conta.
+        periodStart = new Date(2000, 0, 1);
+        break;
       case "month":
         periodStart = startOfMonth(now);
         periodEnd = endOfMonth(now);
@@ -424,6 +428,11 @@ export default function Dashboard() {
         !clientInGroup(clientProductsMap[row.client_id] || [], selectedProductMemberIds)
       )
         continue;
+      if (gestaoPeriodFilter === "all") {
+        // Sem recorte de data, a base é todo cliente que já passou pela carteira.
+        underContract.add(row.client_id);
+        continue;
+      }
       if (row.start_date > startStr) continue;
       if (row.end_date && row.end_date < startStr) continue;
       if (row.cancelled_at && row.cancelled_at.slice(0, 10) < startStr) continue;
@@ -433,6 +442,7 @@ export default function Dashboard() {
   }, [
     clientContractRows,
     gestaoPeriodRange.periodStart,
+    gestaoPeriodFilter,
     inEducation,
     gestaoProductFilter,
     selectedProductMemberIds,
@@ -511,8 +521,24 @@ export default function Dashboard() {
     const { periodStart, periodEnd } = gestaoPeriodRange;
     const months: { [key: string]: { month: string; novos: number; cancelamentos: number; encerramentos: number; suspensos: number; pausados: number } } = {};
     
+    // Com "Todo o período" não há data-limite: partimos do mês do contrato mais
+    // antigo da conta, senão a série nasceria com séculos de meses vazios.
+    let rangeStart = periodStart;
+    if (gestaoPeriodFilter === "all") {
+      let earliest: Date | null = null;
+      for (const contract of filteredContractData) {
+        for (const raw of [contract.start_date, contract.cancelled_at, contract.status_changed_at, contract.end_date]) {
+          if (!raw) continue;
+          const parsed = parseISO(String(raw).slice(0, 10));
+          if (isNaN(parsed.getTime())) continue;
+          if (!earliest || parsed < earliest) earliest = parsed;
+        }
+      }
+      if (earliest) rangeStart = earliest;
+    }
+
     // Calculate the number of months to show
-    const monthsDiff = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+    const monthsDiff = Math.max(1, Math.ceil((periodEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24 * 30)));
     
     // Initialize months based on period
     for (let i = monthsDiff - 1; i >= 0; i--) {
@@ -555,7 +581,7 @@ export default function Dashboard() {
     });
     
     return Object.values(months);
-  }, [filteredContractData, gestaoPeriodRange]);
+  }, [filteredContractData, gestaoPeriodRange, gestaoPeriodFilter]);
 
 
   // Clientes do recorte atual: formação (quando escolhida) e, então, produto.
@@ -733,6 +759,7 @@ export default function Dashboard() {
       "6": "Últimos 6 meses",
       "12": "Últimos 12 meses",
       year: "Este ano",
+      all: "Todo o período",
       custom: "Período personalizado",
     };
     return labels[gestaoPeriodFilter] || "Período";
@@ -1060,6 +1087,7 @@ export default function Dashboard() {
                 <SelectItem value="6">Últimos 6 meses</SelectItem>
                 <SelectItem value="12">Últimos 12 meses</SelectItem>
                 <SelectItem value="year">Este ano</SelectItem>
+                <SelectItem value="all">Todo o período</SelectItem>
                 <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
@@ -1674,7 +1702,7 @@ export default function Dashboard() {
                     </div>
                     Evolução Mensal
                   </CardTitle>
-                  <CardDescription className="mt-1">{gestaoViewMode === "operacoes" ? "Novos, cancelamentos, encerramentos, suspensos e pausados nos últimos 6 meses" : "Novos contratos nos últimos 6 meses"}</CardDescription>
+                  <CardDescription className="mt-1">{gestaoViewMode === "operacoes" ? `Novos, cancelamentos, encerramentos, suspensos e pausados — ${periodLabel.toLowerCase()}` : `Novos contratos — ${periodLabel.toLowerCase()}`}</CardDescription>
                 </div>
               </div>
             </CardHeader>
