@@ -8,20 +8,28 @@ import { Button } from "@/components/ui/button";
 import { buildEducationOptions, educationMatches } from "@/lib/dashboard/clientEducation";
 
 interface Props {
-  /** Clientes já filtrados pelo dashboard (produto/formação). */
+  /** Clientes já filtrados pelo dashboard (produto). */
   clients: Array<{ id: string; full_name: string; hasActiveContract?: boolean }>;
   educationById: Map<string, string | null>;
+  /** Clientes sob contrato no início do período selecionado. Sem isso, usa hasActiveContract. */
+  activeClientIds?: Set<string>;
 }
 
 const TOP_COUNT = 8;
 
-export function ClientsByEducationChart({ clients, educationById }: Props) {
+export function ClientsByEducationChart({ clients, educationById, activeClientIds }: Props) {
   const [selected, setSelected] = useState<{ value: string; label: string } | null>(null);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(false);
 
-  // Mesma régua de "Clientes por Produto": só clientes com contrato ativo.
-  const active = useMemo(() => clients.filter((c) => c.hasActiveContract === true), [clients]);
+  // Clientes sob contrato no início do período filtrado (ou ativos agora, sem o conjunto).
+  const active = useMemo(
+    () =>
+      clients.filter((c) =>
+        activeClientIds ? activeClientIds.has(c.id) : c.hasActiveContract === true,
+      ),
+    [clients, activeClientIds],
+  );
 
   const data = useMemo(
     () => buildEducationOptions(active.map((c) => educationById.get(c.id) ?? null)),
@@ -53,7 +61,9 @@ export function ClientsByEducationChart({ clients, educationById }: Props) {
           <GraduationCap className="h-5 w-5 text-primary" />
           Clientes por Formação
         </CardTitle>
-        <CardDescription>Clientes com contrato ativo. Clique numa formação para ver quem são.</CardDescription>
+        <CardDescription>
+          Clientes sob contrato no início do período selecionado. Clique numa formação para ver quem são.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
@@ -120,7 +130,7 @@ export function ClientsByEducationChart({ clients, educationById }: Props) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{selected?.label}</DialogTitle>
-            <DialogDescription>{people.length} cliente(s) com contrato ativo</DialogDescription>
+            <DialogDescription>{people.length} cliente(s) sob contrato no período</DialogDescription>
           </DialogHeader>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
