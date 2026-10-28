@@ -82,6 +82,8 @@ import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 
 import { ChurnRenewalBySegmentChart } from "@/components/dashboard/ChurnRenewalBySegmentChart";
 import { buildProductGroups, clientInGroup } from "@/lib/dashboard/productGroups";
+import { useClientEducation } from "@/hooks/useClientEducation";
+import { EDUCATION_ALL, educationMatches } from "@/lib/dashboard/clientEducation";
 
 
 
@@ -161,6 +163,64 @@ export default function Dashboard() {
   // Contract stats from RPC for accurate Gestão metrics
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
 
+  // Formação informada na ficha de cada cliente — filtro opcional da Gestão/CX.
+  const [gestaoEducationFilter, setGestaoEducationFilter] = useState<string>(EDUCATION_ALL);
+  const { educationById, options: educationOptions } = useClientEducation();
+
+  const educationClientIds = useMemo(() => {
+    if (gestaoEducationFilter === EDUCATION_ALL) return null;
+    const ids: string[] = [];
+    educationById.forEach((education, clientId) => {
+      if (educationMatches(education, gestaoEducationFilter)) ids.push(clientId);
+    });
+    return ids;
+  }, [educationById, gestaoEducationFilter]);
+
+  const educationSet = useMemo(
+    () => (educationClientIds ? new Set(educationClientIds) : null),
+    [educationClientIds],
+  );
+
+  const inEducation = useCallback(
+    (clientId?: string | null) => !educationSet || (!!clientId && educationSet.has(clientId)),
+    [educationSet],
+  );
+
+  // Contagem local de contratos por cliente: quando a formação reduz a conta a um
+  // recorte, a contagem geral (que não conhece o filtro) é substituída por esta.
+  const { data: clientContractRows } = useQuery({
+    queryKey: ["dashboard-contract-client-status", currentUser?.account_id],
+    enabled: !!currentUser?.account_id,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
+    queryFn: async () => {
+      const { data, error } = await fetchAllRows<{ client_id: string; status: string; end_date: string | null }>(
+        (from, to) =>
+          supabase
+            .from("client_contracts")
+            .select("client_id, status, end_date")
+            .eq("account_id", currentUser!.account_id!)
+            .order("id", { ascending: true })
+            .range(from, to),
+      );
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const scopedContractStats = useMemo(() => {
+    if (!educationSet) return null;
+    const rows = (clientContractRows ?? []).filter((row) => educationSet.has(row.client_id));
+    const distinct = (predicate: (row: any) => boolean) =>
+      new Set(rows.filter(predicate).map((row) => row.client_id)).size;
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      total_clients: new Set(rows.map((row) => row.client_id)).size,
+      active: distinct((row) => row.status === "active"),
+      expired: distinct((row) => row.status === "active" && !!row.end_date && row.end_date < today),
+    };
+  }, [clientContractRows, educationSet]);
+
   // Editable dashboard goals (per account)
   const { data: dashboardGoals } = useQuery({
     queryKey: ["dashboard-goals", currentUser?.account_id],
@@ -180,7 +240,7 @@ export default function Dashboard() {
       };
     },
   });
-  const { data: doubleChairCount } = useDoubleChairCount(currentUser?.account_id);
+  const { data: doubleChairCount } = useDoubleChairCount(currentUser?.account_id, educationClientIds);
 
   // Contracts data for the Contratos tab (exclude renewals to avoid duplicates)
   // Optimized: limit to 500 most recent + paginated fetch for full data
@@ -360,9 +420,12 @@ export default function Dashboard() {
         if (!clientInGroup(clientProducts, selectedProductMemberIds)) return false;
       }
 
+      // Formação escolhida reduz a conta ao recorte de clientes correspondente
+      if (!inEducation(contract.client_id)) return false;
+
       return true;
     });
-  }, [contractData, gestaoProductFilter, selectedProductMemberIds, gestaoPeriodRange, clientProductsMap]);
+  }, [contractData, gestaoProductFilter, selectedProductMemberIds, gestaoPeriodRange, clientProductsMap, inEducation]);
 
   // Calculate monthly chart data including new clients
   const monthlyChartData = useMemo(() => {
@@ -416,20 +479,26 @@ export default function Dashboard() {
   }, [filteredContractData, gestaoPeriodRange]);
 
 
-  // Filter clients by gestaoProductFilter for status cards
+  // Clientes do recorte atual: formação (quando escolhida) e, então, produto.
+  const educationScopedClients = useMemo(
+    () => (educationSet ? clients.filter((c: any) => inEducation(c.id)) : clients),
+    [clients, inEducation],
+  );
+
   const gestaoFilteredClients = useMemo(() => {
-    if (gestaoProductFilter === "all") return clients;
-    return clients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds));
-  }, [clients, gestaoProductFilter, selectedProductMemberIds]);
+    if (gestaoProductFilter === "all") return educationScopedClients;
+    return educationScopedClients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds));
+  }, [educationScopedClients, gestaoProductFilter, selectedProductMemberIds]);
 
   // Filter CX upcoming events by product filter (shares same filter as Gestão)
   const filteredUpcomingEvents = useMemo(() => {
-    if (gestaoProductFilter === "all") return upcomingEvents;
     return (upcomingEvents || []).filter((e: any) => {
+      if (!inEducation(e.client_id)) return false;
+      if (gestaoProductFilter === "all") return true;
       const clientProducts = clientProductsMap[e.client_id] || [];
       return clientInGroup(clientProducts, selectedProductMemberIds);
     });
-  }, [upcomingEvents, gestaoProductFilter, selectedProductMemberIds, clientProductsMap]);
+  }, [upcomingEvents, gestaoProductFilter, selectedProductMemberIds, clientProductsMap, inEducation]);
 
   const gestaoClientStats = useMemo(() => ({
     total: gestaoFilteredClients.length,
@@ -438,6 +507,11 @@ export default function Dashboard() {
     churnRisk: gestaoFilteredClients.filter(c => c.status === "churn_risk").length,
     paused: gestaoFilteredClients.filter(c => c.status === "paused").length,
   }), [gestaoFilteredClients]);
+
+  // Números exibidos nos cartões: a contagem local assume quando a formação filtra a conta.
+  const shownTotalClients = scopedContractStats?.total_clients ?? contractStats?.total_clients ?? gestaoClientStats.total;
+  const shownActiveClients = scopedContractStats?.active ?? contractStats?.active ?? gestaoClientStats.active;
+  const shownExpiredClients = scopedContractStats?.expired ?? contractStats?.expired ?? 0;
 
   // Helper to sum exit counts based on the active filter (cancel only / ended only / both)
   const sumExits = (m: { cancelamentos: number; encerramentos: number }) => {
@@ -452,11 +526,11 @@ export default function Dashboard() {
   const retentionMetrics = useMemo(() => {
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + sumExits(m), 0);
-    const ativosAtuais = contractStats?.active ?? gestaoClientStats.active;
+    const ativosAtuais = shownActiveClients;
     const baseInicio = Math.max(0, ativosAtuais + cancelamentos - novos);
     const rate = baseInicio > 0 ? Math.round(((baseInicio - cancelamentos) / baseInicio) * 100) : 100;
     return { rate, novos, cancelamentos };
-  }, [monthlyChartData, contractStats, gestaoClientStats, gestaoExitTypeFilter]);
+  }, [monthlyChartData, shownActiveClients, gestaoExitTypeFilter]);
 
   // Period-scoped totals derived from the monthly chart data
   const periodExitTotals = useMemo(() => {
@@ -514,12 +588,13 @@ export default function Dashboard() {
         : [...cancelStatuses, "ended"];
     return contractData.filter(contract => {
       if (!allowed.includes(contract.status)) return false;
+      if (!inEducation(contract.client_id)) return false;
       const exitDate = contract.cancelled_at || contract.status_changed_at || contract.end_date;
       if (!exitDate) return false;
       const date = parseISO(exitDate);
       return date >= periodStart && date <= periodEnd;
     });
-  }, [contractData, gestaoPeriodRange, gestaoExitTypeFilter]);
+  }, [contractData, gestaoPeriodRange, gestaoExitTypeFilter, inEducation]);
 
   const lostFinancialValue = useMemo(() => {
     const totalLost = lostContracts.reduce((sum, c) => sum + (c.value || 0), 0);
@@ -585,11 +660,11 @@ export default function Dashboard() {
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
     const encerramentos = monthlyChartData.reduce((sum, m) => sum + (m.encerramentos || 0), 0);
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
-    const ativosAtuais = contractStats?.active ?? gestaoClientStats.active;
+    const ativosAtuais = shownActiveClients;
     const activeBase = Math.max(0, ativosAtuais + cancelamentos + encerramentos - novos);
     const rate = activeBase > 0 ? (cancelamentos / activeBase) * 100 : 0;
     return { rate, cancelamentos, novos, activeBase };
-  }, [monthlyChartData, contractStats, gestaoClientStats]);
+  }, [monthlyChartData, shownActiveClients]);
 
 
   // Taxa de renovação por COORTE DE VENCIMENTO: considera os contratos cujo
@@ -601,6 +676,7 @@ export default function Dashboard() {
       currentUser?.account_id,
       gestaoPeriodRange.periodStart.toISOString(),
       gestaoPeriodRange.periodEnd.toISOString(),
+      gestaoEducationFilter,
     ],
     enabled: !!currentUser?.account_id,
     staleTime: 1000 * 60 * 5,
@@ -624,7 +700,9 @@ export default function Dashboard() {
       if (expErr) throw expErr;
 
       const cohort = (expired ?? []).filter(
-        (c: any) => !["draft", "cancelled"].includes(String(c.status ?? "").toLowerCase())
+        (c: any) =>
+          !["draft", "cancelled"].includes(String(c.status ?? "").toLowerCase()) &&
+          inEducation(c.client_id)
       );
 
       if (cohort.length === 0) {
@@ -858,6 +936,19 @@ export default function Dashboard() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={gestaoEducationFilter} onValueChange={setGestaoEducationFilter}>
+              <SelectTrigger className="w-[150px] sm:w-[190px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0">
+                <SelectValue placeholder="Formação" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[320px]">
+                <SelectItem value="all">Todas as formações</SelectItem>
+                {educationOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {`${option.label} (${option.count})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select 
               value={gestaoPeriodFilter} 
               onValueChange={(value) => {
@@ -900,8 +991,8 @@ export default function Dashboard() {
                 onClick={() => navigate("/contracts?status=active")}
               >
                 Contratos abertos
-                {typeof contractStats?.active === "number" && (
-                  <Badge variant="secondary" className="ml-2">{contractStats.active}</Badge>
+                {typeof shownActiveClients === "number" && (
+                  <Badge variant="secondary" className="ml-2">{shownActiveClients}</Badge>
                 )}
               </Button>
             )}
@@ -942,7 +1033,7 @@ export default function Dashboard() {
                 </PopoverContent>
               </Popover>
             )}
-            {(gestaoProductFilter !== "all" || gestaoPeriodFilter !== "year" || gestaoCustomDateRange) && (
+            {(gestaoProductFilter !== "all" || gestaoPeriodFilter !== "year" || gestaoCustomDateRange || gestaoEducationFilter !== EDUCATION_ALL) && (
               <Button 
                 variant="ghost" 
                 size="sm"
@@ -950,6 +1041,7 @@ export default function Dashboard() {
                   setGestaoProductFilter("all");
                   setGestaoPeriodFilter("year");
                   setGestaoCustomDateRange(undefined);
+                  setGestaoEducationFilter(EDUCATION_ALL);
                 }}
                 className="h-9 text-muted-foreground hover:text-foreground"
               >
@@ -1078,7 +1170,7 @@ export default function Dashboard() {
             <GroupEngagementReport />
           </div>
 
-          <OverdueClientsCard />
+          <OverdueClientsCard clientIds={educationClientIds} />
 
           {canViewOpsConsultantWorkload(currentUser?.email) && (
             <OperationsConsultantWorkloadCard />
@@ -1091,16 +1183,8 @@ export default function Dashboard() {
           {/* Faturamento combinado dos clientes */}
           <ClientsRevenueTotalCard
             accountId={currentUser?.account_id}
-            clientIds={
-              gestaoProductFilter === "all"
-                ? clients.map((c: any) => c.id)
-                : clients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds)).map((c: any) => c.id)
-            }
-            totalClients={
-              gestaoProductFilter === "all"
-                ? clients.length
-                : clients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds)).length
-            }
+            clientIds={gestaoFilteredClients.map((c: any) => c.id)}
+            totalClients={gestaoFilteredClients.length}
             productLabel={
               gestaoProductFilter === "all"
                 ? undefined
@@ -1127,7 +1211,7 @@ export default function Dashboard() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {productsWithClients.map((product) => {
-                    const clientCount = clients.filter((c: any) => clientInGroup(c.product_ids, product.memberIds)).length;
+                    const clientCount = educationScopedClients.filter((c: any) => clientInGroup(c.product_ids, product.memberIds)).length;
                     return (
                       <div
                         key={product.id}
@@ -1341,12 +1425,13 @@ export default function Dashboard() {
             accountId={currentUser?.account_id}
             periodStart={gestaoPeriodRange.periodStart}
             periodEnd={gestaoPeriodRange.periodEnd}
+            clientIds={educationClientIds}
           />
 
 
 
           {/* Comparecimento no último evento presencial (largura total) */}
-          {gestaoViewMode === "operacoes" && <LastEventAttendanceCard />}
+          {gestaoViewMode === "operacoes" && <LastEventAttendanceCard clientIds={educationClientIds} />}
 
           {/* Status Cards - Single Row */}
           <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-4 xl:grid-cols-8" : "md:grid-cols-3"}`}>
@@ -1357,7 +1442,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Total Clientes</p>
-                    <p className="text-2xl font-bold text-foreground">{contractStats?.total_clients ?? gestaoClientStats.total}</p>
+                    <p className="text-2xl font-bold text-foreground">{shownTotalClients}</p>
                   </div>
                   <Users className="h-5 w-5 text-primary" />
                 </div>
@@ -1387,7 +1472,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Ativos</p>
-                    <p className="text-2xl font-bold text-success">{contractStats?.active ?? gestaoClientStats.active}</p>
+                    <p className="text-2xl font-bold text-success">{shownActiveClients}</p>
                   </div>
                   <TrendingUp className="h-5 w-5 text-success" />
                 </div>
@@ -1463,7 +1548,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Vencidos</p>
-                    <p className="text-2xl font-bold text-warning">{contractStats?.expired ?? 0}</p>
+                    <p className="text-2xl font-bold text-warning">{shownExpiredClients}</p>
                   </div>
                   <Clock className="h-5 w-5 text-warning" />
                 </div>
@@ -1472,7 +1557,7 @@ export default function Dashboard() {
 
             {/* Tempo Ganho → Onboarding */}
             {gestaoViewMode === "operacoes" && (
-              <WonToOnboardingCard accountId={currentUser?.account_id} monthsBack={6} />
+              <WonToOnboardingCard accountId={currentUser?.account_id} monthsBack={6} clientIds={educationClientIds} />
             )}
            </div>
 
@@ -1722,7 +1807,7 @@ export default function Dashboard() {
             {/* Clientes por Produto */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {productsWithClients.map((product) => {
-                const clientCount = clients.filter((c: any) => clientInGroup(c.product_ids, product.memberIds)).length;
+                const clientCount = educationScopedClients.filter((c: any) => clientInGroup(c.product_ids, product.memberIds)).length;
                 return (
                   <Card key={product.id}>
                     <CardContent className="p-8">
@@ -1749,7 +1834,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Total Clientes</p>
-                      <p className="text-4xl font-bold">{contractStats?.total_clients ?? gestaoClientStats.total}</p>
+                      <p className="text-4xl font-bold">{shownTotalClients}</p>
                     </div>
                     <Users className="h-8 w-8 text-primary" />
                   </div>
@@ -1777,7 +1862,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Ativos</p>
-                      <p className="text-4xl font-bold text-success">{contractStats?.active ?? gestaoClientStats.active}</p>
+                      <p className="text-4xl font-bold text-success">{shownActiveClients}</p>
                     </div>
                     <TrendingUp className="h-8 w-8 text-success" />
                   </div>
@@ -1845,7 +1930,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Vencidos</p>
-                      <p className="text-4xl font-bold text-warning">{contractStats?.expired ?? 0}</p>
+                      <p className="text-4xl font-bold text-warning">{shownExpiredClients}</p>
                     </div>
                     <Clock className="h-8 w-8 text-warning" />
                   </div>

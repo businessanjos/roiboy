@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { clientScopeIds } from "@/lib/dashboard/clientScope";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +38,12 @@ const RENEWAL_TO_BASE: Record<string, string> = {
   "Ren. Eternum Private": "Eternum Private",
 };
 
-export function LastEventAttendanceCard() {
+interface Props {
+  /** Considera apenas participantes destes clientes (filtro de formação). */
+  clientIds?: string[] | null;
+}
+
+export function LastEventAttendanceCard({ clientIds }: Props) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const [data, setData] = useState<LastEventGroup | null>(null);
@@ -85,8 +91,10 @@ export function LastEventAttendanceCard() {
           .in("event_id", eventIds);
 
         const partsByEvent = new Map<string, { client_id: string | null; rsvp_status: string | null }[]>();
+        const scope = clientScopeIds(clientIds);
         for (const p of allParts ?? []) {
           if (!p.event_id) continue;
+          if (scope && (!p.client_id || !scope.has(p.client_id))) continue;
           const arr = partsByEvent.get(p.event_id) || [];
           arr.push({ client_id: p.client_id ?? null, rsvp_status: p.rsvp_status ?? null });
           partsByEvent.set(p.event_id, arr);
@@ -238,7 +246,7 @@ export function LastEventAttendanceCard() {
     return () => {
       cancelled = true;
     };
-  }, [accountId]);
+  }, [accountId, clientIds]);
 
   if (loading) {
     return (

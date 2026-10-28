@@ -6,10 +6,12 @@ import { useWonToOnboardingTime } from "@/hooks/useWonToOnboardingTime";
 interface Props {
   accountId?: string;
   monthsBack?: number;
+  /** Restringe o cálculo a estes clientes (filtro de formação do dashboard). */
+  clientIds?: string[] | null;
 }
 
-export function WonToOnboardingCard({ accountId, monthsBack = 6 }: Props) {
-  const { data, isLoading } = useWonToOnboardingTime(accountId, monthsBack);
+export function WonToOnboardingCard({ accountId, monthsBack = 6, clientIds }: Props) {
+  const { data, isLoading } = useWonToOnboardingTime(accountId, monthsBack, clientIds);
 
   const avg = data?.avg_days;
   const display = isLoading
