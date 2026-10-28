@@ -74,7 +74,19 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
           Clique numa formação para ver quem são.
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-4 pt-2">
+        <CardContent className="p-4 pt-2">
+          {shortPeriod && (
+            <p className="mb-2.5 flex items-start gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2.5 py-1.5 text-[11px] leading-snug text-muted-foreground">
+              <Info className="mt-[1px] h-3.5 w-3.5 shrink-0 text-primary/70" />
+              <span>
+                Período curto{periodLabel ? ` (${periodLabel})` : ""}: quase todos esses clientes
+                também estão ativos hoje, então o total fica próximo do anual. Use{" "}
+                <span className="font-medium text-foreground">"Este ano"</span> ou{" "}
+                <span className="font-medium text-foreground">"Últimos 12 meses"</span> para
+                comparar.
+              </span>
+            </p>
+          )}
         {data.length === 0 ? (
           <p className="py-3 text-center text-sm text-muted-foreground">Nenhum cliente ativo.</p>
         ) : (
