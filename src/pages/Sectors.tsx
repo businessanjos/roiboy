@@ -330,7 +330,13 @@ export default function Sectors() {
       <div className="mx-auto w-full max-w-5xl px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 md:py-12">
         {/* Header compacto no celular, centralizado no desktop */}
         <header className="mb-6 flex items-center gap-3 md:mb-12 md:flex-col md:text-center">
-          <img src={eternumSimbolo} alt="Eternum" className="h-11 w-auto shrink-0 md:mb-2 md:h-20" />
+          <img
+            src={eternumSimbolo}
+            alt="Eternum"
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            className="h-11 w-auto shrink-0 select-none md:mb-2 md:h-20"
+          />
           <div className="min-w-0">
             <p className="text-[13px] font-medium text-muted-foreground">
               {currentUser?.name ? `Olá, ${currentUser.name.split(" ")[0]}` : "Bem-vindo"}
