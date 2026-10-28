@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { OfferEditableBlocks, type OfferBlocksEditor, type StripAnchor } from "@/components/rh/offers/OfferEditableBlocks";
 import { CheckCircle2, XCircle, MapPin, Briefcase, Calendar, Gift, ArrowRight, Loader2, Sparkles, Clock, Laptop, Car, Plane, Home, Users, GraduationCap, HeartPulse, Shield, Star, Target, Coffee, Smartphone, Building2, Wallet, Award } from "lucide-react";
 
 export const OFFER_DETAIL_ICONS: Record<string, { label: string; Icon: React.ComponentType<{ className?: string }> }> = {
@@ -72,7 +73,7 @@ export type Offer = {
   first_viewed_at: string | null;
   view_count: number;
   candidate_photo_url: string | null;
-  custom_sections?: { id: string; title: string; body: string; kind?: "detail" | "strip"; icon?: string }[] | null;
+  custom_sections?: { id: string; title: string; body: string; kind?: "detail" | "strip" | "text"; icon?: string; anchor?: StripAnchor }[] | null;
 };
 
 // Paleta Eternum
@@ -125,7 +126,14 @@ export default function PublicJobOffer() {
   return <OfferLetterView offer={offer} onOfferChange={setOffer} />;
 }
 
-export function OfferLetterView({ offer, onOfferChange, preview = false, onSectionClick }: { offer: Offer; onOfferChange?: (o: Offer) => void; preview?: boolean; onSectionClick?: (target: { label: string; blockId?: string }) => void }) {
+export function OfferLetterView({ offer, onOfferChange, preview = false, onSectionClick, editor }: { offer: Offer; onOfferChange?: (o: Offer) => void; preview?: boolean; onSectionClick?: (target: { label: string; blockId?: string }) => void; editor?: OfferBlocksEditor }) {
+  const stripsAt = (a: StripAnchor) => (offer.custom_sections || []).filter((b) => b.kind === "strip" && (b.anchor || "end") === a);
+  const renderStrips = (a: StripAnchor, wrap: boolean) => {
+    const items = stripsAt(a);
+    if (!editor && !items.some((b) => b.title?.trim() || b.body?.trim())) return null;
+    const group = <OfferEditableBlocks variant="strip" items={items} editor={editor} icons={OFFER_DETAIL_ICONS} template={{ title: "", body: "", kind: "strip", icon: "sparkles", anchor: a }} gridClassName="grid grid-cols-1 sm:grid-cols-2 gap-3" addLabel="Adicionar faixa aqui" />;
+    return wrap ? <section data-edit="faixas">{group}</section> : <div className="mt-3">{group}</div>;
+  };
   const [responding, setResponding] = useState(false);
   const [response, setResponse] = useState<"accept" | "decline" | null>(null);
   const [message, setMessage] = useState("");
@@ -307,6 +315,7 @@ export function OfferLetterView({ offer, onOfferChange, preview = false, onSecti
       <main
         className={`max-w-4xl mx-auto px-5 sm:px-6 py-12 sm:py-16 md:py-24 space-y-12 sm:space-y-16 md:space-y-20${onSectionClick ? " [&>section]:cursor-pointer [&>section]:rounded-xl [&>section]:transition-shadow [&>section:hover]:ring-2 [&>section:hover]:ring-[#C9A96E] [&>section:hover]:ring-offset-8 [&>section:hover]:ring-offset-transparent" : ""}`}
         onClickCapture={onSectionClick ? (e) => {
+          if ((e.target as HTMLElement).closest("[data-no-section-click]")) return;
           const sec = (e.target as HTMLElement).closest("main > section") as HTMLElement | null;
           if (!sec) return;
           const label = sec.querySelector("h2")?.textContent?.trim() || "";
@@ -394,10 +403,16 @@ export function OfferLetterView({ offer, onOfferChange, preview = false, onSecti
                 />
               );
             })()}
-            {(offer.custom_sections || []).filter((b) => b.kind === "detail" && (b.title?.trim() || b.body?.trim())).map((b) => (
+            {!editor && (offer.custom_sections || []).filter((b) => b.kind === "detail" && (b.title?.trim() || b.body?.trim())).map((b) => (
               <DetailCard key={b.id} icon={(() => { const I = (OFFER_DETAIL_ICONS[b.icon || ""] || OFFER_DETAIL_ICONS.briefcase).Icon; return <I className="h-4 w-4" />; })()} label={b.title} value={b.body} />
             ))}
           </div>
+          {editor && (
+            <div className="mt-3">
+              <OfferEditableBlocks variant="detail" items={(offer.custom_sections || []).filter((b) => b.kind === "detail")} editor={editor} icons={OFFER_DETAIL_ICONS} template={{ title: "", body: "", kind: "detail", icon: "briefcase" }} gridClassName="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4" addLabel="Adicionar quadro" />
+            </div>
+          )}
+          {renderStrips("after_details", false)}
         </section>
 
         {/* REMUNERAÇÃO */}
@@ -486,6 +501,8 @@ export function OfferLetterView({ offer, onOfferChange, preview = false, onSecti
             </div>
           </section>
         )}
+
+        {renderStrips("after_benefits", true)}
 
         {/* PERKS */}
         {offer.perks?.length > 0 && (
@@ -590,7 +607,12 @@ export function OfferLetterView({ offer, onOfferChange, preview = false, onSecti
         </section>
 
         {/* BLOCOS PERSONALIZADOS */}
-        {(offer.custom_sections || []).filter((b) => b.kind !== "detail" && b.kind !== "strip" && (b.title?.trim() || b.body?.trim())).map((b) => (
+        {editor && (
+          <section data-edit="blocos">
+            <OfferEditableBlocks variant="text" items={(offer.custom_sections || []).filter((b) => b.kind !== "detail" && b.kind !== "strip")} editor={editor} icons={OFFER_DETAIL_ICONS} template={{ title: "", body: "", kind: "text" }} gridClassName="space-y-10" addLabel="Adicionar bloco de texto" />
+          </section>
+        )}
+        {!editor && (offer.custom_sections || []).filter((b) => b.kind !== "detail" && b.kind !== "strip" && (b.title?.trim() || b.body?.trim())).map((b) => (
           <section key={b.id} data-block-id={b.id}>
             {b.title?.trim() && <SectionLabel>{b.title}</SectionLabel>}
             <p
@@ -602,31 +624,8 @@ export function OfferLetterView({ offer, onOfferChange, preview = false, onSecti
           </section>
         ))}
 
-        {/* FAIXAS PERSONALIZADAS */}
-        {(() => {
-          const strips = (offer.custom_sections || []).filter((b) => b.kind === "strip" && (b.title?.trim() || b.body?.trim()));
-          if (!strips.length) return null;
-          return (
-            <section data-edit="faixas">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {strips.map((b) => {
-                  const I = (OFFER_DETAIL_ICONS[b.icon || ""] || OFFER_DETAIL_ICONS.sparkles).Icon;
-                  return (
-                    <div key={b.id} className="flex items-center gap-3 px-5 py-4 rounded-sm" style={{ background: CARD, color: TEXT_DARK, boxShadow: `inset 0 0 0 1px ${GOLD}30` }}>
-                      <div className="flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center" style={{ background: `${GOLD}25`, color: TEXT_DARK }}>
-                        <I className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
-                        <span className="text-sm font-medium truncate">{b.title}</span>
-                        {b.body?.trim() && <span className="text-sm font-semibold truncate max-w-[60%]" title={b.body}>{b.body}</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          );
-        })()}
+        {/* FAIXAS PERSONALIZADAS (fim) */}
+        {renderStrips("end", true)}
 
         {/* PRÓXIMOS PASSOS */}
         {offer.next_steps && (
