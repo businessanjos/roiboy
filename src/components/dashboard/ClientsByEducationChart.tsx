@@ -94,7 +94,10 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
           <p className="py-3 text-center text-sm text-muted-foreground">Nenhum cliente ativo.</p>
         ) : (
           <>
-            <div className="grid gap-x-8 sm:grid-cols-2">
+            <div
+              className="grid gap-x-8 sm:grid-flow-col sm:grid-cols-2 sm:[grid-template-rows:repeat(var(--edu-rows),auto)]"
+              style={{ ["--edu-rows" as any]: Math.ceil(visible.length / 2) }}
+            >
               {visible.map((d, i) => {
                 const pct = active.length > 0 ? Math.round((d.count / active.length) * 100) : 0;
                 const width = Math.max((d.count / max) * 100, 4);
