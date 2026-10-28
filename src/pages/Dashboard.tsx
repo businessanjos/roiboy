@@ -77,6 +77,7 @@ import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/co
 import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakdownDialog";
 import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttendanceCard";
 import { WonToOnboardingCard } from "@/components/dashboard/WonToOnboardingCard";
+import { StatusMetricCard } from "@/components/dashboard/StatusMetricCard";
 import { ClientsRevenueTotalCard } from "@/components/dashboard/ClientsRevenueTotalCard";
 import { EditableGoal } from "@/components/dashboard/EditableGoal";
 import { DashboardMapTab } from "@/components/dashboard/DashboardMapTab";
@@ -612,6 +613,22 @@ export default function Dashboard() {
       clientInGroup(c.product_ids, productClientsOpen.memberIds),
     );
   }, [productClientsOpen, educationScopedClients]);
+
+  // Distribuição por produto exibida na dica do cartão "Ativos".
+  // Usa exatamente a mesma conta dos cartões "Clientes por Produto" acima.
+  const activeProductRows = useMemo(
+    () =>
+      productsWithClients
+        .map((g) => ({
+          label: g.name,
+          value: educationScopedClients.filter((c: any) =>
+            clientInGroup(c.product_ids, g.memberIds),
+          ).length,
+        }))
+        .filter((row) => row.value > 0)
+        .sort((a, b) => b.value - a.value),
+    [productsWithClients, educationScopedClients],
+  );
 
   const gestaoFilteredClients = useMemo(() => {
     if (gestaoProductFilter === "all") return educationScopedClients;
@@ -1380,127 +1397,161 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Status Cards - Single Row */}
-          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-4 xl:grid-cols-8" : "md:grid-cols-3"}`}>
+          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 items-stretch ${gestaoViewMode === "operacoes" ? "md:grid-cols-4 xl:grid-cols-8" : "md:grid-cols-3"}`}>
             {/* Total de Clientes (oculto no modo operações) */}
             {gestaoViewMode !== "operacoes" && (
-            <Card className="shadow-card border-l-4 border-l-primary">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Total Clientes</p>
-                    <p className="text-2xl font-bold text-foreground">{shownTotalClients}</p>
-                  </div>
-                  <Users className="h-5 w-5 text-primary" />
-                </div>
-              </CardContent>
-            </Card>
+              <StatusMetricCard
+                label="Total Clientes"
+                value={shownTotalClients}
+                icon={Users}
+                accentClass="border-l-primary"
+                valueClass="text-foreground"
+                iconClass="text-primary"
+                details={{
+                  title: "Todos os clientes que já passaram pela carteira",
+                  rows: [
+                    { label: "Com contrato em vigor", value: shownActiveClients },
+                    { label: "Com contrato vencido", value: shownExpiredClients },
+                    { label: "Saíram no período", value: periodExitTotals.cancelamentos + periodExitTotals.encerramentos },
+                  ],
+                  footer: "Muda com a formação escolhida. O período e o produto não alteram este número.",
+                }}
+              />
             )}
 
             {/* Cadeira Dupla — vínculos com sync_data ativos (cada par conta como 1) */}
-            <Link to="/dashboard/cadeira-dupla" className="block">
-              <Card className="shadow-card border-l-4 border-l-pink-500 cursor-pointer hover:shadow-lg transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Cadeira Dupla</p>
-                      <p className="text-2xl font-bold text-pink-600">{doubleChairCount ?? 0}</p>
-                    </div>
-                    <Link2 className="h-5 w-5 text-pink-500" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
+            <StatusMetricCard
+              label="Cadeira Dupla"
+              value={doubleChairCount ?? 0}
+              icon={Link2}
+              accentClass="border-l-pink-500"
+              valueClass="text-pink-600"
+              iconClass="text-pink-500"
+              href="/dashboard/cadeira-dupla"
+              details={{
+                title: "Clientes que dividem o atendimento",
+                lines: [
+                  "Cada par de clientes ligados entre si conta como 1.",
+                  "Serve para quem estuda junto, foi indicado ou é da mesma empresa.",
+                ],
+                footer: "Clique para abrir a lista completa.",
+              }}
+            />
 
             {/* Ativos */}
-            <Card className="shadow-card border-l-4 border-l-success">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Ativos</p>
-                    <p className="text-2xl font-bold text-success">{shownActiveClients}</p>
-                  </div>
-                  <TrendingUp className="h-5 w-5 text-success" />
-                </div>
-              </CardContent>
-            </Card>
+            <StatusMetricCard
+              label="Ativos"
+              value={shownActiveClients}
+              icon={TrendingUp}
+              accentClass="border-l-success"
+              valueClass="text-success"
+              iconClass="text-success"
+              details={{
+                title: "Clientes com contrato em vigor hoje",
+                rows: activeProductRows,
+                lines: ["Um cliente com dois produtos aparece nos dois."],
+                footer: "Vencidos continuam aqui enquanto a renovação não é concluída. O período não muda este número.",
+              }}
+            />
 
             {/* Cancelamentos */}
             {showCancelamentos && (
-            <Card 
-              className={`shadow-card border-l-4 border-l-danger ${showCancellationAnalytics ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
-              onClick={showCancellationAnalytics ? () => setCancellationModalOpen(true) : undefined}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Cancelamentos</p>
-                    <p className="text-2xl font-bold text-danger">{periodExitTotals.cancelamentos}</p>
-                  </div>
-                  <AlertTriangle className="h-5 w-5 text-danger" />
-                </div>
-              </CardContent>
-            </Card>
+              <StatusMetricCard
+                label="Cancelamentos"
+                value={periodExitTotals.cancelamentos}
+                icon={AlertTriangle}
+                accentClass="border-l-danger"
+                valueClass="text-danger"
+                iconClass="text-danger"
+                onClick={showCancellationAnalytics ? () => setCancellationModalOpen(true) : undefined}
+                details={{
+                  title: "Contratos cancelados no período",
+                  lines: [
+                    "Contamos pelo mês em que o contrato foi cancelado.",
+                    `Período: ${periodLabel.toLowerCase()}.`,
+                    "Vale o recorte de formação e produto escolhido acima.",
+                  ],
+                  footer: showCancellationAnalytics
+                    ? "Clique para abrir o relatório de cancelamentos."
+                    : undefined,
+                }}
+              />
             )}
 
             {/* Encerramentos */}
             {showEncerramentos && (
-            <Card className="shadow-card border-l-4 border-l-warning">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Encerramentos</p>
-                    <p className="text-2xl font-bold text-warning">{periodExitTotals.encerramentos}</p>
-                  </div>
-                  <TrendingDown className="h-5 w-5 text-warning" />
-                </div>
-              </CardContent>
-            </Card>
+              <StatusMetricCard
+                label="Encerramentos"
+                value={periodExitTotals.encerramentos}
+                icon={TrendingDown}
+                accentClass="border-l-warning"
+                valueClass="text-warning"
+                iconClass="text-warning"
+                details={{
+                  title: "Contratos encerrados no período",
+                  lines: [
+                    "Encerramento é o fim do contrato por distrato ou acordo.",
+                    `Período: ${periodLabel.toLowerCase()}.`,
+                    "Vale o recorte de formação e produto escolhido acima.",
+                  ],
+                }}
+              />
             )}
 
             {/* Suspensos */}
             {gestaoViewMode === "operacoes" && (
-            <Card className="shadow-card border-l-4 border-l-amber-500">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Suspensos</p>
-                    <p className="text-2xl font-bold text-warning">{periodExitTotals.suspensos}</p>
-                  </div>
-                  <Minus className="h-5 w-5 text-warning" />
-                </div>
-              </CardContent>
-            </Card>
+              <StatusMetricCard
+                label="Suspensos"
+                value={periodExitTotals.suspensos}
+                icon={Minus}
+                accentClass="border-l-amber-500"
+                valueClass="text-warning"
+                iconClass="text-warning"
+                details={{
+                  title: "Contratos suspensos temporariamente",
+                  lines: [
+                    "O cliente pausa o atendimento e volta sem fazer um novo contrato.",
+                    `Período: ${periodLabel.toLowerCase()}.`,
+                  ],
+                }}
+              />
             )}
 
             {/* Pausados */}
             {gestaoViewMode === "operacoes" && (
-            <Card className="shadow-card border-l-4 border-l-sky-500">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Pausados</p>
-                    <p className="text-2xl font-bold text-info">{periodExitTotals.pausados}</p>
-                  </div>
-                  <Minus className="h-5 w-5 text-info" />
-                </div>
-              </CardContent>
-            </Card>
+              <StatusMetricCard
+                label="Pausados"
+                value={periodExitTotals.pausados}
+                icon={Minus}
+                accentClass="border-l-sky-500"
+                valueClass="text-info"
+                iconClass="text-info"
+                details={{
+                  title: "Contratos pausados",
+                  lines: [
+                    "O atendimento está parado por pedido do cliente, mas o contrato continua valendo.",
+                    `Período: ${periodLabel.toLowerCase()}.`,
+                  ],
+                }}
+              />
             )}
 
             {/* Vencidos (active + end_date < today) */}
-            <Card className="shadow-card border-l-4 border-l-orange-500">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Vencidos</p>
-                    <p className="text-2xl font-bold text-warning">{shownExpiredClients}</p>
-                  </div>
-                  <Clock className="h-5 w-5 text-warning" />
-                </div>
-              </CardContent>
-            </Card>
+            <StatusMetricCard
+              label="Vencidos"
+              value={shownExpiredClients}
+              icon={Clock}
+              accentClass="border-l-orange-500"
+              valueClass="text-warning"
+              iconClass="text-warning"
+              details={{
+                title: "Contratos ativos com a data de término já passada",
+                lines: [
+                  "Eles continuam contando em Ativos enquanto a renovação não é resolvida.",
+                ],
+                footer: "Contado na data de hoje; o filtro de período não muda este número.",
+              }}
+            />
 
             {/* Tempo Ganho → Onboarding */}
             {gestaoViewMode === "operacoes" && (
