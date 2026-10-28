@@ -100,6 +100,26 @@ export function useLeadMerge() {
         console.error("Error updating deals:", dealsError);
       }
 
+      // 4b. Move every other record linked to the source lead, so deleting it
+      // never fails on a reference (video calls, conversations, calls, etc.).
+      const linkedTables = [
+        "video_call_sessions",
+        "zapp_conversations",
+        "zapp_calls",
+        "sales_meetings",
+        "threecplus_call_logs",
+        "internal_tasks",
+        "email_queue",
+        "client_service_history",
+      ] as const;
+      for (const table of linkedTables) {
+        const { error: linkError } = await (supabase.from(table as any) as any)
+          .update({ lead_id: targetLeadId })
+          .eq("lead_id", sourceLeadId)
+          .eq("account_id", currentUser.account_id);
+        if (linkError) throw linkError;
+      }
+
       // 5. Add merge event to timeline
       const { error: mergeEventError } = await supabase
         .from("lead_timeline")
