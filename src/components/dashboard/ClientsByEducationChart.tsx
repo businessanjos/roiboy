@@ -13,11 +13,13 @@ interface Props {
   educationById: Map<string, string | null>;
   /** Clientes sob contrato no início do período selecionado. Sem isso, usa hasActiveContract. */
   activeClientIds?: Set<string>;
+  /** Formação selecionada no filtro do topo: recebe destaque. */
+  highlightValue?: string;
 }
 
 const TOP_COUNT = 8;
 
-export function ClientsByEducationChart({ clients, educationById, activeClientIds }: Props) {
+export function ClientsByEducationChart({ clients, educationById, activeClientIds, highlightValue }: Props) {
   const [selected, setSelected] = useState<{ value: string; label: string } | null>(null);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -37,7 +39,9 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
   );
 
   const max = data[0]?.count ?? 1;
-  const visible = expanded ? data : data.slice(0, TOP_COUNT);
+  const visible = expanded
+    ? data
+    : data.filter((d, i) => i < TOP_COUNT || d.value === highlightValue);
   const hiddenCount = Math.max(data.length - TOP_COUNT, 0);
 
   const people = useMemo(() => {
@@ -62,7 +66,7 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
           Clientes por Formação
         </CardTitle>
         <CardDescription>
-          Clientes sob contrato no início do período selecionado. Clique numa formação para ver quem são.
+          {active.length} clientes com contrato vigente no período selecionado. Clique numa formação para ver quem são.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -73,12 +77,14 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
             {visible.map((d, i) => {
               const pct = active.length > 0 ? Math.round((d.count / active.length) * 100) : 0;
               const width = Math.max((d.count / max) * 100, 4);
+              const isHighlighted = d.value === highlightValue;
+              const dimmed = !!highlightValue && !isHighlighted;
               return (
                 <button
                   key={d.value}
                   type="button"
                   onClick={() => open({ value: d.value, label: d.label })}
-                  className="group w-full flex items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={`group w-full flex items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-all hover:bg-muted/60 ${isHighlighted ? "bg-primary/10 ring-1 ring-primary/40" : ""} ${dimmed ? "opacity-50 hover:opacity-100" : ""} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
                 >
                   <span className="w-6 shrink-0 text-center text-xs font-semibold tabular-nums text-muted-foreground">
                     {i + 1}º

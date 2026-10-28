@@ -432,11 +432,12 @@ export default function Dashboard() {
     clientProductsMap,
   ]);
 
-  // Clientes sob contrato na data de início do período, SEM o filtro de formação:
-  // alimenta o gráfico "Clientes por Formação", que precisa mostrar todas as
-  // formações mesmo quando uma já está selecionada no filtro de cima.
+  // Clientes com contrato vigente em algum momento DENTRO do período, SEM o filtro
+  // de formação: alimenta o gráfico "Clientes por Formação" (todas as formações
+  // continuam visíveis; a selecionada no topo recebe destaque).
   const periodActiveClientIdsForEducation = useMemo(() => {
     const startStr = gestaoPeriodRange.periodStart.toISOString().slice(0, 10);
+    const endStr = gestaoPeriodRange.periodEnd.toISOString().slice(0, 10);
     const set = new Set<string>();
     for (const row of clientContractRows ?? []) {
       if (!row.client_id || !row.start_date) continue;
@@ -446,7 +447,7 @@ export default function Dashboard() {
         !clientInGroup(clientProductsMap[row.client_id] || [], selectedProductMemberIds)
       )
         continue;
-      if (row.start_date > startStr) continue;
+      if (row.start_date > endStr) continue;
       if (row.end_date && row.end_date < startStr) continue;
       if (row.cancelled_at && row.cancelled_at.slice(0, 10) < startStr) continue;
       set.add(row.client_id);
@@ -455,6 +456,7 @@ export default function Dashboard() {
   }, [
     clientContractRows,
     gestaoPeriodRange.periodStart,
+    gestaoPeriodRange.periodEnd,
     gestaoProductFilter,
     selectedProductMemberIds,
     clientProductsMap,
@@ -1313,6 +1315,7 @@ export default function Dashboard() {
             clients={productScopedClients as any}
             educationById={educationById}
             activeClientIds={periodActiveClientIdsForEducation}
+            highlightValue={gestaoEducationFilter === EDUCATION_ALL ? undefined : gestaoEducationFilter}
           />
 
 
