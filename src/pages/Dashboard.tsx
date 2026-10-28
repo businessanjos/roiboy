@@ -988,8 +988,8 @@ export default function Dashboard() {
                 onClick={() => navigate("/contracts?status=active")}
               >
                 Contratos abertos
-                {typeof contractStats?.active === "number" && (
-                  <Badge variant="secondary" className="ml-2">{contractStats.active}</Badge>
+                {typeof shownActiveClients === "number" && (
+                  <Badge variant="secondary" className="ml-2">{shownActiveClients}</Badge>
                 )}
               </Button>
             )}
