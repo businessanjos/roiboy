@@ -631,9 +631,10 @@ export function RenewalLosses() {
           <SelectTrigger className="w-[190px]">
             <SelectValue placeholder="Período" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-h-[440px]">
             <SelectItem value="this_year">Este ano</SelectItem>
             <SelectItem value="last_year">Ano passado</SelectItem>
+            <SelectItem value="all">Todo o período</SelectItem>
             <SelectItem value="this_quarter">Este trimestre</SelectItem>
             <SelectItem value="this_month">Este mês</SelectItem>
             <SelectItem value="last_month">Mês passado</SelectItem>
@@ -643,7 +644,6 @@ export function RenewalLosses() {
             <SelectItem value="180">Últimos 6 meses</SelectItem>
             <SelectItem value="365">Último ano</SelectItem>
             <SelectItem value="custom">Personalizado…</SelectItem>
-            <SelectItem value="all">Todo o período</SelectItem>
           </SelectContent>
         </Select>
         {filterPeriod === "custom" && (
