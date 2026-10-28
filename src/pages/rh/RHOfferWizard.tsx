@@ -197,7 +197,7 @@ export default function RHOfferWizard() {
         signer_role: data.signer_role || "",
         custom_sections: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind !== "detail" && b.kind !== "strip").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
         extra_details: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "detail").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "briefcase" })),
-        extra_strips: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "strip").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "check" })),
+        extra_strips: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "strip").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "sparkles" })),
         accent_color: data.accent_color || "#6366F1",
         cover_image_url: data.cover_image_url || "",
         // Ao clonar, a nova offer não é modelo; ao editar, mantém flag

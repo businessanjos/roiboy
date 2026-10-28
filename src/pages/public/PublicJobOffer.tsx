@@ -610,7 +610,7 @@ export function OfferLetterView({ offer, onOfferChange, preview = false, onSecti
             <section data-edit="faixas">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {strips.map((b) => {
-                  const I = (OFFER_DETAIL_ICONS[b.icon || ""] || OFFER_DETAIL_ICONS.check || OFFER_DETAIL_ICONS.briefcase).Icon;
+                  const I = (OFFER_DETAIL_ICONS[b.icon || ""] || OFFER_DETAIL_ICONS.sparkles).Icon;
                   return (
                     <div key={b.id} className="flex items-center gap-3 px-5 py-4 rounded-sm" style={{ background: CARD, color: TEXT_DARK, boxShadow: `inset 0 0 0 1px ${GOLD}30` }}>
                       <div className="flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center" style={{ background: `${GOLD}25`, color: TEXT_DARK }}>
