@@ -66,8 +66,8 @@ export function ClientListDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col gap-0 overflow-hidden p-0">
-        <div className="flex items-start gap-3 border-b bg-muted/30 px-5 py-4">
+      <DialogContent className="flex max-h-[78vh] max-w-xl flex-col gap-0 overflow-hidden p-0">
+        <div className="flex items-start gap-3 border-b bg-muted/50 px-5 py-4">
           {Icon && (
             <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
               <Icon className="h-5 w-5 text-primary" />
@@ -106,7 +106,7 @@ export function ClientListDialog({
           )}
         </div>
 
-        <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+        <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-3 pb-5">
           {people.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">{emptyLabel}</p>
           ) : (
@@ -119,10 +119,10 @@ export function ClientListDialog({
                       to={`/clients/${c.id}`}
                       className="group flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <span className="w-5 shrink-0 text-right text-[11px] font-medium tabular-nums text-muted-foreground/70">
+                      <span className="w-5 shrink-0 text-right text-[11px] font-medium tabular-nums text-muted-foreground">
                         {i + 1}
                       </span>
-                      <Avatar className="h-8 w-8 border bg-primary/10">
+                      <Avatar className="h-8 w-8 border border-primary/15 bg-primary/15">
                         <AvatarFallback className="bg-transparent text-[11px] font-semibold text-primary">
                           {initials(c.full_name || "?")}
                         </AvatarFallback>
@@ -131,12 +131,12 @@ export function ClientListDialog({
                       {showMeta && (
                         <Badge
                           variant="outline"
-                          className={cn("max-w-[45%] shrink-0 truncate border-border/60 text-[11px] font-normal text-muted-foreground")}
+                          className={cn("max-w-[45%] shrink-0 truncate border-border/70 bg-muted/50 text-[11px] font-normal text-foreground/75")}
                         >
                           {meta}
                         </Badge>
                       )}
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 opacity-60 transition-opacity group-hover:opacity-100" />
                     </Link>
                   </li>
                 );
