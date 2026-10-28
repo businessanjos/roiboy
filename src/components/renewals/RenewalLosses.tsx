@@ -395,7 +395,7 @@ export function RenewalLosses() {
           outcome: outcome?.outcome || null,
           contract_status: c.status || null,
           outcome_id: outcome?.id || null,
-          loss_reason: outcome?.loss_reason || CONTRACT_REASON_LABELS[c.cancellation_reason] || c.cancellation_reason || null,
+          loss_reason: outcome?.loss_reason || null,
           loss_notes: outcome?.loss_notes || c.cancellation_justification || null,
           resolved_at: outcome?.resolved_at || outcome?.created_at || null,
           days_expired: daysExpired,
@@ -503,34 +503,22 @@ export function RenewalLosses() {
     }
   };
 
-  const handleSaveOutcome = async (outcome: "lost" | "renewed") => {
+  const handleSaveOutcome = async (outcome: "lost" | "renewed" | "pending") => {
     if (!editItem || !currentUser) return;
     setSaving(true);
     try {
-      const payload = {
-        account_id: currentUser.account_id,
-        contract_id: editItem.id,
-        client_id: editItem.client_id,
-        outcome,
-        loss_reason: outcome === "lost" ? editReason || null : null,
-        loss_notes: outcome === "lost" ? editNotes || null : null,
-        renewal_value: editItem.renewal_value,
-        resolved_at: new Date().toISOString(),
-        resolved_by: currentUser.id,
-      };
-
       await saveRenewalOutcome({
-        accountId: payload.account_id,
-        contractId: payload.contract_id,
-        clientId: payload.client_id,
+        accountId: currentUser.account_id,
+        contractId: editItem.id,
+        clientId: editItem.client_id,
         outcome,
-        renewalValue: payload.renewal_value,
-        resolvedBy: payload.resolved_by,
-        lossReason: payload.loss_reason,
-        lossNotes: payload.loss_notes,
+        renewalValue: editItem.renewal_value,
+        resolvedBy: currentUser.id,
+        lossReason: outcome === "lost" ? editReason || null : null,
+        lossNotes: outcome === "lost" ? editNotes || null : null,
       });
 
-      toast({ title: outcome === "lost" ? "Perda registrada" : "Renovação registrada" });
+      toast({ title: outcome === "lost" ? "Perda registrada" : outcome === "pending" ? "Contrato mantido ativo" : "Renovação registrada" });
       setEditItem(null);
       await fetchExpired();
     } catch (err: any) {
@@ -1223,7 +1211,10 @@ export function RenewalLosses() {
               />
             </div>
           </div>
-          <DialogFooter className="flex gap-2">
+          <DialogFooter className="flex flex-wrap gap-2">
+            <Button variant="ghost" onClick={() => handleSaveOutcome("pending")} disabled={saving}>
+              Manter ativo
+            </Button>
             <Button variant="outline" onClick={() => handleSaveOutcome("renewed")} disabled={saving}>
               Marcar como Renovado
             </Button>
