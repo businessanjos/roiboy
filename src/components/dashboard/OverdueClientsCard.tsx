@@ -94,13 +94,13 @@ export function OverdueClientsCard({ clientIds }: Props) {
           return;
         }
 
-        const clientIds = Array.from(byClient.keys());
+        const overdueClientIds = Array.from(byClient.keys());
         const { data: clients } = await supabase
           .from("clients")
           .select(
             "id, full_name, logo_url, responsible_user_id, users:responsible_user_id(name)",
           )
-          .in("id", clientIds);
+          .in("id", overdueClientIds);
 
         let mapped: OverdueClient[] = (clients || []).map((c) => {
           const s = byClient.get(c.id)!;
