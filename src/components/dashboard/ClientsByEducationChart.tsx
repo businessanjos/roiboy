@@ -13,6 +13,7 @@ interface Props {
   educationById: Map<string, string | null>;
   /** Clientes sob contrato no início do período selecionado. Sem isso, usa hasActiveContract. */
   activeClientIds?: Set<string>;
+  highlightValue?: string;
   /** Formação selecionada no filtro do topo: recebe destaque. */
   highlightValue?: string;
 }
