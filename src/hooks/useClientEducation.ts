@@ -34,11 +34,22 @@ export function useClientEducation() {
           .range(from, to),
       );
       if (error) throw error;
-      return data;
+      const { data: contracts, error: cErr } = await fetchAllRows<{ client_id: string }>((from, to) =>
+        supabase
+          .from("client_contracts")
+          .select("client_id")
+          .eq("account_id", accountId!)
+          .eq("status", "active")
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
+      if (cErr) throw cErr;
+      return { rows: data, activeIds: new Set(contracts.map((c) => c.client_id)) };
     },
   });
 
-  const rows = query.data ?? [];
+  const rows = query.data?.rows ?? [];
+  const activeIds = query.data?.activeIds;
 
   const educationById = useMemo(() => {
     const map = new Map<string, string | null>();
@@ -46,9 +57,13 @@ export function useClientEducation() {
     return map;
   }, [rows]);
 
+  // Contagem igual à tela "Área da saúde na Mentoria": só clientes com contrato ativo.
   const options: EducationOption[] = useMemo(
-    () => buildEducationOptions(rows.map((row) => row.education)),
-    [rows],
+    () =>
+      buildEducationOptions(
+        rows.filter((row) => activeIds?.has(row.id)).map((row) => row.education),
+      ),
+    [rows, activeIds],
   );
 
   return {
