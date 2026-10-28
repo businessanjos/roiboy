@@ -257,6 +257,7 @@ export default function Renewals() {
             .in("id", chunk)
             .not("end_date", "is", null)
             .lt("end_date", formatDate(today))
+          .in("status", ["active", "ended"])
             .is("parent_contract_id", null)
             .order("end_date", { ascending: true }),
         );
@@ -274,6 +275,7 @@ export default function Renewals() {
           .eq("account_id", currentUser.account_id)
           .not("end_date", "is", null)
           .lt("end_date", formatDate(today))
+          .in("status", ["active", "ended"])
           .gte("end_date", "2025-03-01")
           .is("parent_contract_id", null)
           .order("end_date", { ascending: true })
