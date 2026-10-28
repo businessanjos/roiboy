@@ -62,7 +62,8 @@ export function SettingsSidebarNav({ collapsed, onNavigate, searchQuery = "" }: 
       }
       if (canEditSettings) {
         adminItems.push({ id: "companies", label: "Empresas", icon: Building2 });
-        adminItems.push({ id: "contract-types", label: "Contratos: listas", icon: Book });
+        adminItems.push({ id: "contract-types", label: "Renovações: listas", icon: Book });
+        adminItems.push({ id: "contract-lists", label: "Contratos: listas", icon: Book });
       }
       if (hasVendasAccess && canEditSettings) {
         adminItems.push({ id: "sales", label: "Vendas", icon: Target });

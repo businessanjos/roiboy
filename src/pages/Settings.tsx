@@ -55,7 +55,9 @@ export default function Settings() {
       case "companies":
         return canEditSettings ? <CompaniesManager /> : null;
       case "contract-types":
-        return canEditSettings ? <ContractTypesManager /> : null;
+        return canEditSettings ? <ContractTypesManager scope="renewals" /> : null;
+      case "contract-lists":
+        return canEditSettings ? <ContractTypesManager scope="contracts" /> : null;
       case "ai-knowledge":
         return canEditSettings ? <AIKnowledgeManager /> : null;
       case "sectors":

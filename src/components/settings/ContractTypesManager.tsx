@@ -53,12 +53,27 @@ function describeChange(h: HistoryRow): string {
   return `"${a.label}"${parts.length ? ": " + parts.join(", ") : ""}`;
 }
 
-export function ContractTypesManager() {
+const SCOPES = {
+  contracts: {
+    lists: ["contract_type", "contract_status"] as CatalogListKey[],
+    title: "Contratos: tipos e status",
+    description: "Listas usadas no cadastro e na edição de contratos. Tudo pode ser renomeado ou desativado (registros antigos continuam com o nome) e cada mudança fica no histórico, com opção de desfazer.",
+  },
+  renewals: {
+    lists: ["renewal_status", "loss_reason"] as CatalogListKey[],
+    title: "Renovações: status e motivos",
+    description: "Listas usadas na aba Renovações, ao registrar o desfecho da renovação. Tudo pode ser renomeado ou desativado (registros antigos continuam com o nome) e cada mudança fica no histórico, com opção de desfazer.",
+  },
+};
+
+export function ContractTypesManager({ scope = "contracts" }: { scope?: keyof typeof SCOPES }) {
+  const cfg = SCOPES[scope];
+  const LISTS = CATALOG_LISTS.filter((l) => cfg.lists.includes(l.key));
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const qc = useQueryClient();
   const { data: rows = [], isLoading } = useContractCatalogRows();
-  const [tab, setTab] = useState<CatalogListKey>("contract_type");
+  const [tab, setTab] = useState<CatalogListKey>(cfg.lists[0]);
   const [newLabel, setNewLabel] = useState("");
   const [newBucket, setNewBucket] = useState<string>("");
   const [editing, setEditing] = useState<{ list: CatalogListKey; item: CatalogItem | null; draft: Snapshot } | null>(null);
@@ -166,18 +181,16 @@ export function ContractTypesManager() {
   const bucketLabel = (list: CatalogListKey, v?: string | null) =>
     CATALOG_LISTS.find((l) => l.key === list)?.buckets?.find((b) => b.value === v)?.label;
 
-  const recentBuiltInChanges = (history.data || []).filter((h) => h.action !== "undo" && !h.undone_at &&
+  const scopedHistory = (history.data || []).filter((h) => cfg.lists.includes(h.list_key as CatalogListKey));
+  const recentBuiltInChanges = scopedHistory.filter((h) => h.action !== "undo" && !h.undone_at &&
     mergeCatalog(h.list_key as CatalogListKey, []).some((i) => i.value === h.value)).slice(0, 3);
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Contratos: tipos, status e motivos</CardTitle>
-          <CardDescription>
-            Personalize as listas usadas nos contratos e nas renovações. Tudo pode ser renomeado ou desativado
-            (registros antigos continuam com o nome) e cada mudança fica no histórico, com opção de desfazer.
-          </CardDescription>
+          <CardTitle>{cfg.title}</CardTitle>
+          <CardDescription>{cfg.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {recentBuiltInChanges.length > 0 && (
@@ -191,9 +204,9 @@ export function ContractTypesManager() {
           )}
           <Tabs value={tab} onValueChange={(v) => { setTab(v as CatalogListKey); setNewBucket(""); }}>
             <TabsList className="flex h-auto flex-wrap justify-start">
-              {CATALOG_LISTS.map((l) => <TabsTrigger key={l.key} value={l.key}>{l.title}</TabsTrigger>)}
+              {LISTS.map((l) => <TabsTrigger key={l.key} value={l.key}>{l.title}</TabsTrigger>)}
             </TabsList>
-            {CATALOG_LISTS.map((l) => (
+            {LISTS.map((l) => (
               <TabsContent key={l.key} value={l.key} className="space-y-3">
                 <p className="text-sm text-muted-foreground">{l.hint}</p>
                 <div className="flex flex-wrap gap-2">
@@ -237,11 +250,11 @@ export function ContractTypesManager() {
           <CardDescription>Quem mudou, quando e o quê. Use "Desfazer" para voltar ao estado anterior.</CardDescription>
         </CardHeader>
         <CardContent>
-          {(history.data || []).length === 0 ? (
+          {scopedHistory.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhuma alteração ainda.</p>
           ) : (
             <div className="max-h-[420px] divide-y overflow-y-auto rounded-md border">
-              {(history.data || []).map((h) => (
+              {scopedHistory.map((h) => (
                 <div key={h.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
                   <div className="min-w-0">
                     <span className="font-medium">{h.changed_by_name || "Alguém"}</span>{" "}

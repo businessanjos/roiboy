@@ -36,14 +36,14 @@ export const CATALOG_LISTS: { key: CatalogListKey; title: string; hint: string; 
   {
     key: "renewal_status",
     title: "Status de renovação",
-    hint: "Desfechos mostrados na aba Renovações.",
+    hint: "Desfechos usados na aba Renovações (Renovado, Não renovado etc.).",
     buckets: [
       { value: "renewed", label: "Conta como renovado" },
       { value: "lost", label: "Conta como não renovado/perda" },
       { value: "neutral", label: "Não conta em métricas" },
     ],
   },
-  { key: "loss_reason", title: "Motivos de perda/cancelamento", hint: "Usados no contrato, no modal e no gráfico de Renovações." },
+  { key: "loss_reason", title: "Motivos de não renovação", hint: "Aparecem no \"Registrar desfecho\" e no gráfico Motivos de Perda da aba Renovações." },
 ];
 
 const b = (value: string, label: string, extra: Partial<CatalogItem> = {}, i = 0): CatalogItem => ({
