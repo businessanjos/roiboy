@@ -194,11 +194,17 @@ export default function Dashboard() {
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
     queryFn: async () => {
-      const { data, error } = await fetchAllRows<{ client_id: string; status: string; end_date: string | null }>(
+      const { data, error } = await fetchAllRows<{
+        client_id: string;
+        status: string;
+        start_date: string | null;
+        end_date: string | null;
+        cancelled_at: string | null;
+      }>(
         (from, to) =>
           supabase
             .from("client_contracts")
-            .select("client_id, status, end_date")
+            .select("client_id, status, start_date, end_date, cancelled_at")
             .eq("account_id", currentUser!.account_id!)
             .order("id", { ascending: true })
             .range(from, to),
