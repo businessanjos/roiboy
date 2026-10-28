@@ -840,8 +840,8 @@ export function RenewalLosses() {
                   </ResponsiveContainer>
                   <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-2xl font-semibold tabular-nums text-foreground">{reasonTotal}</span>
-                    <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      contratos
+                    <span className="whitespace-nowrap text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Não renovados
                     </span>
                   </div>
                 </div>
@@ -896,7 +896,7 @@ export function RenewalLosses() {
             </DialogHeader>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="rounded-md border p-2">
-                <div className="text-xs text-muted-foreground">Contratos</div>
+                <div className="text-xs text-muted-foreground">Não renovados</div>
                 <div className="font-semibold">{reasonDetailItems.length}</div>
               </div>
               <div className="rounded-md border p-2">
