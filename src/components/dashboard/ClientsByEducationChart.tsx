@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { GraduationCap, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { GraduationCap, Info, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,14 @@ interface Props {
   activeClientIds?: Set<string>;
   /** Formação selecionada no filtro do topo: recebe destaque. */
   highlightValue?: string;
+  /** Períodos curtos (mês, 7 dias) partem praticamente da carteira de hoje. */
+  shortPeriod?: boolean;
+  periodLabel?: string;
 }
 
 const TOP_COUNT = 8;
 
-export function ClientsByEducationChart({ clients, educationById, activeClientIds, highlightValue }: Props) {
+export function ClientsByEducationChart({ clients, educationById, activeClientIds, highlightValue, shortPeriod, periodLabel }: Props) {
   const [selected, setSelected] = useState<{ value: string; label: string } | null>(null);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(false);
