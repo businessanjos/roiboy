@@ -521,8 +521,24 @@ export default function Dashboard() {
     const { periodStart, periodEnd } = gestaoPeriodRange;
     const months: { [key: string]: { month: string; novos: number; cancelamentos: number; encerramentos: number; suspensos: number; pausados: number } } = {};
     
+    // Com "Todo o período" não há data-limite: partimos do mês do contrato mais
+    // antigo da conta, senão a série nasceria com séculos de meses vazios.
+    let rangeStart = periodStart;
+    if (gestaoPeriodFilter === "all") {
+      let earliest: Date | null = null;
+      for (const contract of filteredContractData) {
+        for (const raw of [contract.start_date, contract.cancelled_at, contract.status_changed_at, contract.end_date]) {
+          if (!raw) continue;
+          const parsed = parseISO(String(raw).slice(0, 10));
+          if (isNaN(parsed.getTime())) continue;
+          if (!earliest || parsed < earliest) earliest = parsed;
+        }
+      }
+      if (earliest) rangeStart = earliest;
+    }
+
     // Calculate the number of months to show
-    const monthsDiff = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+    const monthsDiff = Math.max(1, Math.ceil((periodEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24 * 30)));
     
     // Initialize months based on period
     for (let i = monthsDiff - 1; i >= 0; i--) {
