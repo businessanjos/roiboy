@@ -359,6 +359,7 @@ export function RenewalLosses() {
           `)
           .eq("account_id", currentUser.account_id)
           .in("id", chunk)
+          .in("status", ["active", "ended"])
           .is("parent_contract_id", null),
       );
 
