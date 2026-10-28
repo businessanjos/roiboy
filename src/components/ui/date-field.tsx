@@ -28,6 +28,8 @@ export const DateField = React.forwardRef<HTMLInputElement, Props>(
       if (value === undefined) setInner(next);
       const target = { value: next, name, id, type: "date", valueAsDate: toDate(next) ?? null } as any;
       onChange?.({ target, currentTarget: target } as React.ChangeEvent<HTMLInputElement>);
+      // Campos que salvam "ao sair" (onBlur) também precisam receber a data escolhida.
+      (rest as any).onBlur?.({ target, currentTarget: target } as React.FocusEvent<HTMLInputElement>);
     };
 
     return (
