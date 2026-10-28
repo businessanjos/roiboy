@@ -166,6 +166,18 @@ export default function Dashboard() {
     [productGroups, clients],
   );
 
+  // Nome do produto (grupo) de cada cliente — rótulo útil na lista de clientes por formação.
+  const productNameById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const c of clients) {
+      map.set(
+        c.id,
+        productGroups.find((g) => clientInGroup(c.product_ids, g.memberIds))?.name ?? null,
+      );
+    }
+    return map;
+  }, [clients, productGroups]);
+
 
 
 
@@ -1376,11 +1388,13 @@ export default function Dashboard() {
             clients={productClientRows}
             metaById={educationById}
             metaFallback="Sem formação"
+            icon={Target}
           />
 
           <ClientsByEducationChart
             clients={productScopedClients as any}
             educationById={educationById}
+            metaById={productNameById}
             activeClientIds={periodActiveClientIdsForEducation}
             highlightValue={gestaoEducationFilter === EDUCATION_ALL ? undefined : gestaoEducationFilter}
             shortPeriod={educationPeriodShort}
