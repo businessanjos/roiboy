@@ -581,7 +581,7 @@ export default function Dashboard() {
     });
     
     return Object.values(months);
-  }, [filteredContractData, gestaoPeriodRange]);
+  }, [filteredContractData, gestaoPeriodRange, gestaoPeriodFilter]);
 
 
   // Clientes do recorte atual: formação (quando escolhida) e, então, produto.
