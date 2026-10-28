@@ -232,10 +232,14 @@
   }
 
   /* Barras de rolagem discretas com a identidade ROY: polegar fino e
-     arredondado, trilho invisível, sem setas, e dourado ao passar o mouse. */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.28) transparent;
+     arredondado, trilho invisível, sem setas, e dourado ao passar o mouse.
+     Firefox usa as propriedades padrão; Chrome/Edge/Safari usam o polegar
+     desenhado abaixo (definir scrollbar-width aqui desativaria aquele). */
+  @supports (-moz-appearance: none) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+    }
   }
 
   ::-webkit-scrollbar {
