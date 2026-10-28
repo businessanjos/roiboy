@@ -2,7 +2,7 @@ import { useState } from "react";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Copy, GripVertical, Plus, Trash2 } from "lucide-react";
+import { Copy, GripVertical, MoveHorizontal, Plus, Trash2 } from "lucide-react";
 
 export type OfferBlock = {
   id: string;
@@ -110,7 +110,7 @@ function SortableBlock({ variant, block, icons, editor, onInsertAfter }: { varia
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 20 : undefined, opacity: isDragging ? 0.85 : 1 }}
-      className="group/blk relative"
+      className={`group/blk relative ${block.wide ? "col-span-full" : ""}`}
     >
       <BlockBody variant={variant} block={block} icons={icons} editor={editor} onIconClick={variant !== "text" ? () => setIconOpen((v) => !v) : undefined} />
       {/* alça */}
@@ -127,6 +127,9 @@ function SortableBlock({ variant, block, icons, editor, onInsertAfter }: { varia
       {/* mini-barra */}
       <div className="absolute -top-3 right-2 flex gap-1 opacity-0 group-hover/blk:opacity-100 transition-opacity">
         <ToolBtn title="Inserir abaixo" onClick={onInsertAfter}><Plus className="h-3.5 w-3.5" /></ToolBtn>
+        {variant === "strip" && (
+          <ToolBtn title={block.wide ? "Deixar meia largura" : "Faixa comprida (ocupa duas)"} onClick={() => { editor.snapshot(); editor.update(block.id, { wide: !block.wide }); }}><MoveHorizontal className="h-3.5 w-3.5" /></ToolBtn>
+        )}
         <ToolBtn title="Duplicar" onClick={() => { editor.snapshot(); editor.duplicate(block.id); }}><Copy className="h-3.5 w-3.5" /></ToolBtn>
         <ToolBtn title="Excluir" onClick={() => { editor.snapshot(); editor.remove(block.id); }}><Trash2 className="h-3.5 w-3.5" /></ToolBtn>
       </div>
@@ -158,8 +161,8 @@ function ToolBtn({ title, onClick, children }: { title: string; onClick: () => v
   );
 }
 
-function InlineText({ value, placeholder, editor, id, field, className, style, multiline }: {
-  value: string; placeholder: string; editor?: OfferBlocksEditor; id: string; field: "title" | "body"; className?: string; style?: React.CSSProperties; multiline?: boolean;
+function InlineText({ value, placeholder, editor, id, field, className, style, multiline, onCard }: {
+  value: string; placeholder: string; editor?: OfferBlocksEditor; id: string; field: "title" | "body"; className?: string; style?: React.CSSProperties; multiline?: boolean; onCard?: boolean;
 }) {
   if (!editor) return <span className={className} style={style}>{value}</span>;
   const common = {
@@ -167,8 +170,8 @@ function InlineText({ value, placeholder, editor, id, field, className, style, m
     placeholder,
     onFocus: () => editor.snapshot(),
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => editor.update(id, { [field]: e.target.value }),
-    className: `${className || ""} w-full bg-transparent outline-none rounded-sm placeholder:opacity-40 focus:ring-1 focus:ring-[#c9a86a] hover:bg-black/5 px-0.5`,
-    style,
+    className: `${className || ""} w-full bg-transparent outline-none rounded-sm ${onCard ? "placeholder:text-[#8a6c4c] placeholder:opacity-100" : "placeholder:opacity-40"} focus:ring-1 focus:ring-[#c9a86a] hover:bg-black/5 px-0.5 border-0 shadow-none`,
+    style: { color: onCard ? TEXT_DARK : undefined, ...style },
   };
   if (multiline) {
     return <textarea {...common} rows={Math.max(2, value.split("\n").length)} className={`${common.className} resize-none`} />;
@@ -190,8 +193,21 @@ function BlockBody({ variant, block: b, icons, editor, onIconClick }: { variant:
           <I className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <InlineText editor={editor} id={b.id} field="title" value={b.title} placeholder="Título" className="block text-[10px] uppercase tracking-[0.25em] sm:tracking-[0.3em] opacity-60 font-semibold" />
-          <InlineText editor={editor} id={b.id} field="body" value={b.body} placeholder="Conteúdo" className="block font-medium text-sm mt-1 sm:mt-1.5 break-words" style={{ fontFamily: SERIF }} />
+          <InlineText editor={editor} id={b.id} field="title" value={b.title} onCard placeholder="Título" className="block text-[10px] uppercase tracking-[0.25em] sm:tracking-[0.3em] opacity-60 font-semibold" />
+          <InlineText editor={editor} id={b.id} field="body" value={b.body} onCard placeholder="Conteúdo" className="block font-medium text-sm mt-1 sm:mt-1.5 break-words" style={{ fontFamily: SERIF }} />
+        </div>
+      </div>
+    );
+  }
+  if (variant === "strip" && b.wide) {
+    return (
+      <div className="flex items-start gap-4 px-6 py-5 rounded-sm" style={{ background: CARD, color: TEXT_DARK, boxShadow: `inset 0 0 0 1px ${GOLD}60`, borderLeft: `4px solid ${GOLD}` }}>
+        <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${onIconClick ? "cursor-pointer" : ""}`} style={{ background: GOLD, color: TEXT_DARK }} onClick={onIconClick}>
+          <I className="h-5 w-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <InlineText onCard editor={editor} id={b.id} field="title" value={b.title} placeholder="Título do aviso (ex.: Importante)" className="block text-base font-semibold" style={{ fontFamily: SERIF }} />
+          <InlineText onCard editor={editor} id={b.id} field="body" value={b.body} placeholder="Texto do aviso ou destaque…" multiline className="block text-sm mt-1 leading-relaxed whitespace-pre-line" />
         </div>
       </div>
     );
@@ -203,8 +219,8 @@ function BlockBody({ variant, block: b, icons, editor, onIconClick }: { variant:
           <I className="h-4 w-4" />
         </div>
         <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
-          <InlineText editor={editor} id={b.id} field="title" value={b.title} placeholder="Nome (ex.: Plano de saúde)" className="text-sm font-medium truncate" />
-          <InlineText editor={editor} id={b.id} field="body" value={b.body} placeholder="Valor" className={`text-sm font-semibold truncate ${editor ? "text-right" : "max-w-[60%]"}`} />
+          <InlineText onCard editor={editor} id={b.id} field="title" value={b.title} placeholder="Nome (ex.: Plano de saúde)" className="text-sm font-medium truncate" />
+          <InlineText onCard editor={editor} id={b.id} field="body" value={b.body} placeholder="Valor" className={`text-sm font-semibold truncate ${editor ? "text-right" : "max-w-[60%]"}`} />
         </div>
       </div>
     );
