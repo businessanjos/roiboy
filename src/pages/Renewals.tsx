@@ -89,7 +89,8 @@ export default function Renewals() {
   const [expiredPage, setExpiredPage] = useState(1);
 
   useEffect(() => { setUpcomingPage(1); }, [searchQuery, filterConsultora, filterProduto, filterTempo, filterChance, filterStatus, filterQuarter]);
-  useEffect(() => { setExpiredPage(1); }, [expiredFilterConsultora, expiredFilterProduto, expiredFilterChance, expiredFilterAno]);
+  const [expiredFilterStatus, setExpiredFilterStatus] = useState<string[]>([]);
+  useEffect(() => { setExpiredPage(1); }, [expiredFilterConsultora, expiredFilterProduto, expiredFilterChance, expiredFilterAno, expiredFilterStatus]);
 
   const handleScoreCalculated = useCallback((clientId: string, score: number) => {
     setChanceScores(prev => {
@@ -139,7 +140,7 @@ export default function Renewals() {
           setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: data.id, outcome: newOutcome } }));
         }
       }
-      const labels: Record<string, string> = { negotiating: "Em Negociação", renewed: "Renovado", lost: "Cancelou", pending: "Pendente" };
+      const labels: Record<string, string> = { negotiating: "Em Negociação", renewed: "Renovado", lost: "Não renovado", pending: "Pendente" };
       toast.success(`Status alterado para "${labels[newOutcome] || newOutcome}"`);
       // If lost, remove from pending list
       if (newOutcome === "lost") {
@@ -401,7 +402,7 @@ export default function Renewals() {
               `Vencido há ${Math.abs(daysUntil)} dia(s) (fim em ${formatLocalDate(c.end_date)}).`,
               currentOutcome
                 ? `Desfecho atual: "${currentOutcome === "negotiating" ? "Em negociação" : "Pendente"}".`
-                : "Nenhum desfecho registrado (nem Renovado, nem Cancelou).",
+                : "Nenhum desfecho registrado (nem Renovado, nem Não renovado).",
               "Nenhum contrato sucessor do mesmo produto foi encontrado na janela de -30 a +365 dias do vencimento.",
             ].join(" ")
           : [
@@ -566,6 +567,10 @@ export default function Renewals() {
     if (expiredFilterAno.length > 0) {
       const year = c.end_date ? new Date(c.end_date).getUTCFullYear().toString() : "";
       if (!expiredFilterAno.includes(year)) return false;
+    }
+    if (expiredFilterStatus.length > 0) {
+      const currentOutcome = outcomeMap[c.id]?.outcome || "pending";
+      if (!expiredFilterStatus.includes(currentOutcome)) return false;
     }
     return true;
   });
@@ -776,7 +781,7 @@ export default function Renewals() {
                         <SelectItem value="pending">Pendente</SelectItem>
                         <SelectItem value="negotiating">Em Negociação</SelectItem>
                         <SelectItem value="renewed">Renovado</SelectItem>
-                        <SelectItem value="lost">Cancelou</SelectItem>
+                        <SelectItem value="lost">Não renovado</SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>
@@ -1048,6 +1053,8 @@ export default function Renewals() {
               options={[
                 { value: "pending", label: "Pendente" },
                 { value: "negotiating", label: "Em Negociação" },
+                { value: "renewed", label: "Renovado" },
+                { value: "lost", label: "Não renovado" },
               ]}
             />
             {(filterConsultora.length > 0 ||
@@ -1158,6 +1165,18 @@ export default function Renewals() {
               options={[
                 { value: "2025", label: "2025" },
                 { value: "2026", label: "2026" },
+              ]}
+            />
+            <MultiSelectFilter
+              label="Status"
+              width="w-full sm:w-[180px]"
+              selected={expiredFilterStatus}
+              onChange={setExpiredFilterStatus}
+              options={[
+                { value: "pending", label: "Pendente" },
+                { value: "negotiating", label: "Em Negociação" },
+                { value: "renewed", label: "Renovado" },
+                { value: "lost", label: "Não renovado" },
               ]}
             />
           </div>
