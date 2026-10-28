@@ -286,7 +286,7 @@ export function RenewalLosses() {
   };
   const [items, setItems] = useState<ExpiredContract[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterPeriod, setFilterPeriod] = useState("90");
+  const [filterPeriod, setFilterPeriod] = useState("this_year");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [dateBasis, setDateBasis] = useState<"resolved" | "end">("resolved");
@@ -643,16 +643,16 @@ export function RenewalLosses() {
             <SelectValue placeholder="Período" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="this_year">Este ano</SelectItem>
+            <SelectItem value="last_year">Ano passado</SelectItem>
+            <SelectItem value="this_quarter">Este trimestre</SelectItem>
+            <SelectItem value="this_month">Este mês</SelectItem>
+            <SelectItem value="last_month">Mês passado</SelectItem>
             <SelectItem value="7">Últimos 7 dias</SelectItem>
             <SelectItem value="30">Últimos 30 dias</SelectItem>
             <SelectItem value="90">Últimos 90 dias</SelectItem>
             <SelectItem value="180">Últimos 6 meses</SelectItem>
             <SelectItem value="365">Último ano</SelectItem>
-            <SelectItem value="this_month">Este mês</SelectItem>
-            <SelectItem value="last_month">Mês passado</SelectItem>
-            <SelectItem value="this_quarter">Este trimestre</SelectItem>
-            <SelectItem value="this_year">Este ano</SelectItem>
-            <SelectItem value="last_year">Ano passado</SelectItem>
             <SelectItem value="custom">Personalizado…</SelectItem>
             <SelectItem value="all">Todo o período</SelectItem>
           </SelectContent>
