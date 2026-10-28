@@ -21,6 +21,7 @@ import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percen
 import { canSeeAllSequenceRuns } from "@/lib/zappSequenceHistoryAccess";
 import { useToast } from "@/hooks/use-toast";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
+import { formatAxisMillions } from "@/lib/formatMillions";
 import { cn } from "@/lib/utils";
 import { saveRenewalOutcome } from "@/lib/renewalOutcomes";
 import { renewalReferenceDate, summarizeRenewals } from "@/lib/renewalAnalytics";
