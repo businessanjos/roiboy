@@ -428,6 +428,11 @@ export default function Dashboard() {
         !clientInGroup(clientProductsMap[row.client_id] || [], selectedProductMemberIds)
       )
         continue;
+      if (gestaoPeriodFilter === "all") {
+        // Sem recorte de data, a base é todo cliente que já passou pela carteira.
+        underContract.add(row.client_id);
+        continue;
+      }
       if (row.start_date > startStr) continue;
       if (row.end_date && row.end_date < startStr) continue;
       if (row.cancelled_at && row.cancelled_at.slice(0, 10) < startStr) continue;
@@ -437,6 +442,7 @@ export default function Dashboard() {
   }, [
     clientContractRows,
     gestaoPeriodRange.periodStart,
+    gestaoPeriodFilter,
     inEducation,
     gestaoProductFilter,
     selectedProductMemberIds,
