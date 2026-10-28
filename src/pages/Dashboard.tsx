@@ -420,9 +420,12 @@ export default function Dashboard() {
         if (!clientInGroup(clientProducts, selectedProductMemberIds)) return false;
       }
 
+      // Formação escolhida reduz a conta ao recorte de clientes correspondente
+      if (!inEducation(contract.client_id)) return false;
+
       return true;
     });
-  }, [contractData, gestaoProductFilter, selectedProductMemberIds, gestaoPeriodRange, clientProductsMap]);
+  }, [contractData, gestaoProductFilter, selectedProductMemberIds, gestaoPeriodRange, clientProductsMap, inEducation]);
 
   // Calculate monthly chart data including new clients
   const monthlyChartData = useMemo(() => {
