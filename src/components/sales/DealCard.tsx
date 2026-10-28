@@ -367,8 +367,8 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               ?.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase()))
               .slice(0, 1)
               .map((tag, index) => (
-                <Badge key={index} variant="outline" className="text-[9px] px-1 py-0 h-4 bg-muted/50 truncate max-w-[60px]">
-                  {tag}
+                <Badge key={index} variant="outline" className="text-[9px] px-1 py-0 h-4 bg-muted/50 max-w-[60px] min-w-0 overflow-hidden">
+                  <span className="truncate">{tag}</span>
                 </Badge>
               ))}
             {deal.tags && deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length > 1 && (
