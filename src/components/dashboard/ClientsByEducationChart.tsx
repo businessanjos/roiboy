@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList } from "recharts";
-import { GraduationCap, Search } from "lucide-react";
+import { GraduationCap, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { buildEducationOptions, educationMatches } from "@/lib/dashboard/clientEducation";
 
 interface Props {
@@ -14,11 +13,12 @@ interface Props {
   educationById: Map<string, string | null>;
 }
 
-const chartConfig = { count: { label: "Clientes", color: "hsl(var(--primary))" } };
+const TOP_COUNT = 8;
 
 export function ClientsByEducationChart({ clients, educationById }: Props) {
   const [selected, setSelected] = useState<{ value: string; label: string } | null>(null);
   const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState(false);
 
   // Mesma régua de "Clientes por Produto": só clientes com contrato ativo.
   const active = useMemo(() => clients.filter((c) => c.hasActiveContract === true), [clients]);
@@ -27,6 +27,10 @@ export function ClientsByEducationChart({ clients, educationById }: Props) {
     () => buildEducationOptions(active.map((c) => educationById.get(c.id) ?? null)),
     [active, educationById],
   );
+
+  const max = data[0]?.count ?? 1;
+  const visible = expanded ? data : data.slice(0, TOP_COUNT);
+  const hiddenCount = Math.max(data.length - TOP_COUNT, 0);
 
   const people = useMemo(() => {
     if (!selected) return [];
@@ -37,11 +41,9 @@ export function ClientsByEducationChart({ clients, educationById }: Props) {
       .sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "pt-BR"));
   }, [selected, search, active, educationById]);
 
-  const open = (entry: any) => {
-    const p = entry?.payload ?? entry;
-    if (!p?.value) return;
+  const open = (entry: { value: string; label: string }) => {
     setSearch("");
-    setSelected({ value: p.value, label: p.label });
+    setSelected(entry);
   };
 
   return (
@@ -51,42 +53,65 @@ export function ClientsByEducationChart({ clients, educationById }: Props) {
           <GraduationCap className="h-5 w-5 text-primary" />
           Clientes por Formação
         </CardTitle>
-        <CardDescription>Clientes com contrato ativo. Clique numa barra para ver quem são.</CardDescription>
+        <CardDescription>Clientes com contrato ativo. Clique numa formação para ver quem são.</CardDescription>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">Nenhum cliente ativo.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <ChartContainer
-              config={chartConfig}
-              className="h-[300px]"
-              style={{ minWidth: Math.max(data.length * 72, 480) }}
-            >
-              <BarChart data={data} margin={{ top: 20, right: 8, left: 0, bottom: 40 }}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="label"
-                  interval={0}
-                  angle={-30}
-                  textAnchor="end"
-                  height={60}
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(v: string) => (v.length > 16 ? `${v.slice(0, 15)}…` : v)}
-                />
-                <YAxis allowDecimals={false} width={32} tick={{ fontSize: 11 }} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar
-                  dataKey="count"
-                  fill="var(--color-count)"
-                  radius={[4, 4, 0, 0]}
-                  className="cursor-pointer"
-                  onClick={open}
+          <div className="space-y-1">
+            {visible.map((d, i) => {
+              const pct = active.length > 0 ? Math.round((d.count / active.length) * 100) : 0;
+              const width = Math.max((d.count / max) * 100, 4);
+              return (
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() => open({ value: d.value, label: d.label })}
+                  className="group w-full flex items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <LabelList dataKey="count" position="top" className="fill-foreground" fontSize={11} />
-                </Bar>
-              </BarChart>
-            </ChartContainer>
+                  <span className="w-6 shrink-0 text-center text-xs font-semibold tabular-nums text-muted-foreground">
+                    {i + 1}º
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-baseline justify-between gap-2">
+                      <span className="truncate text-sm font-medium text-foreground">{d.label}</span>
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                        <span className="text-sm font-semibold text-foreground">{d.count}</span>
+                        {" · "}
+                        {pct}%
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-primary/70 to-primary transition-all duration-300 group-hover:from-primary group-hover:to-primary"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+            {hiddenCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-1 w-full text-xs text-muted-foreground"
+                onClick={() => setExpanded((v) => !v)}
+              >
+                {expanded ? (
+                  <>
+                    <ChevronUp className="mr-1 h-3.5 w-3.5" />
+                    Mostrar menos
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="mr-1 h-3.5 w-3.5" />
+                    Ver todas as {data.length} formações
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         )}
       </CardContent>
