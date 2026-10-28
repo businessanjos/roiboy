@@ -11,6 +11,8 @@ export type OfferBlock = {
   kind?: "detail" | "strip" | "text";
   icon?: string;
   anchor?: StripAnchor;
+  /** Faixa comprida de destaque: ocupa as duas colunas. */
+  wide?: boolean;
 };
 export type StripAnchor = "after_details" | "after_benefits" | "end";
 
@@ -53,7 +55,7 @@ export function OfferEditableBlocks({
   const visible = editor ? items : items.filter((b) => b.title?.trim() || b.body?.trim());
   if (!editor) {
     if (!visible.length) return null;
-    return <div className={gridClassName}>{visible.map((b) => <BlockBody key={b.id} variant={variant} block={b} icons={icons} />)}</div>;
+    return <div className={gridClassName}>{visible.map((b) => <div key={b.id} className={b.wide ? "col-span-full" : undefined}><BlockBody variant={variant} block={b} icons={icons} /></div>)}</div>;
   }
   const ids = items.map((b) => b.id);
   const onDragEnd = (e: DragEndEvent) => {
@@ -77,14 +79,26 @@ export function OfferEditableBlocks({
           )}
         </SortableContext>
       </DndContext>
-      <button
-        type="button"
-        onClick={() => { editor.snapshot(); editor.insert(ids[ids.length - 1] ?? null, template, ids); }}
-        className={`mt-3 w-full flex items-center justify-center gap-1.5 rounded-sm border border-dashed text-xs uppercase tracking-[0.2em] transition-opacity ${items.length ? "py-2 opacity-40 hover:opacity-100" : "py-3 opacity-60 hover:opacity-100"}`}
-        style={{ borderColor: `${GOLD}80`, color: GOLD }}
-      >
-        <Plus className="h-3.5 w-3.5" /> {addLabel}
-      </button>
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={() => { editor.snapshot(); editor.insert(ids[ids.length - 1] ?? null, template, ids); }}
+          className={`flex-1 flex items-center justify-center gap-1.5 rounded-sm border border-dashed text-xs uppercase tracking-[0.2em] transition-opacity ${items.length ? "py-2 opacity-40 hover:opacity-100" : "py-3 opacity-60 hover:opacity-100"}`}
+          style={{ borderColor: `${GOLD}80`, color: GOLD }}
+        >
+          <Plus className="h-3.5 w-3.5" /> {addLabel}
+        </button>
+        {variant === "strip" && (
+          <button
+            type="button"
+            onClick={() => { editor.snapshot(); editor.insert(ids[ids.length - 1] ?? null, { ...template, wide: true, icon: "star" }, ids); }}
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-sm border border-dashed text-xs uppercase tracking-[0.2em] transition-opacity ${items.length ? "py-2 opacity-40 hover:opacity-100" : "py-3 opacity-60 hover:opacity-100"}`}
+            style={{ borderColor: `${GOLD}80`, color: GOLD }}
+          >
+            <MoveHorizontal className="h-3.5 w-3.5" /> Faixa comprida (aviso)
+          </button>
+        )}
+      </div>
     </div>
   );
 }
