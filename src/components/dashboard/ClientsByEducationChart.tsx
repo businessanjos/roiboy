@@ -60,75 +60,84 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
 
   return (
     <Card className="shadow-card">
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <GraduationCap className="h-5 w-5 text-primary" />
-          Clientes por Formação
-        </CardTitle>
-        <CardDescription>
-          {active.length} clientes com contrato vigente no período selecionado. Clique numa formação para ver quem são.
+      <CardHeader className="space-y-1 p-4 pb-1">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <GraduationCap className="h-4 w-4 shrink-0 text-primary" />
+            Clientes por Formação
+          </CardTitle>
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {active.length} sob contrato no período
+          </span>
+        </div>
+        <CardDescription className="text-xs">
+          Clique numa formação para ver quem são.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 pt-2">
         {data.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">Nenhum cliente ativo.</p>
+          <p className="py-3 text-center text-sm text-muted-foreground">Nenhum cliente ativo.</p>
         ) : (
-          <div className="space-y-1">
-            {visible.map((d, i) => {
-              const pct = active.length > 0 ? Math.round((d.count / active.length) * 100) : 0;
-              const width = Math.max((d.count / max) * 100, 4);
-              const isHighlighted = d.value === highlightValue;
-              const dimmed = !!highlightValue && !isHighlighted;
-              return (
-                <button
-                  key={d.value}
-                  type="button"
-                  onClick={() => open({ value: d.value, label: d.label })}
-                  className={`group w-full flex items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-all hover:bg-muted/60 ${isHighlighted ? "bg-primary/10 ring-1 ring-primary/40" : ""} ${dimmed ? "opacity-50 hover:opacity-100" : ""} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
-                >
-                  <span className="w-6 shrink-0 text-center text-xs font-semibold tabular-nums text-muted-foreground">
-                    {i + 1}º
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex items-baseline justify-between gap-2">
-                      <span className="truncate text-sm font-medium text-foreground">{d.label}</span>
-                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                        <span className="text-sm font-semibold text-foreground">{d.count}</span>
-                        {" · "}
-                        {pct}%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary/70 to-primary transition-all duration-300 group-hover:from-primary group-hover:to-primary"
+          <>
+            <div className="grid gap-x-8 sm:grid-cols-2">
+              {visible.map((d, i) => {
+                const pct = active.length > 0 ? Math.round((d.count / active.length) * 100) : 0;
+                const width = Math.max((d.count / max) * 100, 4);
+                const isHighlighted = d.value === highlightValue;
+                const dimmed = !!highlightValue && !isHighlighted;
+                return (
+                  <button
+                    key={d.value}
+                    type="button"
+                    onClick={() => open({ value: d.value, label: d.label })}
+                    className={`group flex w-full items-center gap-2 rounded-md px-2 py-[5px] text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                      isHighlighted ? "bg-primary/10 ring-1 ring-primary/40" : ""
+                    } ${dimmed ? "opacity-45 hover:opacity-100" : ""}`}
+                  >
+                    <span className="w-5 shrink-0 text-center text-[11px] font-semibold tabular-nums text-muted-foreground">
+                      {i + 1}º
+                    </span>
+                    <span className="w-28 shrink-0 truncate text-[13px] font-medium text-foreground lg:w-36">
+                      {d.label}
+                    </span>
+                    <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                      <span
+                        className="block h-full rounded-full bg-gradient-to-r from-primary/60 to-primary transition-all duration-300 group-hover:from-primary/80 group-hover:to-primary"
                         style={{ width: `${width}%` }}
                       />
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+                    </span>
+                    <span className="w-16 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+                      <span className="text-[13px] font-semibold text-foreground">{d.count}</span>
+                      {" · "}
+                      {pct}%
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
             {hiddenCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-1 w-full text-xs text-muted-foreground"
-                onClick={() => setExpanded((v) => !v)}
-              >
-                {expanded ? (
-                  <>
-                    <ChevronUp className="mr-1 h-3.5 w-3.5" />
-                    Mostrar menos
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="mr-1 h-3.5 w-3.5" />
-                    Ver todas as {data.length} formações
-                  </>
-                )}
-              </Button>
+              <div className="mt-1 flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-3 text-xs text-muted-foreground"
+                  onClick={() => setExpanded((v) => !v)}
+                >
+                  {expanded ? (
+                    <>
+                      <ChevronUp className="mr-1 h-3.5 w-3.5" />
+                      Mostrar menos
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="mr-1 h-3.5 w-3.5" />
+                      Ver todas as {data.length} formações
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
-          </div>
+          </>
         )}
       </CardContent>
 
