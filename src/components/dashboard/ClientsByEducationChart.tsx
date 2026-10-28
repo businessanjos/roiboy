@@ -99,7 +99,7 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
                     </span>
                     <span
                       title={d.label}
-                      className="w-32 shrink-0 truncate text-[13px] font-medium text-foreground lg:w-40 xl:w-48"
+                      className="w-32 shrink-0 truncate text-[13px] font-medium text-foreground lg:w-44 xl:w-52"
                     >
                       {d.label}
                     </span>
