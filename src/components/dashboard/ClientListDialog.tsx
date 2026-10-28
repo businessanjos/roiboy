@@ -106,7 +106,8 @@ export function ClientListDialog({
           )}
         </div>
 
-        <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-3 pb-5">
+        <div className="relative mt-3 min-h-0 flex-1">
+          <div className="h-full overflow-y-auto px-3 pb-5">
           {people.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">{emptyLabel}</p>
           ) : (
@@ -136,13 +137,18 @@ export function ClientListDialog({
                           {meta}
                         </Badge>
                       )}
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 opacity-60 transition-opacity group-hover:opacity-100" />
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 opacity-0 transition-opacity group-hover:opacity-100" />
                     </Link>
                   </li>
                 );
               })}
             </ul>
           )}
+          </div>
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-background"
+            aria-hidden
+          />
         </div>
       </DialogContent>
     </Dialog>
