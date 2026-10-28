@@ -432,6 +432,40 @@ export default function Dashboard() {
     clientProductsMap,
   ]);
 
+  // Clientes sob contrato na data de início do período, SEM o filtro de formação:
+  // alimenta o gráfico "Clientes por Formação", que precisa mostrar todas as
+  // formações mesmo quando uma já está selecionada no filtro de cima.
+  const periodActiveClientIdsForEducation = useMemo(() => {
+    const startStr = gestaoPeriodRange.periodStart.toISOString().slice(0, 10);
+    const set = new Set<string>();
+    for (const row of clientContractRows ?? []) {
+      if (!row.client_id || !row.start_date) continue;
+      if (row.status === "draft") continue;
+      if (
+        gestaoProductFilter !== "all" &&
+        !clientInGroup(clientProductsMap[row.client_id] || [], selectedProductMemberIds)
+      )
+        continue;
+      if (row.start_date > startStr) continue;
+      if (row.end_date && row.end_date < startStr) continue;
+      if (row.cancelled_at && row.cancelled_at.slice(0, 10) < startStr) continue;
+      set.add(row.client_id);
+    }
+    return set;
+  }, [
+    clientContractRows,
+    gestaoPeriodRange.periodStart,
+    gestaoProductFilter,
+    selectedProductMemberIds,
+    clientProductsMap,
+  ]);
+
+  // Clientes filtrados só por produto (sem formação), para o gráfico de formações.
+  const productScopedClients = useMemo(() => {
+    if (gestaoProductFilter === "all") return clients;
+    return clients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds));
+  }, [clients, gestaoProductFilter, selectedProductMemberIds]);
+
   // Filter contract data by product and period
   const filteredContractData = useMemo(() => {
     const { periodStart, periodEnd } = gestaoPeriodRange;
@@ -1275,7 +1309,11 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <ClientsByEducationChart clients={gestaoFilteredClients as any} educationById={educationById} />
+          <ClientsByEducationChart
+            clients={productScopedClients as any}
+            educationById={educationById}
+            activeClientIds={periodActiveClientIdsForEducation}
+          />
 
 
 
