@@ -188,6 +188,9 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
     }
     return null;
   }, [message.content, message.mention_map]);
+  // Link shared as text (Instagram/YouTube etc.): WhatsApp sends a thumbnail key
+  // without a downloadable file. Show only the clickable link, never a media error.
+  const isLinkPreviewOnly = !message.media_url && message.media_type === "document" && !message.media_filename && /https?:\/\//i.test(message.content || "");
 
   // Check if message can be deleted (only outbound messages sent less than 1 hour ago)
   const canDelete = useMemo(() => {
@@ -389,7 +392,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
           
           {/* Media content - show loading state for pending/null downloads without a URL */}
           {/* Media loading states */}
-          {message.media_download_status === "pending" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
+          {message.media_download_status === "pending" && message.media_type && !message.media_url && message.media_type !== "sticker" && !isLinkPreviewOnly && (
             <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex flex-col items-center justify-center p-4 gap-2">
               <div className="flex items-center gap-2">
                 <Loader2 className="h-5 w-5 animate-spin text-zapp-text-muted" />
@@ -408,7 +411,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               )}
             </div>
           )}
-          {!message.media_download_status && message.media_type && !message.media_url && message.media_type !== "sticker" && (
+          {!message.media_download_status && message.media_type && !message.media_url && message.media_type !== "sticker" && !isLinkPreviewOnly && (
             <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex flex-col items-center justify-center p-4 gap-2">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-warning" />
@@ -422,13 +425,13 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               )}
             </div>
           )}
-          {message.media_download_status === "downloading" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
+          {message.media_download_status === "downloading" && message.media_type && !message.media_url && message.media_type !== "sticker" && !isLinkPreviewOnly && (
             <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center p-4 gap-2">
               <Loader2 className="h-5 w-5 animate-spin text-zapp-text-muted" />
               <span className="text-xs text-zapp-text-muted">Baixando mídia...</span>
             </div>
           )}
-          {message.media_download_status === "failed" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
+          {message.media_download_status === "failed" && message.media_type && !message.media_url && message.media_type !== "sticker" && !isLinkPreviewOnly && (
             <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex flex-col items-center justify-center p-4 gap-2">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-yellow-500" />
@@ -447,7 +450,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               )}
             </div>
           )}
-          {message.media_download_status === "abandoned" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
+          {message.media_download_status === "abandoned" && message.media_type && !message.media_url && message.media_type !== "sticker" && !isLinkPreviewOnly && (
             <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex flex-col items-center justify-center p-4 gap-2">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-warning" />

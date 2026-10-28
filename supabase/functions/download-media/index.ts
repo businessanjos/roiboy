@@ -26,7 +26,7 @@ const corsHeaders = {
  */
 
 // Limite de tamanho por mídia (memória do isolate é compartilhada)
-const MAX_MEDIA_BYTES = 45 * 1024 * 1024;
+const MAX_MEDIA_BYTES = 64 * 1024 * 1024;
 
 const BodySchema = z.object({
   message_id: z.string().uuid().optional(),
