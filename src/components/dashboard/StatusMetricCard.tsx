@@ -114,12 +114,12 @@ export function StatusMetricCard({
           : undefined
       }
     >
-      <CardContent className="flex h-full items-center justify-between gap-2 p-4">
-        <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>
-          <p className={cn("mt-1 text-2xl font-bold leading-none", valueClass)}>{value}</p>
+      <CardContent className="flex h-full flex-col justify-between gap-1.5 p-3">
+        <p className="text-[11px] font-medium leading-tight text-muted-foreground">{label}</p>
+        <div className="flex items-end justify-between gap-1">
+          <p className={cn("text-2xl font-bold leading-none", valueClass)}>{value}</p>
+          <Icon className={cn("h-4 w-4 shrink-0", iconClass)} />
         </div>
-        <Icon className={cn("h-5 w-5 shrink-0", iconClass)} />
       </CardContent>
     </Card>
   );
