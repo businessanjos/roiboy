@@ -464,10 +464,6 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       toast.error("Preencha a data de início e o valor");
       return;
     }
-    if (editingContract && editStatus && editStatus !== editingContract.status && editStatus !== "active" && !editStatusReason.trim()) {
-      toast.error("Informe o motivo e a justificativa da mudança de status");
-      return;
-    }
 
 
     setSaving(true);
@@ -958,7 +954,8 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                   </Select>
                   {editStatus !== editingContract.status && editStatus !== "active" && (
                     <Textarea
-                      placeholder="Motivo e justificativa da mudança de status *"
+                      placeholder="Motivo da mudança de status (opcional)"
+
                       value={editStatusReason}
                       onChange={(e) => setEditStatusReason(e.target.value)}
                       rows={2}
