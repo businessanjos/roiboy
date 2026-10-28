@@ -85,8 +85,8 @@ type Form = {
   signer_name: string;
   signer_role: string;
   custom_sections: { id: string; title: string; body: string }[];
-  extra_details: { id: string; title: string; body: string; icon?: string }[];
-  extra_strips: { id: string; title: string; body: string; icon?: string; anchor?: StripAnchor }[];
+  extra_details: { id: string; title: string; body: string; icon?: string; wide?: boolean }[];
+  extra_strips: { id: string; title: string; body: string; icon?: string; anchor?: StripAnchor; wide?: boolean }[];
   accent_color: string;
   cover_image_url: string;
   candidate_photo_url: string;
@@ -196,8 +196,8 @@ export default function RHOfferWizard() {
         signer_name: data.signer_name || "",
         signer_role: data.signer_role || "",
         custom_sections: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind !== "detail" && b.kind !== "strip").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
-        extra_details: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "detail").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "briefcase" })),
-        extra_strips: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "strip").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "sparkles", anchor: b.anchor || "end" })),
+        extra_details: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "detail").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "briefcase", wide: !!b.wide })),
+        extra_strips: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "strip").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "sparkles", anchor: b.anchor || "end", wide: !!b.wide })),
         accent_color: data.accent_color || "#6366F1",
         cover_image_url: data.cover_image_url || "",
         // Ao clonar, a nova offer não é modelo; ao editar, mantém flag
@@ -336,8 +336,8 @@ export default function RHOfferWizard() {
   const applyBlocks = (next: OfferBlock[]) => setForm((f) => ({
     ...f,
     custom_sections: next.filter((b) => b.kind === "text").map(({ id, title, body }) => ({ id, title, body })),
-    extra_details: next.filter((b) => b.kind === "detail").map(({ id, title, body, icon }) => ({ id, title, body, icon })),
-    extra_strips: next.filter((b) => b.kind === "strip").map(({ id, title, body, icon, anchor }) => ({ id, title, body, icon, anchor })),
+    extra_details: next.filter((b) => b.kind === "detail").map(({ id, title, body, icon, wide }) => ({ id, title, body, icon, wide })),
+    extra_strips: next.filter((b) => b.kind === "strip").map(({ id, title, body, icon, anchor, wide }) => ({ id, title, body, icon, anchor, wide })),
   }));
   const blocksEditor: OfferBlocksEditor = {
     snapshot: () => blocksUndo.snapshot(allBlocks),
