@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { clientScopeKey, filterByClientScope } from "@/lib/dashboard/clientScope";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LabelList } from "recharts";
@@ -43,6 +44,8 @@ interface Props {
   accountId?: string | null;
   periodStart: Date;
   periodEnd: Date;
+  /** Restringe o gráfico a estes clientes (filtro de formação do dashboard). */
+  clientIds?: string[] | null;
 }
 
 type EventKind = "cancelamento" | "renovado" | "vencido_sem_sucessor";
@@ -106,23 +109,29 @@ const formatDate = (value: string | null) =>
   value ? new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR") : "—";
 
 
-export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }: Props) {
+export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, clientIds }: Props) {
   const startStr = periodStart.toISOString().slice(0, 10);
   const endStr = periodEnd.toISOString().slice(0, 10);
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
   const { labels: statusLabels } = useContractCatalog("contract_status");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["dashboard-churn-renewal-segment", accountId, startStr, endStr],
+    queryKey: ["dashboard-churn-renewal-segment", accountId, startStr, endStr, clientScopeKey(clientIds)],
     enabled: !!accountId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data: contracts, error } = await supabase
+      const { data: allContracts, error } = await supabase
         .from("client_contracts")
         .select("id, client_id, product_id, start_date, end_date, status, cancelled_at, parent_contract_id")
         .eq("account_id", accountId!)
         .limit(10000);
       if (error) throw error;
+
+      const contracts = filterByClientScope(
+        (allContracts ?? []) as any[],
+        (c: any) => c.client_id,
+        clientIds,
+      );
 
       const productIds = Array.from(
         new Set((contracts ?? []).map((c: any) => c.product_id).filter(Boolean))

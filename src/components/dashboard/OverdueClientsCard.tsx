@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { clientScopeIds } from "@/lib/dashboard/clientScope";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
@@ -30,7 +31,12 @@ interface OverdueClient {
  * Card no dashboard CS: top clientes em atraso.
  * Escopo automático: filtra por responsible_user_id se o usuário não tem acesso total.
  */
-export function OverdueClientsCard() {
+interface Props {
+  /** Restringe o ranking a estes clientes (filtro de formação do dashboard). */
+  clientIds?: string[] | null;
+}
+
+export function OverdueClientsCard({ clientIds }: Props) {
   const { currentUser } = useCurrentUser();
   const { isAdmin } = usePermissions();
   const hasFullAccess = isAdmin;
@@ -64,8 +70,10 @@ export function OverdueClientsCard() {
         >();
         const now = Date.now();
 
+        const scope = clientScopeIds(clientIds);
         for (const row of entries || []) {
           if (!row.client_id) continue;
+          if (scope && !scope.has(row.client_id)) continue;
           const cur = byClient.get(row.client_id) || {
             amount: 0,
             count: 0,
@@ -135,7 +143,7 @@ export function OverdueClientsCard() {
     return () => {
       cancelled = true;
     };
-  }, [currentUser?.account_id, currentUser?.id, hasFullAccess]);
+  }, [currentUser?.account_id, currentUser?.id, hasFullAccess, clientIds]);
 
   const total = rows.reduce((sum, r) => sum + r.overdue_amount, 0);
 
