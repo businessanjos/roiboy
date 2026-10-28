@@ -194,11 +194,17 @@ export default function Dashboard() {
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
     queryFn: async () => {
-      const { data, error } = await fetchAllRows<{ client_id: string; status: string; end_date: string | null }>(
+      const { data, error } = await fetchAllRows<{
+        client_id: string;
+        status: string;
+        start_date: string | null;
+        end_date: string | null;
+        cancelled_at: string | null;
+      }>(
         (from, to) =>
           supabase
             .from("client_contracts")
-            .select("client_id, status, end_date")
+            .select("client_id, status, start_date, end_date, cancelled_at")
             .eq("account_id", currentUser!.account_id!)
             .order("id", { ascending: true })
             .range(from, to),
@@ -396,6 +402,35 @@ export default function Dashboard() {
     return { periodStart, periodEnd };
   }, [gestaoPeriodFilter, gestaoCustomDateRange]);
 
+  // Clientes de fato sob contrato na data de início do período filtrado.
+  // É a base real do churn e da retenção, já respeitando produto e formação.
+  const periodStartActiveClients = useMemo(() => {
+    const startStr = gestaoPeriodRange.periodStart.toISOString().slice(0, 10);
+    const underContract = new Set<string>();
+    for (const row of clientContractRows ?? []) {
+      if (!row.client_id || !row.start_date) continue;
+      if (row.status === "draft") continue;
+      if (!inEducation(row.client_id)) continue;
+      if (
+        gestaoProductFilter !== "all" &&
+        !clientInGroup(clientProductsMap[row.client_id] || [], selectedProductMemberIds)
+      )
+        continue;
+      if (row.start_date > startStr) continue;
+      if (row.end_date && row.end_date < startStr) continue;
+      if (row.cancelled_at && row.cancelled_at.slice(0, 10) < startStr) continue;
+      underContract.add(row.client_id);
+    }
+    return underContract.size;
+  }, [
+    clientContractRows,
+    gestaoPeriodRange.periodStart,
+    inEducation,
+    gestaoProductFilter,
+    selectedProductMemberIds,
+    clientProductsMap,
+  ]);
+
   // Filter contract data by product and period
   const filteredContractData = useMemo(() => {
     const { periodStart, periodEnd } = gestaoPeriodRange;
@@ -526,11 +561,11 @@ export default function Dashboard() {
   const retentionMetrics = useMemo(() => {
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + sumExits(m), 0);
-    const ativosAtuais = shownActiveClients;
-    const baseInicio = Math.max(0, ativosAtuais + cancelamentos - novos);
-    const rate = baseInicio > 0 ? Math.round(((baseInicio - cancelamentos) / baseInicio) * 100) : 100;
+    const baseInicio = periodStartActiveClients;
+    const retidos = Math.max(0, baseInicio - cancelamentos);
+    const rate = baseInicio > 0 ? Math.round((retidos / baseInicio) * 100) : 100;
     return { rate, novos, cancelamentos };
-  }, [monthlyChartData, shownActiveClients, gestaoExitTypeFilter]);
+  }, [monthlyChartData, periodStartActiveClients, gestaoExitTypeFilter]);
 
   // Period-scoped totals derived from the monthly chart data
   const periodExitTotals = useMemo(() => {
@@ -658,13 +693,11 @@ export default function Dashboard() {
   const churnMetrics = useMemo(() => {
     // Churn = somente cancelamentos antecipados (não inclui encerramentos/não renovações)
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
-    const encerramentos = monthlyChartData.reduce((sum, m) => sum + (m.encerramentos || 0), 0);
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
-    const ativosAtuais = shownActiveClients;
-    const activeBase = Math.max(0, ativosAtuais + cancelamentos + encerramentos - novos);
+    const activeBase = periodStartActiveClients;
     const rate = activeBase > 0 ? (cancelamentos / activeBase) * 100 : 0;
     return { rate, cancelamentos, novos, activeBase };
-  }, [monthlyChartData, shownActiveClients]);
+  }, [monthlyChartData, periodStartActiveClients]);
 
 
   // Taxa de renovação por COORTE DE VENCIMENTO: considera os contratos cujo
@@ -918,13 +951,13 @@ export default function Dashboard() {
 
           {/* Filters - aligned with tabs (hidden on Mapa which has its own filters) */}
           {dashboardTab !== "mapa" && (
-          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto overflow-x-auto pb-1 scrollbar-thin">
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto lg:min-w-0 lg:flex-1 lg:justify-end overflow-x-auto pb-1 scrollbar-thin">
             <div className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0">
               <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="text-xs sm:text-sm font-medium hidden xs:inline">Filtros:</span>
             </div>
             <Select value={gestaoProductFilter} onValueChange={setGestaoProductFilter}>
-              <SelectTrigger className="w-[130px] sm:w-[160px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0">
+              <SelectTrigger className="w-[150px] sm:w-[190px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0">
                 <SelectValue placeholder="Produtos" />
               </SelectTrigger>
               <SelectContent>
