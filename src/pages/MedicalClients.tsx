@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { EducationSelect } from "@/components/client/EducationSelect";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { buildEducationOptions, educationKey, EDUCATION_NONE } from "@/lib/dashboard/clientEducation";
 
 
 type Evidence = { source: string; field?: string; text: string };
@@ -135,15 +136,14 @@ export default function MedicalClients() {
     return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
   }, [clients]);
 
-  const educationBreakdown = useMemo(() => {
-    const m = new Map<string, number>();
-    clients.forEach((c) => {
-      const key = (c.education ?? "").trim();
-      if (!key) return;
-      m.set(key, (m.get(key) ?? 0) + 1);
-    });
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
-  }, [clients]);
+  // Mesmo agrupamento do Dashboard: "ADMINISTRAÇÃO" e "Administração" viram uma só.
+  const educationBreakdown = useMemo(
+    () =>
+      buildEducationOptions(clients.map((c) => c.education))
+        .filter((o) => o.value !== EDUCATION_NONE)
+        .map((o) => [o.value, o.label, o.count] as const),
+    [clients],
+  );
 
   const identifiedCount = useMemo(
     () => clients.filter((c) => (c.education ?? "").trim() !== "").length,
@@ -161,7 +161,7 @@ export default function MedicalClients() {
     return clients.filter((c) => {
       if (programFilter !== "all" && (c.program ?? "__none__") !== programFilter) return false;
       if (areaFilter !== "all" && !(c.practiceAreas ?? []).includes(areaFilter)) return false;
-      if (educationFilter !== "all" && (c.education ?? "").trim() !== educationFilter) return false;
+      if (educationFilter !== "all" && educationKey(c.education) !== educationFilter) return false;
       if (sourceFilter !== "all" && !c.evidence.some((e) => e.source === sourceFilter)) return false;
       if (classificationFilter === "unclassified" && (c.education || c.education_specialty)) return false;
       if (classificationFilter === "classified" && !c.education && !c.education_specialty) return false;
@@ -289,12 +289,12 @@ export default function MedicalClients() {
           >
             Todas as formações ({clients.length})
           </button>
-          {educationBreakdown.map(([label, count]) => (
+          {educationBreakdown.map(([key, label, count]) => (
             <button
-              key={label}
+              key={key}
               type="button"
-              onClick={() => setEducationFilter(educationFilter === label ? "all" : label)}
-              className={`text-xs rounded-full border px-3 py-1 transition-colors ${educationFilter === label ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+              onClick={() => setEducationFilter(educationFilter === key ? "all" : key)}
+              className={`text-xs rounded-full border px-3 py-1 transition-colors ${educationFilter === key ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
             >
               {label} ({count})
             </button>
