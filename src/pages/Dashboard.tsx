@@ -526,14 +526,20 @@ export default function Dashboard() {
   }, [educationScopedClients, gestaoProductFilter, selectedProductMemberIds]);
 
   // Filter CX upcoming events by product filter (shares same filter as Gestão)
+  // Only clients with an active contract appear (cancelled/ended stay out).
+  const activeClientIds = useMemo(
+    () => new Set(clients.filter((c: any) => c.hasActiveContract === true).map((c: any) => c.id)),
+    [clients],
+  );
   const filteredUpcomingEvents = useMemo(() => {
     return (upcomingEvents || []).filter((e: any) => {
+      if (!activeClientIds.has(e.client_id)) return false;
       if (!inEducation(e.client_id)) return false;
       if (gestaoProductFilter === "all") return true;
       const clientProducts = clientProductsMap[e.client_id] || [];
       return clientInGroup(clientProducts, selectedProductMemberIds);
     });
-  }, [upcomingEvents, gestaoProductFilter, selectedProductMemberIds, clientProductsMap, inEducation]);
+  }, [upcomingEvents, activeClientIds, gestaoProductFilter, selectedProductMemberIds, clientProductsMap, inEducation]);
 
   const gestaoClientStats = useMemo(() => ({
     total: gestaoFilteredClients.length,
