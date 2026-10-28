@@ -147,7 +147,14 @@ export default function Dashboard() {
   );
 
   // Agrupa produtos equivalentes (renovações + nomes legados Rykas -> Eternum)
-  const productGroups = useMemo(() => buildProductGroups(visibleProducts as any[]), [visibleProducts]);
+  // Produtos inativos (ex.: nomes legados Rykas) entram só para somar clientes ao grupo;
+  // grupos sem nenhum produto ativo e sem clientes ficam de fora.
+  const productGroups = useMemo(() => {
+    const activeIds = new Set(visibleProducts.filter((p: any) => p.is_active !== false).map((p: any) => p.id));
+    return buildProductGroups(visibleProducts as any[]).filter(
+      (g) => g.memberIds.some((id) => activeIds.has(id)) || clients.some((c: any) => clientInGroup(c.product_ids, g.memberIds)),
+    );
+  }, [visibleProducts, clients]);
 
   // Só exibe grupos que possuem clientes ativos (oculta zerados)
   const productsWithClients = useMemo(

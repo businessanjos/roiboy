@@ -339,6 +339,7 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
                       dataKey="total"
                       fill="hsl(var(--primary))"
                       radius={[4, 4, 0, 0]}
+                      maxBarSize={64}
                       className="cursor-pointer"
                       onClick={(d: any) => {
                         const m = d?.payload?.month ?? d?.month;

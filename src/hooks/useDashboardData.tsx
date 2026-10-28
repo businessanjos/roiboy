@@ -16,6 +16,7 @@ interface Product {
   id: string;
   name: string;
   color?: string | null;
+  is_active?: boolean | null;
 }
 
 interface LifeEvent {
@@ -52,8 +53,7 @@ export function useProducts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, color")
-        .eq("is_active", true)
+        .select("id, name, color, is_active")
         .order("name");
       
       if (error) throw error;
@@ -127,7 +127,7 @@ export function useClientsWithScores() {
           (async () => { const { data } = await supabase.from("client_products").select("client_id, product_id").eq("is_active", true).in("client_id", batch); return data || []; })()
         );
         activeContractPromises.push(
-          (async () => { const { data } = await supabase.from("client_contracts").select("client_id").eq("status", "active").in("client_id", batch); return data || []; })()
+          (async () => { const { data } = await supabase.from("client_contracts").select("client_id, product_id").eq("status", "active").in("client_id", batch); return data || []; })()
         );
       }
 
@@ -140,6 +140,13 @@ export function useClientsWithScores() {
       productResults.flat().forEach((cp: any) => {
         if (!clientProductsMap[cp.client_id]) clientProductsMap[cp.client_id] = [];
         clientProductsMap[cp.client_id].push(cp.product_id);
+      });
+
+      // Contratos ativos são a fonte oficial do produto do cliente
+      activeResults.flat().forEach((c: any) => {
+        if (!c.product_id) return;
+        const list = (clientProductsMap[c.client_id] ??= []);
+        if (!list.includes(c.product_id)) list.push(c.product_id);
       });
 
       const activeContractsSet = new Set(activeResults.flat().map((c: any) => c.client_id));
