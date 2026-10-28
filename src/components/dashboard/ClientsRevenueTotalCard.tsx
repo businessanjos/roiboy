@@ -41,6 +41,8 @@ function periodBounds(periodFilter: string, customRange?: DateRange): { from: st
   const now = new Date();
   const to = monthKey(now);
   switch (periodFilter) {
+    case "all":
+      return { from: "2000-01", to, label: "Todo o período" };
     case "7":
     case "month":
       return { from: to, to, label: "Este mês" };

@@ -383,6 +383,10 @@ export default function Dashboard() {
     let periodEnd: Date = now;
     
     switch (gestaoPeriodFilter) {
+      case "all":
+        // "Todo o período" começa antes do primeiro contrato da conta.
+        periodStart = new Date(2000, 0, 1);
+        break;
       case "month":
         periodStart = startOfMonth(now);
         periodEnd = endOfMonth(now);
@@ -733,6 +737,7 @@ export default function Dashboard() {
       "6": "Últimos 6 meses",
       "12": "Últimos 12 meses",
       year: "Este ano",
+      all: "Todo o período",
       custom: "Período personalizado",
     };
     return labels[gestaoPeriodFilter] || "Período";
@@ -1060,6 +1065,7 @@ export default function Dashboard() {
                 <SelectItem value="6">Últimos 6 meses</SelectItem>
                 <SelectItem value="12">Últimos 12 meses</SelectItem>
                 <SelectItem value="year">Este ano</SelectItem>
+                <SelectItem value="all">Todo o período</SelectItem>
                 <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
