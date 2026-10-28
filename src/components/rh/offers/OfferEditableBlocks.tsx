@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { Modifier } from "@dnd-kit/core";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -52,6 +53,16 @@ export function OfferEditableBlocks({
   emptyHint?: boolean;
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const scaleRef = useRef(1);
+  // A prévia é encolhida com zoom; corrige o deslocamento do arrasto para seguir o mouse.
+  const zoomFix: Modifier = ({ transform }) => ({ ...transform, x: transform.x / scaleRef.current, y: transform.y / scaleRef.current });
+  const measureScale = () => {
+    const el = wrapRef.current;
+    if (!el || !el.offsetWidth) { scaleRef.current = 1; return; }
+    const r = el.getBoundingClientRect().width / el.offsetWidth;
+    scaleRef.current = r > 0.1 && r < 10 ? r : 1;
+  };
   const visible = editor ? items : items.filter((b) => b.title?.trim() || b.body?.trim());
   if (!editor) {
     if (!visible.length) return null;
@@ -67,8 +78,8 @@ export function OfferEditableBlocks({
     editor.reorder(arrayMove(ids, from, to));
   };
   return (
-    <div data-no-section-click className={emptyHint && !items.length ? "" : undefined}>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+    <div ref={wrapRef} data-no-section-click className={emptyHint && !items.length ? "" : undefined}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd} onDragStart={measureScale} modifiers={[zoomFix]}>
         <SortableContext items={ids} strategy={rectSortingStrategy}>
           {items.length > 0 && (
             <div className={gridClassName}>
