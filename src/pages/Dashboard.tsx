@@ -731,6 +731,15 @@ export default function Dashboard() {
     return labels[gestaoPeriodFilter] || "Período";
   }, [gestaoPeriodFilter]);
 
+  // Períodos de até ~1 mês partem praticamente da carteira atual, então o gráfico
+  // "Clientes por Formação" quase não muda. O aviso informa isso na própria tela.
+  const educationPeriodShort = useMemo(() => {
+    const days = Math.round(
+      (gestaoPeriodRange.periodEnd.getTime() - gestaoPeriodRange.periodStart.getTime()) / 86_400_000
+    );
+    return days <= 45;
+  }, [gestaoPeriodRange]);
+
   // Churn do período: cancelamentos / base de ativos no INÍCIO do período
   // Base início ≈ ativos atuais + todas as saídas no período − novos no período
   const churnMetrics = useMemo(() => {
@@ -1316,6 +1325,8 @@ export default function Dashboard() {
             educationById={educationById}
             activeClientIds={periodActiveClientIdsForEducation}
             highlightValue={gestaoEducationFilter === EDUCATION_ALL ? undefined : gestaoEducationFilter}
+            shortPeriod={educationPeriodShort}
+            periodLabel={gestaoPeriodFilter === "custom" ? undefined : periodLabel}
           />
 
 
