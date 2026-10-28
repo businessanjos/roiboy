@@ -5,6 +5,7 @@ import { OfferLetterView, OFFER_DETAIL_ICONS, type Offer as PreviewOffer } from 
 import { useOfferContentSettings } from "@/hooks/useOfferContentSettings";
 import { KpiPacksEditorDialog, OfferDefaultsDialog } from "@/components/rh/offers/OfferContentSettingsDialogs";
 import { useUndoHistory } from "@/hooks/useUndoHistory";
+import { OfferPreviewBuilder } from "@/components/rh/offers/OfferPreviewBuilder";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -85,6 +86,7 @@ type Form = {
   signer_role: string;
   custom_sections: { id: string; title: string; body: string }[];
   extra_details: { id: string; title: string; body: string; icon?: string }[];
+  extra_strips: { id: string; title: string; body: string; icon?: string }[];
   accent_color: string;
   cover_image_url: string;
   candidate_photo_url: string;
@@ -101,7 +103,7 @@ const EMPTY: Form = {
   start_date: "", offer_expires_at: "",
   work_schedule: { rules: [{ days: ["mon","tue","wed","thu","fri"], start_time: "09:00", end_time: "18:00", lunch_minutes: 60 }] },
   hero_headline: "", company_intro: "", role_pitch: "", next_steps: "",
-  signer_name: "", signer_role: "", custom_sections: [], extra_details: [],
+  signer_name: "", signer_role: "", custom_sections: [], extra_details: [], extra_strips: [],
   accent_color: "#6366F1", cover_image_url: "", candidate_photo_url: "",
   is_template: false, template_name: "",
 };
@@ -193,8 +195,9 @@ export default function RHOfferWizard() {
         next_steps: data.next_steps || "",
         signer_name: data.signer_name || "",
         signer_role: data.signer_role || "",
-        custom_sections: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind !== "detail").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
+        custom_sections: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind !== "detail" && b.kind !== "strip").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
         extra_details: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "detail").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "briefcase" })),
+        extra_strips: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "strip").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "sparkles" })),
         accent_color: data.accent_color || "#6366F1",
         cover_image_url: data.cover_image_url || "",
         // Ao clonar, a nova offer não é modelo; ao editar, mantém flag
@@ -323,9 +326,11 @@ export default function RHOfferWizard() {
     setTimeout(() => setFlashAnchor(null), 1800);
   };
   const flash = (anchor: string) => cn("scroll-mt-24 rounded-lg transition-shadow", flashAnchor === anchor && "ring-2 ring-primary ring-offset-4 ring-offset-background");
+  const [builderOpen, setBuilderOpen] = useState(false);
   const handlePreviewSectionClick = ({ label, blockId }: { label: string; blockId?: string }) => {
     setMobilePreviewOpen(false);
     const l = label.toLowerCase();
+    if (l === "faixas") { setBuilderOpen(true); return; }
     if (blockId) return focusAnchor(4, `edit-block-${blockId}`);
     if (l.includes("eternum") && !l.includes("comunidade")) return focusAnchor(4, "edit-intro");
     if (l.includes("convite")) return focusAnchor(4, "edit-pitch");
@@ -383,7 +388,7 @@ export default function RHOfferWizard() {
     first_viewed_at: null,
     view_count: 0,
     candidate_photo_url: form.candidate_photo_url || null,
-    custom_sections: [...form.custom_sections, ...form.extra_details.map((d) => ({ ...d, kind: "detail" as const }))],
+    custom_sections: [...form.custom_sections, ...form.extra_details.map((d) => ({ ...d, kind: "detail" as const })), ...form.extra_strips.map((d) => ({ ...d, kind: "strip" as const }))],
   }), [form, recordId, savedToken, defaultCompanyIntro, defaultNextSteps]);
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -470,7 +475,7 @@ export default function RHOfferWizard() {
       company_intro: form.company_intro || defaultCompanyIntro,
       role_pitch: form.role_pitch || null,
       next_steps: form.next_steps || defaultNextSteps,
-      custom_sections: [...form.custom_sections, ...form.extra_details.map((d) => ({ ...d, kind: "detail" as const }))].filter((b) => b.title.trim() || b.body.trim()),
+      custom_sections: [...form.custom_sections, ...form.extra_details.map((d) => ({ ...d, kind: "detail" as const })), ...form.extra_strips.map((d) => ({ ...d, kind: "strip" as const }))].filter((b) => b.title.trim() || b.body.trim()),
       signer_name: form.signer_name || null,
       signer_role: form.signer_role || null,
       accent_color: form.accent_color,
@@ -1281,9 +1286,10 @@ export default function RHOfferWizard() {
               </Button>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mb-2">Clique em qualquer bloco da prévia para editar ao lado.</p>
+          <p className="text-xs text-muted-foreground mb-2">Clique em qualquer bloco para editar, ou no + para adicionar faixas, quadros e blocos.</p>
           <div className="rounded-lg border overflow-hidden h-[calc(100vh-8rem)] overflow-y-auto bg-muted">
-            <div style={{ width: 1000, zoom: previewLarge ? 0.76 : 0.58 }}>
+            <Button type="button" size="icon" className="sticky top-2 float-right mr-2 mt-2 z-10 h-9 w-9 rounded-full shadow-lg" onClick={() => setBuilderOpen(true)} title="Adicionar e organizar blocos"><Plus className="h-5 w-5" /></Button>
+              <div style={{ width: 1000, zoom: previewLarge ? 0.76 : 0.58 }}>
               <OfferLetterView offer={livePreviewOffer} preview onSectionClick={handlePreviewSectionClick} />
             </div>
           </div>
@@ -1300,11 +1306,20 @@ export default function RHOfferWizard() {
         <DialogContent className="max-w-5xl w-[95vw] h-[92vh] p-0 overflow-hidden flex flex-col">
           <DialogHeader className="px-4 py-3 border-b"><DialogTitle>Prévia da carta</DialogTitle></DialogHeader>
           <div className="flex-1 overflow-y-auto">
-            <OfferLetterView offer={livePreviewOffer} preview onSectionClick={handlePreviewSectionClick} />
+            <Button type="button" size="icon" className="sticky top-2 float-right mr-2 mt-2 z-10 h-9 w-9 rounded-full shadow-lg" onClick={() => setBuilderOpen(true)} title="Adicionar e organizar blocos"><Plus className="h-5 w-5" /></Button>
+              <OfferLetterView offer={livePreviewOffer} preview onSectionClick={handlePreviewSectionClick} />
           </div>
         </DialogContent>
       </Dialog>
 
+      <OfferPreviewBuilder
+        open={builderOpen}
+        onOpenChange={setBuilderOpen}
+        strips={form.extra_strips}
+        details={form.extra_details}
+        sections={form.custom_sections}
+        onChange={(k, v) => set(k, v as any)}
+      />
       <KpiPacksEditorDialog
         open={kpiEditorOpen}
         onOpenChange={setKpiEditorOpen}

@@ -72,7 +72,7 @@ export type Offer = {
   first_viewed_at: string | null;
   view_count: number;
   candidate_photo_url: string | null;
-  custom_sections?: { id: string; title: string; body: string; kind?: "detail"; icon?: string }[] | null;
+  custom_sections?: { id: string; title: string; body: string; kind?: "detail" | "strip"; icon?: string }[] | null;
 };
 
 // Paleta Eternum
@@ -590,7 +590,7 @@ export function OfferLetterView({ offer, onOfferChange, preview = false, onSecti
         </section>
 
         {/* BLOCOS PERSONALIZADOS */}
-        {(offer.custom_sections || []).filter((b) => b.kind !== "detail" && (b.title?.trim() || b.body?.trim())).map((b) => (
+        {(offer.custom_sections || []).filter((b) => b.kind !== "detail" && b.kind !== "strip" && (b.title?.trim() || b.body?.trim())).map((b) => (
           <section key={b.id} data-block-id={b.id}>
             {b.title?.trim() && <SectionLabel>{b.title}</SectionLabel>}
             <p
@@ -601,6 +601,32 @@ export function OfferLetterView({ offer, onOfferChange, preview = false, onSecti
             </p>
           </section>
         ))}
+
+        {/* FAIXAS PERSONALIZADAS */}
+        {(() => {
+          const strips = (offer.custom_sections || []).filter((b) => b.kind === "strip" && (b.title?.trim() || b.body?.trim()));
+          if (!strips.length) return null;
+          return (
+            <section data-edit="faixas">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {strips.map((b) => {
+                  const I = (OFFER_DETAIL_ICONS[b.icon || ""] || OFFER_DETAIL_ICONS.sparkles).Icon;
+                  return (
+                    <div key={b.id} className="flex items-center gap-3 px-5 py-4 rounded-sm" style={{ background: CARD, color: TEXT_DARK, boxShadow: `inset 0 0 0 1px ${GOLD}30` }}>
+                      <div className="flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center" style={{ background: `${GOLD}25`, color: TEXT_DARK }}>
+                        <I className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium truncate">{b.title}</span>
+                        {b.body?.trim() && <span className="text-sm font-semibold truncate max-w-[60%]" title={b.body}>{b.body}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })()}
 
         {/* PRÓXIMOS PASSOS */}
         {offer.next_steps && (
