@@ -1,4 +1,5 @@
 import { useContractTypes } from "@/hooks/useContractTypes";
+import { useContractCatalog } from "@/hooks/useContractCatalog";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseLocalDate } from "@/lib/dateUtils";
@@ -181,6 +182,9 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const [statusContract, setStatusContract] = useState<Contract | null>(null);
   const [statusReason, setStatusReason] = useState("");
   const [statusSaving, setStatusSaving] = useState(false);
+  const [editStatus, setEditStatus] = useState("");
+  const [editStatusReason, setEditStatusReason] = useState("");
+  const statusCatalog = useContractCatalog("contract_status");
 
   const [formData, setFormData] = useState({
     start_date: "",
@@ -334,6 +338,8 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
 
   const openEditDialog = (contract: Contract) => {
     setEditingContract(contract);
+    setEditStatus(contract.status || "active");
+    setEditStatusReason("");
     const parsed = parsePaymentOption(contract.payment_option);
     setFormData({
       start_date: contract.start_date,
@@ -458,6 +464,11 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       toast.error("Preencha a data de início e o valor");
       return;
     }
+    if (editingContract && editStatus && editStatus !== editingContract.status && editStatus !== "active" && !editStatusReason.trim()) {
+      toast.error("Informe o motivo e a justificativa da mudança de status");
+      return;
+    }
+
 
     setSaving(true);
     try {
@@ -499,11 +510,19 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       };
 
       if (editingContract) {
+        const statusChanged = !!editStatus && editStatus !== editingContract.status;
         const { error } = await supabase
           .from("client_contracts")
           .update({
             ...contractData,
             parent_contract_id: editingContract.parent_contract_id, // Keep original parent
+            ...(statusChanged
+              ? {
+                  status: editStatus,
+                  status_reason: editStatus === "active" ? null : editStatusReason.trim() || null,
+                  status_changed_at: new Date().toISOString(),
+                }
+              : {}),
           })
           .eq("id", editingContract.id);
 
@@ -917,6 +936,36 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                   )}
                 </div>
               </div>
+
+              {editingContract && (
+                <div className="space-y-2">
+                  <Label>Status do contrato</Label>
+                  <Select value={editStatus} onValueChange={setEditStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusCatalog.options
+                        .concat(
+                          statusCatalog.options.some((o) => o.value === editStatus) || !editStatus
+                            ? []
+                            : [{ value: editStatus, label: statusCatalog.labels[editStatus] || editStatus } as any]
+                        )
+                        .map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {editStatus !== editingContract.status && editStatus !== "active" && (
+                    <Textarea
+                      placeholder="Motivo e justificativa da mudança de status *"
+                      value={editStatusReason}
+                      onChange={(e) => setEditStatusReason(e.target.value)}
+                      rows={2}
+                    />
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="notes">Observações</Label>
