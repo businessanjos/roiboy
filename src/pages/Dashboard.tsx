@@ -561,11 +561,11 @@ export default function Dashboard() {
   const retentionMetrics = useMemo(() => {
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + sumExits(m), 0);
-    const ativosAtuais = shownActiveClients;
-    const baseInicio = Math.max(0, ativosAtuais + cancelamentos - novos);
-    const rate = baseInicio > 0 ? Math.round(((baseInicio - cancelamentos) / baseInicio) * 100) : 100;
+    const baseInicio = periodStartActiveClients;
+    const retidos = Math.max(0, baseInicio - cancelamentos);
+    const rate = baseInicio > 0 ? Math.round((retidos / baseInicio) * 100) : 100;
     return { rate, novos, cancelamentos };
-  }, [monthlyChartData, shownActiveClients, gestaoExitTypeFilter]);
+  }, [monthlyChartData, periodStartActiveClients, gestaoExitTypeFilter]);
 
   // Period-scoped totals derived from the monthly chart data
   const periodExitTotals = useMemo(() => {
@@ -693,13 +693,11 @@ export default function Dashboard() {
   const churnMetrics = useMemo(() => {
     // Churn = somente cancelamentos antecipados (não inclui encerramentos/não renovações)
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
-    const encerramentos = monthlyChartData.reduce((sum, m) => sum + (m.encerramentos || 0), 0);
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
-    const ativosAtuais = shownActiveClients;
-    const activeBase = Math.max(0, ativosAtuais + cancelamentos + encerramentos - novos);
+    const activeBase = periodStartActiveClients;
     const rate = activeBase > 0 ? (cancelamentos / activeBase) * 100 : 0;
     return { rate, cancelamentos, novos, activeBase };
-  }, [monthlyChartData, shownActiveClients]);
+  }, [monthlyChartData, periodStartActiveClients]);
 
 
   // Taxa de renovação por COORTE DE VENCIMENTO: considera os contratos cujo
