@@ -1,10 +1,8 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { GraduationCap, Info, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { GraduationCap, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ClientListDialog } from "@/components/dashboard/ClientListDialog";
 import { buildEducationOptions, educationMatches } from "@/lib/dashboard/clientEducation";
 
 interface Props {
@@ -15,6 +13,8 @@ interface Props {
   activeClientIds?: Set<string>;
   /** Formação selecionada no filtro do topo: recebe destaque. */
   highlightValue?: string;
+  /** Rótulo secundário de cada cliente na lista (ex.: produto). */
+  metaById?: Map<string, string | null>;
   /** Períodos curtos (mês, 7 dias) partem praticamente da carteira de hoje. */
   shortPeriod?: boolean;
   periodLabel?: string;
@@ -22,9 +22,8 @@ interface Props {
 
 const TOP_COUNT = 8;
 
-export function ClientsByEducationChart({ clients, educationById, activeClientIds, highlightValue, shortPeriod, periodLabel }: Props) {
+export function ClientsByEducationChart({ clients, educationById, activeClientIds, highlightValue, metaById, shortPeriod, periodLabel }: Props) {
   const [selected, setSelected] = useState<{ value: string; label: string } | null>(null);
-  const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(false);
 
   // Clientes sob contrato no início do período filtrado (ou ativos agora, sem o conjunto).
@@ -49,15 +48,12 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
 
   const people = useMemo(() => {
     if (!selected) return [];
-    const q = search.trim().toLowerCase();
     return active
       .filter((c) => educationMatches(educationById.get(c.id) ?? null, selected.value))
-      .filter((c) => !q || c.full_name?.toLowerCase().includes(q))
       .sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "pt-BR"));
-  }, [selected, search, active, educationById]);
+  }, [selected, active, educationById]);
 
   const open = (entry: { value: string; label: string }) => {
-    setSearch("");
     setSelected(entry);
   };
 
@@ -162,31 +158,16 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
         )}
       </CardContent>
 
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{selected?.label}</DialogTitle>
-            <DialogDescription>{people.length} cliente(s) sob contrato no período</DialogDescription>
-          </DialogHeader>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <div className="max-h-[60vh] overflow-y-auto divide-y rounded-md border">
-            {people.map((c) => (
-              <Link
-                key={c.id}
-                to={`/clients/${c.id}`}
-                className="flex items-center justify-between px-3 py-2 text-sm hover:bg-muted/50"
-              >
-                <span className="font-medium">{c.full_name}</span>
-                <span className="text-xs text-muted-foreground">{educationById.get(c.id) || "Sem formação"}</span>
-              </Link>
-            ))}
-            {people.length === 0 && <p className="p-4 text-sm text-muted-foreground text-center">Nenhum cliente encontrado.</p>}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ClientListDialog
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+        title={selected?.label ?? ""}
+        description={`${people.length} cliente(s) sob contrato no período`}
+        clients={people}
+        metaById={metaById}
+        metaFallback="Sem produto"
+        icon={GraduationCap}
+      />
     </Card>
   );
 }
