@@ -103,13 +103,13 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
                     >
                       {d.label}
                     </span>
-                    <span className="h-2 min-w-12 flex-1 overflow-hidden rounded-full bg-muted">
+                    <span className="h-2 min-w-[3rem] flex-1 overflow-hidden rounded-full bg-muted">
                       <span
                         className="block h-full rounded-full bg-gradient-to-r from-primary/60 to-primary transition-all duration-300 group-hover:from-primary/80 group-hover:to-primary"
                         style={{ width: `${width}%` }}
                       />
                     </span>
-                    <span className="w-16 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+                    <span className="w-14 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
                       <span className="text-[13px] font-semibold text-foreground">{d.count}</span>
                       {" · "}
                       {pct}%
