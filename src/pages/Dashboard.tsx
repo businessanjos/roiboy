@@ -1380,6 +1380,134 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
+          {/* Status Cards - Single Row */}
+          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-4 xl:grid-cols-8" : "md:grid-cols-3"}`}>
+            {/* Total de Clientes (oculto no modo operações) */}
+            {gestaoViewMode !== "operacoes" && (
+            <Card className="shadow-card border-l-4 border-l-primary">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Total Clientes</p>
+                    <p className="text-2xl font-bold text-foreground">{shownTotalClients}</p>
+                  </div>
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+            )}
+
+            {/* Cadeira Dupla — vínculos com sync_data ativos (cada par conta como 1) */}
+            <Link to="/dashboard/cadeira-dupla" className="block">
+              <Card className="shadow-card border-l-4 border-l-pink-500 cursor-pointer hover:shadow-lg transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Cadeira Dupla</p>
+                      <p className="text-2xl font-bold text-pink-600">{doubleChairCount ?? 0}</p>
+                    </div>
+                    <Link2 className="h-5 w-5 text-pink-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+
+            {/* Ativos */}
+            <Card className="shadow-card border-l-4 border-l-success">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Ativos</p>
+                    <p className="text-2xl font-bold text-success">{shownActiveClients}</p>
+                  </div>
+                  <TrendingUp className="h-5 w-5 text-success" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cancelamentos */}
+            {showCancelamentos && (
+            <Card 
+              className={`shadow-card border-l-4 border-l-danger ${showCancellationAnalytics ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
+              onClick={showCancellationAnalytics ? () => setCancellationModalOpen(true) : undefined}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Cancelamentos</p>
+                    <p className="text-2xl font-bold text-danger">{periodExitTotals.cancelamentos}</p>
+                  </div>
+                  <AlertTriangle className="h-5 w-5 text-danger" />
+                </div>
+              </CardContent>
+            </Card>
+            )}
+
+            {/* Encerramentos */}
+            {showEncerramentos && (
+            <Card className="shadow-card border-l-4 border-l-warning">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Encerramentos</p>
+                    <p className="text-2xl font-bold text-warning">{periodExitTotals.encerramentos}</p>
+                  </div>
+                  <TrendingDown className="h-5 w-5 text-warning" />
+                </div>
+              </CardContent>
+            </Card>
+            )}
+
+            {/* Suspensos */}
+            {gestaoViewMode === "operacoes" && (
+            <Card className="shadow-card border-l-4 border-l-amber-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Suspensos</p>
+                    <p className="text-2xl font-bold text-warning">{periodExitTotals.suspensos}</p>
+                  </div>
+                  <Minus className="h-5 w-5 text-warning" />
+                </div>
+              </CardContent>
+            </Card>
+            )}
+
+            {/* Pausados */}
+            {gestaoViewMode === "operacoes" && (
+            <Card className="shadow-card border-l-4 border-l-sky-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Pausados</p>
+                    <p className="text-2xl font-bold text-info">{periodExitTotals.pausados}</p>
+                  </div>
+                  <Minus className="h-5 w-5 text-info" />
+                </div>
+              </CardContent>
+            </Card>
+            )}
+
+            {/* Vencidos (active + end_date < today) */}
+            <Card className="shadow-card border-l-4 border-l-orange-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Vencidos</p>
+                    <p className="text-2xl font-bold text-warning">{shownExpiredClients}</p>
+                  </div>
+                  <Clock className="h-5 w-5 text-warning" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tempo Ganho → Onboarding */}
+            {gestaoViewMode === "operacoes" && (
+              <WonToOnboardingCard accountId={currentUser?.account_id} monthsBack={6} clientIds={educationClientIds} />
+            )}
+           </div>
+
           <ClientListDialog
             open={!!productClientsOpen}
             onOpenChange={(o) => !o && setProductClientsOpen(null)}
@@ -1599,134 +1727,6 @@ export default function Dashboard() {
 
           {/* Comparecimento no último evento presencial (largura total) */}
           {gestaoViewMode === "operacoes" && <LastEventAttendanceCard clientIds={educationClientIds} />}
-
-          {/* Status Cards - Single Row */}
-          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-4 xl:grid-cols-8" : "md:grid-cols-3"}`}>
-            {/* Total de Clientes (oculto no modo operações) */}
-            {gestaoViewMode !== "operacoes" && (
-            <Card className="shadow-card border-l-4 border-l-primary">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Total Clientes</p>
-                    <p className="text-2xl font-bold text-foreground">{shownTotalClients}</p>
-                  </div>
-                  <Users className="h-5 w-5 text-primary" />
-                </div>
-              </CardContent>
-            </Card>
-            )}
-
-            {/* Cadeira Dupla — vínculos com sync_data ativos (cada par conta como 1) */}
-            <Link to="/dashboard/cadeira-dupla" className="block">
-              <Card className="shadow-card border-l-4 border-l-pink-500 cursor-pointer hover:shadow-lg transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Cadeira Dupla</p>
-                      <p className="text-2xl font-bold text-pink-600">{doubleChairCount ?? 0}</p>
-                    </div>
-                    <Link2 className="h-5 w-5 text-pink-500" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-
-            {/* Ativos */}
-            <Card className="shadow-card border-l-4 border-l-success">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Ativos</p>
-                    <p className="text-2xl font-bold text-success">{shownActiveClients}</p>
-                  </div>
-                  <TrendingUp className="h-5 w-5 text-success" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Cancelamentos */}
-            {showCancelamentos && (
-            <Card 
-              className={`shadow-card border-l-4 border-l-danger ${showCancellationAnalytics ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
-              onClick={showCancellationAnalytics ? () => setCancellationModalOpen(true) : undefined}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Cancelamentos</p>
-                    <p className="text-2xl font-bold text-danger">{periodExitTotals.cancelamentos}</p>
-                  </div>
-                  <AlertTriangle className="h-5 w-5 text-danger" />
-                </div>
-              </CardContent>
-            </Card>
-            )}
-
-            {/* Encerramentos */}
-            {showEncerramentos && (
-            <Card className="shadow-card border-l-4 border-l-warning">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Encerramentos</p>
-                    <p className="text-2xl font-bold text-warning">{periodExitTotals.encerramentos}</p>
-                  </div>
-                  <TrendingDown className="h-5 w-5 text-warning" />
-                </div>
-              </CardContent>
-            </Card>
-            )}
-
-            {/* Suspensos */}
-            {gestaoViewMode === "operacoes" && (
-            <Card className="shadow-card border-l-4 border-l-amber-500">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Suspensos</p>
-                    <p className="text-2xl font-bold text-warning">{periodExitTotals.suspensos}</p>
-                  </div>
-                  <Minus className="h-5 w-5 text-warning" />
-                </div>
-              </CardContent>
-            </Card>
-            )}
-
-            {/* Pausados */}
-            {gestaoViewMode === "operacoes" && (
-            <Card className="shadow-card border-l-4 border-l-sky-500">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Pausados</p>
-                    <p className="text-2xl font-bold text-info">{periodExitTotals.pausados}</p>
-                  </div>
-                  <Minus className="h-5 w-5 text-info" />
-                </div>
-              </CardContent>
-            </Card>
-            )}
-
-            {/* Vencidos (active + end_date < today) */}
-            <Card className="shadow-card border-l-4 border-l-orange-500">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Vencidos</p>
-                    <p className="text-2xl font-bold text-warning">{shownExpiredClients}</p>
-                  </div>
-                  <Clock className="h-5 w-5 text-warning" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Tempo Ganho → Onboarding */}
-            {gestaoViewMode === "operacoes" && (
-              <WonToOnboardingCard accountId={currentUser?.account_id} monthsBack={6} clientIds={educationClientIds} />
-            )}
-           </div>
 
           {/* Historical Chart */}
           <Card className="shadow-card overflow-hidden">
