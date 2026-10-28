@@ -5,7 +5,7 @@ import { OfferLetterView, OFFER_DETAIL_ICONS, type Offer as PreviewOffer } from 
 import { useOfferContentSettings } from "@/hooks/useOfferContentSettings";
 import { KpiPacksEditorDialog, OfferDefaultsDialog } from "@/components/rh/offers/OfferContentSettingsDialogs";
 import { useUndoHistory } from "@/hooks/useUndoHistory";
-import { OfferPreviewBuilder } from "@/components/rh/offers/OfferPreviewBuilder";
+import type { OfferBlock, OfferBlocksEditor, StripAnchor } from "@/components/rh/offers/OfferEditableBlocks";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -86,7 +86,7 @@ type Form = {
   signer_role: string;
   custom_sections: { id: string; title: string; body: string }[];
   extra_details: { id: string; title: string; body: string; icon?: string }[];
-  extra_strips: { id: string; title: string; body: string; icon?: string }[];
+  extra_strips: { id: string; title: string; body: string; icon?: string; anchor?: StripAnchor }[];
   accent_color: string;
   cover_image_url: string;
   candidate_photo_url: string;
@@ -197,7 +197,7 @@ export default function RHOfferWizard() {
         signer_role: data.signer_role || "",
         custom_sections: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind !== "detail" && b.kind !== "strip").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "" })),
         extra_details: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "detail").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "briefcase" })),
-        extra_strips: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "strip").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "sparkles" })),
+        extra_strips: (((data as any).custom_sections as any[]) || []).filter((b: any) => b.kind === "strip").map((b: any) => ({ id: b.id || crypto.randomUUID(), title: b.title || "", body: b.body || "", icon: b.icon || "sparkles", anchor: b.anchor || "end" })),
         accent_color: data.accent_color || "#6366F1",
         cover_image_url: data.cover_image_url || "",
         // Ao clonar, a nova offer não é modelo; ao editar, mantém flag
@@ -326,11 +326,61 @@ export default function RHOfferWizard() {
     setTimeout(() => setFlashAnchor(null), 1800);
   };
   const flash = (anchor: string) => cn("scroll-mt-24 rounded-lg transition-shadow", flashAnchor === anchor && "ring-2 ring-primary ring-offset-4 ring-offset-background");
-  const [builderOpen, setBuilderOpen] = useState(false);
+  // Edição direta na prévia: quadros, faixas e blocos de texto num só fluxo
+  const allBlocks: OfferBlock[] = [
+    ...form.custom_sections.map((b) => ({ ...b, kind: "text" as const })),
+    ...form.extra_details.map((b) => ({ ...b, kind: "detail" as const })),
+    ...form.extra_strips.map((b) => ({ ...b, kind: "strip" as const })),
+  ];
+  const blocksUndo = useUndoHistory<OfferBlock[]>();
+  const applyBlocks = (next: OfferBlock[]) => setForm((f) => ({
+    ...f,
+    custom_sections: next.filter((b) => b.kind === "text").map(({ id, title, body }) => ({ id, title, body })),
+    extra_details: next.filter((b) => b.kind === "detail").map(({ id, title, body, icon }) => ({ id, title, body, icon })),
+    extra_strips: next.filter((b) => b.kind === "strip").map(({ id, title, body, icon, anchor }) => ({ id, title, body, icon, anchor })),
+  }));
+  const blocksEditor: OfferBlocksEditor = {
+    snapshot: () => blocksUndo.snapshot(allBlocks),
+    update: (id, patch) => applyBlocks(allBlocks.map((b) => (b.id === id ? { ...b, ...patch } : b))),
+    remove: (id) => applyBlocks(allBlocks.filter((b) => b.id !== id)),
+    duplicate: (id) => {
+      const i = allBlocks.findIndex((b) => b.id === id);
+      if (i < 0) return;
+      const arr = [...allBlocks];
+      arr.splice(i + 1, 0, { ...allBlocks[i], id: crypto.randomUUID() });
+      applyBlocks(arr);
+    },
+    insert: (afterId, block) => {
+      const arr = [...allBlocks];
+      const i = afterId ? arr.findIndex((b) => b.id === afterId) : -1;
+      const nb = { ...block, id: crypto.randomUUID() } as OfferBlock;
+      if (i < 0) arr.push(nb); else arr.splice(i + 1, 0, nb);
+      applyBlocks(arr);
+    },
+    reorder: (ids) => {
+      const set = new Set(ids);
+      const moved = ids.map((id) => allBlocks.find((b) => b.id === id)!).filter(Boolean);
+      applyBlocks([...allBlocks.filter((b) => !set.has(b.id)), ...moved]);
+    },
+  };
+  const undoBlocks = () => { const prev = blocksUndo.pop(); if (prev) applyBlocks(prev); };
+  const undoBlocksRef = useRef(undoBlocks);
+  undoBlocksRef.current = undoBlocks;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z" || e.shiftKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      e.preventDefault();
+      undoBlocksRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const handlePreviewSectionClick = ({ label, blockId }: { label: string; blockId?: string }) => {
     setMobilePreviewOpen(false);
     const l = label.toLowerCase();
-    if (l === "faixas") { setBuilderOpen(true); return; }
+    if (l === "faixas" || l === "blocos") return;
     if (blockId) return focusAnchor(4, `edit-block-${blockId}`);
     if (l.includes("eternum") && !l.includes("comunidade")) return focusAnchor(4, "edit-intro");
     if (l.includes("convite")) return focusAnchor(4, "edit-pitch");
@@ -1278,6 +1328,9 @@ export default function RHOfferWizard() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium flex items-center gap-2"><Eye className="h-4 w-4" /> Prévia da carta</p>
             <div className="flex items-center gap-1">
+              <Button type="button" size="sm" variant="ghost" className="h-7 text-xs gap-1" disabled={!blocksUndo.canUndo} onClick={undoBlocks} title="Desfazer (Ctrl+Z)">
+                <Undo2 className="h-3.5 w-3.5" /> Desfazer
+              </Button>
               <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setPreviewLarge((v) => !v)}>
                 {previewLarge ? "Reduzir" : "Ampliar"}
               </Button>
@@ -1286,11 +1339,10 @@ export default function RHOfferWizard() {
               </Button>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mb-2">Clique em qualquer bloco para editar, ou no + para adicionar faixas, quadros e blocos.</p>
+          <p className="text-xs text-muted-foreground mb-2">Edite quadros, faixas e blocos direto aqui: arraste pela alça, use + para inserir. Os demais blocos abrem a edição ao lado.</p>
           <div className="rounded-lg border overflow-hidden h-[calc(100vh-8rem)] overflow-y-auto bg-muted">
-            <Button type="button" size="icon" className="sticky top-2 float-right mr-2 mt-2 z-10 h-9 w-9 rounded-full shadow-lg" onClick={() => setBuilderOpen(true)} title="Adicionar e organizar blocos"><Plus className="h-5 w-5" /></Button>
-              <div style={{ width: 1000, zoom: previewLarge ? 0.76 : 0.58 }}>
-              <OfferLetterView offer={livePreviewOffer} preview onSectionClick={handlePreviewSectionClick} />
+            <div style={{ width: 1000, zoom: previewLarge ? 0.76 : 0.58 }}>
+              <OfferLetterView offer={livePreviewOffer} preview onSectionClick={handlePreviewSectionClick} editor={blocksEditor} />
             </div>
           </div>
         </aside>
@@ -1306,20 +1358,11 @@ export default function RHOfferWizard() {
         <DialogContent className="max-w-5xl w-[95vw] h-[92vh] p-0 overflow-hidden flex flex-col">
           <DialogHeader className="px-4 py-3 border-b"><DialogTitle>Prévia da carta</DialogTitle></DialogHeader>
           <div className="flex-1 overflow-y-auto">
-            <Button type="button" size="icon" className="sticky top-2 float-right mr-2 mt-2 z-10 h-9 w-9 rounded-full shadow-lg" onClick={() => setBuilderOpen(true)} title="Adicionar e organizar blocos"><Plus className="h-5 w-5" /></Button>
-              <OfferLetterView offer={livePreviewOffer} preview onSectionClick={handlePreviewSectionClick} />
+            <OfferLetterView offer={livePreviewOffer} preview onSectionClick={handlePreviewSectionClick} editor={blocksEditor} />
           </div>
         </DialogContent>
       </Dialog>
 
-      <OfferPreviewBuilder
-        open={builderOpen}
-        onOpenChange={setBuilderOpen}
-        strips={form.extra_strips}
-        details={form.extra_details}
-        sections={form.custom_sections}
-        onChange={(k, v) => set(k, v as any)}
-      />
       <KpiPacksEditorDialog
         open={kpiEditorOpen}
         onOpenChange={setKpiEditorOpen}
