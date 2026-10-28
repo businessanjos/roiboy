@@ -71,6 +71,7 @@ import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementRep
 import { OperationsConsultantWorkloadCard } from "@/components/dashboard/OperationsConsultantWorkloadCard";
 import { OverdueClientsCard } from "@/components/dashboard/OverdueClientsCard";
 import { ClientsByEducationChart } from "@/components/dashboard/ClientsByEducationChart";
+import { ClientListDialog } from "@/components/dashboard/ClientListDialog";
 import { canViewOpsConsultantWorkload } from "@/lib/featureFlags";
 import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/components/dashboard/CancellationAnalyticsModal";
 import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakdownDialog";
@@ -82,7 +83,7 @@ import { DashboardMapTab } from "@/components/dashboard/DashboardMapTab";
 import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 
 import { ChurnRenewalBySegmentChart } from "@/components/dashboard/ChurnRenewalBySegmentChart";
-import { buildProductGroups, clientInGroup } from "@/lib/dashboard/productGroups";
+import { buildProductGroups, clientInGroup, type ProductGroup } from "@/lib/dashboard/productGroups";
 import { useClientEducation } from "@/hooks/useClientEducation";
 import { EDUCATION_ALL, educationMatches } from "@/lib/dashboard/clientEducation";
 
@@ -589,6 +590,16 @@ export default function Dashboard() {
     () => (educationSet ? clients.filter((c: any) => inEducation(c.id)) : clients),
     [clients, inEducation],
   );
+
+  // Produto clicado nos cartões "Clientes por Produto" para listar quem são.
+  const [productClientsOpen, setProductClientsOpen] = useState<ProductGroup | null>(null);
+
+  const productClientRows = useMemo(() => {
+    if (!productClientsOpen) return [];
+    return educationScopedClients.filter((c: any) =>
+      clientInGroup(c.product_ids, productClientsOpen.memberIds),
+    );
+  }, [productClientsOpen, educationScopedClients]);
 
   const gestaoFilteredClients = useMemo(() => {
     if (gestaoProductFilter === "all") return educationScopedClients;
@@ -1321,7 +1332,7 @@ export default function Dashboard() {
                 <Users className="h-5 w-5 text-primary" />
                 Clientes por Produto
               </CardTitle>
-              <CardDescription>Distribuição em tempo real</CardDescription>
+              <CardDescription>Distribuição em tempo real · clique num produto para ver quem são</CardDescription>
             </CardHeader>
             <CardContent>
               {productsWithClients.length === 0 ? (
@@ -1333,9 +1344,11 @@ export default function Dashboard() {
                   {productsWithClients.map((product) => {
                     const clientCount = educationScopedClients.filter((c: any) => clientInGroup(c.product_ids, product.memberIds)).length;
                     return (
-                      <div
+                      <button
                         key={product.id}
-                        className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                        type="button"
+                        onClick={() => setProductClientsOpen(product)}
+                        className="flex w-full items-center justify-between gap-3 p-4 rounded-lg border bg-card text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -1347,13 +1360,23 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <span className="text-2xl font-bold text-primary">{clientCount}</span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
               )}
             </CardContent>
           </Card>
+
+          <ClientListDialog
+            open={!!productClientsOpen}
+            onOpenChange={(o) => !o && setProductClientsOpen(null)}
+            title={productClientsOpen?.name ?? ""}
+            description={`${productClientRows.length} cliente(s) com contrato ativo neste produto`}
+            clients={productClientRows}
+            metaById={educationById}
+            metaFallback="Sem formação"
+          />
 
           <ClientsByEducationChart
             clients={productScopedClients as any}
@@ -1939,7 +1962,13 @@ export default function Dashboard() {
               {productsWithClients.map((product) => {
                 const clientCount = educationScopedClients.filter((c: any) => clientInGroup(c.product_ids, product.memberIds)).length;
                 return (
-                  <Card key={product.id}>
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => setProductClientsOpen(product)}
+                    className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                  <Card>
                     <CardContent className="p-8">
                       <div className="flex items-center gap-5">
                         <div className="p-4 rounded-xl bg-primary/10">
@@ -1952,6 +1981,7 @@ export default function Dashboard() {
                       </div>
                     </CardContent>
                   </Card>
+                  </button>
                 );
               })}
             </div>
