@@ -70,6 +70,7 @@ import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
 import { OperationsConsultantWorkloadCard } from "@/components/dashboard/OperationsConsultantWorkloadCard";
 import { OverdueClientsCard } from "@/components/dashboard/OverdueClientsCard";
+import { ClientsByEducationChart } from "@/components/dashboard/ClientsByEducationChart";
 import { canViewOpsConsultantWorkload } from "@/lib/featureFlags";
 import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/components/dashboard/CancellationAnalyticsModal";
 import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakdownDialog";
@@ -1273,6 +1274,9 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
+
+          <ClientsByEducationChart clients={gestaoFilteredClients as any} educationById={educationById} />
+
 
 
           {/* ⭐ Métricas Estrela de Operações: Churn & NPS */}
