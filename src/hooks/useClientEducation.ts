@@ -40,7 +40,7 @@ export function useClientEducation() {
           .select("client_id")
           .eq("account_id", accountId!)
           .eq("status", "active")
-          .order("client_id", { ascending: true })
+          .order("id", { ascending: true })
           .range(from, to),
       );
       if (cErr) throw cErr;
