@@ -402,6 +402,35 @@ export default function Dashboard() {
     return { periodStart, periodEnd };
   }, [gestaoPeriodFilter, gestaoCustomDateRange]);
 
+  // Clientes de fato sob contrato na data de início do período filtrado.
+  // É a base real do churn e da retenção, já respeitando produto e formação.
+  const periodStartActiveClients = useMemo(() => {
+    const startStr = gestaoPeriodRange.periodStart.toISOString().slice(0, 10);
+    const underContract = new Set<string>();
+    for (const row of clientContractRows ?? []) {
+      if (!row.client_id || !row.start_date) continue;
+      if (row.status === "draft") continue;
+      if (!inEducation(row.client_id)) continue;
+      if (
+        gestaoProductFilter !== "all" &&
+        !clientInGroup(clientProductsMap[row.client_id] || [], selectedProductMemberIds)
+      )
+        continue;
+      if (row.start_date > startStr) continue;
+      if (row.end_date && row.end_date < startStr) continue;
+      if (row.cancelled_at && row.cancelled_at.slice(0, 10) < startStr) continue;
+      underContract.add(row.client_id);
+    }
+    return underContract.size;
+  }, [
+    clientContractRows,
+    gestaoPeriodRange.periodStart,
+    inEducation,
+    gestaoProductFilter,
+    selectedProductMemberIds,
+    clientProductsMap,
+  ]);
+
   // Filter contract data by product and period
   const filteredContractData = useMemo(() => {
     const { periodStart, periodEnd } = gestaoPeriodRange;
