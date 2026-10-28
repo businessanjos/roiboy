@@ -97,10 +97,13 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
                     <span className="w-5 shrink-0 text-center text-[11px] font-semibold tabular-nums text-muted-foreground">
                       {i + 1}º
                     </span>
-                    <span className="w-28 shrink-0 truncate text-[13px] font-medium text-foreground lg:w-36">
+                    <span
+                      title={d.label}
+                      className="w-32 shrink-0 truncate text-[13px] font-medium text-foreground lg:w-40 xl:w-48"
+                    >
                       {d.label}
                     </span>
-                    <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                    <span className="h-2 min-w-12 flex-1 overflow-hidden rounded-full bg-muted">
                       <span
                         className="block h-full rounded-full bg-gradient-to-r from-primary/60 to-primary transition-all duration-300 group-hover:from-primary/80 group-hover:to-primary"
                         style={{ width: `${width}%` }}
