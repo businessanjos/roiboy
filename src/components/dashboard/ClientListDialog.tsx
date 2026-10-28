@@ -70,7 +70,7 @@ export function ClientListDialog({
         <div className="flex items-start gap-3 border-b bg-muted/30 px-5 py-4">
           {Icon && (
             <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <Icon className="h-4.5 w-4.5 text-primary" />
+              <Icon className="h-5 w-5 text-primary" />
             </div>
           )}
           <div className="min-w-0 flex-1 pr-8">
