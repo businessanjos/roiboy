@@ -342,6 +342,18 @@ Deno.serve(async (req) => {
     }
   }
 
+  // A deal-only match (no lead found) may point to a closed deal. Promote it
+  // to its lead, or keep it as the previous deal so a new one is opened.
+  let deallessPrevious: { id: string; status: string; lead_id: string | null } | null = null;
+  if (!leadId && dealId) {
+    const { data: md } = await supabase.from("deals").select("id, status, lead_id")
+      .eq("id", dealId).eq("account_id", accountId).maybeSingle();
+    const closed = ["won", "lost", "canceled", "cancelled"].includes(String(md?.status || "").toLowerCase());
+    if (md?.lead_id) { leadId = md.lead_id; dealId = null; }
+    else if (md && closed) { deallessPrevious = md as any; dealId = null; }
+  }
+
+
   // Distribuição: leads/deals do Typeform caem para o Jonathan Marcato
   // (gestor que faz a triagem/distribuição para os vendedores).
   const JONATHAN_MARCATO_ID = "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
