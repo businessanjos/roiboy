@@ -363,7 +363,8 @@ export default function EventsKpis() {
               <Kpi onClick={() => setDetail("actual")} label="Custo real" value={fmtBRL(kpis.actual)} icon={Receipt}
                 hint={usage === null ? "sem orçamento" : `${usage}% do previsto`} />
             </div>
-            <KpiDetailDialog kind={detail} onClose={() => setDetail(null)} events={filtered} costs={costs} parts={parts} />
+            <KpiDetailDialog kind={detail} onClose={() => setDetail(null)} events={filtered} costs={costs} parts={parts}
+              returnState={buildEventDetailReturnState({ year, modality, type, status, detail } satisfies EventKpisSnapshot)} />
 
             <div className="flex items-start gap-2 text-xs text-muted-foreground">
               <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
