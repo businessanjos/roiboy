@@ -274,7 +274,7 @@ export default function EventsKpis() {
 
         <div className="flex flex-wrap items-center gap-2">
           <Select value={modality} onValueChange={setModality}>
-            <SelectTrigger className="w-[160px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[190px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas modalidades</SelectItem>
               <SelectItem value="online">Online</SelectItem>
@@ -282,14 +282,14 @@ export default function EventsKpis() {
             </SelectContent>
           </Select>
           <Select value={type} onValueChange={setType}>
-            <SelectTrigger className="w-[160px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[190px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os tipos</SelectItem>
               {typeOptions.map((t) => <SelectItem key={t} value={t}>{typeLabel(t)}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-[160px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[190px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
               <SelectItem value="completed">Realizados</SelectItem>
