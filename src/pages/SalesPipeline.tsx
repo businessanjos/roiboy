@@ -93,6 +93,7 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
+import { RefreshCw as ReapplyIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, addMonths, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -245,6 +246,7 @@ export default function SalesPipeline() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [activitySort, setActivitySort] = usePersistedFilter<'none' | 'pending_desc' | 'pending_asc' | 'total_desc' | 'total_asc'>("salesPipeline", "activitySort", "none");
   const [titleTagFilter, setTitleTagFilter] = usePersistedFilter<string[]>("salesPipeline", "titleTagFilter", []);
+  const [onlyReapplied, setOnlyReapplied] = usePersistedFilter<boolean>("salesPipeline", "onlyReapplied", false);
   const [openDatePreset, setOpenDatePreset] = usePersistedFilter<string>("salesPipeline", "openDatePreset", "all");
   const [openDateStart, setOpenDateStart] = usePersistedFilter<string>("salesPipeline", "openDateStart", "");
   const [openDateEnd, setOpenDateEnd] = usePersistedFilter<string>("salesPipeline", "openDateEnd", "");
