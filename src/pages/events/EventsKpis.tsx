@@ -11,7 +11,13 @@ import { ChevronLeft, ChevronRight, TrendingUp, CalendarCheck, Users, Wallet, Re
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import {
+  buildEventDetailReturnState,
+  getEventKpisEntry,
+  type EventKpisDetailKind,
+  type EventKpisSnapshot,
+} from "@/lib/navigation/eventDetailReturn";
 
 interface EventRow {
   id: string;
@@ -71,16 +77,17 @@ function Kpi({ label, value, hint, icon: Icon, tone, onClick }: { label: string;
   );
 }
 
-type DetailKind = "events" | "realized" | "participants" | "budget" | "actual";
+type DetailKind = EventKpisDetailKind;
 
 const DETAIL_TITLES: Record<DetailKind, string> = {
   events: "Eventos do período", realized: "Eventos realizados", participants: "Participantes por evento",
   budget: "Orçamento previsto por evento", actual: "Custo real por evento",
 };
 
-function KpiDetailDialog({ kind, onClose, events, costs, parts }: {
+function KpiDetailDialog({ kind, onClose, events, costs, parts, returnState }: {
   kind: DetailKind | null; onClose: () => void; events: EventRow[];
   costs: Record<string, { planned: number; actual: number }>; parts: Record<string, { confirmed: number; present: number }>;
+  returnState: Record<string, unknown>;
 }) {
   const [q, setQ] = useState("");
   useEffect(() => { setQ(""); }, [kind]);
@@ -114,7 +121,7 @@ function KpiDetailDialog({ kind, onClose, events, costs, parts }: {
         <div className="flex-1 overflow-y-auto -mx-1 px-1 divide-y divide-border">
           {rows.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">Nenhum evento.</p>}
           {rows.map(({ e, budget, actual, confirmed, present }, i) => (
-            <Link key={e.id} to={`/events/${e.id}`} className="flex items-center gap-3 py-2.5 hover:bg-muted/50 rounded-md px-2">
+            <Link key={e.id} to={`/events/${e.id}`} state={returnState} className="flex items-center gap-3 py-2.5 hover:bg-muted/50 rounded-md px-2">
               <span className="text-xs text-muted-foreground w-6 tabular-nums">{i + 1}</span>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">{e.title || "Sem título"}</div>
