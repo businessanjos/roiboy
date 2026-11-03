@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
+import { isManagementUser } from "@/lib/access/managementRoles";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -256,6 +257,13 @@ export default function Tasks() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUser, setFilterUser] = usePersistedFilter<string>("tasks", "filterUser", "all");
+  // Quem não é gestor abre a tela em "Minhas tarefas" (pode trocar depois).
+  const defaultedMineRef = useRef(false);
+  useEffect(() => {
+    if (defaultedMineRef.current || !currentUser) return;
+    defaultedMineRef.current = true;
+    if (!isManagementUser(currentUser as any) && filterUser === "all") setFilterUser("mine");
+  }, [currentUser, filterUser, setFilterUser]);
   const [filterActivityType, setFilterActivityType] = usePersistedFilter<string>("tasks", "filterActivityType", "all");
   const [sortBy, setSortBy] = usePersistedFilter<SortOption>("tasks", "sortBy", "priority");
   const [sortDirection, setSortDirection] = usePersistedFilter<SortDirection>("tasks", "sortDirection", "asc");
@@ -473,7 +481,7 @@ export default function Tasks() {
 
         // User filter (server-side) para não estourar limites em contas grandes.
         if (filterUser === "mine" && currentUser?.id) {
-          q = q.or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
+          q = q.eq("assigned_to", currentUser.id);
         } else if (filterUser !== "all" && filterUser) {
           q = q.eq("assigned_to", filterUser);
         }
@@ -534,7 +542,7 @@ export default function Tasks() {
         q = q.or(`activity_type_id.in.(${sectorActivityTypeIds.join(",")}),activity_type_id.is.null`);
       }
       if (filterUser === "mine" && currentUser?.id) {
-        q = q.or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
+        q = q.eq("assigned_to", currentUser.id);
       } else if (filterUser !== "all" && filterUser) {
         q = q.eq("assigned_to", filterUser);
       }
@@ -654,6 +662,7 @@ export default function Tasks() {
       const { data } = await supabase
         .from("users")
         .select("id, name, avatar_url")
+        .eq("is_active", true)
         .order("name");
       const allUsers = (data || []) as User[];
 
@@ -673,16 +682,6 @@ export default function Tasks() {
           .in("team_role_id", roleIds);
         (userRoles || []).forEach((r: any) => commercial.add(r.user_id));
       }
-
-      // Ex-comerciais (usuários inativos ou sem cargo) detectados por negócios
-      const { data: deals } = await supabase
-        .from("deals")
-        .select("responsible_user_id, sdr_user_id")
-        .limit(20000);
-      (deals || []).forEach((d: any) => {
-        if (d.responsible_user_id) commercial.add(d.responsible_user_id);
-        if (d.sdr_user_id) commercial.add(d.sdr_user_id);
-      });
 
       const filtered = allUsers.filter((u) => commercial.has(u.id));
       return filtered.length > 0 ? filtered : allUsers;
@@ -946,7 +945,7 @@ export default function Tasks() {
     
     // User filter
     const matchesUser = filterUser === "all" || 
-      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser));
+      (filterUser === "mine" ? (task.assigned_to === currentUser?.id) : (task.assigned_to === filterUser));
 
     // Activity type filter
     const matchesActivityType = filterActivityType === "all" || 
@@ -1011,7 +1010,7 @@ export default function Tasks() {
   const baseFilteredTasksIgnoringDate = useMemo(() => tasks.filter((task) => {
     const matchesSearch = matchesTaskSearch(task);
     const matchesUser = filterUser === "all" ||
-      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser));
+      (filterUser === "mine" ? (task.assigned_to === currentUser?.id) : (task.assigned_to === filterUser));
     const matchesActivityType = filterActivityType === "all" ||
       task.activity_type?.id === filterActivityType;
     const activitySectorId = task.activity_type?.sector_id;
@@ -2501,7 +2500,7 @@ export default function Tasks() {
               const matchesSearch = matchesTaskSearch(task);
               
               const matchesUser = filterUser === "all" || 
-                (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser));
+                (filterUser === "mine" ? (task.assigned_to === currentUser?.id) : (task.assigned_to === filterUser));
 
               const matchesActivityType = filterActivityType === "all" || 
                 task.activity_type?.id === filterActivityType;
