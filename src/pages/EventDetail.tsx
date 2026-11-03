@@ -1,6 +1,7 @@
 import { isEventLocked, resolveEventStatus } from "@/lib/events/eventStatus";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { buildEventKpisEntryState, getEventDetailReturn } from "@/lib/navigation/eventDetailReturn";
 import { Progress } from "@/components/ui/progress";
 import {
   DropdownMenu,
@@ -115,6 +116,9 @@ interface Event {
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Where this event was opened from: KPIs Anuais sends its list and filters back.
+  const kpisReturn = useMemo(() => getEventDetailReturn(location.state), [location.state]);
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -369,10 +373,16 @@ export default function EventDetail() {
         <Button 
           variant="ghost" 
           className="w-fit gap-2"
-          onClick={() => navigate("/events")}
+          onClick={() => {
+            if (kpisReturn) {
+              navigate(kpisReturn.url, { state: buildEventKpisEntryState(kpisReturn.kpis) });
+              return;
+            }
+            navigate("/events");
+          }}
         >
           <ArrowLeft className="h-4 w-4" />
-          Voltar para Eventos
+          {kpisReturn ? `Voltar para ${kpisReturn.label}` : "Voltar para Eventos"}
         </Button>
         
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
