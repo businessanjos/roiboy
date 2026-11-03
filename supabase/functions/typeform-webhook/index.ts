@@ -397,6 +397,7 @@ Deno.serve(async (req) => {
 
   // ---------- No match + submission complete → create the lead (replaces N8N) ----------
   let createdLeadId: string | null = null;
+  let reopenedFrom: string | null = null;
   if (!leadId && !dealId && row.is_completed && email && full_name) {
     const tags = tag ? [tag] : [];
 
@@ -426,6 +427,11 @@ Deno.serve(async (req) => {
       method = "email";
     } else {
       noteFailure(`createLeadCore falhou: ${result.error}`);
+    }
+    if (dealId && deallessPrevious) {
+      await supabase.from("deals").update({ previous_lost_deal_id: deallessPrevious.id })
+        .eq("id", dealId).eq("account_id", accountId);
+      reopenedFrom = deallessPrevious.id;
     }
   } else if (row.is_completed && !leadId && !dealId) {
     // Completou a ficha mas não deu match nem conseguimos criar
