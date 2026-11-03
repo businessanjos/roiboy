@@ -532,6 +532,23 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ---------- Leave a trace on the lost deal pointing to the new one ----------
+  if (reopenedFrom && dealId) {
+    try {
+      await supabase.from("deal_activities").insert({
+        account_id: accountId,
+        deal_id: reopenedFrom,
+        type: "note",
+        title: "Aplicou novamente",
+        content: `O contato preencheu o formulário novamente${formTitle ? ` (${formTitle})` : ""} e um novo negócio foi aberto.\n\nnovo_negocio: ${dealId}\nresponse_id: ${row.response_id}`,
+        user_id: distributionUserId,
+        completed_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      noteFailure(`Falha ao registrar reaplicação no negócio perdido: ${(e as any)?.message || e}`);
+    }
+  }
+
   // ---------- Enrich lead custom fields (MQL / Canal / Faturamento) ----------
   // For newly-created leads createLeadCore already inserted them; we only need
   // this for matched (pre-existing) leads whose fields were empty.
