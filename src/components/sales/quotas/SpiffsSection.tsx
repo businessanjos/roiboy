@@ -116,7 +116,8 @@ export function SpiffsSection() {
       trigger_per_value: prizeType === "roulette" ? triggerPerValue : 0,
       roulette_min_prize: prizeType === "roulette" ? rouletteMin : 0,
       roulette_max_prize: prizeType === "roulette" ? rouletteMax : 0,
-      roulette_pool_id: prizeType === "roulette" && roulettePoolId !== "range" ? roulettePoolId : null,
+      roulette_pool_id:
+        (prizeType === "roulette" || prizeType === "custom") && roulettePoolId !== "range" ? roulettePoolId : null,
       trigger_sales_count: prizeType === "custom" ? triggerSalesCount : 0,
       trigger_window_days: prizeType === "custom" ? triggerWindowDays : 7,
       trigger_week_start_day:
@@ -478,6 +479,31 @@ export function SpiffsSection() {
                       <p className="text-[10px] text-muted-foreground">
                         Ex: 3 vendas em uma semana (Qua→Ter), ou "War Day" no último dia útil do mês.
                       </p>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Roleta vinculada</Label>
+                        <Select
+                          value={roulettePoolId === "range" ? "none" : roulettePoolId}
+                          onValueChange={(v) => setRoulettePoolId(v === "none" ? "range" : v)}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sem roleta — prêmio livre (descrição abaixo)</SelectItem>
+                            {roulettePools.length > 0 && (
+                              <>
+                                <div className="px-2 py-1 text-[10px] text-muted-foreground uppercase">Pools cadastrados</div>
+                                {roulettePools.map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>🎁 {p.name}</SelectItem>
+                                ))}
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-muted-foreground">
+                          {roulettePoolId !== "range"
+                            ? "Ao girar, o prêmio sai desta roleta (com aprovação do gestor). A descrição abaixo continua salva como referência."
+                            : "Sem roleta, o giro registra apenas a descrição do prêmio abaixo (com aprovação do gestor)."}
+                        </p>
+                      </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Prêmio (descrição livre)</Label>
                         <Textarea
