@@ -454,6 +454,7 @@ Deno.serve(async (req) => {
         (d: any) => !["won", "lost", "canceled", "cancelled"].includes((d.status || "").toLowerCase()),
       );
       if (activeDeal) dealId = activeDeal.id;
+      const lastLost = (existingDeals || []).find((d: any) => String(d.status || "").toLowerCase() === "lost");
 
       if (!activeDeal) {
         const isMql = mqlOption === "opt_1";
@@ -509,6 +510,7 @@ Deno.serve(async (req) => {
                 status: "open",
                 responsible_user_id: distributionUserId,
                 stage_changed_at: new Date().toISOString(),
+                previous_lost_deal_id: lastLost?.id || null,
               })
               .select("id")
               .single();
@@ -517,6 +519,7 @@ Deno.serve(async (req) => {
               noteFailure(`Falha ao criar deal para lead existente: ${dealErr.message}`);
             } else if (newDeal) {
               dealId = newDeal.id;
+              reopenedFrom = lastLost?.id || null;
               console.log(`[typeform-webhook] Deal created on match: ${newDeal.id} → ${isMql ? "Closer" : "TP - Eternum Pass"}`);
             }
           } else {
