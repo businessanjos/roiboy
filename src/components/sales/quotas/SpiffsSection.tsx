@@ -1384,6 +1384,19 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
 export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; restrictToUserId?: string }) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
+  const linkedPoolQuery = useQuery({
+    queryKey: ["roulette-pool-label", spiff.roulette_pool_id],
+    queryFn: async () => {
+      if (!spiff.roulette_pool_id) return null;
+      const { data } = await supabase
+        .from("roulette_prize_pools")
+        .select("id, name")
+        .eq("id", spiff.roulette_pool_id)
+        .maybeSingle();
+      return (data as { id: string; name: string } | null) ?? null;
+    },
+    enabled: !!spiff.roulette_pool_id,
+  });
   const triggerSalesCount = Number(spiff.trigger_sales_count || 0);
   const windowDays = Number(spiff.trigger_window_days || 7);
   const windowType: string | null = spiff.trigger_window_type || null;
@@ -1620,13 +1633,23 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
               {weekStartDay !== null
                 ? `Conta os negócios ganhos por cada vendedor na semana atual (${dayNames[weekStartDay]} 00:00 → ${dayNames[(weekStartDay + 6) % 7]} 23:59).`
                 : `Conta os negócios ganhos por cada vendedor nos últimos ${windowDays} dias.`}
-              {" "}A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro. O prêmio é livre — escolhido pelo próprio vendedor (ex: "{spiff.custom_prize_description || "vale presente"}").
+              {" "}A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro.{" "}
+              {spiff.roulette_pool_id
+                ? `O prêmio sai da roleta "${linkedPoolQuery.data?.name ?? "vinculada"}" e precisa da aprovação do gestor.`
+                : `O prêmio é livre — escolhido pelo próprio vendedor (ex: "${spiff.custom_prize_description || "vale presente"}").`}
             </p>
           </PopoverContent>
         </Popover>
       </div>
-      {spiff.custom_prize_description && (
-        <p className="text-xs text-muted-foreground italic">🎁 Prêmio: {spiff.custom_prize_description}</p>
+      {spiff.roulette_pool_id ? (
+        <p className="text-xs text-muted-foreground italic">
+          🎰 Roleta: {linkedPoolQuery.data?.name ?? "vinculada"}
+          {spiff.custom_prize_description ? ` • Prêmio de referência: ${spiff.custom_prize_description}` : ""}
+        </p>
+      ) : (
+        spiff.custom_prize_description && (
+          <p className="text-xs text-muted-foreground italic">🎁 Prêmio: {spiff.custom_prize_description}</p>
+        )
       )}
       {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhuma venda ganha na janela atual ainda.</p>
