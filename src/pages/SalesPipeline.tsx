@@ -93,7 +93,7 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
-import { RefreshCw as ReapplyIcon } from "lucide-react";
+import { RefreshCw as ReapplyIcon, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, addMonths, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
