@@ -654,6 +654,7 @@ export default function Tasks() {
       const { data } = await supabase
         .from("users")
         .select("id, name, avatar_url")
+        .eq("is_active", true)
         .order("name");
       const allUsers = (data || []) as User[];
 
@@ -673,16 +674,6 @@ export default function Tasks() {
           .in("team_role_id", roleIds);
         (userRoles || []).forEach((r: any) => commercial.add(r.user_id));
       }
-
-      // Ex-comerciais (usuários inativos ou sem cargo) detectados por negócios
-      const { data: deals } = await supabase
-        .from("deals")
-        .select("responsible_user_id, sdr_user_id")
-        .limit(20000);
-      (deals || []).forEach((d: any) => {
-        if (d.responsible_user_id) commercial.add(d.responsible_user_id);
-        if (d.sdr_user_id) commercial.add(d.sdr_user_id);
-      });
 
       const filtered = allUsers.filter((u) => commercial.has(u.id));
       return filtered.length > 0 ? filtered : allUsers;
