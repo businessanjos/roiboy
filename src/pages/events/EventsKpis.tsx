@@ -9,9 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip as UiTooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ChevronLeft, ChevronRight, TrendingUp, CalendarCheck, Users, Wallet, Receipt, CheckCircle2, Info, RotateCcw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Link } from "react-router-dom";
 
 interface EventRow {
   id: string;
+  title: string | null;
   scheduled_at: string | null;
   ends_at: string | null;
   modality: string;
@@ -51,9 +55,10 @@ function chunk<T>(arr: T[], size: number) {
   return res;
 }
 
-function Kpi({ label, value, hint, icon: Icon, tone }: { label: string; value: string; hint?: string; icon: any; tone?: "success" }) {
+function Kpi({ label, value, hint, icon: Icon, tone, onClick }: { label: string; value: string; hint?: string; icon: any; tone?: "success"; onClick?: () => void }) {
   return (
-    <Card className="h-full">
+    <Card className="h-full cursor-pointer transition-colors hover:border-primary/60" role="button" tabIndex={0} onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick?.(); } }}>
       <CardContent className="p-4 flex flex-col gap-1 h-full">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{label}</span>
@@ -61,8 +66,74 @@ function Kpi({ label, value, hint, icon: Icon, tone }: { label: string; value: s
         </div>
         <div className={`text-2xl font-semibold tabular-nums truncate ${tone === "success" ? "text-success" : ""}`}>{value}</div>
         {hint && <div className="text-xs text-muted-foreground truncate">{hint}</div>}
+        <div className="text-[11px] text-primary mt-auto pt-1">Ver detalhes</div>
       </CardContent>
     </Card>
+  );
+}
+
+type DetailKind = "events" | "realized" | "participants" | "budget" | "actual";
+
+const DETAIL_TITLES: Record<DetailKind, string> = {
+  events: "Eventos do período", realized: "Eventos realizados", participants: "Participantes por evento",
+  budget: "Orçamento previsto por evento", actual: "Custo real por evento",
+};
+
+function KpiDetailDialog({ kind, onClose, events, costs, parts }: {
+  kind: DetailKind | null; onClose: () => void; events: EventRow[];
+  costs: Record<string, { planned: number; actual: number }>; parts: Record<string, { confirmed: number; present: number }>;
+}) {
+  const [q, setQ] = useState("");
+  useEffect(() => { setQ(""); }, [kind]);
+  const rows = useMemo(() => {
+    if (!kind) return [];
+    let list = kind === "realized" ? events.filter((e) => isEventCompleted(e)) : events;
+    const budgetOf = (e: EventRow) => (Number(e.budget || 0) > 0 ? Number(e.budget) : costs[e.id]?.planned ?? 0);
+    const metric = (e: EventRow) =>
+      kind === "participants" ? parts[e.id]?.present ?? 0 : kind === "budget" ? budgetOf(e) : kind === "actual" ? costs[e.id]?.actual ?? 0 : 0;
+    if (kind === "participants" || kind === "budget" || kind === "actual") list = [...list].sort((a, b) => metric(b) - metric(a));
+    else list = [...list].sort((a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? ""));
+    const term = q.trim().toLowerCase();
+    if (term) list = list.filter((e) => (e.title ?? "").toLowerCase().includes(term));
+    return list.map((e) => ({ e, budget: budgetOf(e), actual: costs[e.id]?.actual ?? 0, confirmed: parts[e.id]?.confirmed ?? 0, present: parts[e.id]?.present ?? 0 }));
+  }, [kind, events, costs, parts, q]);
+  const statusLabel = (e: EventRow) => { const s = resolveEventStatus(e); return s === "completed" ? "Realizado" : s === "cancelled" ? "Cancelado" : "A realizar"; };
+  const sum = (k: "budget" | "actual" | "present" | "confirmed") => rows.reduce((s, r) => s + r[k], 0);
+  return (
+    <Dialog open={!!kind} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{kind ? DETAIL_TITLES[kind] : ""}</DialogTitle>
+          <DialogDescription>
+            {rows.length} evento(s)
+            {kind === "participants" && ` · ${sum("present").toLocaleString("pt-BR")} presentes de ${sum("confirmed").toLocaleString("pt-BR")} confirmados`}
+            {kind === "budget" && ` · ${fmtBRL(sum("budget"))} previstos`}
+            {kind === "actual" && ` · ${fmtBRL(sum("actual"))} gastos de ${fmtBRL(sum("budget"))} previstos`}
+          </DialogDescription>
+        </DialogHeader>
+        <Input placeholder="Buscar evento..." value={q} onChange={(e) => setQ(e.target.value)} className="h-9" />
+        <div className="flex-1 overflow-y-auto -mx-1 px-1 divide-y divide-border">
+          {rows.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">Nenhum evento.</p>}
+          {rows.map(({ e, budget, actual, confirmed, present }, i) => (
+            <Link key={e.id} to={`/events/${e.id}`} className="flex items-center gap-3 py-2.5 hover:bg-muted/50 rounded-md px-2">
+              <span className="text-xs text-muted-foreground w-6 tabular-nums">{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{e.title || "Sem título"}</div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {e.scheduled_at ? new Date(e.scheduled_at).toLocaleDateString("pt-BR") : "Sem data"} · {typeLabel(e.event_type)} · {modalityLabel(e.modality)} · {statusLabel(e)}
+                </div>
+              </div>
+              <div className="text-right text-sm tabular-nums shrink-0">
+                {kind === "participants" && (<><div className="font-medium">{present} presentes</div><div className="text-xs text-muted-foreground">{confirmed} confirmados</div></>)}
+                {kind === "budget" && <div className="font-medium">{fmtBRL(budget)}</div>}
+                {kind === "actual" && (<><div className="font-medium">{fmtBRL(actual)}</div><div className="text-xs text-muted-foreground">previsto {fmtBRL(budget)}</div></>)}
+                {(kind === "events" || kind === "realized") && <div className="text-xs text-muted-foreground">{present} presentes · {fmtBRL(actual)}</div>}
+              </div>
+            </Link>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -102,6 +173,7 @@ export default function EventsKpis() {
   const [modality, setModality] = useState("all");
   const [type, setType] = useState("all");
   const [status, setStatus] = useState("all");
+  const [detail, setDetail] = useState<DetailKind | null>(null);
 
   useEffect(() => {
     if (!accountId) return;
@@ -111,7 +183,7 @@ export default function EventsKpis() {
       const end = new Date(year + 1, 0, 1).toISOString();
       const { data: evs } = await supabase
         .from("events")
-        .select("id,scheduled_at,ends_at,modality,event_type,status,budget")
+        .select("id,title,scheduled_at,ends_at,modality,event_type,status,budget")
         .eq("account_id", accountId)
         .gte("scheduled_at", start)
         .lt("scheduled_at", end);
@@ -237,15 +309,16 @@ export default function EventsKpis() {
         ) : (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-              <Kpi label="Eventos" value={String(kpis.total)} hint="no ano selecionado" icon={CalendarCheck} />
-              <Kpi label="Realizados" value={String(kpis.realized)} tone="success" icon={CheckCircle2}
+              <Kpi onClick={() => setDetail("events")} label="Eventos" value={String(kpis.total)} hint="no ano selecionado" icon={CalendarCheck} />
+              <Kpi onClick={() => setDetail("realized")} label="Realizados" value={String(kpis.realized)} tone="success" icon={CheckCircle2}
                 hint={`${kpis.total ? Math.round((kpis.realized / kpis.total) * 100) : 0}% de conclusão`} />
-              <Kpi label="Participantes" value={kpis.present.toLocaleString("pt-BR")} icon={Users}
+              <Kpi onClick={() => setDetail("participants")} label="Participantes" value={kpis.present.toLocaleString("pt-BR")} icon={Users}
                 hint={`${kpis.confirmed.toLocaleString("pt-BR")} confirmados`} />
-              <Kpi label="Orçamento previsto" value={fmtBRL(kpis.planned)} icon={Wallet} hint="soma dos custos previstos" />
-              <Kpi label="Custo real" value={fmtBRL(kpis.actual)} icon={Receipt}
+              <Kpi onClick={() => setDetail("budget")} label="Orçamento previsto" value={fmtBRL(kpis.planned)} icon={Wallet} hint="soma dos custos previstos" />
+              <Kpi onClick={() => setDetail("actual")} label="Custo real" value={fmtBRL(kpis.actual)} icon={Receipt}
                 hint={usage === null ? "sem orçamento" : `${usage}% do previsto`} />
             </div>
+            <KpiDetailDialog kind={detail} onClose={() => setDetail(null)} events={filtered} costs={costs} parts={parts} />
 
             <div className="flex items-start gap-2 text-xs text-muted-foreground">
               <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
