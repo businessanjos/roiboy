@@ -194,7 +194,9 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
 
         {(deal.typeform_reapplication_count ?? 0) > 0 && (
           <div className="flex flex-wrap items-center gap-1 rounded border border-info/30 bg-info/10 px-1.5 py-1 text-info text-[10px]"
-            title="Nova resposta de formulário recebida neste negócio. A etapa e o responsável foram mantidos.">
+            title={deal.previous_lost_deal_id
+              ? "Este contato já tinha um negócio perdido e preencheu o formulário de novo. O negócio anterior continua nos perdidos, com o aviso registrado."
+              : "Nova resposta de formulário recebida neste negócio. A etapa e o responsável foram mantidos."}>
             <RefreshCw className="h-3 w-3 shrink-0" />
             <span className="font-semibold">Aplicou novamente</span>
             {(deal.typeform_reapplication_count ?? 0) > 1 && <span>· {deal.typeform_reapplication_count} vezes</span>}

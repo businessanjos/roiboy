@@ -7739,6 +7739,7 @@ export type Database = {
           lost_reason: string | null
           notes: string | null
           pipeline_id: string | null
+          previous_lost_deal_id: string | null
           probability: number | null
           received_value: number | null
           renewal_responsible_user_id: string | null
@@ -7786,6 +7787,7 @@ export type Database = {
           lost_reason?: string | null
           notes?: string | null
           pipeline_id?: string | null
+          previous_lost_deal_id?: string | null
           probability?: number | null
           received_value?: number | null
           renewal_responsible_user_id?: string | null
@@ -7833,6 +7835,7 @@ export type Database = {
           lost_reason?: string | null
           notes?: string | null
           pipeline_id?: string | null
+          previous_lost_deal_id?: string | null
           probability?: number | null
           received_value?: number | null
           renewal_responsible_user_id?: string | null

@@ -342,6 +342,18 @@ Deno.serve(async (req) => {
     }
   }
 
+  // A deal-only match (no lead found) may point to a closed deal. Promote it
+  // to its lead, or keep it as the previous deal so a new one is opened.
+  let deallessPrevious: { id: string; status: string; lead_id: string | null } | null = null;
+  if (!leadId && dealId) {
+    const { data: md } = await supabase.from("deals").select("id, status, lead_id")
+      .eq("id", dealId).eq("account_id", accountId).maybeSingle();
+    const closed = ["won", "lost", "canceled", "cancelled"].includes(String(md?.status || "").toLowerCase());
+    if (md?.lead_id) { leadId = md.lead_id; dealId = null; }
+    else if (md && closed) { deallessPrevious = md as any; dealId = null; }
+  }
+
+
   // Distribuição: leads/deals do Typeform caem para o Jonathan Marcato
   // (gestor que faz a triagem/distribuição para os vendedores).
   const JONATHAN_MARCATO_ID = "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
@@ -385,6 +397,7 @@ Deno.serve(async (req) => {
 
   // ---------- No match + submission complete → create the lead (replaces N8N) ----------
   let createdLeadId: string | null = null;
+  let reopenedFrom: string | null = null;
   if (!leadId && !dealId && row.is_completed && email && full_name) {
     const tags = tag ? [tag] : [];
 
@@ -415,6 +428,11 @@ Deno.serve(async (req) => {
     } else {
       noteFailure(`createLeadCore falhou: ${result.error}`);
     }
+    if (dealId && deallessPrevious) {
+      await supabase.from("deals").update({ previous_lost_deal_id: deallessPrevious.id })
+        .eq("id", dealId).eq("account_id", accountId);
+      reopenedFrom = deallessPrevious.id;
+    }
   } else if (row.is_completed && !leadId && !dealId) {
     // Completou a ficha mas não deu match nem conseguimos criar
     if (!email) noteFailure("Resposta completa sem e-mail — impossível criar lead");
@@ -436,6 +454,7 @@ Deno.serve(async (req) => {
         (d: any) => !["won", "lost", "canceled", "cancelled"].includes((d.status || "").toLowerCase()),
       );
       if (activeDeal) dealId = activeDeal.id;
+      const lastLost = (existingDeals || []).find((d: any) => String(d.status || "").toLowerCase() === "lost");
 
       if (!activeDeal) {
         const isMql = mqlOption === "opt_1";
@@ -491,6 +510,7 @@ Deno.serve(async (req) => {
                 status: "open",
                 responsible_user_id: distributionUserId,
                 stage_changed_at: new Date().toISOString(),
+                previous_lost_deal_id: lastLost?.id || null,
               })
               .select("id")
               .single();
@@ -499,6 +519,7 @@ Deno.serve(async (req) => {
               noteFailure(`Falha ao criar deal para lead existente: ${dealErr.message}`);
             } else if (newDeal) {
               dealId = newDeal.id;
+              reopenedFrom = lastLost?.id || null;
               console.log(`[typeform-webhook] Deal created on match: ${newDeal.id} → ${isMql ? "Closer" : "TP - Eternum Pass"}`);
             }
           } else {
@@ -508,6 +529,23 @@ Deno.serve(async (req) => {
       }
     } catch (e: any) {
       noteFailure(`Erro no roteamento do lead existente: ${e?.message || e}`);
+    }
+  }
+
+  // ---------- Leave a trace on the lost deal pointing to the new one ----------
+  if (reopenedFrom && dealId) {
+    try {
+      await supabase.from("deal_activities").insert({
+        account_id: accountId,
+        deal_id: reopenedFrom,
+        type: "note",
+        title: "Aplicou novamente",
+        content: `O contato preencheu o formulário novamente${formTitle ? ` (${formTitle})` : ""} e um novo negócio foi aberto.\n\nnovo_negocio: ${dealId}\nresponse_id: ${row.response_id}`,
+        user_id: distributionUserId,
+        completed_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      noteFailure(`Falha ao registrar reaplicação no negócio perdido: ${(e as any)?.message || e}`);
     }
   }
 

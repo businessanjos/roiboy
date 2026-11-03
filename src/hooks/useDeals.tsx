@@ -65,6 +65,7 @@ export interface Deal {
   // Joined data
   typeform_reapplication_count?: number;
   typeform_last_reapplication_at?: string | null;
+  previous_lost_deal_id?: string | null;
   client?: {
     id: string;
     full_name: string;
@@ -247,7 +248,7 @@ export function useDeals(pipelineId?: string | null) {
           stage_id, value, entry_value, received_value, currency, expected_close_date, probability, source,
           responsible_user_id, sdr_user_id, notes, status, won_at, lost_at, lost_reason,
           loss_reason_id, loss_sub_reason_id, loss_notes, tags, is_renewal, renewal_responsible_user_id, created_at, updated_at,
-          typeform_reapplication_count, typeform_last_reapplication_at,
+          typeform_reapplication_count, typeform_last_reapplication_at, previous_lost_deal_id,
           client:clients(id, full_name, phone_e164, avatar_url),
           lead:leads(id, full_name, phone, email, avatar_url),
           responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url, is_active),
