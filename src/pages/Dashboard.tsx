@@ -71,6 +71,7 @@ import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementRep
 import { OperationsConsultantWorkloadCard } from "@/components/dashboard/OperationsConsultantWorkloadCard";
 import { OverdueClientsCard } from "@/components/dashboard/OverdueClientsCard";
 import { ClientsByEducationChart } from "@/components/dashboard/ClientsByEducationChart";
+import { ClientsByPracticeAreaChart } from "@/components/dashboard/ClientsByPracticeAreaChart";
 import { ClientListDialog } from "@/components/dashboard/ClientListDialog";
 import { canViewOpsConsultantWorkload } from "@/lib/featureFlags";
 import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/components/dashboard/CancellationAnalyticsModal";
@@ -86,6 +87,7 @@ import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 import { ChurnRenewalBySegmentChart } from "@/components/dashboard/ChurnRenewalBySegmentChart";
 import { buildProductGroups, clientInGroup, type ProductGroup } from "@/lib/dashboard/productGroups";
 import { useClientEducation } from "@/hooks/useClientEducation";
+import { useClientPracticeAreas } from "@/hooks/useClientPracticeAreas";
 import { EDUCATION_ALL, educationMatches } from "@/lib/dashboard/clientEducation";
 
 
@@ -188,6 +190,8 @@ export default function Dashboard() {
   // Formação informada na ficha de cada cliente — filtro opcional da Gestão/CX.
   const [gestaoEducationFilter, setGestaoEducationFilter] = useState<string>(EDUCATION_ALL);
   const { educationById, options: educationOptions } = useClientEducation();
+  // Áreas de atuação informadas na ficha de cada cliente — gráfico abaixo de "por formação".
+  const { nicheById } = useClientPracticeAreas();
 
   const educationClientIds = useMemo(() => {
     if (gestaoEducationFilter === EDUCATION_ALL) return null;
@@ -1576,6 +1580,15 @@ export default function Dashboard() {
             metaById={productNameById}
             activeClientIds={periodActiveClientIdsForEducation}
             highlightValue={gestaoEducationFilter === EDUCATION_ALL ? undefined : gestaoEducationFilter}
+            shortPeriod={educationPeriodShort}
+            periodLabel={gestaoPeriodFilter === "custom" ? undefined : periodLabel}
+          />
+
+          <ClientsByPracticeAreaChart
+            clients={productScopedClients as any}
+            nicheById={nicheById}
+            metaById={productNameById}
+            activeClientIds={periodActiveClientIdsForEducation}
             shortPeriod={educationPeriodShort}
             periodLabel={gestaoPeriodFilter === "custom" ? undefined : periodLabel}
           />
