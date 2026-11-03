@@ -398,8 +398,8 @@ export default function EventsKpis() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <RankList title="Por modalidade" rows={byModality} total={kpis.total} />
-              <RankList title="Por tipo" rows={byType} total={kpis.total} />
+              <RankList title="Por modalidade" subtitle="Online x presencial" rows={byModality} total={kpis.total} split />
+              <RankList title="Por tipo" subtitle="Ranking dos formatos mais realizados" rows={byType} total={kpis.total} />
             </div>
           </>
         )}
