@@ -253,7 +253,7 @@ export default function EventsKpis() {
 
   const hasFilter = modality !== "all" || type !== "all" || status !== "all";
   const usage = kpis.planned > 0 ? Math.round((kpis.actual / kpis.planned) * 100) : null;
-  const tickBRL = (v: number) => (v >= 1000 ? `${Math.round(v / 1000)} mil` : String(v));
+  const tickBRL = (v: number) => (v >= 1_000_000 ? `R$ ${(v / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi` : v >= 1000 ? `R$ ${Math.round(v / 1000)}k` : `R$ ${v}`);
 
   return (
     <TooltipProvider>
@@ -327,14 +327,14 @@ export default function EventsKpis() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-base">Eventos por mês</CardTitle></CardHeader>
+                <CardHeader className="pb-2 flex-row items-center justify-between space-y-0"><CardTitle className="text-base">Eventos por mês</CardTitle><div className="flex items-center gap-3 text-xs text-muted-foreground"><span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-primary/35" />Total</span><span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-primary" />Realizados</span></div></CardHeader>
                 <CardContent>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={monthly} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                      <BarChart data={monthly} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
                         <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
-                        <XAxis dataKey="mes" tickLine={false} axisLine={false} fontSize={12} />
-                        <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
+                        <XAxis dataKey="mes" tickLine={false} axisLine={false} fontSize={11} interval={0} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={11} width={64} tick={{ fill: "hsl(var(--muted-foreground))" }} />
                         <Tooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                         <Bar dataKey="total" name="Total" fill="hsl(var(--primary) / 0.35)" radius={[4, 4, 0, 0]} maxBarSize={22} />
                         <Bar dataKey="realizados" name="Realizados" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={22} />
@@ -344,14 +344,14 @@ export default function EventsKpis() {
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-base">Custo real por mês</CardTitle></CardHeader>
+                <CardHeader className="pb-2 flex-row items-center justify-between space-y-0"><CardTitle className="text-base">Custo real por mês</CardTitle><span className="text-xs text-muted-foreground tabular-nums">Total {fmtBRL(kpis.actual)}</span></CardHeader>
                 <CardContent>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={monthly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <BarChart data={monthly} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
                         <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
-                        <XAxis dataKey="mes" tickLine={false} axisLine={false} fontSize={12} />
-                        <YAxis tickFormatter={tickBRL} tickLine={false} axisLine={false} fontSize={12} width={52} />
+                        <XAxis dataKey="mes" tickLine={false} axisLine={false} fontSize={11} interval={0} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis tickFormatter={tickBRL} tickLine={false} axisLine={false} fontSize={11} width={64} tick={{ fill: "hsl(var(--muted-foreground))" }} />
                         <Tooltip formatter={(v: number) => fmtBRL(v)} cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                         <Bar dataKey="custo" name="Custo" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={28} />
                       </BarChart>
