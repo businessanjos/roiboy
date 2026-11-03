@@ -420,7 +420,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   // Primeira leva menor: a conversa abre quase instantaneamente e o restante
   // do histórico entra sob demanda ao rolar para cima.
   const INITIAL_MESSAGES_PAGE_SIZE = 30;
-  const MESSAGE_COLUMNS = "id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, sender_phone, delivery_status, media_download_status, external_message_id, is_deleted, deleted_at, quoted_message_id, quoted_content, quoted_sender_name, updated_at, is_edited, transcription, mention_map";
+  const MESSAGE_COLUMNS = "id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, sender_phone, delivery_status, media_download_status, media_last_error, external_message_id, is_deleted, deleted_at, quoted_message_id, quoted_content, quoted_sender_name, updated_at, is_edited, transcription, mention_map";
 
   const mapMessageRow = (m: any): Message => ({
     id: m.id,
@@ -443,6 +443,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     sender_name: m.sender_name,
     delivery_status: m.delivery_status,
     media_download_status: m.media_download_status,
+    media_last_error: m.media_last_error ?? null,
     external_message_id: m.external_message_id,
     is_deleted: m.is_deleted || false,
     deleted_at: m.deleted_at,
@@ -887,7 +888,8 @@ export function useZappConversations(options: UseZappConversationsOptions) {
                   ? { 
                       ...msg, 
                       media_url: newData.media_url || msg.media_url, 
-                      media_download_status: newData.media_download_status 
+                      media_download_status: newData.media_download_status,
+                      media_last_error: newData.media_last_error ?? null,
                     }
                   : msg
               );
