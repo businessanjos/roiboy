@@ -1260,14 +1260,20 @@ export default function SalesPipeline() {
   const titleTagOptions = useMemo(() => buildTitleTagOptions(dealsBeforeTagFilter), [dealsBeforeTagFilter]);
 
   // Apply unified filter to deals
+  const reappliedCount = useMemo(
+    () => dealsBeforeTagFilter.filter(d => (d.typeform_reapplication_count ?? 0) > 0).length,
+    [dealsBeforeTagFilter],
+  );
   const filteredOpenDeals = useMemo(() => {
-    if (!titleTagFilter.length) return dealsBeforeTagFilter;
+    let list = dealsBeforeTagFilter;
+    if (onlyReapplied) list = list.filter(d => (d.typeform_reapplication_count ?? 0) > 0);
+    if (!titleTagFilter.length) return list;
     const selected = new Set(titleTagFilter);
-    return dealsBeforeTagFilter.filter(d => {
+    return list.filter(d => {
       const info = getTitleTagInfo(d.title);
       return info ? selected.has(info.key) : false;
     });
-  }, [dealsBeforeTagFilter, titleTagFilter]);
+  }, [dealsBeforeTagFilter, titleTagFilter, onlyReapplied]);
 
   // Sort by activity metrics when the user chose a non-default option.
   // Kanban preserves stage grouping — sorting only reorders cards inside each column.
