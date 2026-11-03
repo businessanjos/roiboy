@@ -380,6 +380,8 @@ export default function RoyZapp() {
     if (profileDenied("royzapp", "sector_queue")) caps = { ...caps, canSeeAllSectorConversations: false };
     return caps;
   }, [zappRole, hasGlobalVisibility, profileDenied]);
+  // Gestores/admins auditam conversas de qualquer atendente sem pedir transferência.
+  const canOpenAnyConversation = isAdmin || hasGlobalVisibility;
 
 
 
@@ -907,7 +909,7 @@ export default function RoyZapp() {
     );
     if (assignment) {
       // Bloqueio: conversa atribuída a outro atendente
-      if (assignment.agent_id && currentAgent?.id && assignment.agent_id !== currentAgent.id) {
+      if (!canOpenAnyConversation && assignment.agent_id && currentAgent?.id && assignment.agent_id !== currentAgent.id) {
         const agent = agents.find(a => a.id === assignment.agent_id);
         const name = agent?.user?.name || "outro atendente";
         toast.warning(`Esta conversa está atribuída a ${name}.`, {
@@ -923,7 +925,7 @@ export default function RoyZapp() {
     // Não está na lista atual — deixa o efeito de URL processar (ele troca setor/instância)
     replaceSearchParams((next) => next.set("conversation", conversationId));
     setUrlParamsProcessed(false);
-  }, [assignments, currentAgent?.id, agents, replaceSearchParams, pushMobileSelectionHistory]);
+  }, [assignments, currentAgent?.id, agents, replaceSearchParams, pushMobileSelectionHistory, canOpenAnyConversation]);
 
   // Notification hook
   const { 
@@ -1248,7 +1250,7 @@ export default function RoyZapp() {
       );
       if (assignment) {
         // Bloqueio: atribuída a outro atendente
-        if (assignment.agent_id && currentAgent?.id && assignment.agent_id !== currentAgent.id) {
+        if (!canOpenAnyConversation && assignment.agent_id && currentAgent?.id && assignment.agent_id !== currentAgent.id) {
           const agent = agents.find(a => a.id === assignment.agent_id);
           const name = agent?.user?.name || "outro atendente";
           toast.warning(`Esta conversa está atribuída a ${name}.`, {
@@ -1285,7 +1287,7 @@ export default function RoyZapp() {
           }
           
           // Atribuída a outro? Avisa e não abre.
-          if (data.agent_id && currentAgent?.id && data.agent_id !== currentAgent.id) {
+          if (!canOpenAnyConversation && data.agent_id && currentAgent?.id && data.agent_id !== currentAgent.id) {
             const { data: agentRow } = await supabase
               .from("zapp_agents")
               .select("user:users(name)")
@@ -1338,7 +1340,7 @@ export default function RoyZapp() {
         contactOps.createConversationFromUrl(contact, !!leadId);
       }
     }
-  }, [assignments, loading, currentUser?.account_id, currentAgent, agents, searchParams, urlParamsProcessed, contactOps, selectedSectorId, selectedIntegrationId, replaceSearchParams]);
+  }, [assignments, loading, currentUser?.account_id, currentAgent, agents, searchParams, urlParamsProcessed, contactOps, selectedSectorId, selectedIntegrationId, replaceSearchParams, canOpenAnyConversation]);
 
   const getAgentName = (agentId: string | null) => {
     if (!agentId) return null;
