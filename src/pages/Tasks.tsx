@@ -256,6 +256,13 @@ export default function Tasks() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUser, setFilterUser] = usePersistedFilter<string>("tasks", "filterUser", "all");
+  // Quem não é gestor abre a tela em "Minhas tarefas" (pode trocar depois).
+  const defaultedMineRef = useRef(false);
+  useEffect(() => {
+    if (defaultedMineRef.current || !currentUser) return;
+    defaultedMineRef.current = true;
+    if (!isManagementUser(currentUser as any) && filterUser === "all") setFilterUser("mine");
+  }, [currentUser, filterUser, setFilterUser]);
   const [filterActivityType, setFilterActivityType] = usePersistedFilter<string>("tasks", "filterActivityType", "all");
   const [sortBy, setSortBy] = usePersistedFilter<SortOption>("tasks", "sortBy", "priority");
   const [sortDirection, setSortDirection] = usePersistedFilter<SortDirection>("tasks", "sortDirection", "asc");
