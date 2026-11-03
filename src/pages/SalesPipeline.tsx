@@ -93,6 +93,7 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
+import { RefreshCw as ReapplyIcon, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, addMonths, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -245,6 +246,7 @@ export default function SalesPipeline() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [activitySort, setActivitySort] = usePersistedFilter<'none' | 'pending_desc' | 'pending_asc' | 'total_desc' | 'total_asc'>("salesPipeline", "activitySort", "none");
   const [titleTagFilter, setTitleTagFilter] = usePersistedFilter<string[]>("salesPipeline", "titleTagFilter", []);
+  const [onlyReapplied, setOnlyReapplied] = usePersistedFilter<boolean>("salesPipeline", "onlyReapplied", false);
   const [openDatePreset, setOpenDatePreset] = usePersistedFilter<string>("salesPipeline", "openDatePreset", "all");
   const [openDateStart, setOpenDateStart] = usePersistedFilter<string>("salesPipeline", "openDateStart", "");
   const [openDateEnd, setOpenDateEnd] = usePersistedFilter<string>("salesPipeline", "openDateEnd", "");
@@ -1258,14 +1260,20 @@ export default function SalesPipeline() {
   const titleTagOptions = useMemo(() => buildTitleTagOptions(dealsBeforeTagFilter), [dealsBeforeTagFilter]);
 
   // Apply unified filter to deals
+  const reappliedCount = useMemo(
+    () => dealsBeforeTagFilter.filter(d => (d.typeform_reapplication_count ?? 0) > 0).length,
+    [dealsBeforeTagFilter],
+  );
   const filteredOpenDeals = useMemo(() => {
-    if (!titleTagFilter.length) return dealsBeforeTagFilter;
+    let list = dealsBeforeTagFilter;
+    if (onlyReapplied) list = list.filter(d => (d.typeform_reapplication_count ?? 0) > 0);
+    if (!titleTagFilter.length) return list;
     const selected = new Set(titleTagFilter);
-    return dealsBeforeTagFilter.filter(d => {
+    return list.filter(d => {
       const info = getTitleTagInfo(d.title);
       return info ? selected.has(info.key) : false;
     });
-  }, [dealsBeforeTagFilter, titleTagFilter]);
+  }, [dealsBeforeTagFilter, titleTagFilter, onlyReapplied]);
 
   // Sort by activity metrics when the user chose a non-default option.
   // Kanban preserves stage grouping — sorting only reorders cards inside each column.
@@ -2385,6 +2393,27 @@ export default function SalesPipeline() {
                             <SelectItem value="total_asc">Total de atividades (menor → maior)</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                    )}
+                    {activeTab === 'open' && (
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Formulário</label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          aria-pressed={onlyReapplied}
+                          onClick={() => setOnlyReapplied(!onlyReapplied)}
+                          title="Mostrar só os negócios que receberam uma nova resposta de formulário"
+                          className={cn(
+                            "h-10 gap-2 text-sm font-normal bg-background",
+                            onlyReapplied && "border-info/60 text-info bg-info/10 hover:bg-info/15 hover:text-info"
+                          )}
+                        >
+                          <ReapplyIcon className="h-4 w-4" />
+                          Aplicou novamente
+                          <Badge variant="secondary" className="text-[10px] px-1.5">{reappliedCount}</Badge>
+                          {onlyReapplied && <X className="h-3.5 w-3.5 opacity-70" />}
+                        </Button>
                       </div>
                     )}
                     {activeTab === 'open' && titleTagOptions.length > 0 && (
