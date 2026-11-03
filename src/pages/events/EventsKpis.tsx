@@ -137,26 +137,62 @@ function KpiDetailDialog({ kind, onClose, events, costs, parts }: {
   );
 }
 
-function RankList({ title, rows, total }: { title: string; rows: { name: string; value: number }[]; total: number }) {
+function RankList({ title, subtitle, rows, total, split }: { title: string; subtitle?: string; rows: { name: string; value: number }[]; total: number; split?: boolean }) {
+  const shades = ["bg-primary", "bg-primary/60", "bg-primary/35", "bg-primary/20"];
   return (
-    <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-base">{title}</CardTitle></CardHeader>
-      <CardContent className="space-y-2.5">
-        {rows.length === 0 && <p className="text-sm text-muted-foreground">Nenhum evento.</p>}
-        {rows.map((r) => {
-          const pct = total ? Math.round((r.value / total) * 100) : 0;
-          return (
-            <div key={r.name} className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span className="truncate">{r.name}</span>
-                <span className="tabular-nums text-muted-foreground">{r.value} · {pct}%</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
-              </div>
+    <Card className="h-full">
+      <CardHeader className="pb-3 flex-row items-start justify-between space-y-0">
+        <div>
+          <CardTitle className="text-base">{title}</CardTitle>
+          {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+        </div>
+        <span className="text-xs text-muted-foreground tabular-nums">{total} eventos</span>
+      </CardHeader>
+      <CardContent>
+        {rows.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">Nenhum evento.</p>}
+        {split && rows.length > 0 ? (
+          <div className="space-y-5">
+            <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
+              {rows.map((r, i) => (
+                <div key={r.name} className={`${shades[i % shades.length]} h-full`} style={{ width: `${total ? (r.value / total) * 100 : 0}%` }} />
+              ))}
             </div>
-          );
-        })}
+            <div className="grid grid-cols-2 gap-3">
+              {rows.map((r, i) => {
+                const pct = total ? Math.round((r.value / total) * 100) : 0;
+                return (
+                  <div key={r.name} className="rounded-xl border border-border bg-muted/30 p-4">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className={`h-2.5 w-2.5 rounded-sm ${shades[i % shades.length]}`} />{r.name}
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-3xl font-semibold tabular-nums">{pct}%</span>
+                      <span className="text-sm text-muted-foreground tabular-nums">{r.value} eventos</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {rows.map((r, i) => {
+              const pct = total ? Math.round((r.value / total) * 100) : 0;
+              const max = rows[0]?.value || 1;
+              return (
+                <div key={r.name} className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/40">
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums ${i < 3 ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
+                  <span className="w-28 shrink-0 truncate text-sm">{r.name}</span>
+                  <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max((r.value / max) * 100, 3)}%` }} />
+                  </div>
+                  <span className="w-10 text-right text-sm font-medium tabular-nums">{r.value}</span>
+                  <span className="w-10 text-right text-xs text-muted-foreground tabular-nums">{pct}%</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -362,8 +398,8 @@ export default function EventsKpis() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <RankList title="Por modalidade" rows={byModality} total={kpis.total} />
-              <RankList title="Por tipo" rows={byType} total={kpis.total} />
+              <RankList title="Por modalidade" subtitle="Online x presencial" rows={byModality} total={kpis.total} split />
+              <RankList title="Por tipo" subtitle="Ranking dos formatos mais realizados" rows={byType} total={kpis.total} />
             </div>
           </>
         )}
