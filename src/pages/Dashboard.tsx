@@ -87,6 +87,7 @@ import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 import { ChurnRenewalBySegmentChart } from "@/components/dashboard/ChurnRenewalBySegmentChart";
 import { buildProductGroups, clientInGroup, type ProductGroup } from "@/lib/dashboard/productGroups";
 import { useClientEducation } from "@/hooks/useClientEducation";
+import { useClientPracticeAreas } from "@/hooks/useClientPracticeAreas";
 import { EDUCATION_ALL, educationMatches } from "@/lib/dashboard/clientEducation";
 
 
@@ -1579,6 +1580,15 @@ export default function Dashboard() {
             metaById={productNameById}
             activeClientIds={periodActiveClientIdsForEducation}
             highlightValue={gestaoEducationFilter === EDUCATION_ALL ? undefined : gestaoEducationFilter}
+            shortPeriod={educationPeriodShort}
+            periodLabel={gestaoPeriodFilter === "custom" ? undefined : periodLabel}
+          />
+
+          <ClientsByPracticeAreaChart
+            clients={productScopedClients as any}
+            nicheById={nicheById}
+            metaById={productNameById}
+            activeClientIds={periodActiveClientIdsForEducation}
             shortPeriod={educationPeriodShort}
             periodLabel={gestaoPeriodFilter === "custom" ? undefined : periodLabel}
           />
