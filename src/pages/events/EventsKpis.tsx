@@ -66,7 +66,6 @@ function Kpi({ label, value, hint, icon: Icon, tone, onClick }: { label: string;
         </div>
         <div className={`text-2xl font-semibold tabular-nums truncate ${tone === "success" ? "text-success" : ""}`}>{value}</div>
         {hint && <div className="text-xs text-muted-foreground truncate">{hint}</div>}
-        <div className="text-[11px] text-primary mt-auto pt-1">Ver detalhes</div>
       </CardContent>
     </Card>
   );
