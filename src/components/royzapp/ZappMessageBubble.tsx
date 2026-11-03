@@ -1,3 +1,4 @@
+import { zappMediaFailureReason } from "@/lib/zappMediaFailureReason";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -437,6 +438,11 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
                 <AlertTriangle className="h-5 w-5 text-yellow-500" />
                 <span className="text-xs text-zapp-text-muted">Falha ao carregar mídia</span>
               </div>
+              {zappMediaFailureReason(message.media_last_error, message.media_type) && (
+                <p className="text-[11px] leading-snug text-zapp-text-muted text-center max-w-[240px]">
+                  {zappMediaFailureReason(message.media_last_error, message.media_type)}
+                </p>
+              )}
               {onRetryMediaDownload && (
                 <Button
                   variant="ghost"

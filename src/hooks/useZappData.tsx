@@ -22,6 +22,7 @@ export interface Message {
   sender_phone?: string | null;
   delivery_status?: "pending" | "sent" | "delivered" | "read" | "failed" | null;
   media_download_status?: "pending" | "downloading" | "completed" | "failed" | "abandoned" | null;
+  media_last_error?: string | null;
   external_message_id?: string | null;
   transcription?: string | null;
   is_deleted?: boolean;
