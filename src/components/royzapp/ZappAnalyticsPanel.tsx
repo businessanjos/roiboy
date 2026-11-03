@@ -406,8 +406,8 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   }
 
   const engagement =
-    data && data.total_conversations > 0
-      ? Math.round((data.conversations_with_inbound / data.total_conversations) * 1000) / 10
+    data && data.active_conversations > 0
+      ? Math.round((data.conversations_with_inbound / data.active_conversations) * 1000) / 10
       : null;
 
   const dayData = (data?.by_day || []).map((d) => ({
@@ -560,8 +560,8 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="no">Grupos de clientes</SelectItem>
-              <SelectItem value="yes">Todos os grupos</SelectItem>
+              <SelectItem value="no">Sem grupos</SelectItem>
+              <SelectItem value="yes">Incluir grupos</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching} aria-label="Atualizar">
@@ -571,9 +571,9 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
 
         {data && (
           <p className="text-[11px] leading-relaxed text-zapp-text-muted">
-            Base do cálculo: {includeGroups ? "conversas individuais e todos os grupos" : "conversas individuais e grupos de clientes (até 19 clientes, sem grupos internos)"}
+            Base do cálculo: {includeGroups ? "conversas individuais e todos os grupos" : "somente conversas individuais"}
             {!includeGroups && (data.group_conversations_excluded ?? 0) > 0
-              ? ` (${data.group_conversations_excluded} grupos gigantes ou internos fora da conta)`
+              ? ` (${data.group_conversations_excluded} grupos fora da conta)`
               : ""}
             {" · "}
             {effectiveIntegration ? "somente a conexão selecionada" : "todas as conexões da área"}
@@ -644,7 +644,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 onClick={() => setContactsDialog("inbound")}
               />
 
-              <Kpi icon={TrendingUp} label="Engajamento" value={engagement === null ? "—" : `${engagement}%`} hint="conversas com resposta do cliente" tone={engagement !== null && engagement < 50 ? "warning" : "success"} />
+              <Kpi icon={TrendingUp} label="Engajamento" value={engagement === null ? "—" : `${engagement}%`} hint={`${data.conversations_with_inbound} de ${data.active_conversations} conversas ativas no período tiveram resposta do cliente`} tone={engagement !== null && engagement < 50 ? "warning" : "success"} />
               <Kpi
                 icon={Clock}
                 label="Tempo de resposta (mediana)"

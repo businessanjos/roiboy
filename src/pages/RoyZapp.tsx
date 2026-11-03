@@ -1340,7 +1340,7 @@ export default function RoyZapp() {
         contactOps.createConversationFromUrl(contact, !!leadId);
       }
     }
-  }, [assignments, loading, currentUser?.account_id, currentAgent, agents, searchParams, urlParamsProcessed, contactOps, selectedSectorId, selectedIntegrationId, replaceSearchParams]);
+  }, [assignments, loading, currentUser?.account_id, currentAgent, agents, searchParams, urlParamsProcessed, contactOps, selectedSectorId, selectedIntegrationId, replaceSearchParams, canOpenAnyConversation]);
 
   const getAgentName = (agentId: string | null) => {
     if (!agentId) return null;
