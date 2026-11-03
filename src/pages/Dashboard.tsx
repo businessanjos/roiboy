@@ -71,6 +71,7 @@ import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementRep
 import { OperationsConsultantWorkloadCard } from "@/components/dashboard/OperationsConsultantWorkloadCard";
 import { OverdueClientsCard } from "@/components/dashboard/OverdueClientsCard";
 import { ClientsByEducationChart } from "@/components/dashboard/ClientsByEducationChart";
+import { ClientsByPracticeAreaChart } from "@/components/dashboard/ClientsByPracticeAreaChart";
 import { ClientListDialog } from "@/components/dashboard/ClientListDialog";
 import { canViewOpsConsultantWorkload } from "@/lib/featureFlags";
 import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/components/dashboard/CancellationAnalyticsModal";
@@ -188,6 +189,8 @@ export default function Dashboard() {
   // Formação informada na ficha de cada cliente — filtro opcional da Gestão/CX.
   const [gestaoEducationFilter, setGestaoEducationFilter] = useState<string>(EDUCATION_ALL);
   const { educationById, options: educationOptions } = useClientEducation();
+  // Áreas de atuação informadas na ficha de cada cliente — gráfico abaixo de "por formação".
+  const { nicheById } = useClientPracticeAreas();
 
   const educationClientIds = useMemo(() => {
     if (gestaoEducationFilter === EDUCATION_ALL) return null;
