@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
+import { isManagementUser } from "@/lib/access/managementRoles";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
