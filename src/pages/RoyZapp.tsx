@@ -573,6 +573,15 @@ export default function RoyZapp() {
   const keepsConversationSelection = activeView === "inbox" || isCrmSectorView || isMeetingsView;
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
 
+  // Grupo aberto na tela: quem está lendo não deve continuar vendo o selo de não lidas.
+  const openGroupId = selectedConversation?.zapp_conversation?.is_group ? selectedConversation.zapp_conversation.id : null;
+  const openGroupUnread = openGroupId
+    ? assignments.find((a) => a.zapp_conversation?.id === openGroupId)?.zapp_conversation?.unread_count || 0
+    : 0;
+  useEffect(() => {
+    if (openGroupId && openGroupUnread > 0 && !document.hidden) void markGroupRead(openGroupId);
+  }, [openGroupId, openGroupUnread, markGroupRead]);
+
   // Remember the last selected conversation so navigating away (and back) to CRM/Inbox restores it
   const lastSelectedAssignmentIdRef = useRef<string | null>(null);
   const selectionStorageKey = useMemo(
