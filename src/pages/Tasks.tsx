@@ -473,7 +473,7 @@ export default function Tasks() {
 
         // User filter (server-side) para não estourar limites em contas grandes.
         if (filterUser === "mine" && currentUser?.id) {
-          q = q.or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
+          q = q.eq("assigned_to", currentUser.id);
         } else if (filterUser !== "all" && filterUser) {
           q = q.eq("assigned_to", filterUser);
         }
@@ -534,7 +534,7 @@ export default function Tasks() {
         q = q.or(`activity_type_id.in.(${sectorActivityTypeIds.join(",")}),activity_type_id.is.null`);
       }
       if (filterUser === "mine" && currentUser?.id) {
-        q = q.or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
+        q = q.eq("assigned_to", currentUser.id);
       } else if (filterUser !== "all" && filterUser) {
         q = q.eq("assigned_to", filterUser);
       }
@@ -946,7 +946,7 @@ export default function Tasks() {
     
     // User filter
     const matchesUser = filterUser === "all" || 
-      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser));
+      (filterUser === "mine" ? (task.assigned_to === currentUser?.id) : (task.assigned_to === filterUser));
 
     // Activity type filter
     const matchesActivityType = filterActivityType === "all" || 
@@ -1011,7 +1011,7 @@ export default function Tasks() {
   const baseFilteredTasksIgnoringDate = useMemo(() => tasks.filter((task) => {
     const matchesSearch = matchesTaskSearch(task);
     const matchesUser = filterUser === "all" ||
-      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser));
+      (filterUser === "mine" ? (task.assigned_to === currentUser?.id) : (task.assigned_to === filterUser));
     const matchesActivityType = filterActivityType === "all" ||
       task.activity_type?.id === filterActivityType;
     const activitySectorId = task.activity_type?.sector_id;
@@ -2501,7 +2501,7 @@ export default function Tasks() {
               const matchesSearch = matchesTaskSearch(task);
               
               const matchesUser = filterUser === "all" || 
-                (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser));
+                (filterUser === "mine" ? (task.assigned_to === currentUser?.id) : (task.assigned_to === filterUser));
 
               const matchesActivityType = filterActivityType === "all" || 
                 task.activity_type?.id === filterActivityType;
