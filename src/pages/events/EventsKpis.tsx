@@ -183,7 +183,7 @@ export default function EventsKpis() {
       const end = new Date(year + 1, 0, 1).toISOString();
       const { data: evs } = await supabase
         .from("events")
-        .select("id,scheduled_at,ends_at,modality,event_type,status,budget")
+        .select("id,title,scheduled_at,ends_at,modality,event_type,status,budget")
         .eq("account_id", accountId)
         .gte("scheduled_at", start)
         .lt("scheduled_at", end);
