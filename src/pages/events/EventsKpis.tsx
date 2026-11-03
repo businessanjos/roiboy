@@ -207,15 +207,18 @@ function RankList({ title, subtitle, rows, total, split }: { title: string; subt
 export default function EventsKpis() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id ?? null;
-  const [year, setYear] = useState(new Date().getFullYear());
+  const location = useLocation();
+  // Snapshot handed back by an event opened from one of the detail lists.
+  const restored = useMemo(() => getEventKpisEntry(location.state), [location.state]);
+  const [year, setYear] = useState(() => restored?.year ?? new Date().getFullYear());
   const [events, setEvents] = useState<EventRow[]>([]);
   const [costs, setCosts] = useState<Record<string, { planned: number; actual: number }>>({});
   const [parts, setParts] = useState<Record<string, { confirmed: number; present: number }>>({});
   const [loading, setLoading] = useState(true);
-  const [modality, setModality] = useState("all");
-  const [type, setType] = useState("all");
-  const [status, setStatus] = useState("all");
-  const [detail, setDetail] = useState<DetailKind | null>(null);
+  const [modality, setModality] = useState(() => restored?.modality ?? "all");
+  const [type, setType] = useState(() => restored?.type ?? "all");
+  const [status, setStatus] = useState(() => restored?.status ?? "all");
+  const [detail, setDetail] = useState<DetailKind | null>(() => restored?.detail ?? null);
 
   useEffect(() => {
     if (!accountId) return;
