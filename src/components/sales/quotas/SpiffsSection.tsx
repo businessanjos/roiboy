@@ -116,7 +116,8 @@ export function SpiffsSection() {
       trigger_per_value: prizeType === "roulette" ? triggerPerValue : 0,
       roulette_min_prize: prizeType === "roulette" ? rouletteMin : 0,
       roulette_max_prize: prizeType === "roulette" ? rouletteMax : 0,
-      roulette_pool_id: prizeType === "roulette" && roulettePoolId !== "range" ? roulettePoolId : null,
+      roulette_pool_id:
+        (prizeType === "roulette" || prizeType === "custom") && roulettePoolId !== "range" ? roulettePoolId : null,
       trigger_sales_count: prizeType === "custom" ? triggerSalesCount : 0,
       trigger_window_days: prizeType === "custom" ? triggerWindowDays : 7,
       trigger_week_start_day:
@@ -478,6 +479,31 @@ export function SpiffsSection() {
                       <p className="text-[10px] text-muted-foreground">
                         Ex: 3 vendas em uma semana (Qua→Ter), ou "War Day" no último dia útil do mês.
                       </p>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Roleta vinculada</Label>
+                        <Select
+                          value={roulettePoolId === "range" ? "none" : roulettePoolId}
+                          onValueChange={(v) => setRoulettePoolId(v === "none" ? "range" : v)}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sem roleta — prêmio livre (descrição abaixo)</SelectItem>
+                            {roulettePools.length > 0 && (
+                              <>
+                                <div className="px-2 py-1 text-[10px] text-muted-foreground uppercase">Pools cadastrados</div>
+                                {roulettePools.map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>🎁 {p.name}</SelectItem>
+                                ))}
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-muted-foreground">
+                          {roulettePoolId !== "range"
+                            ? "Ao girar, o prêmio sai desta roleta (com aprovação do gestor). A descrição abaixo continua salva como referência."
+                            : "Sem roleta, o giro registra apenas a descrição do prêmio abaixo (com aprovação do gestor)."}
+                        </p>
+                      </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Prêmio (descrição livre)</Label>
                         <Textarea
@@ -1358,6 +1384,19 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
 export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; restrictToUserId?: string }) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
+  const linkedPoolQuery = useQuery({
+    queryKey: ["roulette-pool-label", spiff.roulette_pool_id],
+    queryFn: async () => {
+      if (!spiff.roulette_pool_id) return null;
+      const { data } = await supabase
+        .from("roulette_prize_pools")
+        .select("id, name")
+        .eq("id", spiff.roulette_pool_id)
+        .maybeSingle();
+      return (data as { id: string; name: string } | null) ?? null;
+    },
+    enabled: !!spiff.roulette_pool_id,
+  });
   const triggerSalesCount = Number(spiff.trigger_sales_count || 0);
   const windowDays = Number(spiff.trigger_window_days || 7);
   const windowType: string | null = spiff.trigger_window_type || null;
@@ -1594,13 +1633,23 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
               {weekStartDay !== null
                 ? `Conta os negócios ganhos por cada vendedor na semana atual (${dayNames[weekStartDay]} 00:00 → ${dayNames[(weekStartDay + 6) % 7]} 23:59).`
                 : `Conta os negócios ganhos por cada vendedor nos últimos ${windowDays} dias.`}
-              {" "}A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro. O prêmio é livre — escolhido pelo próprio vendedor (ex: "{spiff.custom_prize_description || "vale presente"}").
+              {" "}A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro.{" "}
+              {spiff.roulette_pool_id
+                ? `O prêmio sai da roleta "${linkedPoolQuery.data?.name ?? "vinculada"}" e precisa da aprovação do gestor.`
+                : `O prêmio é livre — escolhido pelo próprio vendedor (ex: "${spiff.custom_prize_description || "vale presente"}").`}
             </p>
           </PopoverContent>
         </Popover>
       </div>
-      {spiff.custom_prize_description && (
-        <p className="text-xs text-muted-foreground italic">🎁 Prêmio: {spiff.custom_prize_description}</p>
+      {spiff.roulette_pool_id ? (
+        <p className="text-xs text-muted-foreground italic">
+          🎰 Roleta: {linkedPoolQuery.data?.name ?? "vinculada"}
+          {spiff.custom_prize_description ? ` • Prêmio de referência: ${spiff.custom_prize_description}` : ""}
+        </p>
+      ) : (
+        spiff.custom_prize_description && (
+          <p className="text-xs text-muted-foreground italic">🎁 Prêmio: {spiff.custom_prize_description}</p>
+        )
       )}
       {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhuma venda ganha na janela atual ainda.</p>
