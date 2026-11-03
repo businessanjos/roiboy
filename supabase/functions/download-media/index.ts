@@ -47,8 +47,9 @@ function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {
 function hasExpectedMediaSignature(data: Uint8Array, mediaType: string, mimetype: string | null): boolean {
   if (data.byteLength < 12) return false;
   if (mediaType === "video") {
-    // ISO BMFF containers used by MP4/MOV have an `ftyp` box near the start.
-    return new TextDecoder().decode(data.subarray(4, 12)).includes("ftyp");
+    // MP4 começa com `ftyp`; MOV de iPhone pode começar com `wide`, `mdat`, `moov`, `free` ou `skip`.
+    const box = new TextDecoder().decode(data.subarray(4, 8));
+    return ["ftyp", "wide", "mdat", "moov", "free", "skip", "pnot"].includes(box);
   }
   if (mediaType === "image") {
     return (data[0] === 0xff && data[1] === 0xd8) ||
