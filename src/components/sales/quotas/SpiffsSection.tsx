@@ -1160,10 +1160,9 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     const userDeals = (dealsQuery.data ?? []).filter((d) => d.responsible_user_id === uid);
     const total = userDeals.reduce((acc, d) => acc + capturedAmount(d), 0);
     const earnedSpins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
-    // Giros pendentes = só vendas do mês atual ainda NÃO vinculadas a um giro.
-    // Vendas de meses anteriores são consideradas já resgatadas.
-    const nowD = new Date();
-    const monthStart = new Date(nowD.getFullYear(), nowD.getMonth(), 1).getTime();
+    // Giros pendentes = vendas do período selecionado ainda NÃO vinculadas a um giro.
+    const monthStart = new Date(`${period.from}T00:00:00`).getTime();
+    const periodEnd = new Date(`${period.to}T23:59:59`).getTime();
     const availableDeals = userDeals
       .filter(
         (d) =>
@@ -1183,7 +1182,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     const monthSpins = (spinsLogQuery.data ?? []).filter(
       // Só giros sem vendas vinculadas: os vinculados já saem via usedDealIds,
       // e giros deste mês por vendas de meses anteriores não podem zerar o mês atual.
-      (l: any) => l.user_id === uid && !linkedSpinIds.has(l.id) && l.spun_at && new Date(l.spun_at).getTime() >= monthStart,
+      (l: any) => l.user_id === uid && !linkedSpinIds.has(l.id) && l.spun_at && new Date(l.spun_at).getTime() >= monthStart && new Date(l.spun_at).getTime() <= periodEnd,
     ).length;
     const pendingSpins = triggerPerValue > 0
       ? Math.max(0, Math.min(Math.floor(availableTotal / triggerPerValue), monthEarned - monthSpins))
