@@ -123,7 +123,7 @@ export function ClientsByEducationChart({ clients, educationById, activeClientId
                         style={{ width: `${width}%` }}
                       />
                     </span>
-                    <span className="w-14 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+                    <span className="w-16 shrink-0 whitespace-nowrap text-right text-[11px] tabular-nums text-muted-foreground">
                       <span className="text-[13px] font-semibold text-foreground">{d.count}</span>
                       {" · "}
                       {pct}%
