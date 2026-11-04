@@ -1168,7 +1168,7 @@ export function useZappMessaging({
             }).eq("id", insertedMessageId);
             setMessages(prev => prev.map(m =>
               m.id === insertedMessageId
-                ? { ...m, send_status: "failed" as const, send_error: error.message || "Falha ao enviar áudio", delivery_status: "failed" as const }
+                ? { ...m, send_status: "failed" as const, send_error: friendlyZappError(error, "Falha ao enviar áudio"), delivery_status: "failed" as const }
                 : m
             ));
           }
@@ -1227,7 +1227,7 @@ export function useZappMessaging({
       toast.success("Áudio enviado!");
     } catch (error: any) {
       console.error("Error sending audio:", error);
-      toast.error(error.message || "Erro ao enviar áudio.");
+      toast.error(friendlyZappError(error, "Erro ao enviar áudio."));
     } finally {
       setUploadingMedia(false);
     }
@@ -1472,7 +1472,7 @@ export function useZappMessaging({
     } catch (error: any) {
       console.error("Error sending contact:", error);
       setMessages(prev => prev.filter(m => m.id !== tempMessageId));
-      toast.error(error.message || "Erro ao enviar contato");
+      toast.error(friendlyZappError(error, "Erro ao enviar contato"));
     } finally {
       setSendingContact(false);
     }
