@@ -14,17 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePagedList } from "@/hooks/usePagedList";
-import { ListPagination } from "@/components/ui/list-pagination";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { ChevronRight, Search } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export interface ContactRow {
   contact_key: string;
@@ -58,6 +51,44 @@ interface Props {
 function fmt(dt: string | null) {
   if (!dt) return "—";
   return format(new Date(dt), "dd/MM HH:mm", { locale: ptBR });
+}
+
+/** Mesma grade para cabeçalho e linhas: as colunas nunca saem do prumo. */
+const GRID =
+  "grid grid-cols-[minmax(0,1.5fr)_minmax(0,1.7fr)_54px_54px_minmax(0,96px)_minmax(0,96px)_20px] items-center gap-3";
+
+/** Etiquetas de quem atendeu: sempre uma linha, com "+N" quando não cabe tudo. */
+function AgentPills({ agents, emptyLabel }: { agents: ContactRow["agents"]; emptyLabel: string }) {
+  if (!agents?.length) {
+    return (
+      <Badge variant="outline" className="w-fit border-destructive/50 px-2 py-0 text-[11px] font-normal text-destructive">
+        {emptyLabel}
+      </Badge>
+    );
+  }
+  const shown = agents.slice(0, 2);
+  const rest = agents.length - shown.length;
+  return (
+    <div
+      className="flex min-w-0 items-center gap-1"
+      title={agents.map((a) => `${a.name} · ${a.messages}`).join(" · ")}
+    >
+      {shown.map((a) => (
+        <Badge
+          key={a.name}
+          variant="outline"
+          className="min-w-0 truncate border-zapp-border px-2 py-0 text-[11px] font-normal"
+        >
+          {a.name} · {a.messages}
+        </Badge>
+      ))}
+      {rest > 0 && (
+        <Badge variant="outline" className="shrink-0 border-zapp-border px-2 py-0 text-[11px] font-normal text-zapp-text-muted">
+          +{rest}
+        </Badge>
+      )}
+    </div>
+  );
 }
 
 export function ZappContactsBreakdownDialog({
@@ -117,96 +148,171 @@ export function ZappContactsBreakdownDialog({
   const isInbound = direction === "inbound";
   const pg = usePagedList(rows, { resetKey: [direction, sectorId, integrationId, includeGroups, agentUserId, search], isLoading });
 
+  const firstLabel = isInbound ? "1ª mensagem dele" : "1º contato nosso";
+  const whoLabel = isInbound ? "Quem atendeu" : "Quem enviou";
+  const emptyWhoLabel = isInbound ? "Sem resposta do time" : "Sem envio do time";
+  const countLabel = `${rows.length} ${rows.length === 1 ? "contato" : "contatos"}`;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-zapp-panel border-zapp-border text-zapp-text">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[88vh] w-[94vw] max-w-5xl flex-col gap-3 overflow-hidden bg-zapp-panel border-zapp-border p-5 text-zapp-text">
+        <DialogHeader className="pr-8">
           <DialogTitle>
             {isInbound ? "Contatos que nos chamaram" : "Contatos que o time chamou"}
           </DialogTitle>
           <DialogDescription className="text-zapp-text-muted">
-            Quem falou com quem {periodLabel ? `· ${periodLabel}` : ""} · {rows.length} contato(s)
+            Quem falou com quem{periodLabel ? ` · ${periodLabel}` : ""} · {countLabel}
             {isInbound ? " que escreveram no período" : " que receberam mensagem nossa no período"}
           </DialogDescription>
         </DialogHeader>
 
-        <Input
-          placeholder="Buscar por contato, telefone ou atendente..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="bg-zapp-bg border-zapp-border"
-        />
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zapp-text-muted" />
+          <Input
+            placeholder="Buscar por contato, telefone ou atendente..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 bg-zapp-bg pl-9 text-sm border-zapp-border"
+          />
+        </div>
 
         {error ? (
-          <p className="text-sm text-destructive py-6">
+          <p className="py-6 text-sm text-destructive">
             Não foi possível carregar: {(error as any)?.message}
           </p>
         ) : isLoading ? (
           <div className="space-y-2 py-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
+              <Skeleton key={i} className="h-11 w-full" />
             ))}
           </div>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-zapp-text-muted py-8 text-center">
+          <p className="py-10 text-center text-sm text-zapp-text-muted">
             Nenhum contato no período selecionado.
           </p>
         ) : (
-          <ScrollArea className="h-[55vh] pr-2">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-zapp-border">
-                  <TableHead className="text-zapp-text-muted">Contato</TableHead>
-                  <TableHead className="text-zapp-text-muted">Quem atendeu</TableHead>
-                  <TableHead className="text-zapp-text-muted text-right">Recebidas</TableHead>
-                  <TableHead className="text-zapp-text-muted text-right">Enviadas</TableHead>
-                  <TableHead className="text-zapp-text-muted whitespace-nowrap">
-                    {isInbound ? "1ª mensagem dele" : "1º contato nosso"}
-                  </TableHead>
-                  <TableHead className="text-zapp-text-muted whitespace-nowrap">Última</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pg.items.map((r) => (
-                  <TableRow key={r.contact_key} className={`border-zapp-border ${r.conversation_id && onOpenConversation ? "cursor-pointer hover:bg-primary/5" : ""}`} onClick={() => r.conversation_id && onOpenConversation?.(r.conversation_id)}>
-                    <TableCell className="max-w-[220px]">
-                      <p className="truncate font-medium">{r.contact_name}</p>
-                      <p className="text-[11px] text-zapp-text-muted truncate">
-                        {r.phone_e164 || "sem telefone"}
-                        {r.client_id ? " · cliente cadastrado" : ""}
-                      </p>
-                    </TableCell>
-                    <TableCell className="max-w-[240px]">
-                      {r.agents?.length ? (
-                        <div className="flex flex-wrap gap-1">
-                          {r.agents.map((a) => (
-                            <Badge
-                              key={a.name}
-                              variant="outline"
-                              className="border-zapp-border text-[11px]"
-                            >
-                              {a.name} · {a.messages}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <Badge variant="outline" className="border-destructive/50 text-destructive text-[11px]">
-                          Sem resposta do time
-                        </Badge>
+          <div role="table" aria-label="Contatos do período" className="flex min-h-0 flex-1 flex-col">
+            {/* Cabeçalho fixo: as colunas só fazem sentido com ele na tela. */}
+            <div role="row" className={cn(GRID, "hidden shrink-0 border-b border-zapp-border px-1 pb-2 lg:grid")}>
+              <div role="columnheader" className="text-[10px] font-semibold uppercase tracking-wide text-zapp-text-muted">
+                Contato
+              </div>
+              <div role="columnheader" className="text-[10px] font-semibold uppercase tracking-wide text-zapp-text-muted">
+                {whoLabel}
+              </div>
+              <div role="columnheader" className="text-right text-[10px] font-semibold uppercase tracking-wide text-zapp-text-muted">
+                Receb.
+              </div>
+              <div role="columnheader" className="text-right text-[10px] font-semibold uppercase tracking-wide text-zapp-text-muted">
+                Enviad.
+              </div>
+              <div role="columnheader" className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-zapp-text-muted">
+                {firstLabel}
+              </div>
+              <div role="columnheader" className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-zapp-text-muted">
+                Última
+              </div>
+              <div role="columnheader" aria-hidden />
+            </div>
+
+            <ScrollArea className="min-h-0 flex-1 pr-1" role="rowgroup">
+              {/* Desktop: grade alinhada, uma linha por contato. */}
+              <div className="hidden lg:block">
+                {pg.items.map((r) => {
+                  const clickable = !!r.conversation_id && !!onOpenConversation;
+                  return (
+                    <div
+                      key={r.contact_key}
+                      role="row"
+                      onClick={clickable ? () => onOpenConversation?.(r.conversation_id!) : undefined}
+                      className={cn(
+                        GRID,
+                        "border-b border-zapp-border/60 px-1 py-2.5",
+                        clickable && "cursor-pointer hover:bg-zapp-hover/50"
                       )}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{r.messages_in}</TableCell>
-                    <TableCell className="text-right tabular-nums">{r.messages_out}</TableCell>
-                    <TableCell className="whitespace-nowrap text-sm">{fmt(r.first_at)}</TableCell>
-                    <TableCell className="whitespace-nowrap text-sm">{fmt(r.last_at)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
+                    >
+                      <div role="cell" className="min-w-0">
+                        <p className="truncate text-sm font-medium leading-tight">{r.contact_name}</p>
+                        <p className="truncate text-[11px] leading-tight text-zapp-text-muted">
+                          {r.phone_e164 || "sem telefone"}
+                          {r.client_id ? <span className="text-zapp-accent"> · cliente</span> : null}
+                        </p>
+                      </div>
+                      <div role="cell" className="min-w-0">
+                        <AgentPills agents={r.agents} emptyLabel={emptyWhoLabel} />
+                      </div>
+                      <div
+                        role="cell"
+                        className={cn(
+                          "text-right text-sm tabular-nums",
+                          r.messages_in ? "text-zapp-text" : "text-zapp-text-muted/50"
+                        )}
+                      >
+                        {r.messages_in}
+                      </div>
+                      <div
+                        role="cell"
+                        className={cn(
+                          "text-right text-sm tabular-nums",
+                          r.messages_out ? "text-zapp-text" : "text-zapp-text-muted/50"
+                        )}
+                      >
+                        {r.messages_out}
+                      </div>
+                      <div role="cell" className="text-xs tabular-nums text-zapp-text-muted">
+                        {fmt(r.first_at)}
+                      </div>
+                      <div role="cell" className="text-xs tabular-nums text-zapp-text-muted">
+                        {fmt(r.last_at)}
+                      </div>
+                      <div role="cell" className="flex justify-end">
+                        {clickable && <ChevronRight className="h-4 w-4 text-zapp-text-muted/60" />}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Celular: cartões, porque a tabela de 7 colunas não cabe. */}
+              <ul className="space-y-2 lg:hidden">
+                {pg.items.map((r) => {
+                  const clickable = !!r.conversation_id && !!onOpenConversation;
+                  return (
+                    <li
+                      key={r.contact_key}
+                      onClick={clickable ? () => onOpenConversation?.(r.conversation_id!) : undefined}
+                      className={cn(
+                        "rounded-lg border border-zapp-border bg-zapp-bg/40 p-3",
+                        clickable && "cursor-pointer active:bg-zapp-hover/60"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium leading-tight">{r.contact_name}</p>
+                          <p className="truncate text-[11px] leading-tight text-zapp-text-muted">
+                            {r.phone_e164 || "sem telefone"}
+                            {r.client_id ? <span className="text-zapp-accent"> · cliente</span> : null}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-[11px] tabular-nums text-zapp-text-muted">
+                          {fmt(r.last_at)}
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <AgentPills agents={r.agents} emptyLabel={emptyWhoLabel} />
+                      </div>
+                      <p className="mt-1.5 text-[11px] tabular-nums text-zapp-text-muted">
+                        {r.messages_in} recebidas · {r.messages_out} enviadas · 1º {fmt(r.first_at)}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </ScrollArea>
+          </div>
         )}
         {!isLoading && rows.length > 0 && (
-          <PagerFor state={pg} itemLabel="contatos" />
+          <PagerFor state={pg} itemLabel="contatos" className="shrink-0 rounded-lg border border-zapp-border bg-zapp-bg/40" />
         )}
       </DialogContent>
     </Dialog>
