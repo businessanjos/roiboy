@@ -372,6 +372,13 @@
       "when": 1793795983205,
       "tag": "0052_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1793796680959,
+      "tag": "0053_speed_up_zapp_productivity_contacts",
+      "breakpoints": true
     }
   ]
 }
