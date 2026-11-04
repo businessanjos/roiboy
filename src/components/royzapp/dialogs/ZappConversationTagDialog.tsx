@@ -118,7 +118,7 @@ export const ZappConversationTagDialog = memo(function ZappConversationTagDialog
             </Button>
           </div>
         ) : (
-          <ScrollArea className="min-h-0 flex-1 pr-1">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1">
             <div className="space-y-1.5 pb-1">
               {visibleTags.map((tag) => {
                 const selected = selectedTags.includes(tag.id);
