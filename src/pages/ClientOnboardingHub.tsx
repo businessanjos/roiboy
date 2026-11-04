@@ -39,18 +39,20 @@ export default function ClientOnboardingHub() {
   const [drawerClient, setDrawerClient] = useState<OnboardingClient | null>(null);
   const [tab, setTab] = useState<"pipeline" | "health">("pipeline");
   const [showKpis, setShowKpis] = useState(false);
+  const [onlyMine, setOnlyMine] = useState(false);
   const accountId = currentUser?.account_id;
 
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return clients;
+    const base = onlyMine && currentUser?.id ? clients.filter(c => c.responsible_user_id === currentUser.id) : clients;
+    if (!search.trim()) return base;
     const q = search.toLowerCase();
-    return clients.filter(c =>
+    return base.filter(c =>
       c.full_name?.toLowerCase().includes(q) ||
       c.company_name?.toLowerCase().includes(q) ||
       c.phone_e164?.toLowerCase().includes(q)
     );
-  }, [clients, search]);
+  }, [clients, search, onlyMine, currentUser?.id]);
 
   // Health por etapa para o dashboard
   const stageHealth = useMemo(() => {
@@ -178,7 +180,8 @@ export default function ClientOnboardingHub() {
         </TabsList>
 
         <TabsContent value="pipeline" className="mt-0 lg:mt-2 space-y-3 lg:space-y-4">
-          <div className="relative lg:max-w-md">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <div className="relative flex-1 lg:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -188,6 +191,13 @@ export default function ClientOnboardingHub() {
               onChange={e => setSearch(e.target.value)}
               className="pl-9 h-11 rounded-xl border-transparent bg-muted/70 shadow-none lg:h-10 lg:rounded-md lg:border-input lg:bg-background"
             />
+          </div>
+          <div className="inline-flex rounded-lg bg-muted p-1 self-start" role="group" aria-label="Filtrar por responsável">
+            {([[false, "Todos"], [true, "Meus clientes"]] as const).map(([v, l]) => (
+              <button key={l} type="button" aria-pressed={onlyMine === v} onClick={() => setOnlyMine(v)}
+                className={cn("h-9 rounded-md px-3 text-sm font-medium", onlyMine === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{l}</button>
+            ))}
+          </div>
           </div>
 
           {/* Lista enriquecida com botão Iniciar Onboarding / Continuar */}
