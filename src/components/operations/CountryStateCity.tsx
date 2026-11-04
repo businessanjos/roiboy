@@ -29,6 +29,8 @@ interface CountryStateCityProps {
 
 export function CountryStateCity({ value, onChange, onCountryChange, disabled }: CountryStateCityProps) {
   const isBrazil = (value.pais_codigo || "").toUpperCase() === "BR";
+  // Nome do país por extenso, sempre (sem sigla nem bandeira no campo fechado).
+  const countryLabel = (value.pais || "").trim() || getCountry(value.pais_codigo)?.name || "";
 
   const handleCountry = (code: string) => {
     const c = getCountry(code);
@@ -53,14 +55,19 @@ export function CountryStateCity({ value, onChange, onCountryChange, disabled }:
       <div className="space-y-1.5">
         <Label className="text-xs">País *</Label>
         <Select value={value.pais_codigo || ""} onValueChange={handleCountry} disabled={disabled}>
-          <SelectTrigger><SelectValue placeholder="Selecione o país" /></SelectTrigger>
+          <SelectTrigger className="w-full">
+            {countryLabel ? (
+              <span className="truncate">{countryLabel}</span>
+            ) : (
+              <span className="truncate text-muted-foreground">Selecione o país</span>
+            )}
+          </SelectTrigger>
           <SelectContent className="max-h-72">
             {COUNTRIES.map((c) => (
               <SelectItem key={c.code} value={c.code}>
-                <span className="flex items-center gap-2">
-                  <span className="text-base leading-none">{c.flag}</span>
-                  <span>{c.name}</span>
-                  <span className="text-xs text-muted-foreground">({c.currency})</span>
+                <span className="flex w-full items-center justify-between gap-3">
+                  <span className="truncate">{c.name}</span>
+                  <span className="text-[11px] text-muted-foreground tabular-nums">{c.currency}</span>
                 </span>
               </SelectItem>
             ))}
