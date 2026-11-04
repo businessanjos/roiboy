@@ -78,6 +78,7 @@ export function useOnboardingHub() {
         .map(s => s.id);
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
 
+      // Só entra quem já tem produto (venda concluída); contatos sem produto seguem com o Comercial.
       const filter = `and(stage_id.is.null,created_at.gte.${thirtyDaysAgo}),stage_id.in.(${onboardingStageIds.join(",")})`;
 
       // Carrega em lotes (sem .limit) para não truncar silenciosamente o universo
@@ -89,7 +90,7 @@ export function useOnboardingHub() {
             id, full_name, company_name, phone_e164, avatar_url, logo_url,
             stage_id, status, created_at, onboarding_started_at, stage_changed_at,
             responsible_user_id, ai_next_step, ai_next_step_at,
-            client_products(product_id, products(id, name, color))
+            client_products!inner(product_id, products(id, name, color))
           `)
           .eq("account_id", accountId!)
           .eq("status", "active")
