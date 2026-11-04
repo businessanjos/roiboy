@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { clientScopeKey, filterByClientScope } from "@/lib/dashboard/clientScope";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LabelList } from "recharts";
-import { Layers, XCircle, RefreshCw, Package, Info } from "lucide-react";
+import { Layers, XCircle, RefreshCw, Package, Info, ExternalLink } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const METRIC_HELP: { label: string; color: string; formula: string; detail: string }[] = [
@@ -114,6 +115,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
   const endStr = periodEnd.toISOString().slice(0, 10);
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
   const { labels: statusLabels } = useContractCatalog("contract_status");
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-churn-renewal-segment", accountId, startStr, endStr, clientScopeKey(clientIds)],
@@ -414,17 +416,6 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
               </BarChart>
             </ChartContainer>
           )}
-          {chartData.some((r) => r.segment === "Sem produto") && (
-            <div className="mt-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSelectedSegment("Sem produto")}
-                className="text-xs font-medium text-primary hover:underline"
-              >
-                Ver quem está sem produto
-              </button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -452,8 +443,26 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
                 </TableHeader>
                 <TableBody>
                   {detail.events.map((e) => (
-                    <TableRow key={`${e.contractId}-${e.kind}`}>
-                      <TableCell className="font-medium">{e.clientName}</TableCell>
+                    <TableRow
+                      key={`${e.contractId}-${e.kind}`}
+                      className={e.clientId ? "cursor-pointer" : undefined}
+                      onClick={() => {
+                        if (e.clientId) {
+                          setSelectedSegment(null);
+                          navigate(`/clients/${e.clientId}`);
+                        }
+                      }}
+                    >
+                      <TableCell className="font-medium">
+                        {e.clientId ? (
+                          <span className="inline-flex items-center gap-1 text-primary hover:underline">
+                            {e.clientName}
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                          </span>
+                        ) : (
+                          e.clientName
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={EVENT_VARIANT[e.kind]}>{EVENT_LABEL[e.kind]}</Badge>
                       </TableCell>
