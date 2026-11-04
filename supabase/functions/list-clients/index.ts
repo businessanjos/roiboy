@@ -698,6 +698,29 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Quais dos "Interno" passam nos filtros atuais: eles continuam na lista, mas
+    // não podem entrar no total de clientes. São poucos ids, então a consulta é
+    // barata e usa exatamente os mesmos filtros da listagem.
+    let markedInFilterIds: string[] = [];
+    if (internalMarkedIds.length > 0) {
+      const candidates =
+        preFilterIds && preFilterIds.length > 0
+          ? internalMarkedIds.filter((id) => preFilterIds.includes(id))
+          : internalMarkedIds;
+      if (candidates.length > 0) {
+        let markedQuery = supabase
+          .from("clients")
+          .select("id")
+          .eq("account_id", accountId)
+          .in("id", candidates);
+        markedQuery = applyCommonFilters(markedQuery);
+        const markedResult = await markedQuery;
+        markedInFilterIds = (
+          (markedResult.data as { id: string }[] | null) ?? []
+        ).map((row) => row.id);
+      }
+    }
+
     // Fetch all enrichment data in parallel
     const [
       metricsResult,
@@ -913,6 +936,12 @@ Deno.serve(async (req) => {
       );
     }
 
+    // "Interno" presentes no conjunto contado quando o total vem das próprias
+    // linhas (ordenação em memória ou filtros pós-consulta).
+    const markedInFiltered = filteredClients.filter((c) =>
+      internalMarkedSet.has(c.id),
+    ).length;
+
     // Memory-based sort + pagination (evolution, record).
     let memorySortTotal: number | null = null;
     if (isMemorySort) {
@@ -941,9 +970,20 @@ Deno.serve(async (req) => {
       clientStatus === "no_contract" ||
       userRole === "operation";
 
-    const totalCount = memorySortTotal !== null
-      ? memorySortTotal
-      : hasPostQueryFilters ? filteredClients.length : (count || 0);
+    // O total é de clientes: os "Interno" que aparecem na lista ficam fora dele.
+    const markedInCounted =
+      memorySortTotal !== null || hasPostQueryFilters
+        ? markedInFiltered
+        : markedInFilterIds.length;
+
+    const totalCount = Math.max(
+      0,
+      (memorySortTotal !== null
+        ? memorySortTotal
+        : hasPostQueryFilters
+          ? filteredClients.length
+          : count || 0) - markedInCounted,
+    );
 
     console.log(
       `Found ${count} clients, returning ${filteredClients.length} enriched`
@@ -961,6 +1001,8 @@ Deno.serve(async (req) => {
         limit,
         offset,
         team_users: teamUsersResult.data || [],
+        // Cadastros da equipe que continuam na lista, mas não são clientes.
+        internal_ids: internalMarkedIds,
       }),
       {
         status: 200,
