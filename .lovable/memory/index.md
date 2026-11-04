@@ -91,7 +91,7 @@
 - [RoyZapp Routing & Visibility](mem://features/roy-zapp/routing-and-visibility-v1) — Global admin queue vs assigned agent queue
 - [RoyZapp Sync Engine](mem://features/roy-zapp/state-and-sync-engine-v1) — Realtime reactive sync, media auto-download
 - [RoyZapp Data Resolution](mem://features/roy-zapp/data-resolution-and-quotes-v1) — Suffix matching for quotes/mentions
-- [RoyZapp Conversation Badges](mem://features/roy-zapp/conversation-ui-metadata-pt) — Strict exclusion of manual tags from list UI
+- [RoyZapp Conversation Badges](mem://features/roy-zapp/conversation-ui-metadata-pt) — Etiquetas como selos coloridos com nome na lista/topo; ação de etiquetar nas sequências
 - [RoyZapp Instance Linking](mem://features/roy-zapp/instance-sector-linking-pt) — Free text naming for instances
 - [Auto-route clientes p/ CS](mem://features/roy-zapp/auto-route-clients-to-cs-pt) — Trigger move conversas de clientes com contexto de suporte de Vendas para Customer Success
 - [Auditoria diária de roteamento](mem://features/roy-zapp/routing-audit-job-pt) — Cron corrige conversas cujo prefixo de external_message_id pertence a outra instância (CS vs Comercial)
