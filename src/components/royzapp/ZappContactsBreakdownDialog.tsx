@@ -55,7 +55,7 @@ function fmt(dt: string | null) {
 
 /** Mesma grade para cabeçalho e linhas: as colunas nunca saem do prumo. */
 const GRID =
-  "grid grid-cols-[minmax(0,1.5fr)_minmax(0,1.7fr)_54px_54px_minmax(0,96px)_minmax(0,96px)_20px] items-center gap-3";
+  "grid grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_52px_52px_minmax(0,112px)_minmax(0,112px)_20px] items-center gap-2.5";
 
 /** Etiquetas de quem atendeu: sempre uma linha, com "+N" quando não cabe tudo. */
 function AgentPills({ agents, emptyLabel }: { agents: ContactRow["agents"]; emptyLabel: string }) {
@@ -193,7 +193,7 @@ export function ZappContactsBreakdownDialog({
         ) : (
           <div role="table" aria-label="Contatos do período" className="flex min-h-0 flex-1 flex-col">
             {/* Cabeçalho fixo: as colunas só fazem sentido com ele na tela. */}
-            <div role="row" className={cn(GRID, "hidden shrink-0 border-b border-zapp-border px-1 pb-2 lg:grid")}>
+            <div role="row" className={cn(GRID, "hidden shrink-0 items-end border-b border-zapp-border px-1 pb-2 lg:grid")}>
               <div role="columnheader" className="text-[10px] font-semibold uppercase tracking-wide text-zapp-text-muted">
                 Contato
               </div>
