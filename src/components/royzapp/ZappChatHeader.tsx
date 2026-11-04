@@ -588,7 +588,12 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                     onClick={() => setEditContactOpen(true)}
                   >
                     <Pencil className="h-4 w-4 mr-2" />
-                    {internalContact ? "Editar contato (não é cliente)" : "Editar contato / Não é cliente"}
+                    <span className="flex-1">Editar contato</span>
+                    {internalContact && (
+                      <span className="ml-3 rounded-sm border border-zapp-border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zapp-text-muted">
+                        Interno
+                      </span>
+                    )}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator className="bg-zapp-border" />
