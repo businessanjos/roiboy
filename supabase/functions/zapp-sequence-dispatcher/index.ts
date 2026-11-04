@@ -101,7 +101,7 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
       try {
         if (!step.tag_id) throw new Error("Etiqueta não encontrada");
         const { data: asg } = await supabase.from("zapp_conversation_assignments").select("id")
-          .eq("conversation_id", conv.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+          .eq("zapp_conversation_id", conv.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
         if (!asg) throw new Error("Conversa sem atendimento para etiquetar");
         const { error: tagErr } = await supabase.from("zapp_conversation_tags").upsert(
           { account_id: run.account_id, assignment_id: asg.id, tag_id: step.tag_id, created_by: run.triggered_by },
