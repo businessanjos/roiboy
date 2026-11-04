@@ -30699,6 +30699,7 @@ export type Database = {
         Args: { p_account_id: string }
         Returns: undefined
       }
+      internal_client_ids: { Args: { p_account_id: string }; Returns: string[] }
       is_account_locked: { Args: { p_email: string }; Returns: boolean }
       is_account_owner: { Args: { _user_id?: string }; Returns: boolean }
       is_chat_participant: {
