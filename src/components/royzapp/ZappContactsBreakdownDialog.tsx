@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePagedList } from "@/hooks/usePagedList";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronRight, Search } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -105,6 +106,7 @@ export function ZappContactsBreakdownDialog({
   onOpenConversation,
 }: Props) {
   const [search, setSearch] = useState("");
+  const isSmall = useIsMobile();
 
   const { data, isLoading, error } = useQuery({
     queryKey: [
