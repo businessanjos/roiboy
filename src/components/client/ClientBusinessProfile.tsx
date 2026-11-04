@@ -416,10 +416,10 @@ export function ClientBusinessProfile({
   }, [clientId]);
 
   /** Grava o faturamento do mês selecionado (histórico) e sincroniza o "atual" se for o mês mais recente. */
-  const commitMonthRevenue = async (raw: string) => {
+  const commitMonthRevenue = async (raw: string, notes?: string) => {
     if (!client || !currentUser?.account_id) return;
     const value = parseCurrencyInput(raw);
-    if ((selectedMonthRevenue ?? null) === value) return;
+    if ((selectedMonthRevenue ?? null) === value && notes === undefined) return;
 
     setSaving(true);
     try {
@@ -437,6 +437,7 @@ export function ClientBusinessProfile({
             month: selectedMonth,
             revenue: value,
             created_by: currentUser.id,
+            ...(notes !== undefined ? { notes } : {}),
           } as any,
           { onConflict: "client_id,month" }
         );
@@ -675,9 +676,30 @@ export function ClientBusinessProfile({
                 onCommit={commitMonthRevenue}
                 className="text-lg font-bold text-primary"
               />
-              {foreignLine(
-                selectedMonthRevenue,
-                history.find((h: any) => String(h.month).slice(0, 7) === selectedMonth)?.notes,
+              {foreignCountry && (
+                <ForeignAmountInput
+                  key={`fx-${selectedMonth}`}
+                  countryName={foreignCountry.name}
+                  currencyCode={foreignCountry.currency}
+                  rate={fxRate}
+                  onCommit={(amount) => {
+                    if (!fxRate) return;
+                    const brl = Math.round(amount * fxRate * 100) / 100;
+                    let fmtAmt: string;
+                    try {
+                      fmtAmt = amount.toLocaleString("pt-BR", { style: "currency", currency: foreignCountry.currency });
+                    } catch {
+                      fmtAmt = `${foreignCountry.currencySymbol} ${amount.toFixed(2)}`;
+                    }
+                    const note = `${fmtAmt} · câmbio ${fxRate.toFixed(4).replace(".", ",")}`;
+                    commitMonthRevenue(String(brl).replace(".", ","), note);
+                  }}
+                >
+                  {foreignLine(
+                    selectedMonthRevenue,
+                    history.find((h: any) => String(h.month).slice(0, 7) === selectedMonth)?.notes,
+                  )}
+                </ForeignAmountInput>
               )}
               <p className="text-[10px] text-muted-foreground mt-1">
                 {selectedMonthRevenue == null
@@ -1077,6 +1099,73 @@ export function ClientBusinessProfile({
 }
 
 // ------------- helpers -------------
+
+function ForeignAmountInput({
+  countryName,
+  currencyCode,
+  rate,
+  onCommit,
+  children,
+}: {
+  countryName: string;
+  currencyCode: string;
+  rate: number;
+  onCommit: (amount: number) => void;
+  children: React.ReactNode;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="block w-full text-left hover:opacity-80 transition-opacity"
+        title={`Clique para digitar o valor em ${currencyCode}`}
+      >
+        {children || (
+          <div className="mt-1.5 rounded-md border border-dashed border-border/60 px-2 py-1 text-[10px] text-muted-foreground">
+            Informar em {currencyCode} ({countryName})
+          </div>
+        )}
+      </button>
+    );
+  }
+  const parsed = Number(draft.replace(/\./g, "").replace(",", "."));
+  const preview = draft && Number.isFinite(parsed) && rate ? parsed * rate : null;
+  const finish = (save: boolean) => {
+    setEditing(false);
+    if (save && draft.trim() && Number.isFinite(parsed) && parsed >= 0) onCommit(parsed);
+    setDraft("");
+  };
+  return (
+    <div className="mt-1.5 space-y-1">
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground shrink-0">
+          {currencyCode}
+        </span>
+        <Input
+          autoFocus
+          inputMode="decimal"
+          placeholder="Ex: 24474,83"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => finish(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            if (e.key === "Escape") finish(false);
+          }}
+          className="h-7 text-sm"
+        />
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        {rate
+          ? `= ${preview != null ? currency(preview) : "R$ —"} (1 ${currencyCode} = R$ ${rate.toFixed(2).replace(".", ",")} hoje)`
+          : "Carregando cotação…"}
+      </p>
+    </div>
+  );
+}
 
 function ForeignRevenueLine({
   amount,
