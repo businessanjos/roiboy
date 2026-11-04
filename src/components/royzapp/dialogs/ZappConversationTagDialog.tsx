@@ -73,7 +73,7 @@ export const ZappConversationTagDialog = memo(function ZappConversationTagDialog
         </DialogHeader>
 
         {tags.length > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zapp-text-muted" />
               <Input
@@ -83,7 +83,7 @@ export const ZappConversationTagDialog = memo(function ZappConversationTagDialog
                 className="h-9 bg-zapp-panel pl-8 text-sm"
               />
             </div>
-            <span className="shrink-0 text-xs tabular-nums text-zapp-text-muted">
+            <span className="shrink-0 whitespace-nowrap px-1 text-xs tabular-nums text-zapp-text-muted">
               {selectedTags.length} de {tags.length}
             </span>
             {selectedTags.length > 0 && (
@@ -190,7 +190,7 @@ export const ZappConversationTagDialog = memo(function ZappConversationTagDialog
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:space-x-0">
+        <DialogFooter className="gap-2 border-t border-zapp-border/60 pt-3 sm:space-x-0">
           <Button
             variant="outline"
             onClick={close}
