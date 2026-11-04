@@ -81,10 +81,11 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
     if (el?.scrollTo) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [lastKey]);
 
-  const applyVars = (text: string | null) => {
+  // Assinatura só na primeira mensagem da sequência (as seguintes chegam limpas).
+  const applyVars = (text: string | null, sign = false) => {
     if (!text) return null;
     const processed = replaceVariables ? replaceVariables(text, variables) : text;
-    return signText ? signText(processed) : processed;
+    return sign && signText ? signText(processed) : processed;
   };
 
   const wa = (v: string) => `hsl(var(--wa-${v}))`;
@@ -143,8 +144,8 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
             </p>
           ) : (
             resolved.map(({ item, step, index }, pos) => {
-              const text = applyVars(item.text_content) || applyVars(item.template_body);
-              const caption = applyVars(item.media_caption);
+              const text = applyVars(item.text_content, pos === 0) || applyVars(item.template_body, pos === 0);
+              const caption = applyVars(item.media_caption, pos === 0);
               const isMedia = item.content_type !== "text";
               return (
                 <div key={`${item.id}-${pos}`}>

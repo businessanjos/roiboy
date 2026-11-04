@@ -105,7 +105,8 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
       } else {
         const type = step.content_type === "audio" ? "ptt" : step.content_type === "sticker" ? "image" : step.content_type;
         const payload: Record<string, unknown> = { number, type, file: step.media_url, text: step.media_caption || "" };
-        if (step.media_filename) payload.fileName = step.media_filename;
+        // Nome comercial do arquivo: a API usa "docName" para documentos; sem ele o cliente recebe o nome técnico do link.
+        if (step.media_filename) { payload.fileName = step.media_filename; payload.docName = step.media_filename; }
         // Arquivos grandes: o WhatsApp às vezes desiste de baixar o arquivo; tenta de novo antes de falhar
         res = await fetch(`${host}/send/media`, { method: "POST", headers: { "Content-Type": "application/json", token }, body: JSON.stringify(payload) });
         // Se o WhatsApp não conseguiu baixar pelo link, o ROY baixa o arquivo e envia o conteúdo direto
