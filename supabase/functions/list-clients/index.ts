@@ -59,12 +59,28 @@ Deno.serve(async (req) => {
     const accountId = auth.accountId!;
     const userId = auth.userId;
 
-    // Cadastros com telefone da própria equipe não são clientes: ficam fora da
-    // lista, da paginação e do total (mesma regra das métricas e do RoyZapp).
-    const { data: internalIdsData } = await supabase.rpc("internal_client_ids", {
-      p_account_id: accountId,
-    });
-    const internalClientIds: string[] = (internalIdsData as string[] | null) ?? [];
+    // Cadastros com telefone da própria equipe não são clientes (mesma regra das
+    // métricas e do RoyZapp). Os registrados como internos somem da lista; os que
+    // só batem com telefone de colaborador continuam na lista, marcados
+    // "Interno", e nenhum dos dois entra no total de clientes.
+    const { data: internalSplitData } = await supabase.rpc(
+      "internal_client_split",
+      { p_account_id: accountId },
+    );
+    const internalSplit = (internalSplitData ?? {}) as {
+      all?: unknown;
+      hidden?: unknown;
+    };
+    const internalAllIds: string[] = Array.isArray(internalSplit.all)
+      ? internalSplit.all.map((id) => String(id))
+      : [];
+    const internalHiddenIds: string[] = Array.isArray(internalSplit.hidden)
+      ? internalSplit.hidden.map((id) => String(id))
+      : [];
+    const internalMarkedIds: string[] = internalAllIds.filter(
+      (id) => !internalHiddenIds.includes(id),
+    );
+    const internalMarkedSet = new Set(internalMarkedIds);
 
     // For API key auth, default to admin role
     // For JWT/session auth, fetch user role
@@ -552,11 +568,13 @@ Deno.serve(async (req) => {
       if (updatedFrom) q = q.gte("recent_activity_at", updatedFrom);
       if (updatedTo) q = q.lte("recent_activity_at", updatedTo);
 
-      if (internalClientIds.length > 0) {
+      // Só os registrados como internos somem da lista; os marcados "Interno"
+      // continuam aparecendo (a exclusão do total é feita à parte).
+      if (internalHiddenIds.length > 0) {
         q = q.not(
           "id",
           "in",
-          `(${internalClientIds.map((id) => `"${id}"`).join(",")})`,
+          `(${internalHiddenIds.map((id) => `"${id}"`).join(",")})`,
         );
       }
 
