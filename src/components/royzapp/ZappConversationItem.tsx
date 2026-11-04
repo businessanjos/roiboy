@@ -173,7 +173,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
               </span>
             )}
             <span className={cn(
-              "truncate text-sm flex-1 inline-flex items-center gap-1",
+              "truncate text-sm min-w-0 inline-flex items-center gap-1",
               contact.unreadCount > 0 ? "text-zapp-text font-semibold" : "text-zapp-text font-medium"
             )}>
               <CountryFlag phone={contact.phone} className="text-xs leading-none flex-shrink-0" />
@@ -183,14 +183,16 @@ export const ZappConversationItem = memo(function ZappConversationItem({
             {(() => {
               const tagList = getConversationTags(assignment.conversation_tags);
               if (tagList.length === 0) return null;
-              const hidden = tagList.slice(1);
               return (
-                <span className="flex shrink-0 items-center gap-1">
-                  <ZappTagBadge tag={tagList[0]} className="max-w-[9rem]" />
-                  {hidden.length > 0 && <ZappTagMore count={hidden.length} tags={hidden} />}
+                <span className="flex shrink-0 items-center gap-0.5">
+                  {tagList.slice(0, 3).map((t, i) => (
+                    <ZappTagBadge key={i} tag={t} variant="icon" />
+                  ))}
+                  {tagList.length > 3 && <ZappTagMore count={tagList.length - 3} tags={tagList.slice(3)} />}
                 </span>
               );
             })()}
+            <span className="flex-1" />
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <span className="text-zapp-text-muted text-[11px] whitespace-nowrap">
