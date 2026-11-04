@@ -33,7 +33,8 @@ export function ZappTagChip({ tag, className }: { tag: { name: string; color?: s
   return <ZappTagBadge tag={tag} className={className} tooltip={false} />;
 }
 
-export function SequenceTagStepSelect({ value, onChange, className }: { value?: string | null; onChange: (id: string) => void; className?: string }) {
+export function SequenceTagStepSelect({ value, onChange, className, mode = "add" }: { value?: string | null; onChange: (id: string) => void; className?: string; mode?: "add" | "remove" }) {
+  const canCreate = mode === "add";
   const { currentUser } = useCurrentUser();
   const qc = useQueryClient();
   const { data: tags = [] } = useZappTagsLite();
@@ -63,16 +64,16 @@ export function SequenceTagStepSelect({ value, onChange, className }: { value?: 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" aria-label="Etiqueta a aplicar" className={cn("h-9 justify-between font-normal", className)}>
+        <Button variant="outline" role="combobox" aria-label={canCreate ? "Etiqueta a aplicar" : "Etiqueta a remover"} className={cn("h-9 justify-between font-normal", className)}>
           <span className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-xs text-muted-foreground">Etiquetar:</span>
-            {selected ? <ZappTagChip tag={selected} className="h-5 text-xs" /> : <span className="text-muted-foreground">escolha ou crie</span>}
+            <span className="shrink-0 text-xs text-muted-foreground">{canCreate ? "Etiquetar:" : "Remover:"}</span>
+            {selected ? <ZappTagChip tag={selected} className="h-5 text-xs" /> : <span className="text-muted-foreground">{canCreate ? "escolha ou crie" : "escolha a etiqueta"}</span>}
           </span>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-2" align="start">
-        <Input autoFocus placeholder="Buscar ou criar etiqueta" value={search} onChange={(e) => setSearch(e.target.value)} className="mb-2 h-8" />
+        <Input autoFocus placeholder={canCreate ? "Buscar ou criar etiqueta" : "Buscar etiqueta"} value={search} onChange={(e) => setSearch(e.target.value)} className="mb-2 h-8" />
         <div className="max-h-56 space-y-0.5 overflow-y-auto">
           {filtered.map((t) => (
             <button key={t.id} type="button" onClick={() => { onChange(t.id); setOpen(false); }}
@@ -82,8 +83,9 @@ export function SequenceTagStepSelect({ value, onChange, className }: { value?: 
             </button>
           ))}
           {filtered.length === 0 && !search.trim() && <p className="px-2 py-3 text-center text-xs text-muted-foreground">Nenhuma etiqueta ainda.</p>}
+          {filtered.length === 0 && search.trim() && !canCreate && <p className="px-2 py-3 text-center text-xs text-muted-foreground">Nenhuma etiqueta encontrada.</p>}
         </div>
-        {search.trim() && !exact && (
+        {canCreate && search.trim() && !exact && (
           <div className="mt-2 space-y-2 border-t pt-2">
             <div className="flex flex-wrap gap-1.5">
               {COLORS.map((c) => (

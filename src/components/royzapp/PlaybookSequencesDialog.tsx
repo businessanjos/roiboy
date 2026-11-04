@@ -182,7 +182,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
                       </Select>
                       {stepAction(st) === "move_stage"
                         ? <SequenceStageStepSelect value={st.stage_id || null} onChange={(id) => updateStep(i, { stage_id: id })} className="min-w-0 flex-1 basis-40" />
-                        : <SequenceTagStepSelect value={st.tag_id || null} onChange={(id) => updateStep(i, { tag_id: id })} className="min-w-0 flex-1 basis-40" />}
+                        : <SequenceTagStepSelect mode={stepAction(st) === "remove_tag" ? "remove" : "add"} value={st.tag_id || null} onChange={(id) => updateStep(i, { tag_id: id })} className="min-w-0 flex-1 basis-40" />}
                     </div>
                   ) : <PlaybookItemSelect
                     items={items}
