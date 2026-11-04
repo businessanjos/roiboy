@@ -892,13 +892,20 @@ function isInternalClientRecord(record, cores) {
 
 // src/lib/internalClients.ts
 var PAGE_SIZE = 1e3;
-async function fetchInternalClientIds(client = supabase, accountId) {
+var NO_SPLIT = { all: [], hidden: [] };
+function toIds(value) {
+  return Array.isArray(value) ? value.map((id) => String(id)) : [];
+}
+async function fetchInternalClientSplit(client = supabase, accountId) {
   if (accountId) {
     try {
-      const { data, error } = await client.rpc("internal_client_ids", {
+      const { data, error } = await client.rpc("internal_client_split", {
         p_account_id: accountId
       });
-      if (!error && Array.isArray(data)) return data;
+      if (!error && data && typeof data === "object") {
+        const raw = data;
+        return { all: toIds(raw.all), hidden: toIds(raw.hidden) };
+      }
     } catch {
     }
   }
@@ -907,28 +914,39 @@ async function fetchInternalClientIds(client = supabase, accountId) {
       client.from("zapp_internal_contacts").select("phone_e164"),
       client.from("hr_collaborators").select("phone")
     ]);
-    const cores = buildInternalCoreSet([
-      ...(registered.data ?? []).map(
+    const registeredCores = buildInternalCoreSet(
+      (registered.data ?? []).map(
         (row) => row.phone_e164
-      ),
-      ...(collaborators.data ?? []).map(
+      )
+    );
+    const collabCores = buildInternalCoreSet(
+      (collaborators.data ?? []).map(
         (row) => row.phone
       )
-    ]);
-    if (!cores.size) return [];
-    const ids = [];
+    );
+    if (!registeredCores.size && !collabCores.size) return NO_SPLIT;
+    const all = [];
+    const hidden = [];
     for (let from = 0; ; from += PAGE_SIZE) {
       const { data, error } = await client.from("clients").select("id, phone_e164, additional_phones").range(from, from + PAGE_SIZE - 1);
       const batch = (error ? null : data) ?? [];
       for (const row of batch) {
-        if (isInternalClientRecord(row, cores)) ids.push(row.id);
+        const isRegistered = isInternalClientRecord(row, registeredCores);
+        const isCollaborator = isInternalClientRecord(row, collabCores);
+        if (isRegistered || isCollaborator) {
+          all.push(row.id);
+          if (isRegistered) hidden.push(row.id);
+        }
       }
       if (batch.length < PAGE_SIZE) break;
     }
-    return ids;
+    return { all, hidden };
   } catch {
-    return [];
+    return NO_SPLIT;
   }
+}
+async function fetchInternalClientIds(client = supabase, accountId) {
+  return (await fetchInternalClientSplit(client, accountId)).all;
 }
 function applyInternalClientExclusion(query, ids) {
   if (!ids.length) return query;

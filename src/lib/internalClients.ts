@@ -10,6 +10,24 @@ type ClientPhoneRow = {
 };
 
 /**
+ * Dois grupos, ambos "não é cliente":
+ *
+ * - `all`    : telefone bate com número interno OU com telefone de colaborador.
+ *              Fica fora de contagens, métricas e etiquetas de cliente.
+ * - `hidden` : bate com número registrado em zapp_internal_contacts. Some da
+ *              lista de clientes.
+ *
+ * O que está em `all` e não está em `hidden` aparece na lista marcado "Interno".
+ */
+export type InternalClientSplit = { all: string[]; hidden: string[] };
+
+const NO_SPLIT: InternalClientSplit = { all: [], hidden: [] };
+
+function toIds(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((id) => String(id)) : [];
+}
+
+/**
  * Ids dos cadastros de cliente que são a própria equipe (telefone registrado em
  * zapp_internal_contacts ou telefone de colaborador). A regra é a mesma do
  * RoyZapp e das métricas de produtividade, comparada pelo código DDD + últimos 8.
@@ -18,17 +36,20 @@ type ClientPhoneRow = {
  * listagem segue mostrando tudo — esconder cliente de verdade é pior do que
  * mostrar um cadastro interno.
  */
-export async function fetchInternalClientIds(
+export async function fetchInternalClientSplit(
   client: any = supabase,
   accountId?: string | null,
-): Promise<string[]> {
+): Promise<InternalClientSplit> {
   // 1) Fonte única no banco: mesma função usada pela listagem de clientes.
   if (accountId) {
     try {
-      const { data, error } = await client.rpc("internal_client_ids", {
+      const { data, error } = await client.rpc("internal_client_split", {
         p_account_id: accountId,
       });
-      if (!error && Array.isArray(data)) return data as string[];
+      if (!error && data && typeof data === "object") {
+        const raw = data as { all?: unknown; hidden?: unknown };
+        return { all: toIds(raw.all), hidden: toIds(raw.hidden) };
+      }
     } catch {
       /* cai para a varredura abaixo */
     }
@@ -40,17 +61,20 @@ export async function fetchInternalClientIds(
       client.from("zapp_internal_contacts").select("phone_e164"),
       client.from("hr_collaborators").select("phone"),
     ]);
-    const cores = buildInternalCoreSet([
-      ...(((registered.data as { phone_e164: string }[] | null) ?? []).map(
+    const registeredCores = buildInternalCoreSet(
+      (((registered.data as { phone_e164: string }[] | null) ?? []).map(
         (row) => row.phone_e164,
       )),
-      ...(((collaborators.data as { phone: string | null }[] | null) ?? []).map(
+    );
+    const collabCores = buildInternalCoreSet(
+      (((collaborators.data as { phone: string | null }[] | null) ?? []).map(
         (row) => row.phone,
       )),
-    ]);
-    if (!cores.size) return [];
+    );
+    if (!registeredCores.size && !collabCores.size) return NO_SPLIT;
 
-    const ids: string[] = [];
+    const all: string[] = [];
+    const hidden: string[] = [];
     for (let from = 0; ; from += PAGE_SIZE) {
       const { data, error } = await client
         .from("clients")
@@ -58,14 +82,30 @@ export async function fetchInternalClientIds(
         .range(from, from + PAGE_SIZE - 1);
       const batch = (error ? null : (data as ClientPhoneRow[] | null)) ?? [];
       for (const row of batch) {
-        if (isInternalClientRecord(row, cores)) ids.push(row.id);
+        const isRegistered = isInternalClientRecord(row, registeredCores);
+        const isCollaborator = isInternalClientRecord(row, collabCores);
+        if (isRegistered || isCollaborator) {
+          all.push(row.id);
+          if (isRegistered) hidden.push(row.id);
+        }
       }
       if (batch.length < PAGE_SIZE) break;
     }
-    return ids;
+    return { all, hidden };
   } catch {
-    return [];
+    return NO_SPLIT;
   }
+}
+
+/**
+ * Todos os cadastros que não são clientes (internos registrados + telefones de
+ * colaborador): o conjunto usado por contagens, métricas e etiquetas.
+ */
+export async function fetchInternalClientIds(
+  client: any = supabase,
+  accountId?: string | null,
+): Promise<string[]> {
+  return (await fetchInternalClientSplit(client, accountId)).all;
 }
 
 /**

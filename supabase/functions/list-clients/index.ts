@@ -59,12 +59,28 @@ Deno.serve(async (req) => {
     const accountId = auth.accountId!;
     const userId = auth.userId;
 
-    // Cadastros com telefone da própria equipe não são clientes: ficam fora da
-    // lista, da paginação e do total (mesma regra das métricas e do RoyZapp).
-    const { data: internalIdsData } = await supabase.rpc("internal_client_ids", {
-      p_account_id: accountId,
-    });
-    const internalClientIds: string[] = (internalIdsData as string[] | null) ?? [];
+    // Cadastros com telefone da própria equipe não são clientes (mesma regra das
+    // métricas e do RoyZapp). Os registrados como internos somem da lista; os que
+    // só batem com telefone de colaborador continuam na lista, marcados
+    // "Interno", e nenhum dos dois entra no total de clientes.
+    const { data: internalSplitData } = await supabase.rpc(
+      "internal_client_split",
+      { p_account_id: accountId },
+    );
+    const internalSplit = (internalSplitData ?? {}) as {
+      all?: unknown;
+      hidden?: unknown;
+    };
+    const internalAllIds: string[] = Array.isArray(internalSplit.all)
+      ? internalSplit.all.map((id) => String(id))
+      : [];
+    const internalHiddenIds: string[] = Array.isArray(internalSplit.hidden)
+      ? internalSplit.hidden.map((id) => String(id))
+      : [];
+    const internalMarkedIds: string[] = internalAllIds.filter(
+      (id) => !internalHiddenIds.includes(id),
+    );
+    const internalMarkedSet = new Set(internalMarkedIds);
 
     // For API key auth, default to admin role
     // For JWT/session auth, fetch user role
@@ -552,11 +568,13 @@ Deno.serve(async (req) => {
       if (updatedFrom) q = q.gte("recent_activity_at", updatedFrom);
       if (updatedTo) q = q.lte("recent_activity_at", updatedTo);
 
-      if (internalClientIds.length > 0) {
+      // Só os registrados como internos somem da lista; os marcados "Interno"
+      // continuam aparecendo (a exclusão do total é feita à parte).
+      if (internalHiddenIds.length > 0) {
         q = q.not(
           "id",
           "in",
-          `(${internalClientIds.map((id) => `"${id}"`).join(",")})`,
+          `(${internalHiddenIds.map((id) => `"${id}"`).join(",")})`,
         );
       }
 
@@ -678,6 +696,29 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
+
+    // Quais dos "Interno" passam nos filtros atuais: eles continuam na lista, mas
+    // não podem entrar no total de clientes. São poucos ids, então a consulta é
+    // barata e usa exatamente os mesmos filtros da listagem.
+    let markedInFilterIds: string[] = [];
+    if (internalMarkedIds.length > 0) {
+      const candidates =
+        preFilterIds && preFilterIds.length > 0
+          ? internalMarkedIds.filter((id) => preFilterIds.includes(id))
+          : internalMarkedIds;
+      if (candidates.length > 0) {
+        let markedQuery = supabase
+          .from("clients")
+          .select("id")
+          .eq("account_id", accountId)
+          .in("id", candidates);
+        markedQuery = applyCommonFilters(markedQuery);
+        const markedResult = await markedQuery;
+        markedInFilterIds = (
+          (markedResult.data as { id: string }[] | null) ?? []
+        ).map((row) => row.id);
+      }
     }
 
     // Fetch all enrichment data in parallel
@@ -895,6 +936,12 @@ Deno.serve(async (req) => {
       );
     }
 
+    // "Interno" presentes no conjunto contado quando o total vem das próprias
+    // linhas (ordenação em memória ou filtros pós-consulta).
+    const markedInFiltered = filteredClients.filter((c) =>
+      internalMarkedSet.has(c.id),
+    ).length;
+
     // Memory-based sort + pagination (evolution, record).
     let memorySortTotal: number | null = null;
     if (isMemorySort) {
@@ -923,9 +970,20 @@ Deno.serve(async (req) => {
       clientStatus === "no_contract" ||
       userRole === "operation";
 
-    const totalCount = memorySortTotal !== null
-      ? memorySortTotal
-      : hasPostQueryFilters ? filteredClients.length : (count || 0);
+    // O total é de clientes: os "Interno" que aparecem na lista ficam fora dele.
+    const markedInCounted =
+      memorySortTotal !== null || hasPostQueryFilters
+        ? markedInFiltered
+        : markedInFilterIds.length;
+
+    const totalCount = Math.max(
+      0,
+      (memorySortTotal !== null
+        ? memorySortTotal
+        : hasPostQueryFilters
+          ? filteredClients.length
+          : count || 0) - markedInCounted,
+    );
 
     console.log(
       `Found ${count} clients, returning ${filteredClients.length} enriched`
@@ -943,6 +1001,8 @@ Deno.serve(async (req) => {
         limit,
         offset,
         team_users: teamUsersResult.data || [],
+        // Cadastros da equipe que continuam na lista, mas não são clientes.
+        internal_ids: internalMarkedIds,
       }),
       {
         status: 200,
