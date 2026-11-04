@@ -93,7 +93,7 @@ export function CountryStateCity({ value, onChange, onCountryChange, disabled }:
           <Input
             value={value.estado}
             onChange={(e) => onChange({ ...value, estado: e.target.value, estado_uf: "" })}
-            placeholder="ex.: California"
+            placeholder="Digite o estado ou província"
             disabled={disabled}
           />
         </div>
