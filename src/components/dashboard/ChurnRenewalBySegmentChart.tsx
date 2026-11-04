@@ -441,8 +441,26 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
                 </TableHeader>
                 <TableBody>
                   {detail.events.map((e) => (
-                    <TableRow key={`${e.contractId}-${e.kind}`}>
-                      <TableCell className="font-medium">{e.clientName}</TableCell>
+                    <TableRow
+                      key={`${e.contractId}-${e.kind}`}
+                      className={e.clientId ? "cursor-pointer" : undefined}
+                      onClick={() => {
+                        if (e.clientId) {
+                          setSelectedSegment(null);
+                          navigate(`/clients/${e.clientId}`);
+                        }
+                      }}
+                    >
+                      <TableCell className="font-medium">
+                        {e.clientId ? (
+                          <span className="inline-flex items-center gap-1 text-primary hover:underline">
+                            {e.clientName}
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                          </span>
+                        ) : (
+                          e.clientName
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={EVENT_VARIANT[e.kind]}>{EVENT_LABEL[e.kind]}</Badge>
                       </TableCell>
