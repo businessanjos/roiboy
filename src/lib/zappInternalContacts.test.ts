@@ -43,3 +43,56 @@ describe("isInternalContactPhone", () => {
     expect(isInternalContactPhone("+5511983364308", new Set())).toBe(false);
   });
 });
+
+describe("isInternalClientRecord", () => {
+  const cores = buildInternalCoreSet([
+    "+5543988741227", // Marketing | Eternum
+    "+5543988346806", // Canal Consultor Apoio
+    "+5511976461705", // Everton Pieri
+  ]);
+
+  it("marca cadastro cujo telefone principal é da equipe", () => {
+    expect(isInternalClientRecord({ phone_e164: "+5543988741227" }, cores)).toBe(true);
+    expect(isInternalClientRecord({ phone_e164: "+55 43 98874-1227" }, cores)).toBe(true);
+  });
+
+  it("marca cadastro que só esconde o número da equipe nos extras", () => {
+    expect(
+      isInternalClientRecord(
+        { phone_e164: "+5554981410777", additional_phones: ["+5543988346806"] },
+        cores,
+      ),
+    ).toBe(true);
+  });
+
+  it("não marca cliente real", () => {
+    expect(
+      isInternalClientRecord(
+        { phone_e164: "+5554981410777", additional_phones: ["+5551992190330"] },
+        cores,
+      ),
+    ).toBe(false);
+    expect(isInternalClientRecord({ phone_e164: null }, cores)).toBe(false);
+  });
+
+  it("ignora extras que não são lista de telefones", () => {
+    expect(
+      isInternalClientRecord(
+        { phone_e164: "+5554981410777", additional_phones: null },
+        cores,
+      ),
+    ).toBe(false);
+    expect(
+      isInternalClientRecord(
+        { phone_e164: "+5554981410777", additional_phones: { phone: "+5543988741227" } },
+        cores,
+      ),
+    ).toBe(false);
+  });
+
+  it("lista o telefone principal mais os extras", () => {
+    expect(
+      clientRecordPhones({ phone_e164: "+5554981410777", additional_phones: ["+5551992190330"] }),
+    ).toEqual(["+5554981410777", "+5551992190330"]);
+  });
+});
