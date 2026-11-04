@@ -119,6 +119,9 @@ export const ZappChatHeader = memo(function ZappChatHeader({
 }: ZappChatHeaderProps) {
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
+  const { internalCores } = useZappInternalContacts();
+  // Número da própria equipe: não é cliente, então o status não anuncia espera de cliente.
+  const internalContact = isInternalContactPhone(contactInfo.phone, internalCores);
   const [groupClientsOpen, setGroupClientsOpen] = useState(false);
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const groupJid = assignment.zapp_conversation?.group_jid || null;
@@ -288,11 +291,13 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                 size="sm"
                 className={cn(
                   "hidden lg:inline-flex h-11 min-w-11 sm:h-8 px-1.5 sm:px-3 text-[10px] sm:text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
-                  STATUS_CONFIG[assignment.status]?.color || "text-muted-foreground",
+                  internalContact
+                    ? "text-muted-foreground"
+                    : STATUS_CONFIG[assignment.status]?.color || "text-muted-foreground",
                   "border-current bg-transparent"
                 )}
               >
-                <span>{STATUS_CONFIG[assignment.status]?.label || "Status"}</span>
+                <span>{internalContact ? "Interno" : STATUS_CONFIG[assignment.status]?.label || "Status"}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-48 z-50">
