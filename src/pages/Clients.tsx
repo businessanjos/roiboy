@@ -272,6 +272,18 @@ export default function Clients() {
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalClients, setTotalClients] = useState(0);
+  // Cadastros da equipe que continuam na lista, mas não são clientes: aparecem
+  // marcados "Interno" e ficam fora do total.
+  const [internalIds, setInternalIds] = useState<string[]>([]);
+  const internalBadge = (
+    <Badge
+      variant="secondary"
+      className="h-5 shrink-0 rounded-full px-2 text-[10px] font-semibold uppercase tracking-wide"
+      title="Cadastro da equipe — não conta como cliente"
+    >
+      Interno
+    </Badge>
+  );
   const [tabCounts, setTabCounts] = useState<Record<string, number>>({ active: 0, awaiting: 0, hold: 0, cancelled: 0 });
   const [showFilters, setShowFilters] = useState(false);
   
@@ -667,6 +679,7 @@ export default function Clients() {
       
       setClients(transformedClients);
       setTotalClients(result.total || 0);
+      setInternalIds(Array.isArray(result.internal_ids) ? result.internal_ids : []);
       if (result.team_users) {
         setTeamUsers(result.team_users);
       }
@@ -2061,6 +2074,7 @@ export default function Clients() {
                         <div className="flex items-center gap-1.5">
                           <span className="truncate text-base font-semibold leading-tight">{client.full_name}</span>
                           <VipBadge clientId={client.id} />
+                          {internalIds.includes(client.id) && internalBadge}
                         </div>
                         {prod?.name && (
                           <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
@@ -3187,6 +3201,7 @@ export default function Clients() {
                                     )}
                                     <span className="truncate">{client.full_name}</span>
                                     <VipBadge clientId={client.id} />
+                                    {internalIds.includes(client.id) && internalBadge}
                                     <OverdueBadge status={financialStatusMap?.get(client.id)} compact />
                                   </Link>
                                 );
@@ -3693,6 +3708,7 @@ export default function Clients() {
                       <div className="space-y-1 min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-medium truncate">{client.full_name}</p>
+                          {internalIds.includes(client.id) && internalBadge}
                           {/* Responsible user avatar */}
                           {(() => {
                             const responsible = getResponsibleUser(client);
