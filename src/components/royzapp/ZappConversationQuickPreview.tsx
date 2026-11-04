@@ -51,7 +51,7 @@ export function ZappConversationQuickPreview({ conversationId, onClose, onOpenFu
       const [conv, msgs] = await Promise.all([
         supabase
           .from("zapp_conversations")
-          .select("id, contact_name, phone_e164, is_group")
+          .select("id, contact_name, phone_e164, is_group, client:clients(full_name), lead:leads(full_name)")
           .eq("id", conversationId!)
           .maybeSingle(),
         supabase
@@ -72,7 +72,10 @@ export function ZappConversationQuickPreview({ conversationId, onClose, onOpenFu
     if (data) requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ block: "end" }));
   }, [data]);
 
-  const name = data?.conv?.contact_name || data?.conv?.phone_e164 || "Contato";
+  const conv = data?.conv as any;
+  const name = conv?.client?.full_name || conv?.lead?.full_name
+    || (conv?.contact_name && !/^desconhecido$/i.test(conv.contact_name) ? conv.contact_name : null)
+    || conv?.phone_e164 || "Contato";
 
   return (
     <Dialog open={!!conversationId} onOpenChange={(o) => !o && onClose()}>
