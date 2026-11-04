@@ -171,7 +171,7 @@ export function ZappContactsBreakdownDialog({
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zapp-text-muted" />
           <Input
-            placeholder="Buscar por contato, telefone ou atendente..."
+            placeholder={isSmall ? "Buscar contato ou atendente..." : "Buscar por contato, telefone ou atendente..."}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 bg-zapp-bg pl-9 text-sm border-zapp-border"
