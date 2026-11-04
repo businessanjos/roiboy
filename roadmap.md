@@ -1,4 +1,5 @@
 # Roadmap
+- [x] RoyZapp: clique no menu lateral sem WhatsApp selecionado mostra o aviso "Selecione o setor desejado" em vez de trocar a URL sem abrir nada; 5 testes passaram, build OK, caminho autenticado conferido sem setor (aviso, URL parada em Conversas) e com setor (Tags abre normalmente). Sem publicação.
 - [x] Aviso ao vendedor: textos privado/grupo editáveis por conta, prévia compartilhada com sequências e exemplos lead/negócio; 11 testes e build OK, janela autenticada conferida em desktop/mobile, salvar/readback simulado sem alterar configuração real. Função ativada, sem envio real nem publicação.
 - [x] Mesclagem: destino obrigatório independente dos campos, RPC atômica preservando RLS, arquivamento e desfazer protegido; 7 testes passaram, escolhas conferidas autenticadas com gravações bloqueadas, build OK. Sem mesclagem real ou publicação; docs/deal-merge-review-2026-10-26.md.
 - [ ] Renata: desfazer mesclagem anterior aguarda dados originais recuperáveis ou confirmação da correção manual específica; negócio de origem foi excluído definitivamente pela versão antiga, sem snapshot. Nenhum dado real alterado.
