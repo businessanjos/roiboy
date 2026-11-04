@@ -1,0 +1,3 @@
+ALTER TABLE public.playbook_sequence_steps ADD COLUMN IF NOT EXISTS action_type text, ADD COLUMN IF NOT EXISTS stage_id uuid REFERENCES public.deal_stages(id) ON DELETE CASCADE;
+ALTER TABLE public.zapp_sequence_run_steps ADD COLUMN IF NOT EXISTS action_type text, ADD COLUMN IF NOT EXISTS stage_id uuid;
+UPDATE public.playbook_sequence_steps SET action_type = 'add_tag' WHERE tag_id IS NOT NULL AND action_type IS NULL;
