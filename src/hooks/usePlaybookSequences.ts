@@ -12,10 +12,28 @@ export interface SequenceStep {
   playbook_item_id: string;
   /** Passo de ação: etiqueta a conversa em vez de enviar mensagem. */
   tag_id?: string | null;
+  /** Tipo de ação; ausente = mensagem. */
+  action_type?: SequenceActionType | null;
+  stage_id?: string | null;
   delay_seconds: number;
 }
 
-export const isTagStep = (s: { tag_id?: string | null }) => !!s.tag_id;
+export type SequenceActionType = "add_tag" | "remove_tag" | "move_stage";
+export const SEQUENCE_ACTIONS: { type: SequenceActionType; label: string }[] = [
+  { type: "add_tag", label: "Etiquetar contato" },
+  { type: "remove_tag", label: "Remover etiqueta" },
+  { type: "move_stage", label: "Mover etapa do funil" },
+];
+/** Passos antigos com etiqueta e sem tipo contam como "Etiquetar contato". */
+export const stepAction = (s: { action_type?: SequenceActionType | null; tag_id?: string | null }): SequenceActionType | null =>
+  s.action_type || (s.tag_id != null ? "add_tag" : null);
+export const isActionStep = (s: { action_type?: SequenceActionType | null; tag_id?: string | null }) => stepAction(s) !== null;
+export const isTagStep = isActionStep;
+/** Ação com o alvo escolhido (etiqueta ou etapa). */
+export const isActionReady = (s: SequenceStep) => {
+  const a = stepAction(s);
+  return a === "move_stage" ? !!s.stage_id : !!s.tag_id;
+};
 
 export interface PlaybookSequence {
   id: string;
@@ -44,7 +62,7 @@ export function usePlaybookSequences(sectorId?: string | null) {
     enabled: !!accountId,
     queryFn: async (): Promise<PlaybookSequence[]> => {
       let q = db.from("playbook_sequences")
-        .select("id, name, visibility, sector_id, created_by, playbook_sequence_steps(id, playbook_item_id, tag_id, delay_seconds, position)")
+        .select("id, name, visibility, sector_id, created_by, playbook_sequence_steps(id, playbook_item_id, tag_id, action_type, stage_id, delay_seconds, position)")
         .order("name");
       if (sectorId) q = q.eq("sector_id", sectorId);
       const { data, error } = await q;
@@ -53,7 +71,7 @@ export function usePlaybookSequences(sectorId?: string | null) {
         ...s,
         steps: (s.playbook_sequence_steps || [])
           .sort((a: any, b: any) => a.position - b.position)
-          .map((st: any) => ({ id: st.id, playbook_item_id: st.playbook_item_id || "", tag_id: st.tag_id || null, delay_seconds: st.delay_seconds })),
+          .map((st: any) => ({ id: st.id, playbook_item_id: st.playbook_item_id || "", tag_id: st.tag_id || null, action_type: st.action_type || (st.tag_id ? "add_tag" : null), stage_id: st.stage_id || null, delay_seconds: st.delay_seconds })),
       }));
     },
   });
@@ -61,7 +79,7 @@ export function usePlaybookSequences(sectorId?: string | null) {
   const save = useMutation({
     mutationFn: async (input: { id?: string; name: string; visibility: "personal" | "sector"; steps: SequenceStep[] }) => {
       if (!accountId || !currentUser?.id) throw new Error("Usuário não carregado");
-      const steps = input.steps.filter((s) => s.playbook_item_id || s.tag_id).slice(0, SEQUENCE_MAX_STEPS);
+      const steps = input.steps.filter((s) => (isActionStep(s) ? isActionReady(s) : !!s.playbook_item_id)).slice(0, SEQUENCE_MAX_STEPS);
       if (!input.name.trim()) throw new Error("Dê um nome para a sequência");
       if (steps.length === 0) throw new Error("Adicione ao menos uma mensagem");
       let id = input.id;
@@ -80,7 +98,7 @@ export function usePlaybookSequences(sectorId?: string | null) {
         id = data.id;
       }
       const { error: stepErr } = await db.from("playbook_sequence_steps").insert(
-        normalizeSequenceSteps(steps).map((s, i) => ({ sequence_id: id, account_id: accountId, playbook_item_id: s.tag_id ? null : s.playbook_item_id, tag_id: s.tag_id || null, position: i, delay_seconds: s.delay_seconds })),
+        normalizeSequenceSteps(steps).map((s, i) => ({ sequence_id: id, account_id: accountId, playbook_item_id: isActionStep(s) ? null : s.playbook_item_id, action_type: stepAction(s), tag_id: stepAction(s) === "move_stage" ? null : s.tag_id || null, stage_id: stepAction(s) === "move_stage" ? s.stage_id || null : null, position: i, delay_seconds: s.delay_seconds })),
       );
       if (stepErr) throw stepErr;
     },
@@ -132,7 +150,7 @@ export function buildRunStepRows(
   const times = computeSequenceSchedule(delays, startMs);
   return steps.map((s, i) => ({
     run_id: runId, account_id: accountId, position: i, name: s.name, content_type: s.content_type,
-    text_content: s.text_content, media_url: s.media_url, media_filename: s.media_filename, media_caption: s.media_caption, tag_id: s.tag_id || null,
+    text_content: s.text_content, media_url: s.media_url, media_filename: s.media_filename, media_caption: s.media_caption, tag_id: s.tag_id || null, action_type: s.action_type || null, stage_id: s.stage_id || null,
     delay_seconds: effectiveDelay(delays, i),
     scheduled_at: new Date(times[i]).toISOString(),
   }));
@@ -144,6 +162,7 @@ export interface StartRunInput {
   steps: Array<{
     name: string; content_type: string; text_content: string | null;
     media_url: string | null; media_filename: string | null; media_caption: string | null; delay_seconds: number; tag_id?: string | null;
+    action_type?: SequenceActionType | null; stage_id?: string | null;
   }>;
 }
 

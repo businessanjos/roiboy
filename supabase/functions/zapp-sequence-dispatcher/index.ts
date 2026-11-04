@@ -96,22 +96,46 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
       continue;
     }
 
-    // Passo de ação: etiqueta a conversa (nada vai ao contato)
-    if (step.content_type === "tag") {
+    // Passo de ação: roda no ROY, nada vai ao contato
+    const actionType = step.action_type || (step.content_type === "tag" ? "add_tag" : null);
+    if (actionType) {
       try {
-        if (!step.tag_id) throw new Error("Etiqueta não encontrada");
-        const { data: asg } = await supabase.from("zapp_conversation_assignments").select("id")
-          .eq("zapp_conversation_id", conv.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-        if (!asg) throw new Error("Conversa sem atendimento para etiquetar");
-        const { error: tagErr } = await supabase.from("zapp_conversation_tags").upsert(
-          { account_id: run.account_id, assignment_id: asg.id, tag_id: step.tag_id, created_by: run.triggered_by },
-          { onConflict: "assignment_id,tag_id", ignoreDuplicates: true },
-        );
-        if (tagErr) throw tagErr;
+        if (actionType === "move_stage") {
+          if (!step.stage_id) throw new Error("Etapa não encontrada");
+          const { data: stage } = await supabase.from("deal_stages").select("id, pipeline_id, account_id").eq("id", step.stage_id).maybeSingle();
+          if (!stage || stage.account_id !== run.account_id) throw new Error("Etapa não encontrada");
+          const { data: cv } = await supabase.from("zapp_conversations").select("deal_id, lead_id, client_id").eq("id", conv.id).maybeSingle();
+          let dealId: string | null = null;
+          if (cv?.deal_id) {
+            const { data: d } = await supabase.from("deals").select("id").eq("id", cv.deal_id).eq("status", "open").is("deleted_at", null).maybeSingle();
+            dealId = d?.id || null;
+          }
+          for (const col of ["lead_id", "client_id"] as const) {
+            if (dealId || !cv?.[col]) continue;
+            const { data: d } = await supabase.from("deals").select("id").eq("account_id", run.account_id).eq(col, cv[col])
+              .eq("status", "open").is("deleted_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle();
+            dealId = d?.id || null;
+          }
+          if (!dealId) throw new Error("Contato sem negócio aberto para mover");
+          const { error: mvErr } = await supabase.from("deals").update({ stage_id: stage.id, pipeline_id: stage.pipeline_id }).eq("id", dealId);
+          if (mvErr) throw mvErr;
+        } else {
+          if (!step.tag_id) throw new Error("Etiqueta não encontrada");
+          const { data: asg } = await supabase.from("zapp_conversation_assignments").select("id")
+            .eq("zapp_conversation_id", conv.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+          if (!asg) throw new Error("Conversa sem atendimento para etiquetar");
+          const { error: tagErr } = actionType === "remove_tag"
+            ? await supabase.from("zapp_conversation_tags").delete().eq("assignment_id", asg.id).eq("tag_id", step.tag_id)
+            : await supabase.from("zapp_conversation_tags").upsert(
+              { account_id: run.account_id, assignment_id: asg.id, tag_id: step.tag_id, created_by: run.triggered_by },
+              { onConflict: "assignment_id,tag_id", ignoreDuplicates: true },
+            );
+          if (tagErr) throw tagErr;
+        }
         await supabase.from("zapp_sequence_run_steps").update({ status: "sent", sent_at: new Date().toISOString(), last_error: null }).eq("id", step.id);
         await supabase.from("zapp_sequence_runs").update({ sent_steps: (run.sent_steps = (run.sent_steps || 0) + 1) }).eq("id", runId);
       } catch (err) {
-        await supabase.from("zapp_sequence_run_steps").update({ status: "failed", last_error: String((err as Error).message || "Falha ao etiquetar").slice(0, 300) }).eq("id", step.id);
+        await supabase.from("zapp_sequence_run_steps").update({ status: "failed", last_error: String((err as Error).message || "Falha na ação").slice(0, 300) }).eq("id", step.id);
       }
       continue;
     }

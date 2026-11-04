@@ -379,6 +379,13 @@
       "when": 1793796680959,
       "tag": "0053_speed_up_zapp_productivity_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793797229337,
+      "tag": "0054_sequence_step_actions",
+      "breakpoints": true
     }
   ]
 }

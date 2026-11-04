@@ -21422,32 +21422,38 @@ export type Database = {
       playbook_sequence_steps: {
         Row: {
           account_id: string
+          action_type: string | null
           created_at: string
           delay_seconds: number
           id: string
           playbook_item_id: string | null
           position: number
           sequence_id: string
+          stage_id: string | null
           tag_id: string | null
         }
         Insert: {
           account_id: string
+          action_type?: string | null
           created_at?: string
           delay_seconds?: number
           id?: string
           playbook_item_id?: string | null
           position?: number
           sequence_id: string
+          stage_id?: string | null
           tag_id?: string | null
         }
         Update: {
           account_id?: string
+          action_type?: string | null
           created_at?: string
           delay_seconds?: number
           id?: string
           playbook_item_id?: string | null
           position?: number
           sequence_id?: string
+          stage_id?: string | null
           tag_id?: string | null
         }
         Relationships: [
@@ -21463,6 +21469,13 @@ export type Database = {
             columns: ["sequence_id"]
             isOneToOne: false
             referencedRelation: "playbook_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_sequence_steps_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "deal_stages"
             referencedColumns: ["id"]
           },
           {
@@ -29507,6 +29520,7 @@ export type Database = {
       zapp_sequence_run_steps: {
         Row: {
           account_id: string
+          action_type: string | null
           claimed_at: string | null
           content_type: string
           created_at: string
@@ -29522,12 +29536,14 @@ export type Database = {
           run_id: string
           scheduled_at: string
           sent_at: string | null
+          stage_id: string | null
           status: string
           tag_id: string | null
           text_content: string | null
         }
         Insert: {
           account_id: string
+          action_type?: string | null
           claimed_at?: string | null
           content_type: string
           created_at?: string
@@ -29543,12 +29559,14 @@ export type Database = {
           run_id: string
           scheduled_at: string
           sent_at?: string | null
+          stage_id?: string | null
           status?: string
           tag_id?: string | null
           text_content?: string | null
         }
         Update: {
           account_id?: string
+          action_type?: string | null
           claimed_at?: string | null
           content_type?: string
           created_at?: string
@@ -29564,6 +29582,7 @@ export type Database = {
           run_id?: string
           scheduled_at?: string
           sent_at?: string | null
+          stage_id?: string | null
           status?: string
           tag_id?: string | null
           text_content?: string | null
@@ -30271,6 +30290,7 @@ export type Database = {
         Args: { p_run_id: string }
         Returns: {
           account_id: string
+          action_type: string | null
           claimed_at: string | null
           content_type: string
           created_at: string
@@ -30286,6 +30306,7 @@ export type Database = {
           run_id: string
           scheduled_at: string
           sent_at: string | null
+          stage_id: string | null
           status: string
           tag_id: string | null
           text_content: string | null
