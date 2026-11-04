@@ -15,6 +15,7 @@ import {
   BellOff,
   BellRing,
   Volume2,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ZappConnectionsSection } from "./settings/ZappConnectionsSection";
+import { useZappTagNameTags } from "@/hooks/useZappTagNameTags";
 
 import type { NotificationPermissionStatus } from "@/hooks/useZappNotifications";
 
@@ -158,8 +160,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
         </div>
       </div>
 
-      {/* Access Configuration Notice */}
-      <div className="space-y-3 pt-4 border-t border-zapp-border">
+      {/* Access Configuration Notice */}      <div className="space-y-3 pt-4 border-t border-zapp-border">
         <div>
           <p className="text-zapp-text text-sm font-medium">Controle de Acesso</p>
           <p className="text-zapp-text-muted text-xs">
