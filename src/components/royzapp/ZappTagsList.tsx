@@ -13,7 +13,7 @@ interface ZappTagsListProps {
 /**
  * Etiquetas em blocos iguais: cada uma é um cartão na cor dela, com o nome
  * inteiro (quebra em até duas linhas), a descrição quando existe e as ações
- * de editar/excluir no canto.
+ * de editar/excluir no rodapé do bloco.
  */
 export const ZappTagsList = memo(function ZappTagsList({
   tags,
@@ -50,7 +50,7 @@ export const ZappTagsList = memo(function ZappTagsList({
       ) : (
         <ul
           className="grid gap-2"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(178px, 1fr))" }}
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}
         >
           {tags.map((tag) => {
             const color = tag.color || ZAPP_TAG_FALLBACK_COLOR;
@@ -59,17 +59,24 @@ export const ZappTagsList = memo(function ZappTagsList({
             return (
               <li key={tag.id} className="min-w-0">
                 <article
-                  className="group flex h-[84px] flex-col justify-between overflow-hidden rounded-xl px-3 py-2.5"
+                  className="group flex h-[88px] flex-col gap-1 overflow-hidden rounded-xl px-3 py-2.5"
                   style={{
                     backgroundColor: color,
                     color: text,
                     boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.22)",
                   }}
                 >
-                  <div className="flex items-start gap-1.5">
-                    <p className="line-clamp-2 min-w-0 flex-1 text-[13px] font-semibold leading-[1.15]">
-                      {tag.name}
-                    </p>
+                  <p className="line-clamp-2 min-w-0 flex-1 text-[13px] font-semibold leading-[1.15]">
+                    {tag.name}
+                  </p>
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    {tag.description ? (
+                      <p className="min-w-0 flex-1 truncate text-[11px] leading-4 opacity-80">
+                        {tag.description}
+                      </p>
+                    ) : (
+                      <span className="min-w-0 flex-1" />
+                    )}
                     <div className="flex shrink-0 items-center gap-1 opacity-100 transition-opacity lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
                       <button
                         type="button"
@@ -91,9 +98,6 @@ export const ZappTagsList = memo(function ZappTagsList({
                       </button>
                     </div>
                   </div>
-                  {tag.description ? (
-                    <p className="truncate text-[11px] leading-4 opacity-80">{tag.description}</p>
-                  ) : null}
                 </article>
               </li>
             );
