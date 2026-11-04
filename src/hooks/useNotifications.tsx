@@ -141,6 +141,29 @@ const showBrowserNotification = (title: string, body: string, link?: string | nu
   setTimeout(() => notification.close(), 5000);
 };
 
+// Eventos atrasados (aba adormecida, voltar no navegador, reconexão do tempo
+// real) chegam em lote. Só uma notificação nascida há pouco interrompe o
+// usuário, e no máximo uma a cada 1,2s — o sino continua contando todas.
+const NOTIFY_FRESH_MS = 25_000;
+const NOTIFY_GAP_MS = 1_200;
+
+/**
+ * Decide se um evento de notificação deve interromper o usuário.
+ * `stale` = chegou atrasada (lote depois de aba adormecida ou de voltar no
+ * navegador); `quiet` = chegou logo depois de outra que já interrompeu.
+ */
+export function notifyDecision(
+  createdIso: string | null | undefined,
+  now: number,
+  lastNotifyAt: number,
+): { stale: boolean; quiet: boolean } {
+  const created = new Date((createdIso ?? "") as string).getTime();
+  return {
+    stale: Number.isFinite(created) && now - created > NOTIFY_FRESH_MS,
+    quiet: now - lastNotifyAt < NOTIFY_GAP_MS,
+  };
+}
+
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -157,6 +180,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   // evento realtime UPDATE que ecoa a própria mudança — evita decrementar
   // unreadCount/tabCounts duas vezes para a mesma leitura.
   const readAccountedRef = useRef<Set<string>>(new Set());
+  // Último instante em que som/cartão/push foram disparados (cortina de burst).
+  const lastNotifyAtRef = useRef(0);
+  // Refresco único e adiado para o sino quando chega um lote atrasado.
+  const staleRefreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const requestNotificationPermission = useCallback(async () => {
     if (!supportsNotifications()) {
@@ -298,6 +325,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           const newNotification = payload.new as Notification;
 
           if (newNotification.user_id === currentUserId) {
+            const now = Date.now();
+            const { stale, quiet } = notifyDecision(
+              newNotification.created_at as string,
+              now,
+              lastNotifyAtRef.current,
+            );
+
+            // Lote atrasado: atualiza o sino uma vez, sem som, push ou cartão.
+            if (stale) {
+              if (staleRefreshRef.current) clearTimeout(staleRefreshRef.current);
+              staleRefreshRef.current = setTimeout(() => {
+                staleRefreshRef.current = null;
+                void fetchNotifications();
+              }, 800);
+              return;
+            }
+
             const { data } = await supabase
               .from("notifications")
               .select(`
@@ -311,64 +355,70 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
               setNotifications((prev) => [data, ...prev]);
               setUnreadCount((prev) => prev + 1);
 
-              playNotificationChime();
-              const goTo = (path: string) => {
-                window.history.pushState({}, "", path);
-                window.dispatchEvent(new PopStateEvent("popstate"));
-              };
-              toast.custom(
-                (t) => (
-                  <GlobalNotificationToast
-                    title={data.title}
-                    content={data.content}
-                    type={data.type}
-                    sourceType={data.source_type}
-                    actorName={(data as any).triggered_by_user?.name ?? null}
-                    actorAvatar={(data as any).triggered_by_user?.avatar_url ?? null}
-                    hasLink={!!data.link}
-                    onOpen={() => {
-                      toast.dismiss(t);
-                      goTo(data.link || "/notifications");
-                    }}
-                    onDismiss={() => toast.dismiss(t)}
-                  />
-                ),
-                { duration: 10000, position: "top-right" }
-              );
+              // Várias no mesmo instante: o sino conta todas, mas só a primeira
+              // interrompe (som, cartão e push) para a tela não travar.
+              lastNotifyAtRef.current = now;
 
-              // Send push notification via edge function (server-side)
-              // This ensures it works even when the app is in the background
-              try {
-                const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-                const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-                
-                await fetch(
-                  `https://${projectId}.supabase.co/functions/v1/send-push`,
-                  {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "apikey": anonKey,
-                    },
-                    body: JSON.stringify({
-                      user_id: data.user_id,
-                      title: data.title,
-                      body: data.content || "Nova notificação",
-                      url: data.link || "/notifications",
-                      tag: `notification-${data.id}`,
-                    }),
-                  }
+              if (!quiet) {
+                playNotificationChime();
+                const goTo = (path: string) => {
+                  window.history.pushState({}, "", path);
+                  window.dispatchEvent(new PopStateEvent("popstate"));
+                };
+                toast.custom(
+                  (t) => (
+                    <GlobalNotificationToast
+                      title={data.title}
+                      content={data.content}
+                      type={data.type}
+                      sourceType={data.source_type}
+                      actorName={(data as any).triggered_by_user?.name ?? null}
+                      actorAvatar={(data as any).triggered_by_user?.avatar_url ?? null}
+                      hasLink={!!data.link}
+                      onOpen={() => {
+                        toast.dismiss(t);
+                        goTo(data.link || "/notifications");
+                      }}
+                      onDismiss={() => toast.dismiss(t)}
+                    />
+                  ),
+                  { duration: 10000, position: "top-right" }
                 );
-              } catch (pushError) {
-                console.error("Error sending push:", pushError);
-              }
 
-              // Fallback: show browser notification directly
-              showBrowserNotification(
-                data.title,
-                data.content || "Nova notificação",
-                data.link
-              );
+                // Send push notification via edge function (server-side)
+                // This ensures it works even when the app is in the background
+                try {
+                  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+                  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+                  await fetch(
+                    `https://${projectId}.supabase.co/functions/v1/send-push`,
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "apikey": anonKey,
+                      },
+                      body: JSON.stringify({
+                        user_id: data.user_id,
+                        title: data.title,
+                        body: data.content || "Nova notificação",
+                        url: data.link || "/notifications",
+                        tag: `notification-${data.id}`,
+                      }),
+                    }
+                  );
+                } catch (pushError) {
+                  console.error("Error sending push:", pushError);
+                }
+
+                // Fallback: show browser notification directly
+                showBrowserNotification(
+                  data.title,
+                  data.content || "Nova notificação",
+                  data.link
+                );
+              }
 
               invalidateNotificationsQueries(queryClient, currentUserId);
             }
@@ -378,6 +428,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       .subscribe();
 
     return () => {
+      if (staleRefreshRef.current) clearTimeout(staleRefreshRef.current);
       supabase.removeChannel(channel);
     };
   }, [currentUserId, queryClient]);
