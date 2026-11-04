@@ -34,6 +34,7 @@ import { EducationSelect } from "./EducationSelect";
 
 import { CountryStateCity, type LocationFields } from "@/components/operations/CountryStateCity";
 import { COUNTRIES, BRAZIL_STATES } from "@/lib/countries";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -239,6 +240,24 @@ export function ClientBusinessProfile({
   // Local drafts for inline editable text fields
   const [drafts, setDrafts] = useState<Partial<Record<keyof ClientRow, string>>>({});
   const [revenueHistoryOpen, setRevenueHistoryOpen] = useState(false);
+
+  // Cliente de fora do Brasil: mostra o faturamento também na moeda do país (só leitura).
+  const foreignCountry = useMemo(() => {
+    const raw = (client?.country || "").trim().toLowerCase();
+    if (!raw) return null;
+    const c = COUNTRIES.find((x) => x.code.toLowerCase() === raw || x.name.toLowerCase() === raw);
+    return c && c.currency !== "BRL" ? c : null;
+  }, [client?.country]);
+  const { data: fx } = useExchangeRate(foreignCountry?.currency ?? "BRL");
+  const fxRate = foreignCountry ? fx?.rate ?? 0 : 0;
+  const inForeign = (brl: number | null | undefined) => {
+    if (!foreignCountry || !fxRate || brl == null) return null;
+    try {
+      return (brl / fxRate).toLocaleString("pt-BR", { style: "currency", currency: foreignCountry.currency });
+    } catch {
+      return `${foreignCountry.currencySymbol} ${(brl / fxRate).toFixed(2)}`;
+    }
+  };
 
 
   const fetchAll = async () => {
@@ -615,6 +634,14 @@ export function ClientBusinessProfile({
                 onCommit={commitMonthRevenue}
                 className="text-lg font-bold text-primary"
               />
+              {inForeign(selectedMonthRevenue) && (
+                <p
+                  className="text-sm font-semibold text-foreground mt-0.5"
+                  title={`Cotação de hoje: 1 ${foreignCountry!.currency} = R$ ${fxRate.toFixed(2).replace(".", ",")}`}
+                >
+                  {foreignCountry!.flag} ≈ {inForeign(selectedMonthRevenue)}
+                </p>
+              )}
               <p className="text-[10px] text-muted-foreground mt-1">
                 {selectedMonthRevenue == null
                   ? `Sem faturamento informado para ${monthLabel(selectedMonth)}`
