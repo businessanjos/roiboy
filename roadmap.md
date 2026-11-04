@@ -40,3 +40,5 @@
 - [x] Travamento ao voltar no navegador: causa no handler de INSERT de `notifications`, que tocava som, cartão, push e notificação do sistema para CADA evento, inclusive os entregues em lote após aba adormecida/voltar. Agora lote atrasado (>25s) só atualiza o sino uma vez e rajadas só interrompem 1 a cada 1,2s; 5 testes passaram e build OK. Voltar do navegador reproduzido com Playwright (reload completo, 307 pedidos, nenhum cartão); a rajada real não pôde ser provocada no sandbox sem gravar notificações.
 
 - [x] Selo de etiqueta ao lado do nome atualiza sozinho: as duas tabelas de etiqueta entraram no tempo real e a lista corrige o selo nos eventos de incluir/tirar/renomear. Testado no navegador: selo apareceu na hora ao etiquetar e sumiu ao tirar, sem recarregar; etiqueta de teste removida depois (11 etiquetas, 0 órfãs).
+
+- [x] "Lucas ⛾" (número interno da equipe) deixou de parecer cliente: sem selo "Aguard. cliente" na lista e o topo mostra "Interno". Números já eram desconsiderados nas métricas pelo RPC. Testado no navegador (fila de Vendas) + 5 testes da regra de telefone.

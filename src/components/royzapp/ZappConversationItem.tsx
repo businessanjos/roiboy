@@ -34,6 +34,8 @@ import { ConversationAssignment, getContactInfo, getInitials } from "./types";
 import { VipBadge } from "@/components/client/VipBadge";
 import { CountryFlag } from "@/components/ui/CountryFlag";
 import { isInternalGroup, showsWaitIndicator } from "@/lib/zappInternalGroups";
+import { isInternalContactPhone } from "@/lib/zappInternalContacts";
+import { useZappInternalContacts } from "@/hooks/useZappInternalContacts";
 
 interface ZappConversationItemProps {
   assignment: ConversationAssignment;
@@ -107,7 +109,11 @@ export const ZappConversationItem = memo(function ZappConversationItem({
 }: ZappConversationItemProps) {
   const contact = getContactInfo(assignment);
   const zappConvId = assignment.zapp_conversation?.id;
-  const internal = isInternalGroup(contact.name, !!contact.isGroup, !!contact.isPinned);
+  const { internalCores } = useZappInternalContacts();
+  // Número da própria equipe não é atendimento de cliente: sem selo de espera.
+  const internal =
+    isInternalGroup(contact.name, !!contact.isGroup, !!contact.isPinned) ||
+    isInternalContactPhone(contact.phone, internalCores);
   
   const handleClick = () => {
     onSelect(assignment);
