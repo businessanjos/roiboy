@@ -30,3 +30,45 @@ export function isInternalContactPhone(
   const core = zappPhoneCore(phone);
   return !!core && cores.has(core);
 }
+
+/**
+ * Telefones de um cadastro de cliente: o principal mais os extras
+ * (clients.additional_phones, um array jsonb que costuma vir como strings).
+ */
+export function clientRecordPhones(record: {
+  phone_e164?: string | null;
+  additional_phones?: unknown;
+}): (string | null)[] {
+  const phones: (string | null)[] = [record.phone_e164 ?? null];
+  const extras = record.additional_phones;
+  if (Array.isArray(extras)) {
+    for (const item of extras) {
+      if (typeof item === "string") {
+        phones.push(item);
+      } else if (item && typeof item === "object") {
+        const entry = item as Record<string, unknown>;
+        for (const key of ["phone", "phone_e164", "value", "number"]) {
+          const value = entry[key];
+          if (typeof value === "string") {
+            phones.push(value);
+            break;
+          }
+        }
+      }
+    }
+  }
+  return phones;
+}
+
+/**
+ * Cadastro de cliente que na verdade é alguém da equipe: o telefone (principal
+ * ou extra) bate com um número interno. Apresentação only — o registro fica
+ * onde está, só deixa de ser tratado como cliente.
+ */
+export function isInternalClientRecord(
+  record: { phone_e164?: string | null; additional_phones?: unknown },
+  cores: Set<string>,
+): boolean {
+  if (!cores.size) return false;
+  return clientRecordPhones(record).some((phone) => isInternalContactPhone(phone, cores));
+}

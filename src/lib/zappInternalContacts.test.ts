@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildInternalCoreSet,
+  clientRecordPhones,
+  isInternalClientRecord,
   isInternalContactPhone,
   zappPhoneCore,
 } from "./zappInternalContacts";
