@@ -685,6 +685,15 @@ export function ClientBusinessProfile({
                   : selectedMonth === client.current_revenue_month
                   ? "Mês mais recente informado"
                   : `Valor de ${monthLabel(selectedMonth)}`}
+                {selectedMonthRevenue != null && (
+                  <button
+                    type="button"
+                    onClick={() => commitMonthRevenue("")}
+                    className="ml-2 underline underline-offset-2 hover:text-destructive"
+                  >
+                    Limpar (não informado)
+                  </button>
+                )}
               </p>
             </div>
 
