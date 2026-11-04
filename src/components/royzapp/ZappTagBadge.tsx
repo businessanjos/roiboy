@@ -53,7 +53,7 @@ export function ZappTagBadge({
   const badge = variant === "icon" ? (
     <span
       data-zapp-tag="1"
-      aria-label={`Etiqueta: ${tag.name}`}
+      aria-label={tag.name}
       className={cn("inline-flex h-4 w-4 shrink-0 items-center justify-center", className)}
     >
       <TagIcon className="h-3.5 w-3.5" style={{ color, fill: color }} strokeWidth={2} />
@@ -88,7 +88,7 @@ export function ZappTagBadge({
         <TooltipContent side="top" sideOffset={6} className="max-w-[18rem] text-xs">
           <span className="flex items-center gap-1.5">
             <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-            <span>{tooltipLabel ?? `Etiqueta: ${tag.name}`}</span>
+            <span>{tooltipLabel ?? tag.name}</span>
           </span>
         </TooltipContent>
       </Tooltip>
