@@ -19,6 +19,7 @@ import { ChevronRight, Search } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { isUnknownContactName, resolveZappContactNames } from "@/lib/zappContactNames";
 
 export interface ContactRow {
   contact_key: string;
@@ -132,7 +133,16 @@ export function ZappContactsBreakdownDialog({
         _direction: direction,
       });
       if (error) throw error;
-      return (data as ContactRow[]) || [];
+      const list = (data as ContactRow[]) || [];
+      const unknown = list.filter((r) => r.conversation_id && isUnknownContactName(r.contact_name, r.phone_e164));
+      if (unknown.length) {
+        const names = await resolveZappContactNames(unknown.map((r) => r.conversation_id!));
+        for (const r of unknown) {
+          const n = names.get(r.conversation_id!);
+          if (n) r.contact_name = n;
+        }
+      }
+      return list;
     },
   });
 
