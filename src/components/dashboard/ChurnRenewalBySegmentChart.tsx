@@ -414,17 +414,6 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
               </BarChart>
             </ChartContainer>
           )}
-          {chartData.some((r) => r.segment === "Sem produto") && (
-            <div className="mt-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSelectedSegment("Sem produto")}
-                className="text-xs font-medium text-primary hover:underline"
-              >
-                Ver quem está sem produto
-              </button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
