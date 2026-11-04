@@ -568,7 +568,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
                 onClick={requestApproval}
                 size="lg"
                 className="w-full gap-2 bg-warning hover:bg-warning text-white"
-                disabled={pendingSpins <= 0 || requesting || !dealsOk || (usingPool && prizesQuery.isLoading)}
+                disabled={pendingSpins <= 0 || requesting || !dealsOk || !competence || (usingPool && prizesQuery.isLoading)}
               >
                 <ShieldCheck className="h-5 w-5" />
                 {requesting ? "Enviando solicitação..." : "Solicitar Giro ao Gestor"}

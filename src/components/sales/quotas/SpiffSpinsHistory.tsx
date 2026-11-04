@@ -31,6 +31,7 @@ type SpinRow = {
   prize_amount: number;
   prize_label: string | null;
   spun_at: string;
+  competence_month?: string | null;
   payment_status: "pending" | "paid" | "cancelled";
   cancelled_at: string | null;
   cancelled_reason: string | null;
@@ -80,7 +81,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
       while (true) {
         const { data, error } = await supabase
           .from("spiff_spins")
-          .select("id, spiff_id, user_id, prize_amount, prize_label, spun_at, payment_status, paid_at, paid_by, payment_notes, cancelled_at, cancelled_reason")
+          .select("id, spiff_id, user_id, prize_amount, prize_label, spun_at, competence_month, payment_status, paid_at, paid_by, payment_notes, cancelled_at, cancelled_reason")
           .eq("account_id", accountId!)
           .order("spun_at", { ascending: false })
           .order("id", { ascending: false })
@@ -431,7 +432,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-sm font-medium line-clamp-2 break-words">{userById.get(r.user_id)?.name || "—"}</div>
-                      <div className="text-xs text-muted-foreground line-clamp-1">{spiffById.get(r.spiff_id) || "—"} · {format(new Date(r.spun_at), "dd/MM/yy HH:mm", { locale: ptBR })}</div>
+                      <div className="text-xs text-muted-foreground line-clamp-1">{spiffById.get(r.spiff_id) || "—"}{r.competence_month ? ` · Comp. ${new Date(`${String(r.competence_month).slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}` : ""} · {format(new Date(r.spun_at), "dd/MM/yy HH:mm", { locale: ptBR })}</div>
                     </div>
                     <div className="shrink-0">{renderStatus(r)}</div>
                   </div>
@@ -452,6 +453,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
                   <TableHead>Data</TableHead>
                   <TableHead>Vendedor</TableHead>
                   <TableHead>Campanha</TableHead>
+                  <TableHead>Competência</TableHead>
                   <TableHead>Prêmio</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead className="text-center">Status</TableHead>
@@ -469,6 +471,11 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
                       </TableCell>
                       <TableCell className="font-medium">{userById.get(r.user_id)?.name || "—"}</TableCell>
                       <TableCell className="text-sm">{spiffById.get(r.spiff_id) || "—"}</TableCell>
+                      <TableCell className="text-xs capitalize whitespace-nowrap">
+                        {r.competence_month
+                          ? new Date(`${String(r.competence_month).slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
+                          : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
                       <TableCell className="text-sm">
                         {r.prize_label || <span className="text-muted-foreground">—</span>}
                       </TableCell>

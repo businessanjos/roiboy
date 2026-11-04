@@ -27,6 +27,7 @@ interface PendingRequest {
   user_id: string;
   requested_by: string | null;
   created_at: string;
+  competence_month?: string | null;
   spiff?: any;
   spiff_name?: string;
   user_name?: string;
@@ -55,7 +56,7 @@ export function RouletteApprovalsQueue() {
     queryFn: async (): Promise<PendingRequest[]> => {
       const { data, error } = await supabase
         .from("spiff_spin_requests" as any)
-        .select("id, spiff_id, user_id, requested_by, created_at")
+        .select("id, spiff_id, user_id, requested_by, created_at, competence_month")
         .eq("account_id", currentUser!.account_id)
         .eq("status", "pending")
         .order("created_at", { ascending: true });
@@ -79,6 +80,7 @@ export function RouletteApprovalsQueue() {
         user_id: r.user_id,
         requested_by: r.requested_by,
         created_at: r.created_at,
+        competence_month: r.competence_month,
         spiff: spiffMap.get(r.spiff_id) ?? null,
         spiff_name: (spiffMap.get(r.spiff_id) as any)?.name ?? "SPIFF",
         user_name: userMap.get(r.user_id) ?? "Vendedor",
@@ -219,6 +221,11 @@ export function RouletteApprovalsQueue() {
                     quer girar
                   </span>{" "}
                   {r.spiff_name}
+                  {r.competence_month && (
+                    <Badge variant="outline" className="ml-1.5 text-[10px] capitalize align-middle">
+                      {new Date(`${String(r.competence_month).slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                    </Badge>
+                  )}
                 </div>
                 <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
                   <Clock className="h-3 w-3" />
