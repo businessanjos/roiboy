@@ -305,10 +305,14 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
 
   const [previewConv, setPreviewConv] = useState<{ id: string; page: number } | null>(null);
   const openConversation = (id: string, page = 0) => setPreviewConv({ id, page });
-  const openConversationFull = (id: string, page = 0) => {
+  // Fecha a lista antes da prévia (dois modais empilhados travavam a tela) e a reabre ao fechar a prévia.
+  const [reopenAfterPreview, setReopenAfterPreview] = useState<{ contacts?: "inbound" | "outbound"; alert?: ZappAlertDetailKind } | null>(null);
+  const openFromContacts = (id: string) => { setReopenAfterPreview({ contacts: contactsDialog ?? undefined }); setContactsDialog(null); openConversation(id); };
+  const openFromAlert = (id: string) => { setReopenAfterPreview({ alert: alertDetail ?? undefined }); setAlertDetail(null); openConversation(id); };
+  const openConversationFull = (id: string, page = 0, alertOverride?: ZappAlertDetailKind) => {
     const originState = { ...(location.state ?? {}), zappAnalyticsSnapshot: {
       sector, period, customRange, scope, includeGroups, agentId, convTarget,
-      showUnattributed, newConvDialog, alertDetail, page, newUnidentified,
+      showUnattributed, newConvDialog, alertDetail: alertOverride ?? alertDetail, page, newUnidentified,
     } };
     delete originState.zappConversationReturn;
     const params = new URLSearchParams(location.search);
@@ -1035,7 +1039,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
 
         {contactsDialog && (
           <ZappContactsBreakdownDialog
-            onOpenConversation={openConversation}
+            onOpenConversation={openFromContacts}
             open={!!contactsDialog}
             onOpenChange={(o) => !o && setContactsDialog(null)}
             direction={contactsDialog}
@@ -1051,7 +1055,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
 
         {alertDetail && (
           <ZappAlertDetailDialog
-            onOpenConversation={openConversation}
+            onOpenConversation={openFromAlert}
             open={!!alertDetail}
             onOpenChange={(o) => !o && setAlertDetail(null)}
             kind={alertDetail}
@@ -1067,8 +1071,19 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
 
         <ZappConversationQuickPreview
           conversationId={previewConv?.id ?? null}
-          onClose={() => setPreviewConv(null)}
-          onOpenFull={(id) => { const p = previewConv?.page ?? 0; setPreviewConv(null); openConversationFull(id, p); }}
+          onClose={() => {
+            setPreviewConv(null);
+            if (reopenAfterPreview?.contacts) setContactsDialog(reopenAfterPreview.contacts);
+            if (reopenAfterPreview?.alert) setAlertDetail(reopenAfterPreview.alert);
+            setReopenAfterPreview(null);
+          }}
+          onOpenFull={(id) => {
+            const p = previewConv?.page ?? 0;
+            const alertToRestore = reopenAfterPreview?.alert;
+            setReopenAfterPreview(null);
+            setPreviewConv(null);
+            openConversationFull(id, p, alertToRestore);
+          }}
         />
       </div>
     </ScrollArea>
