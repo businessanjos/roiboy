@@ -40,6 +40,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PERMISSIONS } from "@/lib/access/permissions";
 import { useSectorNavItems } from "@/hooks/useSectorNavItems";
 import { useSector } from "@/contexts/SectorContext";
+import { useInternalClientIds } from "@/hooks/useInternalClientIds";
+import { applyInternalClientExclusion } from "@/lib/internalClients";
 
 function useSearchSectorPages() {
   // Fixed hook calls for the fixed sector catalog; every menu uses the same filtering.
@@ -152,6 +154,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     });
   }, [hasSectorAccess, permissionsLoading, sectorLoading, canSeeRh, sectorPages]);
 
+  // Cadastros com telefone da própria equipe não aparecem como cliente.
+  const { internalClientIds, isLoading: internalIdsLoading } = useInternalClientIds();
   const canViewClients = hasPermission(PERMISSIONS.CLIENTS_VIEW);
   const canViewSales = hasSectorAccess("vendas");
   const canViewLeads = canViewSales && canViewClients;
@@ -201,7 +205,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       return;
     }
 
-    const cacheKey = `${term.toLowerCase()}|${canViewClients}${canViewLeads}${canViewSales}${canViewEvents}${canViewCollaborators}${canViewTasks}${canViewProducts}${canViewFinancial}${canViewMarketing}${canViewTeam}${canViewContracts}|${zappSectorKey}`;
+    const cacheKey = `${term.toLowerCase()}|${canViewClients}${canViewLeads}${canViewSales}${canViewEvents}${canViewCollaborators}${canViewTasks}${canViewProducts}${canViewFinancial}${canViewMarketing}${canViewTeam}${canViewContracts}|${zappSectorKey}|${internalClientIds.join(",")}`;
     const cached = resultCache.get(cacheKey);
     if (cached) {
       setRemote(cached);
@@ -227,10 +231,13 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         ];
         if (phoneLike) filters.push(`phone_e164.ilike.${phoneLike}`, `cpf.ilike.${phoneLike}`);
         tasks.push(
-          supabase
-            .from("clients")
-            .select("id, full_name, company_name, city, state")
-            .or(filters.join(","))
+          applyInternalClientExclusion(
+            supabase
+              .from("clients")
+              .select("id, full_name, company_name, city, state")
+              .or(filters.join(",")),
+            internalClientIds,
+          )
             .limit(6)
             .then(({ data }) =>
               (data || []).map((c) => ({
@@ -614,7 +621,11 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       const results = settled.flat();
 
       if (requestRef.current !== reqId) return;
-      resultCache.set(cacheKey, results);
+      // Sem os números internos ainda não vale guardar: o resultado pode ter
+      // vindo antes deles carregarem e mostraria cadastro interno como cliente.
+      if (!internalIdsLoading) {
+        resultCache.set(cacheKey, results);
+      }
       if (resultCache.size > 80) {
         resultCache.delete(resultCache.keys().next().value as string);
       }
@@ -641,6 +652,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     canViewContracts,
     zappSectorKey,
     zappSectorIds,
+    internalClientIds,
   ]);
 
 

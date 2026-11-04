@@ -1,6 +1,7 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { failIf, jsonResult, requireSector } from "../helpers";
+import { applyInternalClientExclusion, fetchInternalClientIds } from "@/lib/internalClients";
 
 export default defineTool({
   name: "clients_portfolio",
@@ -21,12 +22,14 @@ export default defineTool({
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ status, search, expiring_before, limit, offset, summary_only, include_contracts }, ctx) => {
     const supabase = await requireSector(ctx, "operacoes");
+    // Cadastros com telefone da própria equipe não são clientes.
+    const internalIds = await fetchInternalClientIds(supabase);
 
     const applyClientFilters = (query: any) => {
       let q = query;
       if (status !== "all") q = q.eq("status", status);
       if (search) q = q.or(`full_name.ilike.%${search}%,company_name.ilike.%${search}%`);
-      return q;
+      return applyInternalClientExclusion(q, internalIds);
     };
 
     // Total real da base (respeitando RLS e filtros), independente da paginação.
@@ -44,6 +47,7 @@ export default defineTool({
         statuses.map(async (s) => {
           let q = supabase.from("clients").select("id", { count: "exact", head: true }).eq("status", s);
           if (search) q = q.or(`full_name.ilike.%${search}%,company_name.ilike.%${search}%`);
+          q = applyInternalClientExclusion(q, internalIds);
           const r = await q;
           return [s, r.error ? 0 : r.count ?? 0] as const;
         }),

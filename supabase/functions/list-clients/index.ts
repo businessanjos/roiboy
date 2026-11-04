@@ -59,6 +59,13 @@ Deno.serve(async (req) => {
     const accountId = auth.accountId!;
     const userId = auth.userId;
 
+    // Cadastros com telefone da própria equipe não são clientes: ficam fora da
+    // lista, da paginação e do total (mesma regra das métricas e do RoyZapp).
+    const { data: internalIdsData } = await supabase.rpc("internal_client_ids", {
+      p_account_id: accountId,
+    });
+    const internalClientIds: string[] = (internalIdsData as string[] | null) ?? [];
+
     // For API key auth, default to admin role
     // For JWT/session auth, fetch user role
     if (auth.method !== "api_key" && userId) {
@@ -544,6 +551,14 @@ Deno.serve(async (req) => {
       // Período pela última movimentação registrada na ficha do cliente.
       if (updatedFrom) q = q.gte("recent_activity_at", updatedFrom);
       if (updatedTo) q = q.lte("recent_activity_at", updatedTo);
+
+      if (internalClientIds.length > 0) {
+        q = q.not(
+          "id",
+          "in",
+          `(${internalClientIds.map((id) => `"${id}"`).join(",")})`,
+        );
+      }
 
       return q;
     };
