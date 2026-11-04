@@ -95,16 +95,17 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
       await startSequenceRun({
         conversationId,
         sequence: { id: s.id, name: s.name },
-        steps: s.steps.flatMap((st) => {
-          const item = itemById.get(st.playbook_item_id);
-          if (!item) return [];
+        steps: s.steps.filter((st) => itemById.has(st.playbook_item_id)).map((st, pos) => {
+          const item = itemById.get(st.playbook_item_id)!;
           const processed = item.text_content ? replaceVariables(item.text_content, variables) : undefined;
           const text = buildText ? buildText(item, processed) : (processed || "");
           const caption = item.media_caption ? replaceVariables(item.media_caption, variables) : "";
-          return [{
-            name: item.name, content_type: item.content_type, text_content: (signText ? signText(text) : text) || null,
+          // Assinatura só na primeira mensagem; as seguintes chegam limpas.
+          const sign = (t: string) => (pos === 0 && signText ? signText(t) : t);
+          return {
+            name: item.name, content_type: item.content_type, text_content: sign(text) || null,
             media_url: item.media_url, media_filename: item.media_filename,
-            media_caption: (signText ? signText(caption) : caption) || null,
+            media_caption: sign(caption) || null,
             delay_seconds: st.delay_seconds,
           }];
         }),
