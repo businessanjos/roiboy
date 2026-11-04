@@ -9,6 +9,22 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RouletteCardShuffle, ShuffleCard } from "./RouletteCardShuffle";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+/** Competências disponíveis: de julho/2026 (início da campanha) até o mês atual, mais recente primeiro. */
+function competenceOptions() {
+  const now = new Date();
+  const out: { value: string; label: string }[] = [];
+  let d = new Date(now.getFullYear(), now.getMonth(), 1);
+  const start = new Date(2026, 6, 1);
+  while (d >= start && out.length < 24) {
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+    const l = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    out.push({ value, label: l.charAt(0).toUpperCase() + l.slice(1) });
+    d = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  }
+  return out;
+}
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -114,6 +130,8 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
   const [requestId, setRequestId] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
   const [approver, setApprover] = useState<{ id: string; name: string } | null>(null);
+  const compOptions = competenceOptions();
+  const [competence, setCompetence] = useState<string>("");
 
   const min = Number(spiff.roulette_min_prize ?? 0);
   const max = Number(spiff.roulette_max_prize ?? 0);
@@ -127,6 +145,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
     setApprover(null);
     setRequestId(null);
     setSelectedDeals(new Set());
+    setCompetence("");
 
     // Retoma solicitação pendente já enviada (o pedido continua na fila
     // do gestor mesmo se o vendedor fechar a tela).
@@ -134,7 +153,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
     (async () => {
       const { data } = await supabase
         .from("spiff_spin_requests" as any)
-        .select("id")
+        .select("id, competence_month")
         .eq("spiff_id", spiff.id)
         .eq("user_id", user.uid)
         .eq("status", "pending")
@@ -143,6 +162,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
         .maybeSingle();
       if (cancelled || !data) return;
       setRequestId((data as any).id);
+      if ((data as any).competence_month) setCompetence(String((data as any).competence_month).slice(0, 10));
       setPhase("awaiting_approval");
     })();
     return () => {
@@ -187,6 +207,10 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
       return;
     }
     if (!currentUser?.account_id) return;
+    if (!competence) {
+      toast.error("Escolha o mês de competência do giro.");
+      return;
+    }
     if (usingPool && (prizesQuery.data?.length ?? 0) === 0) {
       toast.error("Nenhum prêmio configurado nesta roleta.");
       return;
@@ -200,6 +224,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
         user_id: user.uid,
         requested_by: currentUser.id,
         status: "pending",
+        competence_month: competence,
       })
       .select("id")
       .single();
@@ -211,6 +236,10 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
     setRequestId((data as any).id);
     setPhase("awaiting_approval");
     toast.success("Solicitação enviada ao gestor. Aguardando aprovação...");
+    // Aviso no WhatsApp do gestor com botões Aprovar/Recusar (não bloqueia o fluxo).
+    supabase.functions
+      .invoke("spin-request-whatsapp", { body: { action: "notify", request_id: (data as any).id } })
+      .catch((e) => console.warn("Aviso de giro no WhatsApp falhou:", e));
   };
 
   // Realtime: ouvir status do request
@@ -287,6 +316,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
         created_by: currentUser.id,
         approved_by: approver.id,
         approved_at: new Date().toISOString(),
+        competence_month: competence || null,
       } as any)
       .select("id")
       .single();
@@ -473,6 +503,22 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
         </DialogHeader>
 
         <div className="py-4 space-y-4 min-w-0 w-full overflow-hidden">
+          <div className="rounded-lg border bg-muted/20 px-3 py-2.5 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium">Mês de competência</p>
+              <p className="text-[10px] text-muted-foreground">A qual mês este giro se refere — fica no histórico.</p>
+            </div>
+            <Select value={competence} onValueChange={setCompetence} disabled={phase !== "idle"}>
+              <SelectTrigger className="h-9 w-[170px] text-xs shrink-0" aria-label="Mês de competência">
+                <SelectValue placeholder="Escolha o mês" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {compOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           {requiresDeals && (phase === "idle" || phase === "result" || (phase === "awaiting_approval" && selectedDeals.size === 0)) && (
             <div className="rounded-lg border bg-muted/20 min-w-0 overflow-hidden">
               <div className="flex items-center justify-between gap-2 px-3 py-2 border-b">
