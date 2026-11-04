@@ -10,8 +10,12 @@ export const SEQUENCE_MAX_DELAY = 300;
 export interface SequenceStep {
   id?: string;
   playbook_item_id: string;
+  /** Passo de ação: etiqueta a conversa em vez de enviar mensagem. */
+  tag_id?: string | null;
   delay_seconds: number;
 }
+
+export const isTagStep = (s: { tag_id?: string | null }) => !!s.tag_id;
 
 export interface PlaybookSequence {
   id: string;
@@ -40,7 +44,7 @@ export function usePlaybookSequences(sectorId?: string | null) {
     enabled: !!accountId,
     queryFn: async (): Promise<PlaybookSequence[]> => {
       let q = db.from("playbook_sequences")
-        .select("id, name, visibility, sector_id, created_by, playbook_sequence_steps(id, playbook_item_id, delay_seconds, position)")
+        .select("id, name, visibility, sector_id, created_by, playbook_sequence_steps(id, playbook_item_id, tag_id, delay_seconds, position)")
         .order("name");
       if (sectorId) q = q.eq("sector_id", sectorId);
       const { data, error } = await q;
@@ -49,7 +53,7 @@ export function usePlaybookSequences(sectorId?: string | null) {
         ...s,
         steps: (s.playbook_sequence_steps || [])
           .sort((a: any, b: any) => a.position - b.position)
-          .map((st: any) => ({ id: st.id, playbook_item_id: st.playbook_item_id, delay_seconds: st.delay_seconds })),
+          .map((st: any) => ({ id: st.id, playbook_item_id: st.playbook_item_id || "", tag_id: st.tag_id || null, delay_seconds: st.delay_seconds })),
       }));
     },
   });
@@ -57,7 +61,7 @@ export function usePlaybookSequences(sectorId?: string | null) {
   const save = useMutation({
     mutationFn: async (input: { id?: string; name: string; visibility: "personal" | "sector"; steps: SequenceStep[] }) => {
       if (!accountId || !currentUser?.id) throw new Error("Usuário não carregado");
-      const steps = input.steps.filter((s) => s.playbook_item_id).slice(0, SEQUENCE_MAX_STEPS);
+      const steps = input.steps.filter((s) => s.playbook_item_id || s.tag_id).slice(0, SEQUENCE_MAX_STEPS);
       if (!input.name.trim()) throw new Error("Dê um nome para a sequência");
       if (steps.length === 0) throw new Error("Adicione ao menos uma mensagem");
       let id = input.id;
@@ -76,7 +80,7 @@ export function usePlaybookSequences(sectorId?: string | null) {
         id = data.id;
       }
       const { error: stepErr } = await db.from("playbook_sequence_steps").insert(
-        normalizeSequenceSteps(steps).map((s, i) => ({ sequence_id: id, account_id: accountId, playbook_item_id: s.playbook_item_id, position: i, delay_seconds: s.delay_seconds })),
+        normalizeSequenceSteps(steps).map((s, i) => ({ sequence_id: id, account_id: accountId, playbook_item_id: s.tag_id ? null : s.playbook_item_id, tag_id: s.tag_id || null, position: i, delay_seconds: s.delay_seconds })),
       );
       if (stepErr) throw stepErr;
     },
@@ -128,7 +132,7 @@ export function buildRunStepRows(
   const times = computeSequenceSchedule(delays, startMs);
   return steps.map((s, i) => ({
     run_id: runId, account_id: accountId, position: i, name: s.name, content_type: s.content_type,
-    text_content: s.text_content, media_url: s.media_url, media_filename: s.media_filename, media_caption: s.media_caption,
+    text_content: s.text_content, media_url: s.media_url, media_filename: s.media_filename, media_caption: s.media_caption, tag_id: s.tag_id || null,
     delay_seconds: effectiveDelay(delays, i),
     scheduled_at: new Date(times[i]).toISOString(),
   }));
@@ -139,7 +143,7 @@ export interface StartRunInput {
   sequence: { id: string | null; name: string };
   steps: Array<{
     name: string; content_type: string; text_content: string | null;
-    media_url: string | null; media_filename: string | null; media_caption: string | null; delay_seconds: number;
+    media_url: string | null; media_filename: string | null; media_caption: string | null; delay_seconds: number; tag_id?: string | null;
   }>;
 }
 
