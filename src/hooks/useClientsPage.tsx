@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { CustomField, FieldOption } from "@/components/custom-fields";
 import { ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
 import { useClientProductsChanged } from "@/lib/client/clientProductsEvents";
+import { useZappInternalContacts } from "@/hooks/useZappInternalContacts";
+import { isInternalClientRecord } from "@/lib/zappInternalContacts";
 
 
 // E.164 format: + followed by 1-15 digits
@@ -71,6 +73,8 @@ export function useClientsPage() {
   const { currentUser } = useCurrentUser();
   const { canCreate, isNearLimit, data: planData } = usePlanLimits();
   const { logAudit } = useAuditLog();
+  // Números da própria equipe: cadastro com um deles não é cliente.
+  const { internalCores } = useZappInternalContacts();
 
   const [clients, setClients] = useState<any[]>([]);
   const [contractMap, setContractMap] = useState<Record<string, ContractData>>({});
@@ -345,9 +349,15 @@ export function useClientsPage() {
     }
   }, [clients, fetchFieldValues, fetchPendingFormSends]);
 
+  // Cadastros cujo telefone é da equipe ficam fora da lista de clientes.
+  const visibleClients = useMemo(
+    () => clients.filter((client) => !isInternalClientRecord(client, internalCores)),
+    [clients, internalCores],
+  );
+
   return {
     // Data
-    clients,
+    clients: visibleClients,
     contractMap,
     whatsappMap,
     products,
