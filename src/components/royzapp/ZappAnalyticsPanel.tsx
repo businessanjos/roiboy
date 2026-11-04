@@ -63,6 +63,7 @@ import {
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ZappContactsBreakdownDialog } from "./ZappContactsBreakdownDialog";
+import { ZappConversationQuickPreview } from "./ZappConversationQuickPreview";
 import { ZappNewConversationsDialog, type NewConvFilter } from "./ZappNewConversationsDialog";
 import { ZappAlertDetailDialog, type ZappAlertDetailKind } from "./ZappAlertDetailDialog";
 import { ZappAgentConversationsDialog, type AgentConversationsTarget } from "./ZappAgentConversationsDialog";
@@ -302,7 +303,9 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   const [alertDetail, setAlertDetail] = useState<ZappAlertDetailKind | null>(saved?.alertDetail ?? null);
   const [aiLoading, setAiLoading] = useState(false);
 
-  const openConversation = (id: string, page = 0) => {
+  const [previewConv, setPreviewConv] = useState<{ id: string; page: number } | null>(null);
+  const openConversation = (id: string, page = 0) => setPreviewConv({ id, page });
+  const openConversationFull = (id: string, page = 0) => {
     const originState = { ...(location.state ?? {}), zappAnalyticsSnapshot: {
       sector, period, customRange, scope, includeGroups, agentId, convTarget,
       showUnattributed, newConvDialog, alertDetail, page, newUnidentified,
@@ -1060,6 +1063,12 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             periodLabel={`${format(range.from, "dd/MM", { locale: ptBR })} a ${format(range.to, "dd/MM", { locale: ptBR })}${selectedAgentName ? ` · ${selectedAgentName}` : ""}`}
           />
         )}
+
+        <ZappConversationQuickPreview
+          conversationId={previewConv?.id ?? null}
+          onClose={() => setPreviewConv(null)}
+          onOpenFull={(id) => { const p = previewConv?.page ?? 0; setPreviewConv(null); openConversationFull(id, p); }}
+        />
       </div>
     </ScrollArea>
   );
