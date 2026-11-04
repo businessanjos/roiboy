@@ -5,9 +5,10 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, ChevronsUpDown, Plus, Tag } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ZappTagBadge } from "@/components/royzapp/ZappTagBadge";
 
 export interface ZappTagLite { id: string; name: string; color: string }
 
@@ -29,17 +30,7 @@ export function useZappTagsLite() {
 
 /** Etiqueta salva no ROY como selo legível (cor + nome), nunca só um ponto. */
 export function ZappTagChip({ tag, className }: { tag: { name: string; color?: string | null }; className?: string }) {
-  const c = tag.color || "#6b7c85";
-  return (
-    <span
-      className={cn("inline-flex h-4 max-w-[9rem] items-center gap-1 rounded-full border px-1.5 text-[10px] font-medium leading-none", className)}
-      style={{ backgroundColor: `${c}1f`, borderColor: `${c}55`, color: c }}
-      title={tag.name}
-    >
-      <Tag className="h-2.5 w-2.5 shrink-0" />
-      <span className="truncate">{tag.name}</span>
-    </span>
-  );
+  return <ZappTagBadge tag={tag} className={className} tooltip={false} />;
 }
 
 export function SequenceTagStepSelect({ value, onChange, className }: { value?: string | null; onChange: (id: string) => void; className?: string }) {
