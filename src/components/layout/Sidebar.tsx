@@ -343,7 +343,17 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
               )}
               <Link
                 to={item.to}
-                onClick={onNavigate}
+                onClick={(event) => {
+                  if (zappGateMessage && item.to.startsWith("/roy-zapp")) {
+                    event.preventDefault();
+                    toast(zappGateMessage, {
+                      description: "Escolha um WhatsApp na tela para abrir esta área.",
+                    });
+                    onNavigate?.();
+                    return;
+                  }
+                  onNavigate?.();
+                }}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
