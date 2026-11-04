@@ -260,9 +260,35 @@ export function ClientBusinessProfile({
   };
 
   // Linha de conversão compartilhada: mesmo formato em todos os cartões.
-  const foreignLine = (brl: number | null | undefined) => {
+  // Meses passados: usa o valor/câmbio registrado no lançamento (fixo), nunca a cotação do dia.
+  const foreignLine = (brl: number | null | undefined, notes?: string | null) => {
+    if (!foreignCountry || brl == null) return null;
+    const fmt = (v: number) => {
+      try {
+        return v.toLocaleString("pt-BR", { style: "currency", currency: foreignCountry.currency });
+      } catch {
+        return `${foreignCountry.currencySymbol} ${v.toFixed(2)}`;
+      }
+    };
+    const parseNum = (s: string) => Number(s.replace(/\./g, "").replace(",", "."));
+    const amtMatch = notes?.match(/[€$£]\s?([\d.]+(?:,\d+)?)/);
+    const rateMatch = notes?.match(/c[âa]mbio\s*([\d]+(?:,\d+)?)/i);
+    const fixedRate = rateMatch ? parseNum(rateMatch[1]) : 0;
+    if (amtMatch || fixedRate) {
+      const value = amtMatch ? parseNum(amtMatch[1]) : brl / fixedRate;
+      const rate = fixedRate || (value ? brl / value : 0);
+      return (
+        <ForeignRevenueLine
+          amount={fmt(value)}
+          countryName={foreignCountry.name}
+          currencyCode={foreignCountry.currency}
+          rate={rate}
+          fixed
+        />
+      );
+    }
     const amount = inForeign(brl);
-    if (!amount || !foreignCountry) return null;
+    if (!amount) return null;
     return (
       <ForeignRevenueLine
         amount={amount}
@@ -649,7 +675,10 @@ export function ClientBusinessProfile({
                 onCommit={commitMonthRevenue}
                 className="text-lg font-bold text-primary"
               />
-              {foreignLine(selectedMonthRevenue)}
+              {foreignLine(
+                selectedMonthRevenue,
+                history.find((h: any) => String(h.month).slice(0, 7) === selectedMonth)?.notes,
+              )}
               <p className="text-[10px] text-muted-foreground mt-1">
                 {selectedMonthRevenue == null
                   ? `Sem faturamento informado para ${monthLabel(selectedMonth)}`
@@ -1045,16 +1074,18 @@ function ForeignRevenueLine({
   countryName,
   currencyCode,
   rate,
+  fixed,
 }: {
   amount: string;
   countryName: string;
   currencyCode: string;
   rate: number;
+  fixed?: boolean;
 }) {
   return (
     <div
       className="mt-1.5 flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/50 px-2 py-1"
-      title={`Cotação de hoje: 1 ${currencyCode} = R$ ${rate.toFixed(2).replace(".", ",")}`}
+      title={`${fixed ? "Valor fixo do mês, câmbio registrado" : "Cotação de hoje"}: 1 ${currencyCode} = R$ ${rate.toFixed(2).replace(".", ",")}`}
     >
       <span className="truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
         Em {countryName}
