@@ -155,7 +155,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   }, [hasSectorAccess, permissionsLoading, sectorLoading, canSeeRh, sectorPages]);
 
   // Cadastros com telefone da própria equipe não aparecem como cliente.
-  const { internalClientIds } = useInternalClientIds();
+  const { internalClientIds, isLoading: internalIdsLoading } = useInternalClientIds();
   const canViewClients = hasPermission(PERMISSIONS.CLIENTS_VIEW);
   const canViewSales = hasSectorAccess("vendas");
   const canViewLeads = canViewSales && canViewClients;
@@ -205,7 +205,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       return;
     }
 
-    const cacheKey = `${term.toLowerCase()}|${canViewClients}${canViewLeads}${canViewSales}${canViewEvents}${canViewCollaborators}${canViewTasks}${canViewProducts}${canViewFinancial}${canViewMarketing}${canViewTeam}${canViewContracts}|${zappSectorKey}`;
+    const cacheKey = `${term.toLowerCase()}|${canViewClients}${canViewLeads}${canViewSales}${canViewEvents}${canViewCollaborators}${canViewTasks}${canViewProducts}${canViewFinancial}${canViewMarketing}${canViewTeam}${canViewContracts}|${zappSectorKey}|${internalClientIds.join(",")}`;
     const cached = resultCache.get(cacheKey);
     if (cached) {
       setRemote(cached);
@@ -621,7 +621,11 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       const results = settled.flat();
 
       if (requestRef.current !== reqId) return;
-      resultCache.set(cacheKey, results);
+      // Sem os números internos ainda não vale guardar: o resultado pode ter
+      // vindo antes deles carregarem e mostraria cadastro interno como cliente.
+      if (!internalIdsLoading) {
+        resultCache.set(cacheKey, results);
+      }
       if (resultCache.size > 80) {
         resultCache.delete(resultCache.keys().next().value as string);
       }
