@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { fetchInternalClientIds } from "@/lib/internalClients";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
@@ -18,7 +19,7 @@ export function useInternalClientIds() {
     queryKey: ["internal-client-ids", accountId],
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
-    queryFn: () => fetchInternalClientIds(supabaseClient, accountId),
+    queryFn: () => fetchInternalClientIds(supabase, accountId),
   });
 
   return { internalClientIds: data ?? NO_IDS, isLoading };
