@@ -85,6 +85,35 @@ export function ZappTagBadge({
   );
 }
 
+/** Selo "+N" das etiquetas que não couberam; a dica de mouse lista quais são. */
+export function ZappTagMore({ count, tags }: { count: number; tags: ZappTagLike[] }) {
+  return (
+    <TooltipProvider delayDuration={120} skipDelayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex h-[18px] shrink-0 items-center rounded-full border border-zapp-border bg-zapp-panel px-1.5 text-[10px] font-medium leading-none text-zapp-text-muted">
+            +{count}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" sideOffset={6} className="max-w-[18rem] text-xs">
+          <span className="flex flex-col gap-1">
+            {tags.map((t, i) => (
+              <span key={i} className="flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: t.color || FALLBACK_COLOR }}
+                />
+                <span className="truncate">{t.name}</span>
+              </span>
+            ))}
+          </span>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 /** Lista de etiquetas da conversa, já filtrada e pronta para exibir. */
 export function getConversationTags(
   conversationTags?: { tag_id: string; tag: ZappTagLike & { id?: string } | null }[] | null,

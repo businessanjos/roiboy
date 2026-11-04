@@ -183,17 +183,11 @@ export const ZappConversationItem = memo(function ZappConversationItem({
             {(() => {
               const tagList = getConversationTags(assignment.conversation_tags);
               if (tagList.length === 0) return null;
+              const hidden = tagList.slice(1);
               return (
                 <span className="flex shrink-0 items-center gap-1">
-                  <ZappTagBadge tag={tagList[0]} className="max-w-[6rem]" />
-                  {tagList.length > 1 && (
-                    <span className="hidden sm:inline-flex min-w-0">
-                      <ZappTagBadge tag={tagList[1]} className="max-w-[6rem]" />
-                    </span>
-                  )}
-                  {tagList.length > 2 && (
-                    <span className="text-[10px] text-zapp-text-muted">+{tagList.length - 2}</span>
-                  )}
+                  <ZappTagBadge tag={tagList[0]} className="max-w-[9rem]" />
+                  {hidden.length > 0 && <ZappTagMore count={hidden.length} tags={hidden} />}
                 </span>
               );
             })()}
