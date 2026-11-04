@@ -2,6 +2,7 @@ import { ZappTagBadge } from "@/components/royzapp/ZappTagBadge";
 import { memo, useState } from "react";
 import { ZappGroupClientsDialog } from "./dialogs/ZappGroupClientsDialog";
 import { ZappGroupParticipantsDialog } from "./dialogs/ZappGroupParticipantsDialog";
+import { ZappEditContactDialog } from "./dialogs/ZappEditContactDialog";
 import {
   ArrowLeft,
   ArrowRightLeft,
@@ -124,10 +125,22 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   const internalContact = isInternalContactPhone(contactInfo.phone, internalCores);
   const [groupClientsOpen, setGroupClientsOpen] = useState(false);
   const [participantsOpen, setParticipantsOpen] = useState(false);
+  const [editContactOpen, setEditContactOpen] = useState(false);
   const groupJid = assignment.zapp_conversation?.group_jid || null;
 
   return (
     <div className="flex flex-col">
+      {!isGroup && conversationId && accountId && (
+        <ZappEditContactDialog
+          open={editContactOpen}
+          onOpenChange={setEditContactOpen}
+          conversationId={conversationId}
+          accountId={accountId}
+          currentName={assignment.zapp_conversation?.contact_name || contactInfo.name || ""}
+          phone={assignment.zapp_conversation?.phone_e164 || contactInfo.phone || null}
+          isNotClient={internalContact}
+        />
+      )}
       {isGroup && conversationId && accountId && (
         <ZappGroupClientsDialog open={groupClientsOpen} onOpenChange={setGroupClientsOpen} conversationId={conversationId} accountId={accountId} />
       )}
@@ -564,6 +577,15 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                       {showLeadOption ? "Adicionar Contato" : "Adicionar Cliente"}
                     </DropdownMenuItem>
                   </>
+                )}
+                {!isGroup && conversationId && accountId && (
+                  <DropdownMenuItem
+                    className="text-zapp-text hover:bg-zapp-hover"
+                    onClick={() => setEditContactOpen(true)}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    {internalContact ? "Editar contato (não é cliente)" : "Editar contato / Não é cliente"}
+                  </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator className="bg-zapp-border" />
                 {isGroup && onOpenEditGroup && (

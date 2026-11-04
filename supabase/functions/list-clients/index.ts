@@ -209,7 +209,25 @@ Deno.serve(async (req) => {
 
     // Pre-filter by product if needed
     let productFilterClientIds: string[] | null = null;
-    if (productId && productId !== "all") {
+    if (productId === "none") {
+      // "Sem produto": clientes da conta sem nenhum produto ativo.
+      const withProduct = new Set<string>();
+      for (let from = 0; ; from += 1000) {
+        const { data } = await supabase.from("client_products").select("client_id")
+          .eq("account_id", accountId).eq("is_active", true).range(from, from + 999);
+        (data || []).forEach((r: any) => withProduct.add(r.client_id));
+        if (!data || data.length < 1000) break;
+      }
+      const ids: string[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data } = await supabase.from("clients").select("id")
+          .eq("account_id", accountId).range(from, from + 999);
+        (data || []).forEach((r: any) => { if (!withProduct.has(r.id)) ids.push(r.id); });
+        if (!data || data.length < 1000) break;
+      }
+      productFilterClientIds = ids;
+      if (ids.length === 0) return emptyResponse();
+    } else if (productId && productId !== "all") {
       const { data: clientProducts } = await supabase
         .from("client_products")
         .select("client_id")

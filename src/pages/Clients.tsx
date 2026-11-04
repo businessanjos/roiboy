@@ -1664,6 +1664,7 @@ export default function Clients() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os produtos</SelectItem>
+                    <SelectItem value="none">Sem produto</SelectItem>
                     {products.map(p => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
