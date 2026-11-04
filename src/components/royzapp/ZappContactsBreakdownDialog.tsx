@@ -52,6 +52,7 @@ interface Props {
   from: Date;
   to: Date;
   periodLabel?: string;
+  onOpenConversation?: (id: string) => void;
 }
 
 function fmt(dt: string | null) {
@@ -70,6 +71,7 @@ export function ZappContactsBreakdownDialog({
   from,
   to,
   periodLabel,
+  onOpenConversation,
 }: Props) {
   const [search, setSearch] = useState("");
 
@@ -166,7 +168,7 @@ export function ZappContactsBreakdownDialog({
               </TableHeader>
               <TableBody>
                 {pg.items.map((r) => (
-                  <TableRow key={r.contact_key} className="border-zapp-border">
+                  <TableRow key={r.contact_key} className={`border-zapp-border ${r.conversation_id && onOpenConversation ? "cursor-pointer hover:bg-primary/5" : ""}`} onClick={() => r.conversation_id && onOpenConversation?.(r.conversation_id)}>
                     <TableCell className="max-w-[220px]">
                       <p className="truncate font-medium">{r.contact_name}</p>
                       <p className="text-[11px] text-zapp-text-muted truncate">
