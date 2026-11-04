@@ -357,7 +357,6 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
               // Várias no mesmo instante: o sino conta todas, mas só a primeira
               // interrompe (som, cartão e push) para a tela não travar.
-              const quiet = now - lastNotifyAtRef.current < NOTIFY_GAP_MS;
               lastNotifyAtRef.current = now;
 
               if (!quiet) {
