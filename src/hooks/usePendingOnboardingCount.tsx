@@ -38,7 +38,7 @@ export function usePendingOnboardingCount() {
       let newCount = 0;
       const { count: noStageCount } = await supabase
         .from("clients")
-        .select("id", { count: "exact", head: true })
+        .select("id, client_products!inner(id)", { count: "exact", head: true })
         .eq("account_id", accountId!)
         .eq("status", "active")
         .is("stage_id", null)
@@ -48,7 +48,7 @@ export function usePendingOnboardingCount() {
       if (firstStageId) {
         const { count: firstStageCount } = await supabase
           .from("clients")
-          .select("id", { count: "exact", head: true })
+          .select("id, client_products!inner(id)", { count: "exact", head: true })
           .eq("account_id", accountId!)
           .eq("status", "active")
           .eq("stage_id", firstStageId)
@@ -61,7 +61,7 @@ export function usePendingOnboardingCount() {
       if (inProgressStageIds.length > 0) {
         const { count } = await supabase
           .from("clients")
-          .select("id", { count: "exact", head: true })
+          .select("id, client_products!inner(id)", { count: "exact", head: true })
           .eq("account_id", accountId!)
           .eq("status", "active")
           .in("stage_id", inProgressStageIds);
