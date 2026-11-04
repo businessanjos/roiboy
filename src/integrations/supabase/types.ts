@@ -21425,27 +21425,30 @@ export type Database = {
           created_at: string
           delay_seconds: number
           id: string
-          playbook_item_id: string
+          playbook_item_id: string | null
           position: number
           sequence_id: string
+          tag_id: string | null
         }
         Insert: {
           account_id: string
           created_at?: string
           delay_seconds?: number
           id?: string
-          playbook_item_id: string
+          playbook_item_id?: string | null
           position?: number
           sequence_id: string
+          tag_id?: string | null
         }
         Update: {
           account_id?: string
           created_at?: string
           delay_seconds?: number
           id?: string
-          playbook_item_id?: string
+          playbook_item_id?: string | null
           position?: number
           sequence_id?: string
+          tag_id?: string | null
         }
         Relationships: [
           {
@@ -21460,6 +21463,13 @@ export type Database = {
             columns: ["sequence_id"]
             isOneToOne: false
             referencedRelation: "playbook_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_sequence_steps_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_tags"
             referencedColumns: ["id"]
           },
         ]
@@ -29513,6 +29523,7 @@ export type Database = {
           scheduled_at: string
           sent_at: string | null
           status: string
+          tag_id: string | null
           text_content: string | null
         }
         Insert: {
@@ -29533,6 +29544,7 @@ export type Database = {
           scheduled_at: string
           sent_at?: string | null
           status?: string
+          tag_id?: string | null
           text_content?: string | null
         }
         Update: {
@@ -29553,6 +29565,7 @@ export type Database = {
           scheduled_at?: string
           sent_at?: string | null
           status?: string
+          tag_id?: string | null
           text_content?: string | null
         }
         Relationships: [
@@ -30274,6 +30287,7 @@ export type Database = {
           scheduled_at: string
           sent_at: string | null
           status: string
+          tag_id: string | null
           text_content: string | null
         }[]
         SetofOptions: {
