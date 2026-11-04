@@ -1,4 +1,4 @@
-import { ZappTagChip } from "@/components/royzapp/SequenceTagStepSelect";
+import { ZappTagBadge } from "@/components/royzapp/ZappTagBadge";
 import { memo, useState } from "react";
 import { ZappGroupClientsDialog } from "./dialogs/ZappGroupClientsDialog";
 import { ZappGroupParticipantsDialog } from "./dialogs/ZappGroupParticipantsDialog";
@@ -212,7 +212,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <VipBadge clientId={clientId} />
             </h3>
             <div className="hidden sm:flex items-center gap-1 flex-shrink-0">{(assignment.conversation_tags || []).filter((ct: any) => ct.tag).slice(0, 3).map((ct: any) => (
-              <ZappTagChip key={ct.tag_id} tag={ct.tag} />
+              <ZappTagBadge key={ct.tag_id} tag={ct.tag} />
             ))}
             {(assignment.conversation_tags || []).filter((ct: any) => ct.tag).length > 3 && (
               <span className="text-[10px] text-zapp-text-muted">+{(assignment.conversation_tags || []).filter((ct: any) => ct.tag).length - 3}</span>

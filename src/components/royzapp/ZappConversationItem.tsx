@@ -1,4 +1,4 @@
-import { ZappTagChip } from "@/components/royzapp/SequenceTagStepSelect";
+import { ZappTagBadge, ZappTagMore, getConversationTags } from "@/components/royzapp/ZappTagBadge";
 import { memo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -180,6 +180,17 @@ export const ZappConversationItem = memo(function ZappConversationItem({
               <span className="truncate">{contact.name}</span>
               <VipBadge clientId={clientId} />
             </span>
+            {(() => {
+              const tagList = getConversationTags(assignment.conversation_tags);
+              if (tagList.length === 0) return null;
+              const hidden = tagList.slice(1);
+              return (
+                <span className="flex shrink-0 items-center gap-1">
+                  <ZappTagBadge tag={tagList[0]} className="max-w-[9rem]" />
+                  {hidden.length > 0 && <ZappTagMore count={hidden.length} tags={hidden} />}
+                </span>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <span className="text-zapp-text-muted text-[11px] whitespace-nowrap">
@@ -369,12 +380,6 @@ export const ZappConversationItem = memo(function ZappConversationItem({
                {dealStage.stageName}
              </Badge>
            )}
-           {(assignment.conversation_tags || []).filter((ct: any) => ct.tag).slice(0, 2).map((ct: any) => (
-              <ZappTagChip key={ct.tag_id} tag={ct.tag} />
-            ))}
-            {(assignment.conversation_tags || []).filter((ct: any) => ct.tag).length > 2 && (
-              <span className="text-[10px] text-zapp-text-muted">+{(assignment.conversation_tags || []).filter((ct: any) => ct.tag).length - 2}</span>
-            )}
            {/* Products from CRM */}
           {/* Products */}
           {products && products.length > 0 && (
