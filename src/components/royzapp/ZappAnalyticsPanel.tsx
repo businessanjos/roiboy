@@ -1035,6 +1035,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
 
         {contactsDialog && (
           <ZappContactsBreakdownDialog
+            onOpenConversation={openConversation}
             open={!!contactsDialog}
             onOpenChange={(o) => !o && setContactsDialog(null)}
             direction={contactsDialog}
