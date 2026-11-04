@@ -2,8 +2,7 @@ import { memo } from "react";
 import { Tags, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ZappTag } from "./types";
-import { ZappTagBadge } from "./ZappTagBadge";
-import { ZAPP_TAG_FALLBACK_COLOR, tagEdge, tagTint } from "@/lib/zappTagColor";
+import { ZAPP_TAG_FALLBACK_COLOR, tagReadableText } from "@/lib/zappTagColor";
 
 interface ZappTagsListProps {
   tags: ZappTag[];
@@ -12,8 +11,9 @@ interface ZappTagsListProps {
 }
 
 /**
- * Etiquetas em blocos iguais: cada uma é um cartão de altura fixa na cor dela,
- * com o selo, a descrição quando existe e as ações de editar/excluir.
+ * Etiquetas em blocos iguais: cada uma é um cartão na cor dela, com o nome
+ * inteiro (quebra em até duas linhas), a descrição quando existe e as ações
+ * de editar/excluir no canto.
  */
 export const ZappTagsList = memo(function ZappTagsList({
   tags,
@@ -50,41 +50,49 @@ export const ZappTagsList = memo(function ZappTagsList({
       ) : (
         <ul
           className="grid gap-2"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(172px, 1fr))" }}
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(178px, 1fr))" }}
         >
           {tags.map((tag) => {
             const color = tag.color || ZAPP_TAG_FALLBACK_COLOR;
+            const text = tagReadableText(color);
+            const soft = text === "#ffffff" ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.10)";
             return (
               <li key={tag.id} className="min-w-0">
                 <article
-                  className="group flex h-[74px] flex-col justify-center gap-1.5 overflow-hidden rounded-xl border px-3 transition-shadow hover:shadow-sm"
-                  style={{ backgroundColor: tagTint(color, 0.16), borderColor: tagEdge(color, 0.42) }}
+                  className="group flex h-[84px] flex-col justify-between overflow-hidden rounded-xl px-3 py-2.5"
+                  style={{
+                    backgroundColor: color,
+                    color: text,
+                    boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.22)",
+                  }}
                 >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <ZappTagBadge tag={tag} size="md" tooltip={false} className="min-w-0 max-w-full" />
-                    <div className="ml-auto flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-zapp-text-muted hover:bg-zapp-panel"
+                  <div className="flex items-start gap-1.5">
+                    <p className="line-clamp-2 min-w-0 flex-1 text-[13px] font-semibold leading-[1.15]">
+                      {tag.name}
+                    </p>
+                    <div className="flex shrink-0 items-center gap-1 opacity-100 transition-opacity lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
+                      <button
+                        type="button"
                         onClick={() => onOpenTagDialog(tag)}
                         aria-label={`Editar tag ${tag.name}`}
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md opacity-80 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        style={{ backgroundColor: soft, color: text }}
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => onDeleteTag(tag.id)}
                         aria-label={`Excluir tag ${tag.name}`}
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md opacity-80 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        style={{ backgroundColor: soft, color: text }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      </button>
                     </div>
                   </div>
                   {tag.description ? (
-                    <p className="truncate text-[11px] leading-4 text-zapp-text-muted">{tag.description}</p>
+                    <p className="truncate text-[11px] leading-4 opacity-80">{tag.description}</p>
                   ) : null}
                 </article>
               </li>

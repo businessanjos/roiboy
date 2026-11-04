@@ -36,3 +36,5 @@
 
 - [x] Renovações > Resultados: opção "Todo o período" no filtro de período, colocada junto das opções anuais e com altura do menu ampliada para caber sem rolar; conferido autenticado com a lista completa visível e o campo assumindo "Todo o período" ao clicar. Build OK; sem mudanças em dados, permissões ou publicação.
 - [x] Dashboard de Gestão/CX: filtro de Formação (clientes, faturamento, contratos, eventos, cadeira dupla, ganho→onboarding, inadimplentes e churn por segmento); churn/retenção passaram a contar clientes com contrato em vigor na data de início do período (decisão do usuário — base global 294, churn 45,9%); barra de filtros parou de cortar entre 1024 e 1920. Build OK; sem alterações em dados, permissões ou publicação.
+
+- [ ] Travamento ao voltar no navegador: RoyZapp dispara muitas notificações instantâneas e o QR de reconexão fica em "Gerando QR Code..." (screenshot 581x352 com "WhatsApp desconectado — [CS] Eternum"). Reproduzir com Playwright, achar a causa do disparo em massa no voltar e corrigir sem alterar permissões, dados ou regras de notificação.
