@@ -180,6 +180,30 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
     const sectorParam = new URLSearchParams(location.search).get("sector");
     return royZappSectorLabel(sectorParam);
   }, [currentSector?.id, location.search]);
+
+  // Sem WhatsApp selecionado, toda tela do ROY zAPP cai na escolha de setor —
+  // o clique no menu mudaria a URL sem abrir nada. Avisamos o que falta.
+  const { allowedZappSectors, unrestricted: zappUnrestricted } = useRoyZappViewAccess();
+  const openableZappSectors = useMemo(
+    () =>
+      resolveAllowedZappSectors({
+        explicitZappSectors: allowedZappSectors,
+        unrestricted: zappUnrestricted,
+        generalSectorIds: sectorAccess.map((a) => a.sector_id),
+      }),
+    [allowedZappSectors, zappUnrestricted, sectorAccess]
+  );
+  const zappGateMessage = useMemo(
+    () =>
+      currentSector?.id === "royzapp"
+        ? zappSectorGateMessage({
+            pathname: location.pathname,
+            search: location.search,
+            hasOpenableSector: openableZappSectors.length > 0,
+          })
+        : null,
+    [currentSector?.id, location.pathname, location.search, openableZappSectors.length]
+  );
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [saving, setSaving] = useState(false);
