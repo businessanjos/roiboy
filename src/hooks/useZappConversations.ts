@@ -953,6 +953,73 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           }));
         }
       )
+      // Etiquetas ao lado do nome: o selo atualiza na hora, sem recarregar a tela.
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'zapp_conversation_tags', filter: `account_id=eq.${accountId}` },
+        async (payload) => {
+          const row = ((payload.new as any) ?? (payload.old as any)) || {};
+          const assignmentId = row.assignment_id;
+          const tagId = row.tag_id;
+          if (!assignmentId || !tagId) return;
+
+          if (payload.eventType === 'DELETE') {
+            setAssignments((prev) => prev.map((a) =>
+              a.id === assignmentId && a.conversation_tags
+                ? { ...a, conversation_tags: a.conversation_tags.filter((ct) => ct.tag_id !== tagId) }
+                : a
+            ));
+            return;
+          }
+
+          if (payload.eventType === 'INSERT') {
+            // O evento traz só o vínculo; nome e cor vêm da etiqueta.
+            const { data: tag } = await supabase
+              .from('zapp_tags')
+              .select('id, name, color')
+              .eq('id', tagId)
+              .maybeSingle();
+            if (!tag) return;
+            setAssignments((prev) => prev.map((a) => {
+              if (a.id !== assignmentId) return a;
+              const current = a.conversation_tags || [];
+              if (current.some((ct) => ct.tag_id === tagId)) return a;
+              return { ...a, conversation_tags: [...current, { tag_id: tagId, tag }] };
+            }));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'zapp_tags', filter: `account_id=eq.${accountId}` },
+        (payload) => {
+          const row = ((payload.new as any) ?? (payload.old as any)) || {};
+          const tagId = row.id;
+          if (!tagId) return;
+
+          if (payload.eventType === 'DELETE') {
+            setAssignments((prev) => prev.map((a) => a.conversation_tags
+              ? { ...a, conversation_tags: a.conversation_tags.filter((ct) => ct.tag_id !== tagId) }
+              : a
+            ));
+            return;
+          }
+
+          if (payload.eventType === 'UPDATE') {
+            setAssignments((prev) => prev.map((a) => a.conversation_tags
+              ? {
+                  ...a,
+                  conversation_tags: a.conversation_tags.map((ct) =>
+                    ct.tag_id === tagId && ct.tag
+                      ? { ...ct, tag: { ...ct.tag, name: row.name ?? ct.tag.name, color: row.color ?? ct.tag.color } }
+                      : ct
+                  ),
+                }
+              : a
+            ));
+          }
+        }
+      )
       .subscribe();
 
 
