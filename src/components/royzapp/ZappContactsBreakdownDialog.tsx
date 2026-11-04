@@ -206,10 +206,10 @@ export function ZappContactsBreakdownDialog({
               <div role="columnheader" className="text-right text-[10px] font-semibold uppercase tracking-wide text-zapp-text-muted">
                 Enviad.
               </div>
-              <div role="columnheader" className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-zapp-text-muted">
+              <div role="columnheader" className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide text-zapp-text-muted">
                 {firstLabel}
               </div>
-              <div role="columnheader" className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-zapp-text-muted">
+              <div role="columnheader" className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide text-zapp-text-muted">
                 Última
               </div>
               <div role="columnheader" aria-hidden />
