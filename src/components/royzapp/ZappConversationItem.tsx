@@ -34,7 +34,6 @@ import { ConversationAssignment, getContactInfo, getInitials } from "./types";
 import { VipBadge } from "@/components/client/VipBadge";
 import { CountryFlag } from "@/components/ui/CountryFlag";
 import { isInternalGroup, showsWaitIndicator } from "@/lib/zappInternalGroups";
-import { getDepartmentColor } from "@/lib/zappDepartmentColor";
 
 interface ZappConversationItemProps {
   assignment: ConversationAssignment;
@@ -324,14 +323,6 @@ export const ZappConversationItem = memo(function ZappConversationItem({
             </span>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            {assignment.department && (
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: getDepartmentColor(assignment.department.color) }}
-                title={`Departamento: ${assignment.department.name ?? ""}`}
-                aria-label={`Departamento: ${assignment.department.name ?? ""}`}
-              />
-            )}
             {contact.unreadCount > 0 && (
               <Badge className="bg-zapp-accent text-white text-[10px] px-1.5 py-0 h-5 min-w-5 flex items-center justify-center">
                 {contact.unreadCount}
