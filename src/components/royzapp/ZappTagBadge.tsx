@@ -49,6 +49,7 @@ export function ZappTagBadge({
 
   const badge = (
     <span
+      data-zapp-tag="1"
       className={cn(
         "inline-flex max-w-[9rem] items-center rounded-full border font-medium leading-none tracking-tight",
         size === "sm" ? "h-[18px] px-2 text-[10px]" : "h-5 px-2.5 text-xs",
