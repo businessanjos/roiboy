@@ -4,18 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Send, Trash2, ListOrdered, Loader2, History, Tag } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Send, Trash2, ListOrdered, Loader2, History, Tag, Zap, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { PlaybookItemForm } from "@/components/sales/PlaybookItemForm";
 import { PlaybookItemSelect } from "@/components/royzapp/PlaybookItemSelect";
 import { PlaybookSequencePreview } from "@/components/royzapp/PlaybookSequencePreview";
 import { SequenceTagStepSelect, useZappTagsLite } from "@/components/royzapp/SequenceTagStepSelect";
+import { SequenceStageStepSelect, useDealStagesLite } from "@/components/royzapp/SequenceStageStepSelect";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ZappSequenceHistoryList } from "@/components/royzapp/ZappSequenceHistoryList";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   usePlaybookSequences, PlaybookSequence, SequenceStep, SEQUENCE_MAX_STEPS,
   SEQUENCE_MIN_DELAY, SEQUENCE_MAX_DELAY, clampDelay, startSequenceRun, normalizeSequenceSteps,
+  SEQUENCE_ACTIONS, SequenceActionType, stepAction, isActionStep,
 } from "@/hooks/usePlaybookSequences";
 
 interface Props {
@@ -35,6 +38,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
   const { sequences, isLoading, save, isSaving, remove } = usePlaybookSequences(sectorId);
   const { currentUser } = useCurrentUser();
   const { data: tags = [] } = useZappTagsLite();
+  const { data: stages = [] } = useDealStagesLite();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState<string | null>(null);
@@ -91,19 +95,30 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
   const handleStart = async (s: PlaybookSequence) => {
     if (!conversationId || !currentUser?.id || !currentUser.account_id) return;
     const tagById = new Map(tags.map((t) => [t.id, t]));
-    const usable = s.steps.filter((st) => (st.tag_id ? tagById.has(st.tag_id) : itemById.has(st.playbook_item_id)));
-    if (!usable.some((st) => !st.tag_id)) { toast.error("Essa sequência não tem mensagens disponíveis"); return; }
+    const stageById = new Map(stages.map((t) => [t.id, t]));
+    const usable = s.steps.filter((st) => {
+      const a = stepAction(st);
+      if (a === "move_stage") return !!st.stage_id && stageById.has(st.stage_id);
+      if (a) return !!st.tag_id && tagById.has(st.tag_id);
+      return itemById.has(st.playbook_item_id);
+    });
+    if (!usable.some((st) => !isActionStep(st))) { toast.error("Essa sequência não tem mensagens disponíveis"); return; }
     setStarting(s.id);
     try {
       await startSequenceRun({
         conversationId,
         sequence: { id: s.id, name: s.name },
         steps: usable.map((st, idx) => {
-          if (st.tag_id) {
-            return { name: `Etiqueta: ${tagById.get(st.tag_id)!.name}`, content_type: "tag", tag_id: st.tag_id,
+          const a = stepAction(st);
+          if (a) {
+            const name = a === "move_stage"
+              ? `Mover para: ${stageById.get(st.stage_id!)!.name}`
+              : `${a === "remove_tag" ? "Remover etiqueta" : "Etiqueta"}: ${tagById.get(st.tag_id!)!.name}`;
+            return { name, content_type: "action", action_type: a, tag_id: a === "move_stage" ? null : st.tag_id,
+              stage_id: a === "move_stage" ? st.stage_id : null,
               text_content: null, media_url: null, media_filename: null, media_caption: null, delay_seconds: st.delay_seconds };
           }
-          const pos = usable.slice(0, idx).filter((x) => !x.tag_id).length;
+          const pos = usable.slice(0, idx).filter((x) => !isActionStep(x)).length;
           const item = itemById.get(st.playbook_item_id)!;
           const processed = item.text_content ? replaceVariables(item.text_content, variables) : undefined;
           const text = buildText ? buildText(item, processed) : (processed || "");
@@ -159,8 +174,16 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
               {draft.steps.map((st, i) => (
                 <div key={i} className="flex flex-wrap items-center gap-2 rounded-md border p-2.5">
                   <span className="w-5 text-center text-xs font-semibold text-muted-foreground">{i + 1}</span>
-                  {st.tag_id !== undefined && st.tag_id !== null ? (
-                    <SequenceTagStepSelect value={st.tag_id || null} onChange={(id) => updateStep(i, { tag_id: id })} className="min-w-0 flex-1 basis-56" />
+                  {stepAction(st) ? (
+                    <div className="flex min-w-0 flex-1 basis-56 flex-wrap items-center gap-2">
+                      <Select value={stepAction(st)!} onValueChange={(v) => updateStep(i, { action_type: v as SequenceActionType, tag_id: v === "move_stage" ? null : (stepAction(st) === "move_stage" ? "" : st.tag_id), stage_id: v === "move_stage" ? st.stage_id || "" : null })}>
+                        <SelectTrigger className="h-9 w-44 shrink-0" aria-label="Tipo de ação"><Zap className="mr-1 h-3.5 w-3.5 text-primary" /><SelectValue /></SelectTrigger>
+                        <SelectContent>{SEQUENCE_ACTIONS.map((a) => <SelectItem key={a.type} value={a.type}>{a.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                      {stepAction(st) === "move_stage"
+                        ? <SequenceStageStepSelect value={st.stage_id || null} onChange={(id) => updateStep(i, { stage_id: id })} className="min-w-0 flex-1 basis-40" />
+                        : <SequenceTagStepSelect value={st.tag_id || null} onChange={(id) => updateStep(i, { tag_id: id })} className="min-w-0 flex-1 basis-40" />}
+                    </div>
                   ) : <PlaybookItemSelect
                     items={items}
                     value={st.playbook_item_id}
@@ -201,12 +224,22 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
                 <Button variant="outline" size="sm" onClick={() => openCreateForm(null)}>
                   <Plus className="mr-1 h-4 w-4" /> Nova mensagem
                 </Button>
-                <Button variant="outline" size="sm" disabled={draft.steps.length >= SEQUENCE_MAX_STEPS}
-                  onClick={() => setDraft({ ...draft, steps: normalizeSequenceSteps([...draft.steps, { playbook_item_id: "", tag_id: "", delay_seconds: 1 }]) })}>
-                  <Tag className="mr-1 h-4 w-4" /> Adicionar ação
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={draft.steps.length >= SEQUENCE_MAX_STEPS}>
+                      <Zap className="mr-1 h-4 w-4" /> Adicionar ação
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {SEQUENCE_ACTIONS.map((a) => (
+                      <DropdownMenuItem key={a.type} onClick={() => setDraft((d) => d && ({ ...d, steps: normalizeSequenceSteps([...d.steps, { playbook_item_id: "", action_type: a.type, tag_id: a.type === "move_stage" ? null : "", stage_id: a.type === "move_stage" ? "" : null, delay_seconds: 1 }]) }))}>
+                        {a.type === "move_stage" ? <ArrowRightLeft className="mr-2 h-4 w-4" /> : <Tag className="mr-2 h-4 w-4" />}{a.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <p className="text-xs text-muted-foreground">Até {SEQUENCE_MAX_STEPS} mensagens, A 1ª sai no clique; cada seguinte aguarda de {SEQUENCE_MIN_DELAY} a {SEQUENCE_MAX_DELAY} segundos após o envio da anterior. Ações etiquetam a conversa automaticamente, sem enviar nada ao contato.</p>
+              <p className="text-xs text-muted-foreground">Até {SEQUENCE_MAX_STEPS} mensagens, A 1ª sai no clique; cada seguinte aguarda de {SEQUENCE_MIN_DELAY} a {SEQUENCE_MAX_DELAY} segundos após o envio da anterior. Ações (etiquetar, remover etiqueta, mover etapa do funil) rodam sozinhas no momento do passo, sem enviar nada ao contato.</p>
             </div>
 
             <div className="flex justify-end gap-2">
@@ -246,7 +279,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{s.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {s.steps.filter((x) => !x.tag_id).length} mensagens{s.steps.some((x) => x.tag_id) ? ` + ${s.steps.filter((x) => x.tag_id).length} ação(ões)` : ""} · {s.visibility === "personal" ? "só eu" : "todo o setor"}
+                      {s.steps.filter((x) => !isActionStep(x)).length} mensagens{s.steps.some(isActionStep) ? ` + ${s.steps.filter(isActionStep).length} ação(ões)` : ""} · {s.visibility === "personal" ? "só eu" : "todo o setor"}
                     </p>
                   </div>
                   <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => editDraft(s)}><Pencil className="h-4 w-4" /></Button>
