@@ -79,6 +79,7 @@ import { PlaybookSequencesDialog } from "@/components/royzapp/PlaybookSequencesD
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
 import { ZappRulerEnrollDialog } from "@/components/royzapp/ruler/ZappRulerEnrollDialog";
+import { CUSTOMER_SUCCESS_SECTOR_ID } from "@/lib/royZappSectors";
 import { useZappRulers } from "@/hooks/useZappRulers";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { resolveZappSectorRole, zappRoleCapabilities } from "@/lib/royZappRoles";
@@ -2177,7 +2178,7 @@ export default function RoyZapp() {
             canTransfer={zappCaps.canTransfer}
             canReply={zappCaps.canReply}
             canClaim={zappCaps.canClaim}
-            onOpenRuler={() => setRulerEnrollOpen(true)}
+             onOpenRuler={selectedSectorId === CUSTOMER_SUCCESS_SECTOR_ID ? undefined : () => setRulerEnrollOpen(true)}
             onOpenCreateDeal={() => {
               const conv = selectedConversation?.zapp_conversation;
               const hasContactRecord = !!conv?.lead_id || !!conv?.client_id;
