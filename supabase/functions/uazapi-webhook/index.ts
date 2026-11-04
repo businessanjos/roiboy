@@ -1033,7 +1033,37 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ handled: "deal_transfer_decision" }), {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
+          // Resposta de botão do pedido de giro de roleta (Aprovar/Recusar).
+          const srq = btnId.match(/^srq:(approve|reject):([0-9a-f-]{36})$/i);
+          if (srq) {
+            const approve = srq[1].toLowerCase() === "approve";
+            const { data: res } = await supabase.rpc("decide_spin_request_by_phone", {
+              _request_id: srq[2], _phone: phone, _approve: approve,
+            });
+            const r: any = res || {};
+            let reply = "";
+            if (r.ok) {
+              reply = r.status === "approved"
+                ? `✅ Giro liberado: ${r.seller_name} já pode girar a roleta de "${r.spiff_name}".`
+                : `❌ Recusado: o giro de ${r.seller_name} em "${r.spiff_name}" foi recusado.`;
+            } else if (r.already) {
+              const map: Record<string, string> = { approved: "aprovado", rejected: "recusado", consumed: "usado", cancelled: "cancelado pelo vendedor" };
+              reply = `Esse pedido já foi ${map[r.already] || r.already}.`;
+            } else if (r.error === "not_manager") {
+              reply = "Este número não está autorizado a aprovar giros de roleta.";
+            }
+            if (reply) {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/spin-request-whatsapp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                body: JSON.stringify({ action: "confirm", request_id: srq[2], phone, text: reply }),
+              }).catch((e) => console.warn("[WEBHOOK] srq confirm falhou:", e));
+            }
+            return new Response(JSON.stringify({ handled: "spin_request_decision" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
           }
+        }
         }
         
         // Extract content and media from various formats
