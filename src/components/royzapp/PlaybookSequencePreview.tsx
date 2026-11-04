@@ -3,7 +3,7 @@ import { applyWhatsAppFormatting } from "@/lib/whatsappFormatting";
 import {
   AudioLines, FileText, Image as ImageIcon, LayoutTemplate, Link2,
   ListChecks, Smile, Timer, Video, ChevronLeft, Phone, CheckCheck, Zap, Paperclip, Mic,
-  Signal, Wifi, BatteryFull, Camera,
+  Signal, Wifi, BatteryFull, Camera, Tag,
 } from "lucide-react";
 import type { PlaybookItem } from "@/hooks/usePlaybook";
 import type { SequenceStep } from "@/hooks/usePlaybookSequences";
@@ -15,6 +15,7 @@ interface Props {
   replaceVariables?: (text: string, vars: Record<string, string>) => string;
   signText?: (text: string) => string;
   messageOnly?: boolean;
+  tags?: { id: string; name: string; color: string }[];
 }
 
 function MediaBlock({ item }: { item: PlaybookItem }) {
@@ -68,13 +69,30 @@ function MediaBlock({ item }: { item: PlaybookItem }) {
   }
 }
 
-export function PlaybookSequencePreview({ steps, items, variables = {}, replaceVariables, signText, messageOnly = false }: Props) {
+export function PlaybookSequencePreview({ steps, items, variables = {}, replaceVariables, signText, messageOnly = false, tags = [] }: Props) {
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
-  const resolved = steps
-    .map((st, i) => ({ step: st, item: itemById.get(st.playbook_item_id), index: i }))
-    .filter((r) => r.item) as { step: SequenceStep; item: PlaybookItem; index: number }[];
+  const tagById = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags]);
+  const actions = new Map<number, { name: string; color: string }[]>();
+  const resolved: { step: SequenceStep; item: PlaybookItem; index: number }[] = [];
+  steps.forEach((st, i) => {
+    if (st.tag_id) {
+      const t = tagById.get(st.tag_id);
+      if (t) actions.set(resolved.length, [...(actions.get(resolved.length) || []), t]);
+      return;
+    }
+    const item = itemById.get(st.playbook_item_id);
+    if (item) resolved.push({ step: st, item, index: i });
+  });
+  const trailing = actions.get(resolved.length) || [];
+  const TagNotice = ({ t }: { t: { name: string; color: string } }) => (
+    <div className="my-1.5 flex justify-center">
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] shadow-sm" style={{ background: wa("chip"), color: wa("meta") }}>
+        <Tag className="h-3 w-3" style={{ color: t.color }} /> etiqueta <b style={{ color: t.color }}>{t.name}</b> aplicada
+      </span>
+    </div>
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
-  const lastKey = resolved.map((r) => r.item.id).join(",");
+  const lastKey = steps.map((r) => r.tag_id || r.playbook_item_id).join(",");
   // Acompanha a última mensagem, como no WhatsApp, ao adicionar/trocar etapas.
   useEffect(() => {
     const el = scrollRef.current;
@@ -149,6 +167,7 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
               const isMedia = item.content_type !== "text";
               return (
                 <div key={`${item.id}-${pos}`}>
+                  {!messageOnly && (actions.get(pos) || []).map((t, k) => <TagNotice key={k} t={t} />)}
                   {!messageOnly && <div className="my-1.5 flex justify-center">
                     <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] shadow-sm" style={{ background: wa("chip"), color: wa("meta") }}>
                       {pos === 0 ? <><Zap className="h-3 w-3" /> instantâneo ao clicar</> : <><Timer className="h-3 w-3" /> aguarda {step.delay_seconds}s</>}
@@ -173,6 +192,7 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
               );
             })
           )}
+          {!messageOnly && trailing.map((t, k) => <TagNotice key={`end-${k}`} t={t} />)}
         </div>
 
         {/* Barra de digitação + indicador de início */}

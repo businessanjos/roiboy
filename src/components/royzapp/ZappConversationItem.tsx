@@ -1,3 +1,4 @@
+import { ZappTagChip } from "@/components/royzapp/SequenceTagStepSelect";
 import { memo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -368,6 +369,12 @@ export const ZappConversationItem = memo(function ZappConversationItem({
                {dealStage.stageName}
              </Badge>
            )}
+           {(assignment.conversation_tags || []).filter((ct: any) => ct.tag).slice(0, 2).map((ct: any) => (
+              <ZappTagChip key={ct.tag_id} tag={ct.tag} />
+            ))}
+            {(assignment.conversation_tags || []).filter((ct: any) => ct.tag).length > 2 && (
+              <span className="text-[10px] text-zapp-text-muted">+{(assignment.conversation_tags || []).filter((ct: any) => ct.tag).length - 2}</span>
+            )}
            {/* Products from CRM */}
           {/* Products */}
           {products && products.length > 0 && (
