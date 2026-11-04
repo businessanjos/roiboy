@@ -96,6 +96,26 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
       continue;
     }
 
+    // Passo de ação: etiqueta a conversa (nada vai ao contato)
+    if (step.content_type === "tag") {
+      try {
+        if (!step.tag_id) throw new Error("Etiqueta não encontrada");
+        const { data: asg } = await supabase.from("zapp_conversation_assignments").select("id")
+          .eq("conversation_id", conv.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (!asg) throw new Error("Conversa sem atendimento para etiquetar");
+        const { error: tagErr } = await supabase.from("zapp_conversation_tags").upsert(
+          { account_id: run.account_id, assignment_id: asg.id, tag_id: step.tag_id, created_by: run.triggered_by },
+          { onConflict: "assignment_id,tag_id", ignoreDuplicates: true },
+        );
+        if (tagErr) throw tagErr;
+        await supabase.from("zapp_sequence_run_steps").update({ status: "sent", sent_at: new Date().toISOString(), last_error: null }).eq("id", step.id);
+        await supabase.from("zapp_sequence_runs").update({ sent_steps: (run.sent_steps = (run.sent_steps || 0) + 1) }).eq("id", runId);
+      } catch (err) {
+        await supabase.from("zapp_sequence_run_steps").update({ status: "failed", last_error: String((err as Error).message || "Falha ao etiquetar").slice(0, 300) }).eq("id", step.id);
+      }
+      continue;
+    }
+
     const isText = ["text", "link", "list", "template"].includes(step.content_type);
     const now = new Date().toISOString();
     try {
