@@ -180,6 +180,23 @@ export const ZappConversationItem = memo(function ZappConversationItem({
               <span className="truncate">{contact.name}</span>
               <VipBadge clientId={clientId} />
             </span>
+            {(() => {
+              const tagList = getConversationTags(assignment.conversation_tags);
+              if (tagList.length === 0) return null;
+              return (
+                <span className="flex shrink-0 items-center gap-1">
+                  <ZappTagBadge tag={tagList[0]} className="max-w-[6rem]" />
+                  {tagList.length > 1 && (
+                    <span className="hidden sm:inline-flex min-w-0">
+                      <ZappTagBadge tag={tagList[1]} className="max-w-[6rem]" />
+                    </span>
+                  )}
+                  {tagList.length > 2 && (
+                    <span className="text-[10px] text-zapp-text-muted">+{tagList.length - 2}</span>
+                  )}
+                </span>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <span className="text-zapp-text-muted text-[11px] whitespace-nowrap">
