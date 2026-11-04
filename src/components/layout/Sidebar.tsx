@@ -65,6 +65,9 @@ import { royZappSectorLabel } from "@/lib/royZappSectors";
 import { getSpecializedMenu } from "@/lib/navigation/specializedMenu";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useSectorNavItems } from "@/hooks/useSectorNavItems";
+import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
+import { resolveAllowedZappSectors } from "@/lib/royZappAccess";
+import { zappSectorGateMessage } from "@/lib/navigation/zappSectorGate";
 import {
   Sheet,
   SheetContent,
@@ -142,7 +145,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
   const navigate = useNavigate();
   // Use centralized super admin hook (eliminates duplicate RPC call)
   const { isSuperAdmin } = useSuperAdmin();
-  const { hasSectorAccess } = useSectorAccess();
+  const { hasSectorAccess, sectorAccess } = useSectorAccess();
 
   // Hook for ROY zAPP instance selection
   const { openZappForSector, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useSidebarZappNavigation();
