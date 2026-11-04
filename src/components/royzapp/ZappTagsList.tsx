@@ -70,7 +70,7 @@ export const ZappTagsList = memo(function ZappTagsList({
                     {tag.name}
                   </p>
                   {tag.description ? (
-                    <p className="truncate pr-16 text-[11px] leading-4 opacity-80">
+                    <p className="truncate pr-16 text-[11px] leading-4 opacity-90">
                       {tag.description}
                     </p>
                   ) : null}
