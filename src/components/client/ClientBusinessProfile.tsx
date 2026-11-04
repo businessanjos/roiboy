@@ -616,6 +616,7 @@ export function ClientBusinessProfile({
               value={client.initial_revenue}
               onCommit={commitInitialRevenue}
               accent="muted"
+              foreign={inForeign(client.initial_revenue)}
             />
             <div className="rounded-lg border bg-card p-3">
               <div className="flex items-center justify-between mb-1">
@@ -1038,12 +1039,14 @@ function RevenueBlock({
   value,
   onCommit,
   accent = "primary",
+  foreign,
 }: {
   label: string;
   icon: React.ReactNode;
   value: number | null;
   onCommit: (raw: string) => void;
   accent?: "primary" | "muted";
+  foreign?: string | null;
 }) {
   return (
     <div className="rounded-lg border bg-card p-3">
@@ -1057,6 +1060,7 @@ function RevenueBlock({
           "text-lg font-bold " + (accent === "primary" ? "text-primary" : "text-foreground")
         }
       />
+      {foreign && <p className="text-sm font-semibold text-foreground mt-0.5">≈ {foreign}</p>}
     </div>
   );
 }
