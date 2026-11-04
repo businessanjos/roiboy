@@ -6,9 +6,30 @@ export interface ZappTagLike {
   color?: string | null;
 }
 
+const FALLBACK_COLOR = "#6b7c85";
+
+function toRgb(hex: string): [number, number, number] {
+  const raw = hex.replace("#", "").trim();
+  const full = raw.length === 3 ? raw.split("").map((c) => c + c).join("") : raw.slice(0, 6);
+  const n = (i: number) => parseInt(full.slice(i, i + 2), 16);
+  const r = n(0), g = n(2), b = n(4);
+  return [Number.isNaN(r) ? 107 : r, Number.isNaN(g) ? 124 : g, Number.isNaN(b) ? 133 : b];
+}
+
+/** Texto escuro ou claro conforme a cor da etiqueta, para sempre dar leitura. */
+function readableText(hex: string) {
+  const [r, g, b] = toRgb(hex);
+  const lin = (v: number) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  return L > 0.3 ? "#1c1917" : "#ffffff";
+}
+
 /**
- * Etiqueta do RoyZapp em selo legível: cor + nome, com a dica de mouse
- * dizendo exatamente qual é a etiqueta. Nunca um ponto solto.
+ * Etiqueta do RoyZapp em selo legível: cor cheia + nome, com a dica de mouse
+ * dizendo exatamente qual é. Nunca um ponto solto.
  */
 export function ZappTagBadge({
   tag,
@@ -23,27 +44,23 @@ export function ZappTagBadge({
   tooltipLabel?: string;
   size?: "sm" | "md";
 }) {
-  const color = tag.color || "#6b7c85";
+  const color = tag.color || FALLBACK_COLOR;
+  const text = readableText(color);
 
   const badge = (
     <span
       className={cn(
-        "inline-flex max-w-[9rem] items-center gap-1.5 rounded-full border font-medium leading-none tracking-tight",
-        size === "sm" ? "h-[18px] px-1.5 text-[10px]" : "h-5 px-2 text-xs",
+        "inline-flex max-w-[9rem] items-center rounded-full border font-medium leading-none tracking-tight",
+        size === "sm" ? "h-[18px] px-2 text-[10px]" : "h-5 px-2.5 text-xs",
         className,
       )}
       style={{
-        backgroundColor: `${color}26`,
-        borderColor: `${color}66`,
-        color,
-        boxShadow: `inset 0 1px 0 ${color}1a`,
+        backgroundColor: color,
+        borderColor: color,
+        color: text,
+        boxShadow: "0 1px 2px rgba(0,0,0,0.28)",
       }}
     >
-      <span
-        aria-hidden
-        className={cn("shrink-0 rounded-full", size === "sm" ? "h-1.5 w-1.5" : "h-2 w-2")}
-        style={{ backgroundColor: color, boxShadow: `0 0 0 2px ${color}33` }}
-      />
       <span className="truncate">{tag.name}</span>
     </span>
   );
@@ -58,14 +75,8 @@ export function ZappTagBadge({
         </TooltipTrigger>
         <TooltipContent side="top" sideOffset={6} className="max-w-[18rem] text-xs">
           <span className="flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: color }}
-            />
-            <span>
-              {tooltipLabel ?? `Etiqueta: ${tag.name}`}
-            </span>
+            <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+            <span>{tooltipLabel ?? `Etiqueta: ${tag.name}`}</span>
           </span>
         </TooltipContent>
       </Tooltip>
@@ -77,7 +88,7 @@ export function ZappTagBadge({
 export function getConversationTags(
   conversationTags?: { tag_id: string; tag: ZappTagLike & { id?: string } | null }[] | null,
 ) {
-  return (conversationTags || []).map((ct) => ct.tag).filter(Boolean) as (ZappTagLike & {
-    id?: string;
-  })[];
+  return (conversationTags || [])
+    .map((ct) => ct.tag)
+    .filter(Boolean) as (ZappTagLike & { id?: string })[];
 }
