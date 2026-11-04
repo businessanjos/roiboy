@@ -232,8 +232,8 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <VipBadge clientId={clientId} />
             </h3>
             {showNameTags && (
-            <div className="hidden sm:flex items-center gap-1 flex-shrink-0">{(assignment.conversation_tags || []).filter((ct: any) => ct.tag).slice(0, 3).map((ct: any) => (
-              <ZappTagBadge key={ct.tag_id} tag={ct.tag} />
+            <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">{(assignment.conversation_tags || []).filter((ct: any) => ct.tag).slice(0, 3).map((ct: any) => (
+              <ZappTagBadge key={ct.tag_id} tag={ct.tag} tone="soft" />
             ))}
             {(assignment.conversation_tags || []).filter((ct: any) => ct.tag).length > 3 && (
               <span className="text-[10px] text-zapp-text-muted">+{(assignment.conversation_tags || []).filter((ct: any) => ct.tag).length - 3}</span>
