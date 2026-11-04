@@ -8,6 +8,7 @@ import * as tus from "tus-js-client";
 import { Message } from "@/hooks/useZappData";
 import { ConversationAssignment, getContactInfo } from "@/components/royzapp/types";
 import { invokeWhatsAppManager } from "@/lib/whatsappRouting";
+import { friendlyZappError, withZappRetry } from "@/lib/zappTransientErrors";
 import { applyZappSignature } from "@/lib/zappSignature";
 
 interface UseZappMessagingProps {
@@ -66,15 +67,22 @@ const resolveUploadContentType = (file: File) => {
   return VIDEO_CONTENT_TYPES_BY_EXTENSION[extension] || file.type || "application/octet-stream";
 };
 
+// Upload com retentativa em oscilações do servidor de arquivos. Se uma tentativa
+// anterior chegou a gravar o arquivo (timeout só na resposta), o "já existe"
+// conta como sucesso para não travar o envio.
+const uploadSmallZappMedia = (bucket: string, fileName: string, body: Blob, contentType: string) =>
+  withZappRetry(async () => {
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(fileName, body, { cacheControl: "3600", upsert: false, contentType });
+    if (error && !/already exists|duplicate/i.test(error.message || "")) throw error;
+  });
+
 const uploadZappMediaFile = async (bucket: string, fileName: string, file: File) => {
   const contentType = resolveUploadContentType(file);
 
   if (file.size <= RESUMABLE_UPLOAD_THRESHOLD_BYTES) {
-    const { error } = await supabase.storage
-      .from(bucket)
-      .upload(fileName, file, { cacheControl: "3600", upsert: false, contentType });
-
-    if (error) throw error;
+    await uploadSmallZappMedia(bucket, fileName, file, contentType);
     return;
   }
 
@@ -883,7 +891,7 @@ export function useZappMessaging({
     } catch (error: any) {
       console.error("Error sending media:", error);
       setMessages(prev => prev.filter(m => m.id !== tempMessageId));
-      toast.error(error.message || "Erro ao enviar mídia");
+      toast.error(friendlyZappError(error, "Erro ao enviar mídia"));
     } finally {
       setUploadingMedia(false);
     }
@@ -1058,11 +1066,7 @@ export function useZappMessaging({
       const fileName = `${currentUser!.account_id}/audio_${Date.now()}.${extension}`;
       const bucket = "zapp-media";
       
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(fileName, audioBlob, { contentType: audioBlob.type, cacheControl: '3600', upsert: false });
-      
-      if (uploadError) throw uploadError;
+      await uploadSmallZappMedia(bucket, fileName, audioBlob, audioBlob.type);
       
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
       const mediaUrl = urlData.publicUrl;
@@ -1164,7 +1168,7 @@ export function useZappMessaging({
             }).eq("id", insertedMessageId);
             setMessages(prev => prev.map(m =>
               m.id === insertedMessageId
-                ? { ...m, send_status: "failed" as const, send_error: error.message || "Falha ao enviar áudio", delivery_status: "failed" as const }
+                ? { ...m, send_status: "failed" as const, send_error: friendlyZappError(error, "Falha ao enviar áudio"), delivery_status: "failed" as const }
                 : m
             ));
           }
@@ -1223,7 +1227,7 @@ export function useZappMessaging({
       toast.success("Áudio enviado!");
     } catch (error: any) {
       console.error("Error sending audio:", error);
-      toast.error(error.message || "Erro ao enviar áudio.");
+      toast.error(friendlyZappError(error, "Erro ao enviar áudio."));
     } finally {
       setUploadingMedia(false);
     }
@@ -1468,7 +1472,7 @@ export function useZappMessaging({
     } catch (error: any) {
       console.error("Error sending contact:", error);
       setMessages(prev => prev.filter(m => m.id !== tempMessageId));
-      toast.error(error.message || "Erro ao enviar contato");
+      toast.error(friendlyZappError(error, "Erro ao enviar contato"));
     } finally {
       setSendingContact(false);
     }
