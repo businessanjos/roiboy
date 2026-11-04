@@ -259,6 +259,20 @@ export function ClientBusinessProfile({
     }
   };
 
+  // Linha de conversão compartilhada: mesmo formato em todos os cartões.
+  const foreignLine = (brl: number | null | undefined) => {
+    const amount = inForeign(brl);
+    if (!amount || !foreignCountry) return null;
+    return (
+      <ForeignRevenueLine
+        amount={amount}
+        countryName={foreignCountry.name}
+        currencyCode={foreignCountry.currency}
+        rate={fxRate}
+      />
+    );
+  };
+
 
   const fetchAll = async () => {
     setLoading(true);
@@ -616,7 +630,7 @@ export function ClientBusinessProfile({
               value={client.initial_revenue}
               onCommit={commitInitialRevenue}
               accent="muted"
-              foreign={inForeign(client.initial_revenue)}
+              foreignLine={foreignLine(client.initial_revenue)}
             />
             <div className="rounded-lg border bg-card p-3">
               <div className="flex items-center justify-between mb-1">
@@ -635,14 +649,7 @@ export function ClientBusinessProfile({
                 onCommit={commitMonthRevenue}
                 className="text-lg font-bold text-primary"
               />
-              {inForeign(selectedMonthRevenue) && (
-                <p
-                  className="text-sm font-semibold text-foreground mt-0.5"
-                  title={`Cotação de hoje: 1 ${foreignCountry!.currency} = R$ ${fxRate.toFixed(2).replace(".", ",")}`}
-                >
-                  {foreignCountry!.flag} ≈ {inForeign(selectedMonthRevenue)}
-                </p>
-              )}
+              {foreignLine(selectedMonthRevenue)}
               <p className="text-[10px] text-muted-foreground mt-1">
                 {selectedMonthRevenue == null
                   ? `Sem faturamento informado para ${monthLabel(selectedMonth)}`
@@ -1033,20 +1040,44 @@ export function ClientBusinessProfile({
 
 // ------------- helpers -------------
 
+function ForeignRevenueLine({
+  amount,
+  countryName,
+  currencyCode,
+  rate,
+}: {
+  amount: string;
+  countryName: string;
+  currencyCode: string;
+  rate: number;
+}) {
+  return (
+    <div
+      className="mt-1.5 flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/50 px-2 py-1"
+      title={`Cotação de hoje: 1 ${currencyCode} = R$ ${rate.toFixed(2).replace(".", ",")}`}
+    >
+      <span className="truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        Em {countryName}
+      </span>
+      <span className="shrink-0 text-sm font-semibold tabular-nums">{amount}</span>
+    </div>
+  );
+}
+
 function RevenueBlock({
   label,
   icon,
   value,
   onCommit,
   accent = "primary",
-  foreign,
+  foreignLine,
 }: {
   label: string;
   icon: React.ReactNode;
   value: number | null;
   onCommit: (raw: string) => void;
   accent?: "primary" | "muted";
-  foreign?: string | null;
+  foreignLine?: React.ReactNode;
 }) {
   return (
     <div className="rounded-lg border bg-card p-3">
@@ -1060,7 +1091,7 @@ function RevenueBlock({
           "text-lg font-bold " + (accent === "primary" ? "text-primary" : "text-foreground")
         }
       />
-      {foreign && <p className="text-sm font-semibold text-foreground mt-0.5">≈ {foreign}</p>}
+      {foreignLine}
     </div>
   );
 }
