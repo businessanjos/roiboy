@@ -248,7 +248,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
             </div>
           </div>
           <aside className="self-start lg:sticky lg:top-0">
-            <PlaybookSequencePreview steps={draft.steps} items={items} tags={tags} variables={variables} replaceVariables={replaceVariables} signText={signText} />
+            <PlaybookSequencePreview steps={draft.steps} items={items} tags={tags} stages={stages} variables={variables} replaceVariables={replaceVariables} signText={signText} />
           </aside>
           </div>
         ) : (

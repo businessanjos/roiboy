@@ -6,7 +6,7 @@ import {
   Signal, Wifi, BatteryFull, Camera, Tag,
 } from "lucide-react";
 import type { PlaybookItem } from "@/hooks/usePlaybook";
-import type { SequenceStep } from "@/hooks/usePlaybookSequences";
+import { stepAction, type SequenceStep } from "@/hooks/usePlaybookSequences";
 
 interface Props {
   steps: SequenceStep[];
@@ -16,6 +16,7 @@ interface Props {
   signText?: (text: string) => string;
   messageOnly?: boolean;
   tags?: { id: string; name: string; color: string }[];
+  stages?: { id: string; name: string; color: string; pipeline_name?: string }[];
 }
 
 function MediaBlock({ item }: { item: PlaybookItem }) {
@@ -69,30 +70,37 @@ function MediaBlock({ item }: { item: PlaybookItem }) {
   }
 }
 
-export function PlaybookSequencePreview({ steps, items, variables = {}, replaceVariables, signText, messageOnly = false, tags = [] }: Props) {
+export function PlaybookSequencePreview({ steps, items, variables = {}, replaceVariables, signText, messageOnly = false, tags = [], stages = [] }: Props) {
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const tagById = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags]);
-  const actions = new Map<number, { name: string; color: string }[]>();
+  const stageById = useMemo(() => new Map(stages.map((t) => [t.id, t])), [stages]);
+  const actions = new Map<number, { name: string; color: string; verb: string; prefix: string }[]>();
   const resolved: { step: SequenceStep; item: PlaybookItem; index: number }[] = [];
   steps.forEach((st, i) => {
-    if (st.tag_id) {
-      const t = tagById.get(st.tag_id);
-      if (t) actions.set(resolved.length, [...(actions.get(resolved.length) || []), t]);
+    const a = stepAction(st);
+    if (a) {
+      const t = a === "move_stage" ? stageById.get(st.stage_id || "") : tagById.get(st.tag_id || "");
+      if (t) {
+        const n = a === "move_stage"
+          ? { name: t.name, color: t.color, prefix: "movido para", verb: "" }
+          : { name: t.name, color: t.color, prefix: "etiqueta", verb: a === "remove_tag" ? "removida" : "aplicada" };
+        actions.set(resolved.length, [...(actions.get(resolved.length) || []), n]);
+      }
       return;
     }
     const item = itemById.get(st.playbook_item_id);
     if (item) resolved.push({ step: st, item, index: i });
   });
   const trailing = actions.get(resolved.length) || [];
-  const TagNotice = ({ t }: { t: { name: string; color: string } }) => (
+  const TagNotice = ({ t }: { t: { name: string; color: string; verb: string; prefix: string } }) => (
     <div className="my-1.5 flex justify-center">
       <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] shadow-sm" style={{ background: wa("chip"), color: wa("meta") }}>
-        <Tag className="h-3 w-3" style={{ color: t.color }} /> etiqueta <b style={{ color: t.color }}>{t.name}</b> aplicada
+        <Tag className="h-3 w-3" style={{ color: t.color }} /> {t.prefix} <b style={{ color: t.color }}>{t.name}</b>{t.verb ? ` ${t.verb}` : ""}
       </span>
     </div>
   );
   const scrollRef = useRef<HTMLDivElement>(null);
-  const lastKey = steps.map((r) => r.tag_id || r.playbook_item_id).join(",");
+  const lastKey = steps.map((r) => r.stage_id || r.tag_id || r.playbook_item_id).join(",");
   // Acompanha a última mensagem, como no WhatsApp, ao adicionar/trocar etapas.
   useEffect(() => {
     const el = scrollRef.current;
