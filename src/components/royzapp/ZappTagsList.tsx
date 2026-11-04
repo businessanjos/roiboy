@@ -59,28 +59,22 @@ export const ZappTagsList = memo(function ZappTagsList({
             return (
               <li key={tag.id} className="min-w-0">
                 <article
-                  className="group flex h-[70px] flex-col overflow-hidden rounded-xl px-3 py-2"
+                  className="group relative flex h-[70px] flex-col justify-center gap-0.5 overflow-hidden rounded-xl px-3 py-2"
                   style={{
                     backgroundColor: color,
                     color: text,
                     boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.22)",
                   }}
                 >
-                  <div className="flex min-h-0 flex-1 items-center">
-                    <p className="line-clamp-2 min-w-0 text-[13px] font-semibold leading-[1.2]">
-                      {tag.name}
+                  <p className="line-clamp-2 min-w-0 text-[13px] font-semibold leading-[1.2]">
+                    {tag.name}
+                  </p>
+                  {tag.description ? (
+                    <p className="truncate pr-16 text-[11px] leading-4 opacity-80">
+                      {tag.description}
                     </p>
-                  </div>
-                  <div className="flex min-w-0 items-center gap-1.5">
-
-                    {tag.description ? (
-                      <p className="min-w-0 flex-1 truncate text-[11px] leading-4 opacity-80">
-                        {tag.description}
-                      </p>
-                    ) : (
-                      <span className="min-w-0 flex-1" />
-                    )}
-                    <div className="flex shrink-0 items-center gap-1 opacity-100 transition-opacity lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
+                  ) : null}
+                  <div className="absolute bottom-1.5 right-2 flex items-center gap-1 opacity-100 transition-opacity lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
                       <button
                         type="button"
                         onClick={() => onOpenTagDialog(tag)}
@@ -99,9 +93,9 @@ export const ZappTagsList = memo(function ZappTagsList({
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
-                    </div>
                   </div>
                 </article>
+
               </li>
             );
           })}
