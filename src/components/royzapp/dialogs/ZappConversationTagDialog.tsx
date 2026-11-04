@@ -2,7 +2,6 @@ import { memo, useMemo, useState } from "react";
 import { Check, Search, Tags, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -188,7 +187,7 @@ export const ZappConversationTagDialog = memo(function ZappConversationTagDialog
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
         )}
 
         <DialogFooter className="gap-2 sm:space-x-0">
