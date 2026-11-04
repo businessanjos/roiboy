@@ -1,4 +1,4 @@
-import { ZappTagBadge, getConversationTags } from "@/components/royzapp/ZappTagBadge";
+import { ZappTagBadge, ZappTagMore, getConversationTags } from "@/components/royzapp/ZappTagBadge";
 import { memo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
