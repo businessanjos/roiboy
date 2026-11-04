@@ -431,7 +431,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <DropdownMenuContent align="end" className="max-h-[70dvh] overflow-y-auto w-[min(300px,calc(100vw-16px))] bg-zapp-panel border-zapp-border z-50 [&_[role=menuitem]]:min-h-11">
                 {/* Mobile-only actions */}
                 <div className="lg:hidden">
-                  <div className="px-2 py-2 text-xs text-zapp-text-muted">{STATUS_CONFIG[assignment.status]?.label || "Status"}</div>
+                  <div className="px-2 py-2 text-xs text-zapp-text-muted">{internalContact ? "Interno" : STATUS_CONFIG[assignment.status]?.label || "Status"}</div>
                   {!canClaim ? <div className="px-2 py-2 text-xs text-zapp-text-muted">Somente leitura</div> : <DropdownMenuItem className="min-h-11 text-zapp-text" onSelect={() => assignment.agent_id !== currentAgentId ? onAssignToMe(assignment.id) : onReleaseToQueue(assignment.id)}>{assignment.agent_id !== currentAgentId ? "Puxar atendimento" : "Devolver atendimento"}</DropdownMenuItem>}
                   {([['triage', 'Triagem'], ['active', 'Em atendimento'], ['closed', 'Finalizado']] as const).map(([status, label]) => <DropdownMenuItem key={status} className="min-h-11 text-zapp-text" onSelect={() => onUpdateStatus(assignment.id, status)}>{label}</DropdownMenuItem>)}
                   <DropdownMenuSeparator />
