@@ -1,5 +1,6 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { Tag as TagIcon } from "lucide-react";
 
 export interface ZappTagLike {
   name: string;
@@ -37,17 +38,27 @@ export function ZappTagBadge({
   tooltip = true,
   tooltipLabel,
   size = "sm",
+  variant = "badge",
 }: {
   tag: ZappTagLike;
   className?: string;
   tooltip?: boolean;
   tooltipLabel?: string;
   size?: "sm" | "md";
+  variant?: "badge" | "icon";
 }) {
   const color = tag.color || FALLBACK_COLOR;
   const text = readableText(color);
 
-  const badge = (
+  const badge = variant === "icon" ? (
+    <span
+      data-zapp-tag="1"
+      aria-label={`Etiqueta: ${tag.name}`}
+      className={cn("inline-flex h-4 w-4 shrink-0 items-center justify-center", className)}
+    >
+      <TagIcon className="h-3.5 w-3.5" style={{ color, fill: color }} strokeWidth={2} />
+    </span>
+  ) : (
     <span
       data-zapp-tag="1"
       className={cn(
