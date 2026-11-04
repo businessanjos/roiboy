@@ -3,6 +3,8 @@ import { useTablePagination } from "@/hooks/useTablePagination";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useInternalClientIds } from "@/hooks/useInternalClientIds";
+import { applyInternalClientExclusion } from "@/lib/internalClients";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
