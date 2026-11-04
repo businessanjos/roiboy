@@ -59,17 +59,20 @@ export const ZappTagsList = memo(function ZappTagsList({
             return (
               <li key={tag.id} className="min-w-0">
                 <article
-                  className="group flex h-[88px] flex-col gap-1 overflow-hidden rounded-xl px-3 py-2.5"
+                  className="group flex h-[70px] flex-col overflow-hidden rounded-xl px-3 py-2"
                   style={{
                     backgroundColor: color,
                     color: text,
                     boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.22)",
                   }}
                 >
-                  <p className="line-clamp-2 min-w-0 flex-1 text-[13px] font-semibold leading-[1.15]">
-                    {tag.name}
-                  </p>
+                  <div className="flex min-h-0 flex-1 items-center">
+                    <p className="line-clamp-2 min-w-0 text-[13px] font-semibold leading-[1.2]">
+                      {tag.name}
+                    </p>
+                  </div>
                   <div className="flex min-w-0 items-center gap-1.5">
+
                     {tag.description ? (
                       <p className="min-w-0 flex-1 truncate text-[11px] leading-4 opacity-80">
                         {tag.description}
