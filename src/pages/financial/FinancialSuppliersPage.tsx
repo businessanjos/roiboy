@@ -109,15 +109,19 @@ export default function FinancialSuppliersPage() {
   });
 
   // Count clients for the tab badge
+  const { internalClientIds } = useInternalClientIds();
   const { data: clientsCount = 0 } = useQuery({
-    queryKey: ["clients-count", accountId],
+    queryKey: ["clients-count", accountId, internalClientIds],
     queryFn: async () => {
       if (!accountId) return 0;
-      const { count, error } = await supabase
-        .from("clients")
-        .select("*", { count: "exact", head: true })
-        .eq("account_id", accountId)
-        .neq("status", "churned");
+      const { count, error } = await applyInternalClientExclusion(
+        supabase
+          .from("clients")
+          .select("*", { count: "exact", head: true })
+          .eq("account_id", accountId)
+          .neq("status", "churned"),
+        internalClientIds,
+      );
       if (error) throw error;
       return count || 0;
     },
