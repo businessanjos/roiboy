@@ -147,6 +147,23 @@ const showBrowserNotification = (title: string, body: string, link?: string | nu
 const NOTIFY_FRESH_MS = 25_000;
 const NOTIFY_GAP_MS = 1_200;
 
+/**
+ * Decide se um evento de notificação deve interromper o usuário.
+ * `stale` = chegou atrasada (lote depois de aba adormecida ou de voltar no
+ * navegador); `quiet` = chegou logo depois de outra que já interrompeu.
+ */
+export function notifyDecision(
+  createdIso: string | null | undefined,
+  now: number,
+  lastNotifyAt: number,
+): { stale: boolean; quiet: boolean } {
+  const created = new Date((createdIso ?? "") as string).getTime();
+  return {
+    stale: Number.isFinite(created) && now - created > NOTIFY_FRESH_MS,
+    quiet: now - lastNotifyAt < NOTIFY_GAP_MS,
+  };
+}
+
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -308,11 +325,15 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           const newNotification = payload.new as Notification;
 
           if (newNotification.user_id === currentUserId) {
-            const created = new Date(newNotification.created_at as string).getTime();
             const now = Date.now();
+            const { stale, quiet } = notifyDecision(
+              newNotification.created_at as string,
+              now,
+              lastNotifyAtRef.current,
+            );
 
             // Lote atrasado: atualiza o sino uma vez, sem som, push ou cartão.
-            if (Number.isFinite(created) && now - created > NOTIFY_FRESH_MS) {
+            if (stale) {
               if (staleRefreshRef.current) clearTimeout(staleRefreshRef.current);
               staleRefreshRef.current = setTimeout(() => {
                 staleRefreshRef.current = null;
