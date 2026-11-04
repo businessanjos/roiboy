@@ -12,6 +12,9 @@ export interface ZappTagLike {
 /**
  * Etiqueta do RoyZapp em selo legível: cor cheia + nome, com a dica de mouse
  * dizendo exatamente qual é. Nunca um ponto solto.
+ *
+ * `tone="soft"` é a versão discreta para o topo do chat: só o ícone na cor da
+ * etiqueta + o nome em texto suave, sem fundo, borda nem sombra.
  */
 export function ZappTagBadge({
   tag,
@@ -20,6 +23,7 @@ export function ZappTagBadge({
   tooltipLabel,
   size = "sm",
   variant = "badge",
+  tone = "solid",
 }: {
   tag: ZappTagLike;
   className?: string;
@@ -27,6 +31,7 @@ export function ZappTagBadge({
   tooltipLabel?: string;
   size?: "sm" | "md";
   variant?: "badge" | "icon";
+  tone?: "solid" | "soft";
 }) {
   const color = tag.color || ZAPP_TAG_FALLBACK_COLOR;
   const text = tagReadableText(color);
@@ -38,6 +43,18 @@ export function ZappTagBadge({
       className={cn("inline-flex h-4 w-4 shrink-0 items-center justify-center", className)}
     >
       <TagIcon className="h-3.5 w-3.5" style={{ color, fill: color }} strokeWidth={2} />
+    </span>
+  ) : tone === "soft" ? (
+    <span
+      data-zapp-tag="1"
+      className={cn(
+        "inline-flex max-w-[10rem] items-center gap-1 leading-none text-zapp-text-muted",
+        size === "sm" ? "text-[11px]" : "text-xs",
+        className,
+      )}
+    >
+      <TagIcon className="h-3 w-3 shrink-0" style={{ color, fill: color }} strokeWidth={2} />
+      <span className="truncate">{tag.name}</span>
     </span>
   ) : (
     <span
