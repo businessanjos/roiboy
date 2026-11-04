@@ -15,6 +15,7 @@ import {
   BellOff,
   BellRing,
   Volume2,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ZappConnectionsSection } from "./settings/ZappConnectionsSection";
+import { useZappTagNameTags } from "@/hooks/useZappTagNameTags";
 
 import type { NotificationPermissionStatus } from "@/hooks/useZappNotifications";
 
@@ -86,6 +88,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
   onRequestNotificationPermission,
 }: ZappSettingsPanelProps) {
   const navigate = useNavigate();
+  const { enabled: tagNameTagsEnabled, setEnabled: onTagNameTagsChange } = useZappTagNameTags();
 
   return (
     <div className="p-4 space-y-6">
@@ -158,8 +161,30 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
         </div>
       </div>
 
-      {/* Access Configuration Notice */}
-      <div className="space-y-3 pt-4 border-t border-zapp-border">
+      {/* Tag visibility (presentation only, per person) */}
+      <div className="space-y-4 pt-4 border-t border-zapp-border">
+        <div className="flex items-center gap-2">
+          <Tag className="h-4 w-4 text-zapp-accent" />
+          <p className="text-zapp-text text-sm font-medium">Exibição das conversas</p>
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
+          <div className="pr-3">
+            <p className="text-zapp-text text-sm">Etiquetas ao lado do nome</p>
+            <p className="text-zapp-text-muted text-xs">
+              Mostra os selos de etiqueta perto do nome na lista de conversas e no topo do chat.
+              Desligue para deixar a lista mais limpa — as etiquetas continuam salvas.
+            </p>
+          </div>
+          <Switch
+            checked={tagNameTagsEnabled}
+            onCheckedChange={onTagNameTagsChange}
+            className="data-[state=checked]:bg-zapp-accent"
+          />
+        </div>
+      </div>
+
+      {/* Access Configuration Notice */}      <div className="space-y-3 pt-4 border-t border-zapp-border">
         <div>
           <p className="text-zapp-text text-sm font-medium">Controle de Acesso</p>
           <p className="text-zapp-text-muted text-xs">

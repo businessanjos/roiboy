@@ -1,4 +1,5 @@
 import { ZappTagBadge, ZappTagMore, getConversationTags } from "@/components/royzapp/ZappTagBadge";
+import { useZappTagNameTagsEnabled } from "@/hooks/useZappTagNameTags";
 import { memo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -110,6 +111,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
   const contact = getContactInfo(assignment);
   const zappConvId = assignment.zapp_conversation?.id;
   const { internalCores } = useZappInternalContacts();
+  const showNameTags = useZappTagNameTagsEnabled();
   // Número da própria equipe não é atendimento de cliente: sem selo de espera.
   const internal =
     isInternalGroup(contact.name, !!contact.isGroup, !!contact.isPinned) ||
@@ -188,7 +190,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
             </span>
             {(() => {
               const tagList = getConversationTags(assignment.conversation_tags);
-              if (tagList.length === 0) return null;
+              if (tagList.length === 0 || !showNameTags) return null;
               return (
                 <span className="flex shrink-0 items-center gap-0.5">
                   {tagList.slice(0, 3).map((t, i) => (
