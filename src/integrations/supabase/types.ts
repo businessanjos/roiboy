@@ -24839,6 +24839,7 @@ export type Database = {
       spiff_spin_requests: {
         Row: {
           account_id: string
+          competence_month: string | null
           created_at: string
           id: string
           rejection_reason: string | null
@@ -24853,6 +24854,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          competence_month?: string | null
           created_at?: string
           id?: string
           rejection_reason?: string | null
@@ -24867,6 +24869,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          competence_month?: string | null
           created_at?: string
           id?: string
           rejection_reason?: string | null
@@ -24911,6 +24914,7 @@ export type Database = {
           cancelled_at: string | null
           cancelled_deal_id: string | null
           cancelled_reason: string | null
+          competence_month: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -24933,6 +24937,7 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_deal_id?: string | null
           cancelled_reason?: string | null
+          competence_month?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -24955,6 +24960,7 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_deal_id?: string | null
           cancelled_reason?: string | null
+          competence_month?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -30363,6 +30369,10 @@ export type Database = {
           _note?: string
           _request_id: string
         }
+        Returns: Json
+      }
+      decide_spin_request_by_phone: {
+        Args: { _approve: boolean; _phone: string; _request_id: string }
         Returns: Json
       }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
