@@ -13,6 +13,9 @@ export interface RoyZappSector {
   description: string;
 }
 
+/** Setor de Customer Success — usado para esconder ações que a equipe não usa. */
+export const CUSTOMER_SUCCESS_SECTOR_ID: SectorId = "operacoes";
+
 export const ROY_ZAPP_SECTORS: RoyZappSector[] = [
   { id: "vendas", label: "Comercial", description: "Pipeline comercial e leads" },
   { id: "operacoes", label: "Customer Success", description: "Atendimento CX/CS" },
