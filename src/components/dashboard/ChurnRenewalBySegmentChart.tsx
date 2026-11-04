@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { clientScopeKey, filterByClientScope } from "@/lib/dashboard/clientScope";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LabelList } from "recharts";
-import { Layers, XCircle, RefreshCw, Package, Info } from "lucide-react";
+import { Layers, XCircle, RefreshCw, Package, Info, ExternalLink } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const METRIC_HELP: { label: string; color: string; formula: string; detail: string }[] = [
@@ -114,6 +115,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
   const endStr = periodEnd.toISOString().slice(0, 10);
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
   const { labels: statusLabels } = useContractCatalog("contract_status");
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-churn-renewal-segment", accountId, startStr, endStr, clientScopeKey(clientIds)],
