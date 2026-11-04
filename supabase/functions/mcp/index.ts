@@ -946,7 +946,7 @@ async function fetchInternalClientSplit(client = supabase, accountId) {
   }
 }
 async function fetchInternalClientIds(client = supabase, accountId) {
-  return (await fetchInternalClientSplit(client, accountId)).hidden;
+  return (await fetchInternalClientSplit(client, accountId)).all;
 }
 function applyInternalClientExclusion(query, ids) {
   if (!ids.length) return query;

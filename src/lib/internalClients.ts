@@ -98,13 +98,14 @@ export async function fetchInternalClientSplit(
 }
 
 /**
- * Só o conjunto que some da lista (números registrados como internos).
+ * Todos os cadastros que não são clientes (internos registrados + telefones de
+ * colaborador): o conjunto usado por contagens, métricas e etiquetas.
  */
 export async function fetchInternalClientIds(
   client: any = supabase,
   accountId?: string | null,
 ): Promise<string[]> {
-  return (await fetchInternalClientSplit(client, accountId)).hidden;
+  return (await fetchInternalClientSplit(client, accountId)).all;
 }
 
 /**
