@@ -37,6 +37,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { ConversationAssignment, ContactInfo, getInitials, STATUS_CONFIG } from "./types";
+import { isInternalContactPhone } from "@/lib/zappInternalContacts";
+import { useZappInternalContacts } from "@/hooks/useZappInternalContacts";
 import { ZappClientSuggestionBanner } from "./ZappClientSuggestionBanner";
 import { ZappTimezoneBanner } from "./ZappTimezoneBanner";
 import { VipBadge } from "@/components/client/VipBadge";
