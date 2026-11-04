@@ -1,4 +1,5 @@
 import { ZappTagBadge } from "@/components/royzapp/ZappTagBadge";
+import { useZappTagNameTagsEnabled } from "@/hooks/useZappTagNameTags";
 import { memo, useState } from "react";
 import { ZappGroupClientsDialog } from "./dialogs/ZappGroupClientsDialog";
 import { ZappGroupParticipantsDialog } from "./dialogs/ZappGroupParticipantsDialog";
@@ -118,6 +119,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   canTransfer = true,
   canClaim = true,
 }: ZappChatHeaderProps) {
+  const showNameTags = useZappTagNameTagsEnabled();
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
   const { internalCores } = useZappInternalContacts();
@@ -229,6 +231,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <span className="line-clamp-2 break-words lg:truncate">{contactInfo.name}</span>
               <VipBadge clientId={clientId} />
             </h3>
+            {showNameTags && (
             <div className="hidden sm:flex items-center gap-1 flex-shrink-0">{(assignment.conversation_tags || []).filter((ct: any) => ct.tag).slice(0, 3).map((ct: any) => (
               <ZappTagBadge key={ct.tag_id} tag={ct.tag} />
             ))}
@@ -236,6 +239,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <span className="text-[10px] text-zapp-text-muted">+{(assignment.conversation_tags || []).filter((ct: any) => ct.tag).length - 3}</span>
             )}
             </div>
+            )}
             {clientId && <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-zapp-text-muted flex-shrink-0" />}
             {clientProducts && clientProducts.length > 0 && (
               <div className="hidden lg:flex items-center gap-1 flex-shrink-0">
