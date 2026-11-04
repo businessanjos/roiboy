@@ -1732,7 +1732,7 @@ Deno.serve(async (req) => {
       };
       const normalizedQuotedMessageId = normalizeQuotedMessageId(payload.quoted_message_id);
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
-      if (payload.file_name) mediaBody.fileName = payload.file_name;
+      if (payload.file_name) { mediaBody.fileName = payload.file_name; mediaBody.docName = payload.file_name; }
       
       try {
         result = await enqueueSend(token!, `send_media user=${userData.name} type=${outboundMediaType}`, () =>
@@ -1821,7 +1821,7 @@ Deno.serve(async (req) => {
       };
       const normalizedQuotedMessageId = normalizeQuotedMessageId(payload.quoted_message_id);
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
-      if (payload.file_name) mediaBody.fileName = payload.file_name;
+      if (payload.file_name) { mediaBody.fileName = payload.file_name; mediaBody.docName = payload.file_name; }
       
       try {
         result = await enqueueSend(token!, `send_media_to_group user=${userData.name} type=${outboundMediaType}`, () =>

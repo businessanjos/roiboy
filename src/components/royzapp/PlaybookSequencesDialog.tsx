@@ -107,7 +107,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
             media_url: item.media_url, media_filename: item.media_filename,
             media_caption: sign(caption) || null,
             delay_seconds: st.delay_seconds,
-          }];
+          };
         }),
       }, { id: currentUser.id, name: currentUser.name, account_id: currentUser.account_id });
       toast.success(`Sequência "${s.name}" iniciada. Pode ir para outra conversa; se você escrever nesta, ela para.`);
