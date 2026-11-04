@@ -40,6 +40,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PERMISSIONS } from "@/lib/access/permissions";
 import { useSectorNavItems } from "@/hooks/useSectorNavItems";
 import { useSector } from "@/contexts/SectorContext";
+import { useInternalClientIds } from "@/hooks/useInternalClientIds";
+import { applyInternalClientExclusion } from "@/lib/internalClients";
 
 function useSearchSectorPages() {
   // Fixed hook calls for the fixed sector catalog; every menu uses the same filtering.
@@ -152,6 +154,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     });
   }, [hasSectorAccess, permissionsLoading, sectorLoading, canSeeRh, sectorPages]);
 
+  // Cadastros com telefone da própria equipe não aparecem como cliente.
+  const { internalClientIds } = useInternalClientIds();
   const canViewClients = hasPermission(PERMISSIONS.CLIENTS_VIEW);
   const canViewSales = hasSectorAccess("vendas");
   const canViewLeads = canViewSales && canViewClients;
@@ -227,10 +231,13 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         ];
         if (phoneLike) filters.push(`phone_e164.ilike.${phoneLike}`, `cpf.ilike.${phoneLike}`);
         tasks.push(
-          supabase
-            .from("clients")
-            .select("id, full_name, company_name, city, state")
-            .or(filters.join(","))
+          applyInternalClientExclusion(
+            supabase
+              .from("clients")
+              .select("id, full_name, company_name, city, state")
+              .or(filters.join(",")),
+            internalClientIds,
+          )
             .limit(6)
             .then(({ data }) =>
               (data || []).map((c) => ({
@@ -641,6 +648,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     canViewContracts,
     zappSectorKey,
     zappSectorIds,
+    internalClientIds,
   ]);
 
 
