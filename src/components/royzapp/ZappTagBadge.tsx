@@ -91,7 +91,10 @@ export function ZappTagMore({ count, tags }: { count: number; tags: ZappTagLike[
     <TooltipProvider delayDuration={120} skipDelayDuration={0}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="inline-flex h-[18px] shrink-0 items-center rounded-full border border-zapp-border bg-zapp-panel px-1.5 text-[10px] font-medium leading-none text-zapp-text-muted">
+          <span
+            data-zapp-tag-more="1"
+            className="inline-flex h-[18px] shrink-0 items-center rounded-full border border-zapp-border bg-zapp-panel px-1.5 text-[10px] font-medium leading-none text-zapp-text-muted"
+          >
             +{count}
           </span>
         </TooltipTrigger>
