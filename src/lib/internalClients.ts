@@ -18,7 +18,23 @@ type ClientPhoneRow = {
  * listagem segue mostrando tudo — esconder cliente de verdade é pior do que
  * mostrar um cadastro interno.
  */
-export async function fetchInternalClientIds(client: any = supabase): Promise<string[]> {
+export async function fetchInternalClientIds(
+  client: any = supabase,
+  accountId?: string | null,
+): Promise<string[]> {
+  // 1) Fonte única no banco: mesma função usada pela listagem de clientes.
+  if (accountId) {
+    try {
+      const { data, error } = await client.rpc("internal_client_ids", {
+        p_account_id: accountId,
+      });
+      if (!error && Array.isArray(data)) return data as string[];
+    } catch {
+      /* cai para a varredura abaixo */
+    }
+  }
+
+  // 2) Fallback: varre os telefones quando a função não está disponível.
   try {
     const [registered, collaborators] = await Promise.all([
       client.from("zapp_internal_contacts").select("phone_e164"),

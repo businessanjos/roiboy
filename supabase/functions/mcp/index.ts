@@ -892,7 +892,16 @@ function isInternalClientRecord(record, cores) {
 
 // src/lib/internalClients.ts
 var PAGE_SIZE = 1e3;
-async function fetchInternalClientIds(client = supabase) {
+async function fetchInternalClientIds(client = supabase, accountId) {
+  if (accountId) {
+    try {
+      const { data, error } = await client.rpc("internal_client_ids", {
+        p_account_id: accountId
+      });
+      if (!error && Array.isArray(data)) return data;
+    } catch {
+    }
+  }
   try {
     const [registered, collaborators] = await Promise.all([
       client.from("zapp_internal_contacts").select("phone_e164"),
