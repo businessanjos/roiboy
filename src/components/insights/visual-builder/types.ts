@@ -56,6 +56,8 @@ export interface VisualConfig {
   explicitStatus?: boolean;
   // Hidden users for call_commercial visual
   hiddenUsers?: string[];
+  // call_commercial: escopo de funil (padrão exclude_cr = sem Clínica Ryka)
+  callScope?: 'all' | 'exclude_cr' | 'only_cr';
   // Hidden categories for filtering chart groups
   hiddenCategories?: string[];
   // Stack by field for stacked bar charts (e.g., 'responsible_name')
