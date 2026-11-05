@@ -28067,6 +28067,27 @@ export type Database = {
           },
         ]
       }
+      zapp_account_settings: {
+        Row: {
+          account_id: string
+          ruler_keep_title: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          ruler_keep_title?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          ruler_keep_title?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       zapp_agents: {
         Row: {
           account_id: string
@@ -30713,6 +30734,7 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
+      is_zapp_account_admin: { Args: never; Returns: boolean }
       issue_fiscal_invoice: {
         Args: {
           p_invoice_id: string
