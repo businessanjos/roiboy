@@ -452,16 +452,16 @@ function requireUser(ctx) {
   return supabaseForUser(ctx);
 }
 async function requireSector(ctx, sectorId) {
-  const supabase2 = requireUser(ctx);
+  const supabase = requireUser(ctx);
   const userId = ctx.getUserId?.();
   if (!userId) throw new ToolError("N\xE3o autenticado. Reconecte o conector para renovar o acesso.");
-  const { data, error } = await supabase2.rpc("user_has_sector_access", {
+  const { data, error } = await supabase.rpc("user_has_sector_access", {
     _auth_user_id: userId,
     _sector_id: sectorId
   });
   failIf(error);
   if (data !== true) throw new ToolError(`Sem permiss\xE3o para consultar a \xE1rea ${sectorId}.`);
-  return supabase2;
+  return supabase;
 }
 var RH_ALLOWED_EMAILS = /* @__PURE__ */ new Set([
   "m.quintana@me.com",
@@ -519,8 +519,8 @@ var telephony_calls_default = defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, agent_name, campaign_name, direction, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "vendas");
-    let query = supabase2.from("threecplus_call_logs").select(
+    const supabase = await requireSector(ctx, "vendas");
+    let query = supabase.from("threecplus_call_logs").select(
       "id, agent_name, agent_email, call_type, direction, phone, contact_name, campaign_name, status, qualification_name, duration_seconds, wait_seconds, acw_seconds, started_at, connected_at, ended_at"
     ).gte("started_at", toIso(start_date)).lte("started_at", toIso(end_date, true)).order("started_at", { ascending: false }).limit(limit);
     if (agent_name) query = query.ilike("agent_name", `%${agent_name}%`);
@@ -572,8 +572,8 @@ var sales_deals_default = defineTool2({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, status, search, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "vendas");
-    let query = supabase2.from("deals").select(
+    const supabase = await requireSector(ctx, "vendas");
+    let query = supabase.from("deals").select(
       "id, title, status, value, entry_value, received_value, contact_name, contact_email, contact_phone, source, is_renewal, probability, expected_close_date, won_at, lost_at, lost_reason, loss_notes, stage_changed_at, created_at, updated_at, stage_id, pipeline_id, responsible_user_id, sdr_user_id, client_id, deal_stages(name), pipelines(name)"
     ).is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
     const startIso = toIso(start_date);
@@ -628,19 +628,19 @@ var sales_goals_commissions_default = defineTool3({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, include_goals, include_commissions, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "vendas");
+    const supabase = await requireSector(ctx, "vendas");
     const startIso = toIso(start_date);
     const endIso = toIso(end_date, true);
     const payload = { periodo: { inicio: start_date, fim: end_date } };
     if (include_goals) {
-      const { data, error } = await supabase2.from("sales_goals").select("id, client_id, goal_amount, currency, period_start, period_end, created_at").gte("period_end", start_date).lte("period_start", end_date).order("period_start", { ascending: false }).limit(limit);
+      const { data, error } = await supabase.from("sales_goals").select("id, client_id, goal_amount, currency, period_start, period_end, created_at").gte("period_end", start_date).lte("period_start", end_date).order("period_start", { ascending: false }).limit(limit);
       failIf(error);
       const metas = data ?? [];
       payload.metas = metas;
       payload.metas_total = metas.reduce((acc, g) => acc + Number(g.goal_amount ?? 0), 0);
     }
     if (include_commissions) {
-      const { data, error } = await supabase2.from("commission_deal_entries").select(
+      const { data, error } = await supabase.from("commission_deal_entries").select(
         "id, deal_id, deal_title, client_name, deal_value, commission_percent, commission_total, commission_released, commission_pending, commission_status, payment_status, payment_method, approval_status, paid_at, released_at, period_id, plan_id, created_at"
       ).gte("created_at", startIso).lte("created_at", endIso).order("created_at", { ascending: false }).limit(limit);
       failIf(error);
@@ -674,8 +674,8 @@ var zapp_conversations_default = defineTool4({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, search, include_groups, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "royzapp");
-    let query = supabase2.from("zapp_conversations").select(
+    const supabase = await requireSector(ctx, "royzapp");
+    let query = supabase.from("zapp_conversations").select(
       "id, contact_name, phone_e164, channel, sector_id, client_id, deal_id, lead_id, is_group, unread_count, last_message_at, last_message_preview, created_at"
     ).order("last_message_at", { ascending: false, nullsFirst: false }).limit(limit);
     const startIso = toIso(start_date);
@@ -705,8 +705,8 @@ var zapp_messages_default = defineTool5({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ conversation_id, start_date, end_date, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "royzapp");
-    let query = supabase2.from("zapp_messages").select(
+    const supabase = await requireSector(ctx, "royzapp");
+    let query = supabase.from("zapp_messages").select(
       "id, direction, content, transcription, message_type, media_type, sender_name, sender_phone, sender_user_id, delivery_status, sent_at"
     ).eq("zapp_conversation_id", conversation_id).is("deleted_at", null).order("sent_at", { ascending: true }).limit(limit);
     const startIso = toIso(start_date);
@@ -729,119 +729,6 @@ var zapp_messages_default = defineTool5({
 // src/lib/mcp/tools/clients-portfolio.ts
 import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.28.0";
 import { z as z6 } from "npm:zod@^3.25.76";
-
-// src/integrations/supabase/previewAuthStorage.ts
-var RESULT = "lovable-preview-auth:result";
-function readBrokerReply(data, requestId) {
-  if (typeof data !== "object" || data === null) return null;
-  if (!("type" in data) || data.type !== RESULT) return null;
-  if (!("requestId" in data) || data.requestId !== requestId) return null;
-  return {
-    ok: "ok" in data && Boolean(data.ok),
-    value: "value" in data && typeof data.value === "string" ? data.value : null
-  };
-}
-function brokeredPreviewStorage() {
-  if (typeof window === "undefined") return void 0;
-  const host = location.hostname;
-  const PREVIEW_ZONES = ["lovableproject.com", "lovableproject-dev.com", "lovable.app", "gpt-eng.com", "gptengineer.run"];
-  const onPreviewZone = PREVIEW_ZONES.some((z15) => host === z15 || host.endsWith("." + z15));
-  const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-  const projectId = onPreviewZone ? new RegExp("^(?:id-preview(?:-[a-z0-9]+)?|project)--(" + UUID + ")(?:-dev)?(?=\\.|$)", "i").exec(host)?.[1] ?? new RegExp("^(" + UUID + ")(?=[.-])", "i").exec(host)?.[1] : void 0;
-  const parentWindow = window.parent;
-  const framed = parentWindow !== null && parentWindow !== window;
-  if (!projectId || !framed) return localStorage;
-  const dev = host.endsWith(".lovableproject-dev.com") || host.endsWith(".gpt-eng.com");
-  const EDITOR = dev ? /^https:\/\/([a-z0-9-]+\.)*(lovable\.dev|gptengineer\.app)$|^http:\/\/localhost:3000$/ : /^https:\/\/([a-z0-9-]+\.)*(lovable\.dev|gptengineer\.app)$/;
-  const ancestorOrigins = location.ancestorOrigins;
-  const ancestor = ancestorOrigins?.[0] ?? (document.referrer ? new URL(document.referrer).origin : "");
-  const editorOrigins = ancestor && EDITOR.test(ancestor) ? [ancestor] : dev ? ["https://lovable.dev", "http://localhost:3000"] : ["https://lovable.dev"];
-  const TIMEOUT = 2e3;
-  const newId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const request = (type, key, value) => new Promise((resolve) => {
-    const requestId = newId();
-    let done = false;
-    const finish = (reply) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      window.removeEventListener("message", onMessage);
-      resolve(reply);
-    };
-    const onMessage = (e) => {
-      if (!editorOrigins.includes(e.origin)) return;
-      const reply = readBrokerReply(e.data, requestId);
-      if (reply) finish(reply);
-    };
-    window.addEventListener("message", onMessage);
-    const timer = setTimeout(() => {
-      finish(null);
-    }, TIMEOUT);
-    const msg = { type, requestId, projectId, key };
-    if (value !== void 0) msg.value = value;
-    for (const origin of editorOrigins) window.parent.postMessage(msg, origin);
-  });
-  let firstGet = true;
-  const RETRY_DELAY = 250;
-  const readLocal = (key) => {
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return void 0;
-    }
-  };
-  return {
-    getItem: async (key) => {
-      const local = readLocal(key);
-      let res = await request("lovable-preview-auth:get", key, local ?? void 0);
-      if (!res && firstGet) {
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
-        res = await request("lovable-preview-auth:get", key, local ?? void 0);
-      }
-      firstGet = false;
-      if (res?.ok && res.value !== null) {
-        if (res.value === "") {
-          if (local !== void 0 && readLocal(key) === local) localStorage.removeItem(key);
-          return null;
-        }
-        if (local === null && readLocal(key) === null) {
-          try {
-            localStorage.setItem(key, res.value);
-          } catch {
-          }
-        }
-        return res.value;
-      }
-      return localStorage.getItem(key);
-    },
-    setItem: (key, value) => {
-      localStorage.setItem(key, value);
-      return request("lovable-preview-auth:set", key, value).then((res) => {
-        if (res?.ok && res.value !== null && localStorage.getItem(key) === value) {
-          if (res.value === "") localStorage.removeItem(key);
-          else localStorage.setItem(key, res.value);
-        }
-      });
-    },
-    removeItem: (key) => {
-      const local = readLocal(key);
-      localStorage.removeItem(key);
-      return request("lovable-preview-auth:remove", key, local ?? void 0).then(() => {
-      });
-    }
-  };
-}
-
-// src/integrations/supabase/client.ts
-var SUPABASE_URL = "https://mtzoavtbtqflufyccern.supabase.co";
-var SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10em9hdnRidHFmbHVmeWNjZXJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4NDQ2MDYsImV4cCI6MjA4MTQyMDYwNn0.aFVdVFXwpE7iU7G_u-Ehh-FBFxH32fHiZVo8-RzRGUA";
-var supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: brokeredPreviewStorage(),
-    persistSession: true,
-    autoRefreshToken: true
-  }
-});
 
 // src/lib/zappInternalContacts.ts
 function zappPhoneCore(phone) {
@@ -890,13 +777,13 @@ function isInternalClientRecord(record, cores) {
   return clientRecordPhones(record).some((phone) => isInternalContactPhone(phone, cores));
 }
 
-// src/lib/internalClients.ts
+// src/lib/internalClientsCore.ts
 var PAGE_SIZE = 1e3;
 var NO_SPLIT = { all: [], hidden: [] };
 function toIds(value) {
   return Array.isArray(value) ? value.map((id) => String(id)) : [];
 }
-async function fetchInternalClientSplit(client = supabase, accountId) {
+async function fetchInternalClientSplit(client, accountId) {
   if (accountId) {
     try {
       const { data, error } = await client.rpc("internal_client_split", {
@@ -945,7 +832,7 @@ async function fetchInternalClientSplit(client = supabase, accountId) {
     return NO_SPLIT;
   }
 }
-async function fetchInternalClientIds(client = supabase, accountId) {
+async function fetchInternalClientIds(client, accountId) {
   return (await fetchInternalClientSplit(client, accountId)).all;
 }
 function applyInternalClientExclusion(query, ids) {
@@ -973,8 +860,8 @@ var clients_portfolio_default = defineTool6({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ status, search, expiring_before, limit, offset, summary_only, include_contracts }, ctx) => {
-    const supabase2 = await requireSector(ctx, "operacoes");
-    const internalIds = await fetchInternalClientIds(supabase2);
+    const supabase = await requireSector(ctx, "operacoes");
+    const internalIds = await fetchInternalClientIds(supabase);
     const applyClientFilters = (query) => {
       let q = query;
       if (status !== "all") q = q.eq("status", status);
@@ -982,7 +869,7 @@ var clients_portfolio_default = defineTool6({
       return applyInternalClientExclusion(q, internalIds);
     };
     const countResult = await applyClientFilters(
-      supabase2.from("clients").select("id", { count: "exact", head: true })
+      supabase.from("clients").select("id", { count: "exact", head: true })
     );
     failIf(countResult.error);
     const totalClientes = countResult.count ?? 0;
@@ -991,7 +878,7 @@ var clients_portfolio_default = defineTool6({
       const statuses = ["active", "paused", "churn_risk", "churned", "no_contract"];
       const results = await Promise.all(
         statuses.map(async (s) => {
-          let q = supabase2.from("clients").select("id", { count: "exact", head: true }).eq("status", s);
+          let q = supabase.from("clients").select("id", { count: "exact", head: true }).eq("status", s);
           if (search) q = q.or(`full_name.ilike.%${search}%,company_name.ilike.%${search}%`);
           q = applyInternalClientExclusion(q, internalIds);
           const r = await q;
@@ -1003,7 +890,7 @@ var clients_portfolio_default = defineTool6({
       });
     }
     if (summary_only) {
-      const contractsCount = await supabase2.from("client_contracts").select("id", { count: "exact", head: true }).eq("status", "active");
+      const contractsCount = await supabase.from("client_contracts").select("id", { count: "exact", head: true }).eq("status", "active");
       failIf(contractsCount.error);
       return jsonResult({
         resumo: {
@@ -1018,7 +905,7 @@ var clients_portfolio_default = defineTool6({
       });
     }
     const clientsResult = await applyClientFilters(
-      supabase2.from("clients").select(
+      supabase.from("clients").select(
         "id, full_name, company_name, status, responsible_user_id, stage_id, business_segment, mls_level, contract_start_date, contract_end_date, recent_activity_at, created_at"
       ).order("full_name").range(offset, offset + limit - 1)
     );
@@ -1027,7 +914,7 @@ var clients_portfolio_default = defineTool6({
     const ids = clients.map((client) => client.id);
     let contracts = [];
     if (include_contracts && ids.length) {
-      let contractQuery = supabase2.from("client_contracts").select(
+      let contractQuery = supabase.from("client_contracts").select(
         "id, client_id, product_id, status, value, currency, start_date, end_date, contract_type, payment_status, installments_count"
       ).in("client_id", ids).order("end_date", { ascending: true });
       if (expiring_before) contractQuery = contractQuery.lte("end_date", expiring_before);
@@ -1038,7 +925,7 @@ var clients_portfolio_default = defineTool6({
     const productIds = [...new Set(contracts.map((c) => c.product_id).filter(Boolean))];
     let products = [];
     if (productIds.length) {
-      const result = await supabase2.from("products").select("id, name, billing_period, is_active, color").in("id", productIds);
+      const result = await supabase.from("products").select("id, name, billing_period, is_active, color").in("id", productIds);
       failIf(result.error);
       products = result.data ?? [];
     }
@@ -1085,11 +972,11 @@ var client_success_activity_default = defineTool7({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, client_id, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "operacoes");
+    const supabase = await requireSector(ctx, "operacoes");
     const start = toIso(start_date) ?? start_date;
     const end = toIso(end_date, true) ?? end_date;
-    let checkinsQuery = supabase2.from("client_checkins").select("id, client_id, user_id, happened_at, initiated_by, channel, kind, summary, source, message_count").gte("happened_at", start).lte("happened_at", end).order("happened_at", { ascending: false }).limit(limit);
-    let followupsQuery = supabase2.from("client_followups").select("id, client_id, user_id, type, title, content, created_at").gte("created_at", start).lte("created_at", end).order("created_at", { ascending: false }).limit(limit);
+    let checkinsQuery = supabase.from("client_checkins").select("id, client_id, user_id, happened_at, initiated_by, channel, kind, summary, source, message_count").gte("happened_at", start).lte("happened_at", end).order("happened_at", { ascending: false }).limit(limit);
+    let followupsQuery = supabase.from("client_followups").select("id, client_id, user_id, type, title, content, created_at").gte("created_at", start).lte("created_at", end).order("created_at", { ascending: false }).limit(limit);
     if (client_id) {
       checkinsQuery = checkinsQuery.eq("client_id", client_id);
       followupsQuery = followupsQuery.eq("client_id", client_id);
@@ -1128,8 +1015,8 @@ var financial_overview_default = defineTool8({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, entry_type, status, include_entries, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "financeiro");
-    let query = supabase2.from("financial_entries").select("id, entry_type, description, amount, currency, due_date, payment_date, status, category_id, client_id, supplier_id, installment_number, total_installments, is_conciliated").gte("due_date", start_date).lte("due_date", end_date).order("due_date").limit(limit);
+    const supabase = await requireSector(ctx, "financeiro");
+    let query = supabase.from("financial_entries").select("id, entry_type, description, amount, currency, due_date, payment_date, status, category_id, client_id, supplier_id, installment_number, total_installments, is_conciliated").gte("due_date", start_date).lte("due_date", end_date).order("due_date").limit(limit);
     if (entry_type !== "all") query = query.eq("entry_type", entry_type);
     if (status !== "all") query = query.eq("status", status);
     const { data, error } = await query;
@@ -1171,15 +1058,15 @@ var hr_overview_default = defineTool9({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ status, department, include_people, limit }, ctx) => {
-    const supabase2 = await requireRhAccess(ctx);
-    let peopleQuery = supabase2.from("hr_collaborators").select("id, full_name, department, position, hire_date, termination_date, employment_type, status, work_model, unit").order("full_name").limit(limit);
+    const supabase = await requireRhAccess(ctx);
+    let peopleQuery = supabase.from("hr_collaborators").select("id, full_name, department, position, hire_date, termination_date, employment_type, status, work_model, unit").order("full_name").limit(limit);
     if (status !== "all") peopleQuery = peopleQuery.eq("status", status);
     if (department) peopleQuery = peopleQuery.eq("department", department);
     const [peopleResult, vacationsResult, admissionsResult, offboardingsResult] = await Promise.all([
       peopleQuery,
-      supabase2.from("hr_vacation_requests").select("id, collaborator_id, request_type, start_date, end_date, days_count, status").order("start_date", { ascending: false }).limit(limit),
-      supabase2.from("hr_admissions").select("id, candidate_name, position_title, department, contract_type, start_date, stage, admitted_at").order("start_date", { ascending: false }).limit(limit),
-      supabase2.from("hr_offboardings").select("id, collaborator_id, termination_type, last_day_worked, termination_date, notice_type, stage, will_replace, completed_at").order("termination_date", { ascending: false }).limit(limit)
+      supabase.from("hr_vacation_requests").select("id, collaborator_id, request_type, start_date, end_date, days_count, status").order("start_date", { ascending: false }).limit(limit),
+      supabase.from("hr_admissions").select("id, candidate_name, position_title, department, contract_type, start_date, stage, admitted_at").order("start_date", { ascending: false }).limit(limit),
+      supabase.from("hr_offboardings").select("id, collaborator_id, termination_type, last_day_worked, termination_date, notice_type, stage, will_replace, completed_at").order("termination_date", { ascending: false }).limit(limit)
     ]);
     failIf(peopleResult.error);
     failIf(vacationsResult.error);
@@ -1214,13 +1101,13 @@ var marketing_overview_default = defineTool10({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, project_status, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "marketing");
-    let projectsQuery = supabase2.from("marketing_projects").select("id, name, description, status, start_date, target_date, budget_planned, budget_actual, owner_user_id").lte("start_date", end_date).order("target_date").limit(limit);
+    const supabase = await requireSector(ctx, "marketing");
+    let projectsQuery = supabase.from("marketing_projects").select("id, name, description, status, start_date, target_date, budget_planned, budget_actual, owner_user_id").lte("start_date", end_date).order("target_date").limit(limit);
     if (project_status) projectsQuery = projectsQuery.eq("status", project_status);
     const [projectsResult, tasksResult, contentResult] = await Promise.all([
       projectsQuery,
-      supabase2.from("marketing_tasks").select("id, title, description, priority, status, due_date, is_completed, completed_at, assignee_id").gte("due_date", start_date).lte("due_date", end_date).order("due_date").limit(limit),
-      supabase2.from("content_pieces").select("id, title, platform, format, scheduled_date, status, hook, cta, published_url, talent_id, pillar_id").gte("scheduled_date", start_date).lte("scheduled_date", end_date).order("scheduled_date").limit(limit)
+      supabase.from("marketing_tasks").select("id, title, description, priority, status, due_date, is_completed, completed_at, assignee_id").gte("due_date", start_date).lte("due_date", end_date).order("due_date").limit(limit),
+      supabase.from("content_pieces").select("id, title, platform, format, scheduled_date, status, hook, cta, published_url, talent_id, pillar_id").gte("scheduled_date", start_date).lte("scheduled_date", end_date).order("scheduled_date").limit(limit)
     ]);
     failIf(projectsResult.error);
     failIf(tasksResult.error);
@@ -1254,8 +1141,8 @@ var events_overview_default = defineTool11({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, status, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "eventos");
-    let query = supabase2.from("events").select("id, title, description, event_type, scheduled_at, ends_at, duration_minutes, modality, address, status, budget, expected_attendees, max_capacity, category, goals").gte("scheduled_at", toIso(start_date) ?? start_date).lte("scheduled_at", toIso(end_date, true) ?? end_date).order("scheduled_at").limit(limit);
+    const supabase = await requireSector(ctx, "eventos");
+    let query = supabase.from("events").select("id, title, description, event_type, scheduled_at, ends_at, duration_minutes, modality, address, status, budget, expected_attendees, max_capacity, category, goals").gte("scheduled_at", toIso(start_date) ?? start_date).lte("scheduled_at", toIso(end_date, true) ?? end_date).order("scheduled_at").limit(limit);
     if (status) query = query.eq("status", status);
     const eventsResult = await query;
     failIf(eventsResult.error);
@@ -1265,8 +1152,8 @@ var events_overview_default = defineTool11({
     let costs = [];
     if (ids.length) {
       const [participantsResult, costsResult] = await Promise.all([
-        supabase2.from("event_participants").select("id, event_id, guest_name, rsvp_status, invited_at, rsvp_responded_at").in("event_id", ids).limit(1e3),
-        supabase2.from("event_costs").select("id, event_id, description, category, estimated_value, actual_value, status, supplier, due_date, paid_at").in("event_id", ids).limit(1e3)
+        supabase.from("event_participants").select("id, event_id, guest_name, rsvp_status, invited_at, rsvp_responded_at").in("event_id", ids).limit(1e3),
+        supabase.from("event_costs").select("id, event_id, description, category, estimated_value, actual_value, status, supplier, due_date, paid_at").in("event_id", ids).limit(1e3)
       ]);
       failIf(participantsResult.error);
       failIf(costsResult.error);
@@ -1298,8 +1185,8 @@ var tasks_overview_default = defineTool12({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, status, assigned_to, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "operacoes");
-    let query = supabase2.from("internal_tasks").select("id, title, description, status, priority, due_date, due_time, assigned_to, client_id, deal_id, lead_id, activity_type_id, completed_at, created_at, contact_channel").order("due_date", { ascending: true, nullsFirst: false }).limit(limit);
+    const supabase = await requireSector(ctx, "operacoes");
+    let query = supabase.from("internal_tasks").select("id, title, description, status, priority, due_date, due_time, assigned_to, client_id, deal_id, lead_id, activity_type_id, completed_at, created_at, contact_channel").order("due_date", { ascending: true, nullsFirst: false }).limit(limit);
     if (start_date) query = query.gte("due_date", start_date);
     if (end_date) query = query.lte("due_date", end_date);
     if (status !== "all") query = query.eq("status", status);
@@ -1325,8 +1212,8 @@ var products_overview_default = defineTool13({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ include_inactive, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "operacoes");
-    let productsQuery = supabase2.from("products").select("id, name, description, price, cash_price, installment_price, billing_period, is_active, is_renewal, color").order("name").limit(limit);
+    const supabase = await requireSector(ctx, "operacoes");
+    let productsQuery = supabase.from("products").select("id, name, description, price, cash_price, installment_price, billing_period, is_active, is_renewal, color").order("name").limit(limit);
     if (!include_inactive) productsQuery = productsQuery.eq("is_active", true);
     const productsResult = await productsQuery;
     failIf(productsResult.error);
@@ -1336,8 +1223,8 @@ var products_overview_default = defineTool13({
     let contracts = [];
     if (ids.length) {
       const [cpResult, contractResult] = await Promise.all([
-        supabase2.from("client_products").select("client_id, product_id, is_active").in("product_id", ids).limit(1e3),
-        supabase2.from("client_contracts").select("id, client_id, product_id, status, value, start_date, end_date").in("product_id", ids).limit(1e3)
+        supabase.from("client_products").select("client_id, product_id, is_active").in("product_id", ids).limit(1e3),
+        supabase.from("client_contracts").select("id, client_id, product_id, status, value, start_date, end_date").in("product_id", ids).limit(1e3)
       ]);
       failIf(cpResult.error);
       failIf(contractResult.error);
@@ -1367,8 +1254,8 @@ var audit_overview_default = defineTool14({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, entity_type, action, limit }, ctx) => {
-    const supabase2 = await requireSector(ctx, "configuracoes");
-    let query = supabase2.from("audit_logs").select("id, user_id, user_name, action, entity_type, entity_id, entity_name, created_at").gte("created_at", toIso(start_date) ?? start_date).lte("created_at", toIso(end_date, true) ?? end_date).order("created_at", { ascending: false }).limit(limit);
+    const supabase = await requireSector(ctx, "configuracoes");
+    let query = supabase.from("audit_logs").select("id, user_id, user_name, action, entity_type, entity_id, entity_name, created_at").gte("created_at", toIso(start_date) ?? start_date).lte("created_at", toIso(end_date, true) ?? end_date).order("created_at", { ascending: false }).limit(limit);
     if (entity_type) query = query.eq("entity_type", entity_type);
     if (action) query = query.eq("action", action);
     const { data, error } = await query;

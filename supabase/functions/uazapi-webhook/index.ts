@@ -1033,6 +1033,7 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ handled: "deal_transfer_decision" }), {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
+          }
           // Resposta de botão do pedido de giro de roleta (Aprovar/Recusar).
           const srq = btnId.match(/^srq:(approve|reject):([0-9a-f-]{36})$/i);
           if (srq) {
@@ -1063,7 +1064,6 @@ Deno.serve(async (req) => {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
-        }
         }
         
         // Extract content and media from various formats
