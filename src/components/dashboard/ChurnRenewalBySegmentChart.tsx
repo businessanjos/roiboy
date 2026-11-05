@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { clientScopeKey, filterByClientScope } from "@/lib/dashboard/clientScope";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LabelList } from "recharts";
 import { Layers, XCircle, RefreshCw, Package, Info, ExternalLink } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -325,7 +327,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
             Churn e Renovação por segmento
           </CardTitle>
           <CardDescription>
-            Por produto/plano, no período selecionado. Clique em um produto para ver os clientes.
+            Por produto/plano, no período selecionado. Clique em uma barra para ver os clientes.
           </CardDescription>
           <TooltipProvider delayDuration={150}>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
@@ -390,46 +392,59 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
 
 
           ) : (
-            <TooltipProvider delayDuration={150}>
-              <div className="space-y-1">
-                <div className="hidden sm:grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  <span>Produto</span>
-                  <span>Churn (cancelaram)</span>
-                  <span>Renovação (dos que venceram)</span>
-                </div>
-                {chartData.map((row) => (
-                  <button
-                    key={row.segment}
-                    type="button"
-                    onClick={() => setSelectedSegment(row.segment)}
-                    className="grid w-full grid-cols-1 gap-2 rounded-lg border border-transparent px-2 py-2.5 text-left transition-colors hover:border-border hover:bg-muted/40 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-center sm:gap-4"
-                  >
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: row.color ?? "#6b7280" }} />
-                      <span className="truncate text-sm font-medium">{row.segment}</span>
-                      <span className="shrink-0 text-xs text-muted-foreground">{row.base} contratos</span>
-                    </span>
-                    <MetricBar
-                      value={row.churn}
-                      tone="danger"
-                      caption={row.base > 0 ? `${row.cancelamentos} de ${row.base}` : "sem base"}
-                      hint={`${row.cancelamentos} cancelamento(s) entre ${row.base} contrato(s) ativos no período`}
+            <ChartContainer
+              config={{
+                churn: { label: "Churn %", color: "hsl(var(--danger))" },
+                renewal: { label: "Renovação %", color: "hsl(var(--success))" },
+              }}
+              className="h-[380px] w-full"
+            >
+              <BarChart
+                data={chartData}
+                barGap={4}
+                barCategoryGap="22%"
+                margin={{ top: 24, right: 8, left: -8, bottom: 8 }}
+                onClick={(state: any) => {
+                  const seg = state?.activePayload?.[0]?.payload?.segment;
+                  if (seg) setSelectedSegment(seg);
+                }}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="segment"
+                  interval={0}
+                  height={56}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={<SegmentTick />}
+                />
+                <YAxis tick={{ fontSize: 11 }} unit="%" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickLine={false} axisLine={false} />
+                <ChartTooltip
+                  cursor={{ fill: "hsl(var(--muted) / 0.5)" }}
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value, name, item) => {
+                        const row = item?.payload as SegmentRow | undefined;
+                        const pct = `${Number(value).toFixed(0)}%`;
+                        if (name === "churn") {
+                          return `Churn ${pct} · ${row?.cancelamentos ?? 0} de ${row?.base ?? 0} cancelaram`;
+                        }
+                        return row?.vencidos
+                          ? `Renovação ${pct} · ${row?.renovados ?? 0} de ${row?.vencidos} renovaram`
+                          : "Renovação: nada venceu no período";
+                      }}
                     />
-                    <MetricBar
-                      value={row.renewal}
-                      tone="success"
-                      caption={row.vencidos > 0 ? `${row.renovados} de ${row.vencidos}` : "nada venceu"}
-                      hint={
-                        row.vencidos > 0
-                          ? `${row.vencidos} contrato(s) venceram no período; ${row.renovados} renovaram e ${row.vencidos - row.renovados} ainda não têm contrato novo`
-                          : "Nenhum contrato venceu no período"
-                      }
-                      empty={row.vencidos === 0}
-                    />
-                  </button>
-                ))}
-              </div>
-            </TooltipProvider>
+                  }
+                />
+                <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: 12, paddingBottom: 8 }} />
+                <Bar dataKey="churn" name="Churn %" fill="var(--color-churn)" radius={[6, 6, 0, 0]} maxBarSize={36} className="cursor-pointer">
+                  <LabelList dataKey="churn" position="top" formatter={(v: number) => `${v.toFixed(0)}%`} className="fill-foreground text-[11px] font-semibold" />
+                </Bar>
+                <Bar dataKey="renewal" name="Renovação %" fill="var(--color-renewal)" radius={[6, 6, 0, 0]} maxBarSize={36} className="cursor-pointer">
+                  <LabelList dataKey="renewal" position="top" formatter={(v: number) => (v > 0 ? `${v.toFixed(0)}%` : "")} className="fill-muted-foreground text-[11px]" />
+                </Bar>
+              </BarChart>
+            </ChartContainer>
           )}
         </CardContent>
       </Card>
@@ -497,39 +512,28 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
   );
 }
 
-function MetricBar({
-  value,
-  tone,
-  caption,
-  hint,
-  empty,
-}: {
-  value: number;
-  tone: "danger" | "success";
-  caption: string;
-  hint: string;
-  empty?: boolean;
-}) {
-  const color = tone === "danger" ? "hsl(var(--danger))" : "hsl(var(--success))";
+function SegmentTick({ x, y, payload }: any) {
+  const text = String(payload?.value ?? "");
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    if ((cur + " " + w).trim().length > 14 && cur) {
+      lines.push(cur);
+      cur = w;
+    } else cur = (cur + " " + w).trim();
+  }
+  if (cur) lines.push(cur);
+  const shown = lines.slice(0, 3);
+  if (lines.length > 3) shown[2] = `${shown[2].slice(0, 12)}…`;
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted">
-            {!empty && (
-              <span
-                className="absolute inset-y-0 left-0 rounded-full"
-                style={{ width: `${Math.min(100, Math.max(value > 0 ? 2 : 0, value))}%`, background: color }}
-              />
-            )}
-          </span>
-          <span className="w-11 shrink-0 text-right text-sm font-semibold tabular-nums" style={{ color: empty ? undefined : color }}>
-            {empty ? "—" : `${value.toFixed(0)}%`}
-          </span>
-          <span className="w-16 shrink-0 text-xs text-muted-foreground tabular-nums">{caption}</span>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-xs text-xs">{hint}</TooltipContent>
-    </Tooltip>
+    <g transform={`translate(${x},${y + 12})`}>
+      <title>{text}</title>
+      {shown.map((l, i) => (
+        <text key={i} x={0} y={i * 13} textAnchor="middle" className="fill-muted-foreground" style={{ fontSize: 11 }}>
+          {l}
+        </text>
+      ))}
+    </g>
   );
 }
