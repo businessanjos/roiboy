@@ -191,6 +191,7 @@ interface ZappMessageInputProps {
   onInsertFormatting: (type: string) => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
+  onStopAndSendRecording?: () => void;
   onCancelRecording: () => void;
   onDiscardAudioPreview: () => void;
   onConfirmAudioSend: () => void;
@@ -243,6 +244,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onInsertFormatting,
   onStartRecording,
   onStopRecording,
+  onStopAndSendRecording,
   onCancelRecording,
   onDiscardAudioPreview,
   onConfirmAudioSend,
@@ -790,7 +792,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           </div>
         ) : audioPreview ? (
           // Audio preview UI
-          <div className="flex items-center gap-2 flex-1 bg-zapp-input rounded-lg px-3 py-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 bg-zapp-input rounded-lg px-2 sm:px-3 py-1 sm:py-2">
             <audio
               ref={audioPreviewRef}
               src={audioPreview.url}
@@ -829,7 +831,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                  className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-8 sm:w-8"
+                  aria-label="Enviar áudio"
                   onClick={onConfirmAudioSend}
                   disabled={uploadingMedia}
                 >
@@ -868,14 +871,31 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0"
+                  className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-10 sm:w-10"
+                  aria-label="Parar e ouvir"
                   onClick={onStopRecording}
                 >
                   <Square className="h-5 w-5 fill-current" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top">Parar</TooltipContent>
+              <TooltipContent side="top">Parar e ouvir</TooltipContent>
             </Tooltip>
+            {onStopAndSendRecording && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    className="rounded-full flex-shrink-0 h-11 w-11 sm:h-10 sm:w-10"
+                    aria-label="Enviar áudio"
+                    onClick={onStopAndSendRecording}
+                    disabled={uploadingMedia}
+                  >
+                    <Send className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Enviar áudio</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         ) : (
           <>

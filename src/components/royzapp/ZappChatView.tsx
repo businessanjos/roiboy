@@ -83,6 +83,7 @@ interface ZappChatViewProps {
   onInsertFormatting: (type: 'bold' | 'italic' | 'strikethrough' | 'monospace') => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
+  onStopAndSendRecording?: () => void;
   onCancelRecording: () => void;
   onDiscardAudioPreview: () => void;
   onConfirmAudioSend: () => void;
@@ -169,6 +170,7 @@ export function ZappChatView({
   onInsertFormatting,
   onStartRecording,
   onStopRecording,
+  onStopAndSendRecording,
   onCancelRecording,
   onDiscardAudioPreview,
   onConfirmAudioSend,
@@ -513,6 +515,7 @@ export function ZappChatView({
         onInsertFormatting={onInsertFormatting}
         onStartRecording={onStartRecording}
         onStopRecording={onStopRecording}
+        onStopAndSendRecording={onStopAndSendRecording}
         onCancelRecording={onCancelRecording}
         onDiscardAudioPreview={onDiscardAudioPreview}
         onConfirmAudioSend={onConfirmAudioSend}

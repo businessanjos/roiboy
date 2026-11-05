@@ -137,6 +137,7 @@ export function useZappMessaging({
   const [messageInput, setMessageInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const sendLockRef = useRef(false);
+  const sendAfterStopRef = useRef(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioPreview, setAudioPreview] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
@@ -955,6 +956,13 @@ export function useZappMessaging({
         const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
         const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
         // NOTE: fixWebmDuration intentionally not used (caused FFmpeg exit 183).
+        if (sendAfterStopRef.current) {
+          sendAfterStopRef.current = false;
+          audioChunksRef.current = [];
+          setRecordingDuration(0);
+          void sendAudioMessage(audioBlob, elapsedSec);
+          return;
+        }
         const audioUrl = URL.createObjectURL(audioBlob);
         setAudioPreview({ blob: audioBlob, url: audioUrl, duration: elapsedSec });
       };
@@ -976,6 +984,13 @@ export function useZappMessaging({
     } catch (error: any) {
       console.error("Error starting recording:", error);
       toast.error("Erro ao acessar microfone. Verifique as permissões.");
+    }
+  };
+
+  const stopAndSendRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      sendAfterStopRef.current = true;
+      stopRecording();
     }
   };
 
@@ -1677,6 +1692,7 @@ export function useZappMessaging({
     handleFileSelect,
     startRecording,
     stopRecording,
+    stopAndSendRecording,
     cancelRecording,
     discardAudioPreview,
     confirmAudioSend,
