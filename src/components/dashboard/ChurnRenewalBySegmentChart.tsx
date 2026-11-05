@@ -403,7 +403,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
                 data={chartData}
                 barGap={4}
                 barCategoryGap="22%"
-                margin={{ top: 24, right: 8, left: -8, bottom: 8 }}
+                margin={{ top: 36, right: 8, left: -8, bottom: 8 }}
                 onClick={(state: any) => {
                   const seg = state?.activePayload?.[0]?.payload?.segment;
                   if (seg) setSelectedSegment(seg);
@@ -436,7 +436,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
                     />
                   }
                 />
-                <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: 12, paddingBottom: 8 }} />
+                <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: 12, paddingBottom: 20 }} />
                 <Bar dataKey="churn" name="Churn %" fill="var(--color-churn)" radius={[6, 6, 0, 0]} maxBarSize={36} className="cursor-pointer">
                   <LabelList dataKey="churn" position="top" formatter={(v: number) => `${v.toFixed(0)}%`} className="fill-foreground text-[11px] font-semibold" />
                 </Bar>
