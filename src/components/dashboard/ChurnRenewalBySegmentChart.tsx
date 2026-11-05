@@ -4,8 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { clientScopeKey, filterByClientScope } from "@/lib/dashboard/clientScope";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LabelList } from "recharts";
 import { Layers, XCircle, RefreshCw, Package, Info, ExternalLink } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -76,7 +74,7 @@ const INACTIVE_STATUSES = ["draft", "cancelled"];
 const EVENT_LABEL: Record<EventKind, string> = {
   cancelamento: "Cancelamento",
   renovado: "Renovado",
-  vencido_sem_sucessor: "Vencido sem sucessor",
+  vencido_sem_sucessor: "Venceu sem renovar",
 };
 
 const EVENT_VARIANT: Record<EventKind, "destructive" | "default" | "secondary"> = {
@@ -134,6 +132,34 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
         (c: any) => c.client_id,
         clientIds,
       );
+
+      // Contratos antigos sem produto herdam o produto do cadastro do cliente
+      // (ativo primeiro, depois o mais recente) — só para exibição.
+      const orphanClientIds = Array.from(
+        new Set((contracts ?? []).filter((c: any) => !c.product_id && c.client_id).map((c: any) => c.client_id))
+      ) as string[];
+      const clientProductFallback = new Map<string, string>();
+      for (let i = 0; i < orphanClientIds.length; i += 200) {
+        const { data: cps } = await supabase
+          .from("client_products")
+          .select("client_id, product_id, is_active, created_at")
+          .in("client_id", orphanClientIds.slice(i, i + 200));
+        const sorted = ((cps ?? []) as any[]).sort(
+          (a, b) =>
+            Number(!!b.is_active) - Number(!!a.is_active) ||
+            String(b.created_at ?? "").localeCompare(String(a.created_at ?? ""))
+        );
+        for (const cp of sorted) {
+          if (cp.product_id && !clientProductFallback.has(cp.client_id)) {
+            clientProductFallback.set(cp.client_id, cp.product_id);
+          }
+        }
+      }
+      for (const c of contracts as any[]) {
+        if (!c.product_id && c.client_id && clientProductFallback.has(c.client_id)) {
+          c.product_id = clientProductFallback.get(c.client_id);
+        }
+      }
 
       const productIds = Array.from(
         new Set((contracts ?? []).map((c: any) => c.product_id).filter(Boolean))
@@ -299,7 +325,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
             Churn e Renovação por segmento
           </CardTitle>
           <CardDescription>
-            Por produto/plano, no período selecionado. Clique em uma barra para ver os clientes e eventos.
+            Por produto/plano, no período selecionado. Clique em um produto para ver os clientes.
           </CardDescription>
           <TooltipProvider delayDuration={150}>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
@@ -364,57 +390,46 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
 
 
           ) : (
-            <ChartContainer
-              config={{
-                churn: { label: "Churn %", color: "hsl(var(--danger))" },
-                renewal: { label: "Renovação %", color: "hsl(var(--success))" },
-              }}
-              className="h-[340px] w-full"
-            >
-              <BarChart
-                data={chartData}
-                margin={{ top: 16, right: 8, left: 0, bottom: 84 }}
-                onClick={(state: any) => {
-                  const seg = state?.activePayload?.[0]?.payload?.segment;
-                  if (seg) setSelectedSegment(seg);
-                }}
-              >
-                <CartesianGrid vertical={false} className="stroke-muted" stroke="hsl(var(--hairline))" />
-                <XAxis
-                  dataKey="segment"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(value: string) =>
-                    typeof value === "string" && value.length > 18 ? `${value.slice(0, 17)}…` : value
-                  }
-                  interval={0}
-                  angle={-25}
-                  textAnchor="end"
-                  height={72}
-                />
-                <YAxis tick={{ fontSize: 11 }} unit="%" domain={[0, 100]} />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, name, item) => {
-                        const row = item?.payload as SegmentRow | undefined;
-                        const pct = `${Number(value).toFixed(1)}%`;
-                        if (name === "churn") {
-                          return `Churn: ${pct} (${row?.cancelamentos ?? 0} de ${row?.base ?? 0})`;
-                        }
-                        return `Renovação: ${pct} (${row?.renovados ?? 0} de ${row?.vencidos ?? 0})`;
-                      }}
+            <TooltipProvider delayDuration={150}>
+              <div className="space-y-1">
+                <div className="hidden sm:grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  <span>Produto</span>
+                  <span>Churn (cancelaram)</span>
+                  <span>Renovação (dos que venceram)</span>
+                </div>
+                {chartData.map((row) => (
+                  <button
+                    key={row.segment}
+                    type="button"
+                    onClick={() => setSelectedSegment(row.segment)}
+                    className="grid w-full grid-cols-1 gap-2 rounded-lg border border-transparent px-2 py-2.5 text-left transition-colors hover:border-border hover:bg-muted/40 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-center sm:gap-4"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: row.color ?? "#6b7280" }} />
+                      <span className="truncate text-sm font-medium">{row.segment}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{row.base} contratos</span>
+                    </span>
+                    <MetricBar
+                      value={row.churn}
+                      tone="danger"
+                      caption={row.base > 0 ? `${row.cancelamentos} de ${row.base}` : "sem base"}
+                      hint={`${row.cancelamentos} cancelamento(s) entre ${row.base} contrato(s) ativos no período`}
                     />
-                  }
-                />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="churn" name="Churn %" fill="var(--color-churn)" radius={[4, 4, 0, 0]} className="cursor-pointer">
-                  <LabelList dataKey="churn" position="top" formatter={(v: number) => `${v.toFixed(0)}%`} className="fill-muted-foreground text-[10px]" />
-                </Bar>
-                <Bar dataKey="renewal" name="Renovação %" fill="var(--color-renewal)" radius={[4, 4, 0, 0]} className="cursor-pointer">
-                  <LabelList dataKey="renewal" position="top" formatter={(v: number) => `${v.toFixed(0)}%`} className="fill-muted-foreground text-[10px]" />
-                </Bar>
-              </BarChart>
-            </ChartContainer>
+                    <MetricBar
+                      value={row.renewal}
+                      tone="success"
+                      caption={row.vencidos > 0 ? `${row.renovados} de ${row.vencidos}` : "nada venceu"}
+                      hint={
+                        row.vencidos > 0
+                          ? `${row.vencidos} contrato(s) venceram no período; ${row.renovados} renovaram e ${row.vencidos - row.renovados} ainda não têm contrato novo`
+                          : "Nenhum contrato venceu no período"
+                      }
+                      empty={row.vencidos === 0}
+                    />
+                  </button>
+                ))}
+              </div>
+            </TooltipProvider>
           )}
         </CardContent>
       </Card>
@@ -479,5 +494,42 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function MetricBar({
+  value,
+  tone,
+  caption,
+  hint,
+  empty,
+}: {
+  value: number;
+  tone: "danger" | "success";
+  caption: string;
+  hint: string;
+  empty?: boolean;
+}) {
+  const color = tone === "danger" ? "hsl(var(--danger))" : "hsl(var(--success))";
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted">
+            {!empty && (
+              <span
+                className="absolute inset-y-0 left-0 rounded-full"
+                style={{ width: `${Math.min(100, Math.max(value > 0 ? 2 : 0, value))}%`, background: color }}
+              />
+            )}
+          </span>
+          <span className="w-11 shrink-0 text-right text-sm font-semibold tabular-nums" style={{ color: empty ? undefined : color }}>
+            {empty ? "—" : `${value.toFixed(0)}%`}
+          </span>
+          <span className="w-16 shrink-0 text-xs text-muted-foreground tabular-nums">{caption}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs text-xs">{hint}</TooltipContent>
+    </Tooltip>
   );
 }
