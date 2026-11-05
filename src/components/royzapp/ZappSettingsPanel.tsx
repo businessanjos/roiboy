@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { ZappConnectionsSection } from "./settings/ZappConnectionsSection";
 import { useZappTagNameTags } from "@/hooks/useZappTagNameTags";
 import { useZappFirstNameTitle } from "@/hooks/useZappFirstNameTitle";
+import { useZappRulerKeepTitle } from "@/hooks/useZappRulerKeepTitle";
 
 import type { NotificationPermissionStatus } from "@/hooks/useZappNotifications";
 
