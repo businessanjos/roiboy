@@ -1,7 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { History, Loader2 } from "lucide-react";
-import { formatInTimeZone } from "date-fns-tz";
-import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -62,7 +60,7 @@ export function OnboardingHistoryButton({ clientId }: { clientId: string }) {
                     </p>
                     <p className="text-muted-foreground">
                       {r.user_name ?? "Usuário"} ·{" "}
-                      {formatInTimeZone(new Date(r.created_at), "America/Sao_Paulo", "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {new Date(r.created_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </p>
                     {r.details?.from_stage && (
                       <p className="text-muted-foreground">Saiu de: {r.details.from_stage}</p>
