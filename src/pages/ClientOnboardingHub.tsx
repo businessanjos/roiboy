@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrated";
 import { StageChecklistEditor } from "@/components/client/StageChecklistEditor";
 import { ClientOnboardingDrawer } from "@/components/client/ClientOnboardingDrawer";
+import { OnboardingHistoryButton } from "@/components/client/OnboardingHistoryButton";
 import { useOnboardingHub, computeHealth, daysInStage, OnboardingClient } from "@/hooks/useOnboardingHub";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
@@ -144,6 +145,7 @@ export default function ClientOnboardingHub() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <OnboardingHistoryButton />
           <Button variant="outline" size="sm" onClick={refetch}>
             <RefreshCw className="h-4 w-4 mr-2" /> Atualizar
           </Button>
