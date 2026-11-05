@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sparkles,
   RefreshCw,
@@ -34,7 +35,11 @@ interface Props {
   stage: OnboardingStage | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  stages?: OnboardingStage[];
+  onMove?: (stageId: string) => Promise<void>;
 }
+
+const ONBOARDING_DONE_ORDER = 9;
 
 const PRIORITY_STYLES: Record<CoachInsight["priority"], { label: string; className: string }> = {
   urgent: { label: "URGENTE", className: "bg-danger/15 text-danger dark:text-danger border-danger/30" },
@@ -66,8 +71,33 @@ function HealthBadge({ client, stage }: { client: OnboardingClient; stage: Onboa
   );
 }
 
-export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Props) {
+export function ClientOnboardingDrawer({ client, stage, open, onOpenChange, stages = [], onMove }: Props) {
   const { insight, loading, ask, setInsight } = useOnboardingCoach();
+  const [moving, setMoving] = useState(false);
+  const doneStage = [...stages]
+    .filter((s) => s.display_order >= ONBOARDING_DONE_ORDER)
+    .sort((a, b) => a.display_order - b.display_order)[0];
+  const onboardingStages = stages.filter((s) => s.display_order < ONBOARDING_DONE_ORDER);
+
+  const handleMove = async (stageId: string, done = false) => {
+    if (!onMove) return;
+    setMoving(true);
+    try {
+      await onMove(stageId);
+      toast.success(done ? "Onboarding concluído!" : "Etapa atualizada");
+      if (done) onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e?.message || "Não foi possível mudar a etapa");
+    } finally {
+      setMoving(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!client) return;
+    await ask(client.id, "next_step", true);
+    toast.success("Análise da IA atualizada");
+  };
   const [tab, setTab] = useState("coach");
   const [rykaLoading, setRykaLoading] = useState(false);
   const [rykaResult, setRykaResult] = useState<{
@@ -193,6 +223,30 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Pr
               </Button>
             )}
           </div>
+          {onMove && stages.length > 0 && (
+            <div className="flex gap-2 mt-2">
+              <Select
+                value={stage && stage.display_order < ONBOARDING_DONE_ORDER ? stage.id : undefined}
+                onValueChange={(v) => handleMove(v)}
+                disabled={moving}
+              >
+                <SelectTrigger className="h-9 flex-1 text-xs">
+                  <SelectValue placeholder="Mudar etapa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {onboardingStages.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {doneStage && (
+                <Button size="sm" disabled={moving} onClick={() => handleMove(doneStage.id, true)}>
+                  {moving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
+                  Concluir onboarding
+                </Button>
+              )}
+            </div>
+          )}
         </SheetHeader>
 
         <Tabs value={tab} onValueChange={setTab} className="px-6 pt-4">
@@ -228,11 +282,12 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Pr
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => ask(client.id, "next_step", true)}
+                    onClick={handleRegenerate}
                     disabled={loading}
+                    title="Pede uma nova sugestão para a IA"
                   >
                     <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
-                    Atualizar
+                    Regerar análise IA
                   </Button>
                 </div>
 
