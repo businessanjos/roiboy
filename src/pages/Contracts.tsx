@@ -1,3 +1,4 @@
+import { useContractCatalog } from "@/hooks/useContractCatalog";
 import { useContractTypes } from "@/hooks/useContractTypes";
 import { ListPagination } from "@/components/ui/list-pagination";
 import type { PageSize } from "@/hooks/usePagedList";
@@ -240,7 +241,9 @@ const ContractTableRow = memo(function ContractTableRow({
   onConciliateSuccess,
 }: ContractRowProps) {
   const { labels: CONTRACT_TYPES } = useContractTypes();
-  const statusConfig = CONTRACT_STATUS_CONFIG[contract.status] || CONTRACT_STATUS_CONFIG.active;
+  const { labels: statusLabels } = useContractCatalog("contract_status");
+  const statusConfig = CONTRACT_STATUS_CONFIG[contract.status]
+    || (statusLabels[contract.status] ? { ...CONTRACT_STATUS_CONFIG.ended, label: statusLabels[contract.status] } : CONTRACT_STATUS_CONFIG.active);
   const StatusIcon = statusConfig.icon;
 
   return (
@@ -363,6 +366,7 @@ interface Client {
 }
 
 export default function Contracts() {
+  const { options: catalogStatusOptions } = useContractCatalog("contract_status");
   const { labels: CONTRACT_TYPES } = useContractTypes();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1954,6 +1958,9 @@ export default function Contracts() {
                   <SelectItem value="ended">Encerrados</SelectItem>
                   <SelectItem value="dismissed">Demitidas</SelectItem>
                   <SelectItem value="dropout_7d">Desistência 7D</SelectItem>
+                  {catalogStatusOptions.filter((o) => !CONTRACT_STATUS_CONFIG[o.value]).map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
                   <SelectItem value="expired">Vencidos</SelectItem>
                 </SelectContent>
               </Select>

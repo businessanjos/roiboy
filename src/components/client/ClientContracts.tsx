@@ -635,6 +635,10 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
     // First check contract status field
     if (contract.status && contract.status !== 'active') {
       const config = CONTRACT_STATUS_CONFIG[contract.status as keyof typeof CONTRACT_STATUS_CONFIG];
+      const customLabel = !config ? statusCatalog.labels[contract.status] : undefined;
+      if (customLabel) {
+        return { label: customLabel, variant: "outline" as const, icon: CheckCircle, className: "border-border text-foreground", reason: contract.status_reason };
+      }
       if (config) {
         return { 
           label: config.label, 
@@ -1125,6 +1129,14 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                               </DropdownMenuItem>
                             </>
                           )}
+                          {statusCatalog.options
+                            .filter((o) => !(o.value in CONTRACT_STATUS_CONFIG) && o.value !== contract.status)
+                            .map((o) => (
+                              <DropdownMenuItem key={o.value} onClick={() => openEditDialog(contract)}>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Marcar como {o.label}
+                              </DropdownMenuItem>
+                            ))}
                           {contract.status !== 'active' && (
                             <DropdownMenuItem 
                               onClick={() => openStatusDialog(contract, 'active')}
