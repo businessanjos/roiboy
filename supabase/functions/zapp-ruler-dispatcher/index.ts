@@ -35,9 +35,22 @@ function brazilHour(): number {
   );
 }
 
-function personalize(text: string, name: string | null): string {
+const TITLES = new Set(["dr", "dra", "doutor", "doutora"]);
+const isTitle = (w: string) => TITLES.has(w.toLowerCase().replace(/\.$/, ""));
+
+// Mesma regra de src/lib/zappFirstNameTitle.ts (extractFirstName).
+function firstName(full: string, keepTitle: boolean): string {
+  const words = full.split(/\s+/).filter(Boolean);
+  if (!words.length) return "";
+  if (!isTitle(words[0]) || words.length < 2) return words[0];
+  let i = 0;
+  while (i < words.length - 1 && isTitle(words[i])) i++;
+  return keepTitle ? `${words.slice(0, i).join(" ")} ${words[i]}` : words[i];
+}
+
+function personalize(text: string, name: string | null, keepTitle = true): string {
   const full = (name || "").trim();
-  const first = full.split(/\s+/)[0] || "";
+  const first = firstName(full, keepTitle);
   return text
     .replace(/\{nome\}/gi, full)
     .replace(/\{primeiro_nome\}/gi, first);
@@ -96,6 +109,14 @@ Deno.serve(async (req) => {
         null
       );
     }
+
+    const { data: zappSettings } = await supabase
+      .from("zapp_account_settings")
+      .select("account_id, ruler_keep_title")
+      .in("account_id", accountIds);
+    const keepTitleByAccount = new Map(
+      (zappSettings || []).map((r: any) => [r.account_id, r.ruler_keep_title !== false]),
+    );
 
     const hour = brazilHour();
     let sent = 0;
@@ -172,7 +193,7 @@ Deno.serve(async (req) => {
 
       const host = cfg.host_url || Deno.env.get("UAZAPI_URL") || "https://g1.uazapi.com";
       const phone = String(enrollment.contact_phone || "").replace(/\D/g, "");
-      const text = personalize(String(touch.message || "").trim(), enrollment.contact_name);
+      const text = personalize(String(touch.message || "").trim(), enrollment.contact_name, keepTitleByAccount.get(enrollment.account_id) ?? true);
 
       if (!phone || !text) {
         await supabase.from("zapp_ruler_touches")
