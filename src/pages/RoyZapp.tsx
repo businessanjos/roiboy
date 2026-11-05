@@ -78,6 +78,7 @@ import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDia
 import { PlaybookSequencesDialog } from "@/components/royzapp/PlaybookSequencesDialog";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
+import { useZappFirstNameTitle } from "@/hooks/useZappFirstNameTitle";
 import { ZappRulerEnrollDialog } from "@/components/royzapp/ruler/ZappRulerEnrollDialog";
 import { CUSTOMER_SUCCESS_SECTOR_ID } from "@/lib/royZappSectors";
 import { useZappRulers } from "@/hooks/useZappRulers";
@@ -1052,6 +1053,7 @@ export default function RoyZapp() {
   // Playbook dialog state for chat
   const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
   const [sequencesDialogOpen, setSequencesDialogOpen] = useState(false);
+  const { enabled: keepFirstNameTitle } = useZappFirstNameTitle();
   const [rulerEnrollOpen, setRulerEnrollOpen] = useState(false);
   const { templates: rulerTemplates, fetchAll: refetchRulers } = useZappRulers(selectedSectorId);
   const [multiSendInProgress, setMultiSendInProgress] = useState(false);
@@ -2418,6 +2420,7 @@ export default function RoyZapp() {
           conversation: selectedConversation,
           currentUser: currentUser,
           deal: null,
+          keepTitle: keepFirstNameTitle,
         })}
       />
 
@@ -2428,7 +2431,7 @@ export default function RoyZapp() {
         conversationId={selectedConversation?.zapp_conversation_id ?? selectedConversation?.zapp_conversation?.id ?? null}
         buildText={buildPlaybookText}
         signText={messaging.buildSignedText}
-        variables={extractPlaybookVariables({ conversation: selectedConversation, currentUser: currentUser, deal: null })}
+        variables={extractPlaybookVariables({ conversation: selectedConversation, currentUser: currentUser, deal: null, keepTitle: keepFirstNameTitle })}
       />
 
       {/* Close Ticket Dialog */}

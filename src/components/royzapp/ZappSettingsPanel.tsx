@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ZappConnectionsSection } from "./settings/ZappConnectionsSection";
 import { useZappTagNameTags } from "@/hooks/useZappTagNameTags";
+import { useZappFirstNameTitle } from "@/hooks/useZappFirstNameTitle";
 
 import type { NotificationPermissionStatus } from "@/hooks/useZappNotifications";
 
@@ -89,6 +90,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
 }: ZappSettingsPanelProps) {
   const navigate = useNavigate();
   const { enabled: tagNameTagsEnabled, setEnabled: onTagNameTagsChange } = useZappTagNameTags();
+  const { enabled: keepTitleEnabled, setEnabled: onKeepTitleChange } = useZappFirstNameTitle();
 
   return (
     <div className="p-4 space-y-6">
@@ -179,6 +181,22 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
           <Switch
             checked={tagNameTagsEnabled}
             onCheckedChange={onTagNameTagsChange}
+            className="data-[state=checked]:bg-zapp-accent"
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
+          <div className="pr-3">
+            <p className="text-zapp-text text-sm">Manter título no primeiro nome</p>
+            <p className="text-zapp-text-muted text-xs">
+              Nas mensagens do Playbook e sequências, a variável {"{primeiro_nome}"} mantém
+              Dr., Dra., Doutor ou Doutora junto ao nome (ex.: "Dra. Juliana").
+              Desligado, usa só o nome (ex.: "Juliana"). Nomes sem título não mudam.
+            </p>
+          </div>
+          <Switch
+            checked={keepTitleEnabled}
+            onCheckedChange={onKeepTitleChange}
             className="data-[state=checked]:bg-zapp-accent"
           />
         </div>
