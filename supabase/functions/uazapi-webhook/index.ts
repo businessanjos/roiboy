@@ -1060,6 +1060,13 @@ Deno.serve(async (req) => {
                 body: JSON.stringify({ action: "confirm", request_id: srq[2], phone, text: reply }),
               }).catch((e) => console.warn("[WEBHOOK] srq confirm falhou:", e));
             }
+            if (r.ok) {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/spin-request-whatsapp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                body: JSON.stringify({ action: "decided", request_id: srq[2] }),
+              }).catch((e) => console.warn("[WEBHOOK] srq vendedor falhou:", e));
+            }
             return new Response(JSON.stringify({ handled: "spin_request_decision" }), {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             });

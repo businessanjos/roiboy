@@ -63,6 +63,47 @@ Deno.serve(async (req) => {
       if (!s || !phone || !text) return json({ ok: false });
       return json({ ok: await post(s, "/send/text", { number: phone, text }) });
     }
+    if (action === "decided") {
+      // Avisa o vendedor (WhatsApp + sininho) que o gestor aprovou ou recusou.
+      const isService = (req.headers.get("Authorization") || "") === `Bearer ${service}`;
+      if (!isService) {
+        const uc = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, {
+          global: { headers: { Authorization: req.headers.get("Authorization") || "" } },
+        });
+        const { data: au } = await uc.auth.getUser();
+        if (!au?.user) return json({ error: "Não autenticado" }, 401);
+        const { data: mgr } = await supabase.from("users").select("id, account_id").eq("auth_user_id", au.user.id).maybeSingle();
+        if (!mgr || mgr.account_id !== r.account_id || mgr.id !== r.reviewed_by) return json({ error: "Não autorizado" }, 403);
+      }
+      if (!["approved", "rejected"].includes(r.status)) return json({ ok: true, skipped: "not_decided" });
+      const [{ data: spiff }, { data: reviewer }] = await Promise.all([
+        supabase.from("sales_spiffs").select("name").eq("id", r.spiff_id).maybeSingle(),
+        r.reviewed_by ? supabase.from("users").select("name").eq("id", r.reviewed_by).maybeSingle() : Promise.resolve({ data: null } as any),
+      ]);
+      const approved = r.status === "approved";
+      const by = reviewer?.name ? ` por ${reviewer.name}` : "";
+      const comp = monthLabel(r.competence_month);
+      const title = approved ? "🎰 Giro liberado!" : "Giro de roleta recusado";
+      const content = approved
+        ? `Seu giro em "${spiff?.name || "SPIFF"}"${comp ? ` (${comp})` : ""} foi aprovado${by}. Já pode girar a roleta!`
+        : `Seu giro em "${spiff?.name || "SPIFF"}"${comp ? ` (${comp})` : ""} foi recusado${by}.${r.rejection_reason ? ` Motivo: ${r.rejection_reason}` : ""}`;
+      const targets = [...new Set([r.user_id, r.requested_by].filter(Boolean))] as string[];
+      await supabase.from("notifications").insert(targets.map((uid) => ({
+        account_id: r.account_id, user_id: uid, type: "spiff_spin_decided", title, content,
+        link: "/sales-team/spiffs", source_type: "spiff_spin_request", source_id: r.id,
+      })));
+      const s = await getSender(supabase, r.account_id);
+      let sent = 0;
+      if (s) {
+        const { data: phones } = await supabase.from("sales_user_whatsapp_phones").select("phone_e164").in("user_id", targets);
+        const text = `*${title}*\n\n${content}${approved ? `\n\nGirar no app: ${APP_URL}/sales-team/spiffs` : ""}`;
+        for (const p of phones || []) {
+          const number = String(p.phone_e164 || "").replace(/\D/g, "");
+          if (number.length >= 10 && await post(s, "/send/text", { number, text })) sent++;
+        }
+      }
+      return json({ ok: true, sent });
+    }
     if (action !== "notify") return json({ error: "Ação inválida" }, 400);
 
     const userClient = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, {
