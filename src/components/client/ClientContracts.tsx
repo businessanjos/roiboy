@@ -1132,7 +1132,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                           {statusCatalog.options
                             .filter((o) => !(o.value in CONTRACT_STATUS_CONFIG) && o.value !== contract.status)
                             .map((o) => (
-                              <DropdownMenuItem key={o.value} onClick={() => openEditDialog(contract)}>
+                              <DropdownMenuItem key={o.value} onClick={() => { openEditDialog(contract); setEditStatus(o.value); }}>
                                 <CheckCircle className="h-4 w-4 mr-2" />
                                 Marcar como {o.label}
                               </DropdownMenuItem>
