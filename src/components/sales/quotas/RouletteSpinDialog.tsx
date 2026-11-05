@@ -1,3 +1,4 @@
+import { competenceMonthKey } from "@/lib/sales/spiffMonthlySpins";
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -52,17 +53,29 @@ type Phase = "idle" | "awaiting_approval" | "spinning" | "result";
 export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpins, availableDeals, triggerPerValue = 0 }: Props) {
   const requiresDeals = !!availableDeals && triggerPerValue > 0;
   const [selectedDeals, setSelectedDeals] = useState<Set<string>>(new Set());
-  const selectedTotal = (availableDeals ?? [])
+  const [competence, setCompetenceRaw] = useState<string>("");
+  const competenceKey = competence ? competence.slice(0, 7) : null;
+  // Só vendas do mês de competência escolhido: meses diferentes não somam.
+  const monthDeals = competenceKey
+    ? (availableDeals ?? []).filter((d) => competenceMonthKey(d.won_at) === competenceKey)
+    : [];
+  const setCompetence = (v: string) => {
+    if (v !== competence) setSelectedDeals(new Set());
+    setCompetenceRaw(v);
+  };
+  const selectedTotal = monthDeals
     .filter((d) => selectedDeals.has(d.id))
     .reduce((a, d) => a + d.amount, 0);
-  const dealsOk = !requiresDeals || selectedTotal >= triggerPerValue;
+  const allSelectedInMonth = Array.from(selectedDeals).every((id) => monthDeals.some((d) => d.id === id));
+  const dealsOk = !requiresDeals || (!!competenceKey && allSelectedInMonth && selectedTotal >= triggerPerValue);
   const toggleDeal = (id: string) =>
     setSelectedDeals((prev) => {
       const n = new Set(prev);
       if (n.has(id)) n.delete(id);
       else {
         // Não deixa marcar além do necessário para um giro (a sobra fica para o próximo).
-        const cur = (availableDeals ?? []).filter((d) => n.has(d.id)).reduce((a, d) => a + d.amount, 0);
+        if (!monthDeals.some((d) => d.id === id)) return prev;
+        const cur = monthDeals.filter((d) => n.has(d.id)).reduce((a, d) => a + d.amount, 0);
         if (triggerPerValue > 0 && cur >= triggerPerValue) return prev;
         n.add(id);
       }
@@ -131,7 +144,6 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
   const [requesting, setRequesting] = useState(false);
   const [approver, setApprover] = useState<{ id: string; name: string } | null>(null);
   const compOptions = competenceOptions();
-  const [competence, setCompetence] = useState<string>("");
 
   const min = Number(spiff.roulette_min_prize ?? 0);
   const max = Number(spiff.roulette_max_prize ?? 0);
@@ -528,10 +540,12 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
                 </span>
               </div>
               <div className="max-h-48 overflow-y-auto overflow-x-hidden divide-y">
-                {(availableDeals ?? []).length === 0 ? (
-                  <p className="text-xs text-muted-foreground p-3">Nenhuma venda disponível no período.</p>
+                {!competenceKey ? (
+                  <p className="text-xs text-muted-foreground p-3">Escolha o mês de competência para ver as vendas daquele mês.</p>
+                ) : monthDeals.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-3">Nenhuma venda disponível neste mês.</p>
                 ) : (
-                  (availableDeals ?? []).map((d) => (
+                  monthDeals.map((d) => (
                     <label key={d.id} className="flex items-center gap-2 px-3 py-2 text-xs cursor-pointer hover:bg-muted/40 min-w-0">
                       <Checkbox className="shrink-0" checked={selectedDeals.has(d.id)} onCheckedChange={() => toggleDeal(d.id)} />
                       <span className="flex-1 min-w-0 truncate" title={d.title}>{d.title}</span>

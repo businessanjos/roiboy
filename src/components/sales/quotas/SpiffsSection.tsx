@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { spinsByMonth } from "@/lib/sales/spiffMonthlySpins";
 import { useActiveSalesClosers } from "@/lib/sales/salesClosers";
 import { dealCountsForTargetProduct } from "@/lib/sales/itemVendaResolver";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1185,7 +1186,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
   const summary = eligibleIds.map((uid) => {
     const userDeals = (dealsQuery.data ?? []).filter((d) => d.responsible_user_id === uid);
     const total = userDeals.reduce((acc, d) => acc + capturedAmount(d), 0);
-    const earnedSpins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
+    const earnedSpins = spinsByMonth(userDeals, (d) => d.won_at, capturedAmount, triggerPerValue);
     // Giros pendentes = vendas do período selecionado ainda NÃO vinculadas a um giro.
     const monthStart = new Date(`${period.from}T00:00:00`).getTime();
     const periodEnd = new Date(`${period.to}T23:59:59`).getTime();
@@ -1204,14 +1205,18 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     const monthTotal = userDeals
       .filter((d) => !!d.won_at && new Date(d.won_at).getTime() >= monthStart)
       .reduce((acc, d) => acc + capturedAmount(d), 0);
-    const monthEarned = triggerPerValue > 0 ? Math.floor(monthTotal / triggerPerValue) : 0;
+    void monthTotal;
+    const monthEarned = spinsByMonth(
+      userDeals.filter((d) => !!d.won_at && new Date(d.won_at).getTime() >= monthStart),
+      (d) => d.won_at, capturedAmount, triggerPerValue,
+    );
     const monthSpins = (spinsLogQuery.data ?? []).filter(
       // Só giros sem vendas vinculadas: os vinculados já saem via usedDealIds,
       // e giros deste mês por vendas de meses anteriores não podem zerar o mês atual.
       (l: any) => l.user_id === uid && !linkedSpinIds.has(l.id) && l.spun_at && new Date(l.spun_at).getTime() >= monthStart && new Date(l.spun_at).getTime() <= periodEnd,
     ).length;
     const pendingSpins = triggerPerValue > 0
-      ? Math.max(0, Math.min(Math.floor(availableTotal / triggerPerValue), monthEarned - monthSpins))
+      ? Math.max(0, Math.min(spinsByMonth(availableDeals, (d) => d.won_at, capturedAmount, triggerPerValue), monthEarned - monthSpins))
       : 0;
     const remainder = triggerPerValue > 0 ? availableTotal - pendingSpins * triggerPerValue : 0;
     const toNextSpin = triggerPerValue > 0 ? triggerPerValue - remainder : 0;
