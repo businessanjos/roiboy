@@ -1,7 +1,7 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { failIf, jsonResult, requireSector } from "../helpers";
-import { applyInternalClientExclusion, fetchInternalClientIds } from "@/lib/internalClients";
+import { applyInternalClientExclusion, fetchInternalClientIds } from "@/lib/internalClientsCore";
 
 export default defineTool({
   name: "clients_portfolio",
