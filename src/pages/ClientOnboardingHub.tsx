@@ -293,6 +293,11 @@ export default function ClientOnboardingHub() {
         stage={drawerClient?.stage_id ? stageById.get(drawerClient.stage_id) ?? null : null}
         open={!!drawerClient}
         onOpenChange={(o) => !o && setDrawerClient(null)}
+        stages={stages}
+        onMove={async (stageId) => {
+          if (!drawerClient) return;
+          await moveClient(drawerClient.id, stageId);
+        }}
       />
 
       <StageChecklistEditor
