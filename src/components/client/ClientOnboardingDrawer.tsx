@@ -91,7 +91,7 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange, stag
         action: done ? "complete" : "update",
         entityType: "client",
         entityId: client?.id,
-        entityName: (client as any)?.name,
+        entityName: client?.full_name ?? undefined,
         details: {
           context: "onboarding",
           event: done ? "onboarding_completed" : "onboarding_stage_changed",
