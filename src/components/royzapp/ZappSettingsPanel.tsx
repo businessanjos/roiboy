@@ -91,6 +91,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
   const navigate = useNavigate();
   const { enabled: tagNameTagsEnabled, setEnabled: onTagNameTagsChange } = useZappTagNameTags();
   const { enabled: keepTitleEnabled, setEnabled: onKeepTitleChange } = useZappFirstNameTitle();
+  const rulerKeepTitle = useZappRulerKeepTitle();
 
   return (
     <div className="p-4 space-y-6">
@@ -197,6 +198,23 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
           <Switch
             checked={keepTitleEnabled}
             onCheckedChange={onKeepTitleChange}
+            className="data-[state=checked]:bg-zapp-accent"
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
+          <div className="pr-3">
+            <p className="text-zapp-text text-sm">Manter título na régua de relacionamento</p>
+            <p className="text-zapp-text-muted text-xs">
+              Vale para toda a equipe nos toques enviados pela régua: {"{primeiro_nome}"} de
+              "Dra. Juliana Ribeiro" vira "Dra. Juliana". Desligado, vira "Juliana".
+              {!rulerKeepTitle.canEdit && " Só administradores podem alterar."}
+            </p>
+          </div>
+          <Switch
+            checked={rulerKeepTitle.enabled}
+            onCheckedChange={rulerKeepTitle.setEnabled}
+            disabled={!rulerKeepTitle.canEdit || rulerKeepTitle.saving}
             className="data-[state=checked]:bg-zapp-accent"
           />
         </div>
