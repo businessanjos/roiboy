@@ -2,6 +2,7 @@ import { memo, useRef, useState, useMemo, useEffect } from "react";
 import {
   Bold,
   BookOpen,
+  ListOrdered,
   Code,
   Contact,
   FileText,
