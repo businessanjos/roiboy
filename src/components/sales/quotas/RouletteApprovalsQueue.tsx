@@ -164,6 +164,7 @@ export function RouletteApprovalsQueue() {
       return;
     }
     toast.success("Giro liberado!");
+    supabase.functions.invoke("spin-request-whatsapp", { body: { action: "decided", request_id: id } }).catch(() => {});
     queryClient.invalidateQueries({ queryKey: ["spiff-spin-requests-pending"] });
   };
 
@@ -192,6 +193,7 @@ export function RouletteApprovalsQueue() {
       return;
     }
     toast.success("Solicitação rejeitada.");
+    supabase.functions.invoke("spin-request-whatsapp", { body: { action: "decided", request_id: rejectId } }).catch(() => {});
     queryClient.invalidateQueries({ queryKey: ["spiff-spin-requests-pending"] });
   };
 
