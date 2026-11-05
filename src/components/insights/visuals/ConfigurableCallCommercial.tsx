@@ -112,7 +112,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
                     {scheduled}
                   </span>
                   <span className="text-[9px] text-muted-foreground font-medium leading-none">
-                    Agend.
+                    A fazer
                   </span>
                 </div>
 
@@ -123,7 +123,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
                     {completed}
                   </span>
                   <span className="text-[9px] text-muted-foreground font-medium leading-none">
-                    Conc.
+                    Feitas
                   </span>
                 </div>
               </div>
