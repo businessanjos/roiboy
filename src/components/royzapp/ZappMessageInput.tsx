@@ -921,6 +921,11 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 placeholder="Mensagem"
                 value={messageInput}
                 onChange={(value) => {
+                  if (value === "/" && !messageInput && onOpenPlaybook) {
+                    onMessageChange("");
+                    onOpenPlaybook();
+                    return;
+                  }
                   if (value.length <= SECURITY_LIMITS.MESSAGE_MAX) {
                     onMessageChange(value);
                   }
@@ -937,10 +942,16 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Textarea
                   ref={messageInputRef}
                   aria-label="Mensagem"
-                  placeholder="Mensagem"
+                  placeholder={onOpenPlaybook ? "Mensagem (digite / para o Playbook)" : "Mensagem"}
                   value={messageInput}
                   onChange={(e) => {
                     const value = e.target.value;
+                    // "/" no campo vazio abre o Playbook (atalho rápido)
+                    if (value === "/" && !messageInput && onOpenPlaybook) {
+                      onMessageChange("");
+                      onOpenPlaybook();
+                      return;
+                    }
                     // Enforce character limit
                     if (value.length <= SECURITY_LIMITS.MESSAGE_MAX) {
                       onMessageChange(value);
