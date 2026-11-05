@@ -2133,6 +2133,7 @@ export default function RoyZapp() {
            onInsertFormatting={messaging.insertFormatting}
            onStartRecording={messaging.startRecording}
            onStopRecording={messaging.stopRecording}
+           onStopAndSendRecording={messaging.stopAndSendRecording}
            onCancelRecording={messaging.cancelRecording}
            onDiscardAudioPreview={messaging.discardAudioPreview}
            onConfirmAudioSend={messaging.confirmAudioSend}
