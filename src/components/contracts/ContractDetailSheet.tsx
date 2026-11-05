@@ -181,6 +181,7 @@ const formatCurrency = (value: number) => {
 export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate, initialTab = "details" }: ContractDetailSheetProps) {
   const { labels: CONTRACT_TYPES } = useContractTypes();
   const { options: reasonOptions, labels: reasonLabels } = useContractCatalog("loss_reason");
+  const { options: statusOptions, labels: statusLabels } = useContractCatalog("contract_status");
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -322,7 +323,9 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate, in
 
   if (!contract) return null;
 
-  const statusConfig = CONTRACT_STATUS_CONFIG[contract.status] || CONTRACT_STATUS_CONFIG.active;
+  const statusConfig = CONTRACT_STATUS_CONFIG[contract.status]
+    || (statusLabels[contract.status] ? { label: statusLabels[contract.status], icon: CheckCircle, className: "border-border text-foreground bg-muted" } : CONTRACT_STATUS_CONFIG.active);
+  const customStatusOptions = statusOptions.filter((o) => !CONTRACT_STATUS_CONFIG[o.value]);
   const StatusIcon = statusConfig.icon;
 
   return (
@@ -415,6 +418,14 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate, in
                       <div className="flex items-center gap-2">
                         <config.icon className="h-4 w-4" />
                         {config.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                  {customStatusOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        {o.label}
                       </div>
                     </SelectItem>
                   ))}
