@@ -1,3 +1,4 @@
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -74,6 +75,7 @@ function HealthBadge({ client, stage }: { client: OnboardingClient; stage: Onboa
 export function ClientOnboardingDrawer({ client, stage, open, onOpenChange, stages = [], onMove }: Props) {
   const { insight, loading, ask, setInsight } = useOnboardingCoach();
   const [moving, setMoving] = useState(false);
+  const { logAudit } = useAuditLog();
   const doneStage = [...stages]
     .filter((s) => s.display_order >= ONBOARDING_DONE_ORDER)
     .sort((a, b) => a.display_order - b.display_order)[0];
@@ -84,6 +86,20 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange, stag
     setMoving(true);
     try {
       await onMove(stageId);
+      const target = stages.find((s) => s.id === stageId);
+      void logAudit({
+        action: done ? "complete" : "update",
+        entityType: "client",
+        entityId: client?.id,
+        entityName: (client as any)?.name,
+        details: {
+          context: "onboarding",
+          event: done ? "onboarding_completed" : "onboarding_stage_changed",
+          from_stage: stage?.name ?? null,
+          to_stage: target?.name ?? null,
+          completed_at: new Date().toISOString(),
+        },
+      });
       toast.success(done ? "Onboarding concluído!" : "Etapa atualizada");
       if (done) onOpenChange(false);
     } catch (e: any) {
