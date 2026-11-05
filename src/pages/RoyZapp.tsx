@@ -1113,7 +1113,7 @@ export default function RoyZapp() {
     }
   }, [messaging, buildPlaybookText]);
 
-  const usePlaybookItemInChat = useCallback(async (item: PlaybookItem, processedText?: string) => {
+  const handlePlaybookItemInChat = useCallback(async (item: PlaybookItem, processedText?: string) => {
           // For single send: text/link goes to input, media sends directly
           const textPayload = buildPlaybookText(item, processedText);
           if (['text', 'link', 'list', 'template'].includes(item.content_type) && textPayload) {
@@ -2212,7 +2212,7 @@ export default function RoyZapp() {
              if (!item) return;
              const vars = extractPlaybookVariables({ conversation: selectedConversation, currentUser, deal: null, keepTitle: keepFirstNameTitle });
              const processed = item.text_content ? slashReplaceVars(item.text_content, vars) : undefined;
-             void usePlaybookItemInChat(item, processed);
+             void handlePlaybookItemInChat(item, processed);
            }}
            filePreview={messaging.filePreview}
            onSetFilePreview={(preview) => {
@@ -2434,7 +2434,7 @@ export default function RoyZapp() {
         open={playbookDialogOpen}
         onOpenChange={setPlaybookDialogOpen}
         sectorId={selectedSectorId}
-        onUseItem={usePlaybookItemInChat}
+        onUseItem={handlePlaybookItemInChat}
         onMultiSend={handleMultiSend}
         onOpenSequences={() => { setPlaybookDialogOpen(false); setSequencesDialogOpen(true); }}
         variables={extractPlaybookVariables({

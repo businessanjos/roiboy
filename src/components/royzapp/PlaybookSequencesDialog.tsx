@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,11 +29,14 @@ interface Props {
   variables?: Record<string, string>;
   buildText?: (item: PlaybookItem, processedText?: string) => string;
   signText?: (text: string) => string;
+  /** Inicia esta sequência direto (atalho "/" no chat), sem abrir a janela. */
+  autoStartSequenceId?: string | null;
+  onAutoStartHandled?: () => void;
 }
 
 type Draft = { id?: string; name: string; visibility: "personal" | "sector"; steps: SequenceStep[] };
 
-export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversationId, variables = {}, buildText, signText }: Props) {
+export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversationId, variables = {}, buildText, signText, autoStartSequenceId, onAutoStartHandled }: Props) {
   const { items, folders, replaceVariables } = usePlaybook({ sectorId });
   const { sequences, isLoading, save, isSaving, remove } = usePlaybookSequences(sectorId);
   const { currentUser } = useCurrentUser();
@@ -141,6 +144,15 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
       setStarting(null);
     }
   };
+
+  useEffect(() => {
+    if (!autoStartSequenceId || isLoading || !items.length) return;
+    const seq = sequences.find((x) => x.id === autoStartSequenceId);
+    onAutoStartHandled?.();
+    if (!seq) { toast.error("Sequência não encontrada"); return; }
+    void handleStart(seq);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStartSequenceId, isLoading, sequences, items]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) setDraft(null); onOpenChange(v); }}>
