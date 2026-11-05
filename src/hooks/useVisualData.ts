@@ -123,7 +123,7 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
           break;
         case 'tasks':
           if (chartType === 'call_commercial') {
-            result = await fetchTasksCallCommercialData(accountId, filters, unifiedFilters);
+            result = await fetchTasksCallCommercialData(accountId, filters, unifiedFilters, (config as any).callScope || 'exclude_cr');
           } else if (chartType === 'funnel') {
             result = await fetchTasksFunnelData(accountId, filters);
           } else {
@@ -2254,8 +2254,18 @@ function readTaskDimension(task: any, field: string): string | null {
 async function fetchTasksCallCommercialData(
   accountId: string,
   filters: any,
-  unifiedFilters?: VisualFilter[]
+  unifiedFilters?: VisualFilter[],
+  callScope: 'all' | 'exclude_cr' | 'only_cr' = 'exclude_cr'
 ): Promise<AggregatedDataPoint[]> {
+  // Funil da Clínica Ryka (CR): separado em bloco próprio.
+  let crPipelineIds: string[] = [];
+  if (callScope !== 'all') {
+    const { data: pips } = await supabase.from('pipelines').select('id, name').eq('account_id', accountId);
+    crPipelineIds = (pips || [])
+      .filter((p: any) => String(p.name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes('clinica ryka'))
+      .map((p: any) => p.id);
+    if (callScope === 'only_cr' && crPipelineIds.length === 0) return [];
+  }
   const { data: activityTypes, error: atError } = await supabase
     .from('activity_types')
     .select('id, name')
@@ -2283,7 +2293,9 @@ async function fetchTasksCallCommercialData(
   const fetchAll = async (typeId: string, dateField: 'due_date' | 'completed_at') => {
     let query = supabase
       .from('internal_tasks')
-      .select('id, completed_at, assigned_to, deal_id, users!internal_tasks_assigned_to_fkey(name)')
+      .select(callScope === 'all'
+        ? 'id, completed_at, assigned_to, deal_id, users!internal_tasks_assigned_to_fkey(name)'
+        : 'id, completed_at, assigned_to, deal_id, users!internal_tasks_assigned_to_fkey(name), deals!inner(pipeline_id)')
       .eq('account_id', accountId)
       .eq('activity_type_id', typeId)
       .not('assigned_to', 'is', null);
@@ -2298,6 +2310,10 @@ async function fetchTasksCallCommercialData(
       if (endDay) query = query.lte('due_date', endDay);
     }
     if (filters.userId && filters.userId !== 'all') query = query.eq('assigned_to', filters.userId);
+    if (callScope === 'only_cr') query = query.in('deals.pipeline_id', crPipelineIds);
+    if (callScope === 'exclude_cr' && crPipelineIds.length > 0) {
+      query = query.not('deals.pipeline_id', 'in', `(${crPipelineIds.join(',')})`);
+    }
 
     const rows: any[] = [];
     let from = 0;
