@@ -135,6 +135,34 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd, 
         clientIds,
       );
 
+      // Contratos antigos sem produto herdam o produto do cadastro do cliente
+      // (ativo primeiro, depois o mais recente) — só para exibição.
+      const orphanClientIds = Array.from(
+        new Set((contracts ?? []).filter((c: any) => !c.product_id && c.client_id).map((c: any) => c.client_id))
+      ) as string[];
+      const clientProductFallback = new Map<string, string>();
+      for (let i = 0; i < orphanClientIds.length; i += 200) {
+        const { data: cps } = await supabase
+          .from("client_products")
+          .select("client_id, product_id, is_active, created_at")
+          .in("client_id", orphanClientIds.slice(i, i + 200));
+        const sorted = ((cps ?? []) as any[]).sort(
+          (a, b) =>
+            Number(!!b.is_active) - Number(!!a.is_active) ||
+            String(b.created_at ?? "").localeCompare(String(a.created_at ?? ""))
+        );
+        for (const cp of sorted) {
+          if (cp.product_id && !clientProductFallback.has(cp.client_id)) {
+            clientProductFallback.set(cp.client_id, cp.product_id);
+          }
+        }
+      }
+      for (const c of contracts as any[]) {
+        if (!c.product_id && c.client_id && clientProductFallback.has(c.client_id)) {
+          c.product_id = clientProductFallback.get(c.client_id);
+        }
+      }
+
       const productIds = Array.from(
         new Set((contracts ?? []).map((c: any) => c.product_id).filter(Boolean))
       ) as string[];
