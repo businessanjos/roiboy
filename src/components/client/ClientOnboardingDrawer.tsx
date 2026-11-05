@@ -1,5 +1,4 @@
 import { useAuditLog } from "@/hooks/useAuditLog";
-import { OnboardingHistoryButton } from "./OnboardingHistoryButton";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -239,7 +238,6 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange, stag
                 </a>
               </Button>
             )}
-            <OnboardingHistoryButton clientId={client.id} />
           </div>
           {onMove && stages.length > 0 && (
             <div className="flex gap-2 mt-2">
