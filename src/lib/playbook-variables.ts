@@ -1,9 +1,12 @@
 import type { ConversationAssignment } from '@/components/royzapp/types';
+import { extractFirstName } from '@/lib/zappFirstNameTitle';
 
 interface PlaybookVariableContext {
   conversation?: ConversationAssignment | null;
   currentUser?: { name: string; email?: string } | null;
   deal?: { name?: string; value?: number; stage?: string } | null;
+  /** Manter Dr./Dra./Doutor/Doutora em {primeiro_nome} (padrão: sim). */
+  keepTitle?: boolean;
 }
 
 export function extractPlaybookVariables(context: PlaybookVariableContext): Record<string, string> {
@@ -19,7 +22,7 @@ export function extractPlaybookVariables(context: PlaybookVariableContext): Reco
   const nomeCompleto = client?.full_name || lead?.full_name || zapp?.contact_name || oldClient?.full_name || '';
   
   // Primeiro nome (extrai apenas a primeira palavra, fallback para "Olá")
-  const primeiroNome = nomeCompleto.split(' ')[0] || 'Olá';
+  const primeiroNome = extractFirstName(nomeCompleto, context.keepTitle ?? true) || 'Olá';
   
   // Telefone
   const telefone = zapp?.phone_e164 || client?.phone_e164 || oldClient?.phone_e164 || '';
