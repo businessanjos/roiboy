@@ -103,6 +103,8 @@ interface ZappChatViewProps {
   onToggleSignature?: () => void;
   // Playbook
   onOpenPlaybook?: () => void;
+  slashOptions?: import("./ZappMessageInput").SlashOption[];
+  onSlashSelect?: (opt: import("./ZappMessageInput").SlashOption) => void;
   // Meta templates
   isMetaChannel?: boolean;
   onOpenTemplates?: () => void;
@@ -188,6 +190,8 @@ export function ZappChatView({
   hasSignature,
   onToggleSignature,
   onOpenPlaybook,
+  slashOptions,
+  onSlashSelect,
   isMetaChannel,
   onOpenTemplates,
   canTransfer = true,
@@ -528,6 +532,8 @@ export function ZappChatView({
         hasSignature={hasSignature}
         onToggleSignature={onToggleSignature}
         onOpenPlaybook={onOpenPlaybook}
+        slashOptions={slashOptions}
+        onSlashSelect={onSlashSelect}
         isMetaChannel={isMetaChannel}
         onOpenTemplates={onOpenTemplates}
         showSuggestionsButton={suggestionsAvailable}

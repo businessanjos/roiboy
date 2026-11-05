@@ -2,6 +2,7 @@ import { memo, useRef, useState, useMemo, useEffect } from "react";
 import {
   Bold,
   BookOpen,
+  ListOrdered,
   Code,
   Contact,
   FileText,
@@ -202,12 +203,31 @@ interface ZappMessageInputProps {
   onMentionInsert?: (mention: MentionData) => void;
   onToggleSignature?: () => void;
   onOpenPlaybook?: () => void;
+  slashOptions?: SlashOption[];
+  onSlashSelect?: (opt: SlashOption) => void;
   isMetaChannel?: boolean;
   onOpenTemplates?: () => void;
   showSuggestionsButton?: boolean;
   suggestionsOpen?: boolean;
   isLoadingSuggestions?: boolean;
   onToggleSuggestions?: () => void;
+}
+
+export interface SlashOption { id: string; label: string; kind: "sequence" | "item"; contentType?: string }
+
+const normalizeSlash = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+/** Filtra opções do atalho "/": começa com o termo primeiro, depois contém. */
+export function filterSlashOptions(options: SlashOption[], query: string, limit = 8): SlashOption[] {
+  const q = normalizeSlash(query.trim());
+  if (!q) return options.slice(0, limit);
+  const starts: SlashOption[] = [], contains: SlashOption[] = [];
+  for (const o of options) {
+    const n = normalizeSlash(o.label);
+    if (n.startsWith(q) || n.split(/\s+/).some((w) => w.startsWith(q))) starts.push(o);
+    else if (n.includes(q)) contains.push(o);
+  }
+  return [...starts, ...contains].slice(0, limit);
 }
 
 const formatRecordingDuration = (seconds: number): string => {
@@ -255,6 +275,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onMentionInsert,
   onToggleSignature,
   onOpenPlaybook,
+  slashOptions,
+  onSlashSelect,
   isMetaChannel,
   onOpenTemplates,
   showSuggestionsButton,
@@ -265,6 +287,23 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [slashDismissed, setSlashDismissed] = useState(false);
+  const slashActive = !!onSlashSelect && messageInput.startsWith("/") && !messageInput.includes("\n") && messageInput.length <= 60 && !slashDismissed;
+  const slashMatches = slashActive ? filterSlashOptions(slashOptions || [], messageInput.slice(1)) : [];
+  useEffect(() => { setSlashIndex(0); if (!messageInput.startsWith("/")) setSlashDismissed(false); }, [messageInput]);
+  const pickSlash = (opt: SlashOption) => { onMessageChange(""); onSlashSelect?.(opt); };
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (slashActive) {
+      if (e.key === "Escape") { e.preventDefault(); setSlashDismissed(true); return; }
+      if (slashMatches.length) {
+        if (e.key === "ArrowDown") { e.preventDefault(); setSlashIndex((i) => (i + 1) % slashMatches.length); return; }
+        if (e.key === "ArrowUp") { e.preventDefault(); setSlashIndex((i) => (i - 1 + slashMatches.length) % slashMatches.length); return; }
+        if ((e.key === "Enter" && !e.shiftKey) || e.key === "Tab") { e.preventDefault(); pickSlash(slashMatches[Math.min(slashIndex, slashMatches.length - 1)]); return; }
+      }
+    }
+    onKeyPress(e);
+  };
   const [isDragging, setIsDragging] = useState(false);
 
   const toggleAudioPreview = () => {
@@ -921,7 +960,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 placeholder="Mensagem"
                 value={messageInput}
                 onChange={(value) => {
-                  if (value === "/" && !messageInput && onOpenPlaybook) {
+                  if (value === "/" && !messageInput && onOpenPlaybook && !onSlashSelect) {
                     onMessageChange("");
                     onOpenPlaybook();
                     return;
@@ -930,7 +969,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                     onMessageChange(value);
                   }
                 }}
-                onKeyDown={onKeyPress}
+                onKeyDown={handleInputKeyDown}
                 onPaste={handlePaste}
                 disabled={sendingMessage}
                 groupJid={groupJid}
@@ -947,7 +986,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   onChange={(e) => {
                     const value = e.target.value;
                     // "/" no campo vazio abre o Playbook (atalho rápido)
-                    if (value === "/" && !messageInput && onOpenPlaybook) {
+                    if (value === "/" && !messageInput && onOpenPlaybook && !onSlashSelect) {
                       onMessageChange("");
                       onOpenPlaybook();
                       return;
@@ -961,13 +1000,45 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                     target.style.height = 'auto';
                     target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
                   }}
-                  onKeyDown={onKeyPress}
+                  onKeyDown={handleInputKeyDown}
                   onPaste={handlePaste}
                   disabled={sendingMessage}
                   rows={1}
                   maxLength={SECURITY_LIMITS.MESSAGE_MAX}
                   className="flex-1 w-full bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-2xl sm:rounded-lg min-h-[40px] sm:min-h-[52px] max-h-[120px] py-2 sm:py-2.5 resize-none overflow-y-auto"
                 />
+                {slashActive && (
+                  <div role="listbox" aria-label="Sugestões do Playbook" className="absolute bottom-full left-0 right-0 mb-2 z-50 rounded-lg border border-zapp-border bg-zapp-panel shadow-lg overflow-hidden">
+                    <div className="max-h-64 overflow-y-auto py-1">
+                      {slashMatches.length === 0 && (
+                        <p className="px-3 py-2 text-xs text-zapp-text-muted">Nada encontrado para "{messageInput.slice(1)}"</p>
+                      )}
+                      {slashMatches.map((opt, i) => (
+                        <button
+                          key={`${opt.kind}-${opt.id}`}
+                          type="button"
+                          role="option"
+                          aria-selected={i === slashIndex}
+                          onMouseDown={(e) => { e.preventDefault(); pickSlash(opt); }}
+                          onMouseEnter={() => setSlashIndex(i)}
+                          className={cn("flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zapp-text", i === slashIndex && "bg-zapp-hover")}
+                        >
+                          {opt.kind === "sequence" ? <ListOrdered className="h-4 w-4 shrink-0 text-zapp-accent" /> : <BookOpen className="h-4 w-4 shrink-0 text-zapp-text-muted" />}
+                          <span className="truncate flex-1">{opt.label}</span>
+                          <span className="text-[10px] uppercase tracking-wide text-zapp-text-muted">{opt.kind === "sequence" ? "Sequência" : "Mensagem"}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between border-t border-zapp-border px-3 py-1.5 text-[11px] text-zapp-text-muted">
+                      <span>↑↓ escolher · Enter enviar · Esc fechar</span>
+                      {onOpenPlaybook && (
+                        <button type="button" className="text-zapp-accent hover:underline" onMouseDown={(e) => { e.preventDefault(); onMessageChange(""); onOpenPlaybook(); }}>
+                          Abrir Playbook completo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {/* Character count warning */}
                 {messageInput.length > SECURITY_LIMITS.MESSAGE_MAX * 0.8 && (
                   <span className={cn(

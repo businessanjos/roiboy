@@ -77,6 +77,7 @@ import { ClientZappSheet } from "@/components/client/ClientZappSheet";
 import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDialog";
 import { PlaybookSequencesDialog } from "@/components/royzapp/PlaybookSequencesDialog";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
+import { usePlaybookSequences } from "@/hooks/usePlaybookSequences";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
 import { useZappFirstNameTitle } from "@/hooks/useZappFirstNameTitle";
 import { ZappRulerEnrollDialog } from "@/components/royzapp/ruler/ZappRulerEnrollDialog";
@@ -1111,6 +1112,46 @@ export default function RoyZapp() {
       throw new Error('Playbook item has no sendable content');
     }
   }, [messaging, buildPlaybookText]);
+
+  const handlePlaybookItemInChat = useCallback(async (item: PlaybookItem, processedText?: string) => {
+          // For single send: text/link goes to input, media sends directly
+          const textPayload = buildPlaybookText(item, processedText);
+          if (['text', 'link', 'list', 'template'].includes(item.content_type) && textPayload) {
+            messaging.setMessageInput(textPayload);
+            messaging.messageInputRef.current?.focus();
+          } else if (item.content_type === 'image' && item.media_url) {
+            try {
+              const response = await fetch(item.media_url);
+              if (!response.ok) throw new Error('Failed to fetch image');
+              const blob = await response.blob();
+              const fileName = item.name || 'playbook-image.jpg';
+              const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+              const url = URL.createObjectURL(blob);
+              messaging.setImagePreview({ file, url, caption: item.media_caption || undefined });
+              toast.success(item.media_caption ? "Imagem com legenda anexada! Clique em enviar." : "Imagem anexada! Clique em enviar.");
+              messaging.messageInputRef.current?.focus();
+            } catch (error) {
+              console.error('Error loading playbook image:', error);
+              toast.error("Erro ao carregar imagem do playbook");
+            }
+          } else {
+            try {
+              await sendSinglePlaybookItem(item, processedText);
+            } catch (error) {
+              console.error('Error sending playbook item:', error);
+              toast.error("Erro ao enviar item do playbook");
+            }
+          }
+        }, [buildPlaybookText, messaging, sendSinglePlaybookItem]);
+
+  // Atalho "/" no chat: sugestões de sequências e mensagens do Playbook
+  const { items: slashPlaybookItems, replaceVariables: slashReplaceVars } = usePlaybook({ sectorId: selectedSectorId });
+  const { sequences: slashSequences } = usePlaybookSequences(selectedSectorId);
+  const [autoStartSequenceId, setAutoStartSequenceId] = useState<string | null>(null);
+  const slashOptions = useMemo(() => [
+    ...slashSequences.map((s) => ({ id: s.id, label: s.name, kind: "sequence" as const })),
+    ...slashPlaybookItems.map((i) => ({ id: i.id, label: i.name, kind: "item" as const, contentType: i.content_type })),
+  ], [slashSequences, slashPlaybookItems]);
 
   // Multi-send handler
   const handleMultiSend = useCallback(async (payload: MultiSendPayload) => {
@@ -2164,6 +2205,15 @@ export default function RoyZapp() {
              }
            }}
            onOpenPlaybook={() => setPlaybookDialogOpen(true)}
+           slashOptions={slashOptions}
+           onSlashSelect={(opt) => {
+             if (opt.kind === "sequence") { setAutoStartSequenceId(opt.id); return; }
+             const item = slashPlaybookItems.find((i) => i.id === opt.id);
+             if (!item) return;
+             const vars = extractPlaybookVariables({ conversation: selectedConversation, currentUser, deal: null, keepTitle: keepFirstNameTitle });
+             const processed = item.text_content ? slashReplaceVars(item.text_content, vars) : undefined;
+             void handlePlaybookItemInChat(item, processed);
+           }}
            filePreview={messaging.filePreview}
            onSetFilePreview={(preview) => {
               if (preview && preview.file.size > 70 * 1024 * 1024) {
@@ -2384,36 +2434,7 @@ export default function RoyZapp() {
         open={playbookDialogOpen}
         onOpenChange={setPlaybookDialogOpen}
         sectorId={selectedSectorId}
-        onUseItem={async (item, processedText) => {
-          // For single send: text/link goes to input, media sends directly
-          const textPayload = buildPlaybookText(item, processedText);
-          if (['text', 'link', 'list', 'template'].includes(item.content_type) && textPayload) {
-            messaging.setMessageInput(textPayload);
-            messaging.messageInputRef.current?.focus();
-          } else if (item.content_type === 'image' && item.media_url) {
-            try {
-              const response = await fetch(item.media_url);
-              if (!response.ok) throw new Error('Failed to fetch image');
-              const blob = await response.blob();
-              const fileName = item.name || 'playbook-image.jpg';
-              const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
-              const url = URL.createObjectURL(blob);
-              messaging.setImagePreview({ file, url, caption: item.media_caption || undefined });
-              toast.success(item.media_caption ? "Imagem com legenda anexada! Clique em enviar." : "Imagem anexada! Clique em enviar.");
-              messaging.messageInputRef.current?.focus();
-            } catch (error) {
-              console.error('Error loading playbook image:', error);
-              toast.error("Erro ao carregar imagem do playbook");
-            }
-          } else {
-            try {
-              await sendSinglePlaybookItem(item, processedText);
-            } catch (error) {
-              console.error('Error sending playbook item:', error);
-              toast.error("Erro ao enviar item do playbook");
-            }
-          }
-        }}
+        onUseItem={handlePlaybookItemInChat}
         onMultiSend={handleMultiSend}
         onOpenSequences={() => { setPlaybookDialogOpen(false); setSequencesDialogOpen(true); }}
         variables={extractPlaybookVariables({
@@ -2430,6 +2451,8 @@ export default function RoyZapp() {
         sectorId={selectedSectorId}
         conversationId={selectedConversation?.zapp_conversation_id ?? selectedConversation?.zapp_conversation?.id ?? null}
         buildText={buildPlaybookText}
+        autoStartSequenceId={autoStartSequenceId}
+        onAutoStartHandled={() => setAutoStartSequenceId(null)}
         signText={messaging.buildSignedText}
         variables={extractPlaybookVariables({ conversation: selectedConversation, currentUser: currentUser, deal: null, keepTitle: keepFirstNameTitle })}
       />
