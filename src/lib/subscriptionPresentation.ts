@@ -4,5 +4,5 @@ export function hideInternalTrialNotice(email?: string | null): boolean {
   if (!normalized) return false;
   return normalized.endsWith("@anjosbusiness.com.br") ||
     normalized.endsWith("@anjosbusiness.com") ||
-    ["m.quintana@me.com", "coachevertonsantos@gmail.com", "arthur.mudri@hotmail.com"].includes(normalized);
+    ["m.quintana@me.com", "coachevertonsantos@gmail.com", "arthur.mudri@hotmail.com", "rh2@eternumoficial.com"].includes(normalized);
 }
