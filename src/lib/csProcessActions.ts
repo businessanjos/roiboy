@@ -47,8 +47,10 @@ export function toStepInfo(step: Step): StepInfo {
     }
     const url = b.text.match(URL_RE);
     if (url && b.text.replace(URL_RE, "").replace(/[:\-\s]/g, "").length < 20) { actions.push({ kind: "link", url: url[0], label: linkLabel(b.text.replace(URL_RE, ""), url[0]) }); continue; }
+    if (/🚨|^importante\b/i.test(b.text)) { actions.push({ kind: "alert", text: b.text.replace("🚨", "").trim() }); continue; }
     actions.push({ kind: "note", text: b.text });
   }
+  if (!when && /\b(antes|no dia|dia seguinte|anterior|depois)\b/i.test(step.title) && step.title.length < 40) when = stepTitle(step.title).split(" — ")[0];
   if (/\bCX\b/.test(step.title)) who = "CX";
   return { actions, who, when };
 }

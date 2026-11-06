@@ -56,7 +56,7 @@ export function StepNavigator({ process, selected, onSelect, statusOf, visible, 
             {process.phases.map((ph, pi) => (
               <SelectGroup key={pi}>
                 <SelectLabel>Fase {pi + 1} · {phaseName(ph.title)}</SelectLabel>
-                {ph.steps.map((s, si) => <SelectItem key={si} value={`${pi}-${si}`}>{statusOf(`${pi}-${si}`) === "done" ? "✓ " : ""}{pi + 1}.{si + 1} {stepTitle(s.title) || "Etapa"}</SelectItem>)}
+                {ph.steps.map((s, si) => <SelectItem key={si} value={`${pi}-${si}`}>{statusOf(`${pi}-${si}`) === "done" ? "✓ " : ""}{pi + 1}.{si + 1} {stepTitle(s.title) || phaseName(ph.title)}</SelectItem>)}
               </SelectGroup>
             ))}
           </SelectContent>
@@ -82,7 +82,7 @@ export function StepNavigator({ process, selected, onSelect, statusOf, visible, 
                       className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition ${k === selected ? "bg-primary/10 font-medium" : "hover:bg-muted"}`}>
                       <StatusMark s={st} />
                       <span className="tabular-nums text-muted-foreground">{pi + 1}.{si + 1}</span>
-                      <span className={`truncate ${st === "done" ? "text-muted-foreground" : ""}`}>{stepTitle(s.title) || "Etapa"}</span>
+                      <span className={`truncate ${st === "done" ? "text-muted-foreground" : ""}`}>{stepTitle(s.title) || phaseName(ph.title)}</span>
                     </button>
                   </li>
                 );

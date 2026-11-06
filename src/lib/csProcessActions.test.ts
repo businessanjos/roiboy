@@ -21,3 +21,10 @@ describe("passos da etapa", () => {
     expect(plainText("*(ESPERA)* e **Club**")).toBe("(ESPERA) e Club");
   });
 });
+
+describe("ajustes das demais etapas", () => {
+  it("aviso 🚨 do onboarding vira alerta e 'dias antes' vira o quando", () => {
+    expect(toStepInfo(csProcesses[0].phases[2].steps[1]).actions.some((a) => a.kind === "alert")).toBe(true);
+    expect(toStepInfo(csProcesses[1].phases[0].steps[0]).when).toBe("15 dias antes");
+  });
+});
