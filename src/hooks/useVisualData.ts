@@ -2249,6 +2249,41 @@ function readTaskDimension(task: any, field: string): string | null {
 }
 
 
+const normCr = (v: unknown) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+/** Nome de produto/opção que conta como Clínica Ryka nas calls comerciais. */
+export function isCrItemLabel(label: unknown): boolean {
+  const n = normCr(label);
+  return n.includes('clinica ryka') || n.includes('e-pass') || n.includes('rykas pass');
+}
+
+// Negócios cujo "Item da Venda" é Clínica Ryka / E-Pass (aceita uuid do produto, slug ou opção).
+async function fetchCrItemDealIds(accountId: string, dealIds: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  if (dealIds.length === 0) return out;
+  const [{ data: fields }, { data: prods }] = await Promise.all([
+    supabase.from('custom_fields').select('id, name, options').eq('account_id', accountId).eq('show_in_deals', true),
+    supabase.from('products').select('id, name'),
+  ]);
+  const itemField = (fields || []).find((f: any) => normCr(f.name) === 'item da venda');
+  if (!itemField) return out;
+  const crValues = new Set<string>();
+  for (const p of prods || []) if (isCrItemLabel((p as any).name)) crValues.add(String((p as any).id).toLowerCase());
+  for (const o of ((itemField as any).options || []) as any[]) {
+    if (isCrItemLabel(o?.label)) crValues.add(String(o.value).toLowerCase());
+  }
+  for (let i = 0; i < dealIds.length; i += 200) {
+    const { data } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_text')
+      .eq('field_id', (itemField as any).id)
+      .in('deal_id', dealIds.slice(i, i + 200));
+    for (const r of data || []) {
+      if (r.value_text && crValues.has(String(r.value_text).trim().toLowerCase())) out.add(r.deal_id as string);
+    }
+  }
+  return out;
+}
+
 // Fetch tasks data for Call Comercial visual (fixed layout: agendadas em aberto x concluídas).
 // Each metric uses its own natural date column: agendadas -> due_date, concluídas -> completed_at.
 async function fetchTasksCallCommercialData(
@@ -2264,7 +2299,6 @@ async function fetchTasksCallCommercialData(
     crPipelineIds = (pips || [])
       .filter((p: any) => String(p.name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes('clinica ryka'))
       .map((p: any) => p.id);
-    if (callScope === 'only_cr' && crPipelineIds.length === 0) return [];
   }
   const { data: activityTypes, error: atError } = await supabase
     .from('activity_types')
@@ -2295,7 +2329,7 @@ async function fetchTasksCallCommercialData(
       .from('internal_tasks')
       .select(callScope === 'all'
         ? 'id, completed_at, assigned_to, deal_id, users!internal_tasks_assigned_to_fkey(name)'
-        : 'id, completed_at, assigned_to, deal_id, users!internal_tasks_assigned_to_fkey(name), deals!inner(pipeline_id)')
+        : 'id, completed_at, assigned_to, deal_id, users!internal_tasks_assigned_to_fkey(name), deals!inner(id, pipeline_id)')
       .eq('account_id', accountId)
       .eq('activity_type_id', typeId)
       .not('assigned_to', 'is', null);
@@ -2310,10 +2344,6 @@ async function fetchTasksCallCommercialData(
       if (endDay) query = query.lte('due_date', endDay);
     }
     if (filters.userId && filters.userId !== 'all') query = query.eq('assigned_to', filters.userId);
-    if (callScope === 'only_cr') query = query.in('deals.pipeline_id', crPipelineIds);
-    if (callScope === 'exclude_cr' && crPipelineIds.length > 0) {
-      query = query.not('deals.pipeline_id', 'in', `(${crPipelineIds.join(',')})`);
-    }
 
     const rows: any[] = [];
     let from = 0;
@@ -2328,10 +2358,22 @@ async function fetchTasksCallCommercialData(
     return rows;
   };
 
-  const [scheduledRows, completedRows] = await Promise.all([
+  const [scheduledRaw, completedRaw] = await Promise.all([
     agendadaType ? fetchAll(agendadaType.id, 'due_date') : Promise.resolve([]),
     concluidaType ? fetchAll(concluidaType.id, 'completed_at') : Promise.resolve([]),
   ]);
+
+  // CR = funil da Clínica Ryka OU "Item da Venda" do negócio = Clínica Ryka / E-Pass, em qualquer funil.
+  let scheduledRows = scheduledRaw;
+  let completedRows = completedRaw;
+  if (callScope !== 'all') {
+    const dealIds = Array.from(new Set([...scheduledRaw, ...completedRaw].map((t: any) => t.deal_id).filter(Boolean)));
+    const crDealIds = await fetchCrItemDealIds(accountId, dealIds);
+    const isCr = (t: any) => crPipelineIds.includes((t.deals as any)?.pipeline_id) || crDealIds.has(t.deal_id);
+    const keep = callScope === 'only_cr' ? isCr : (t: any) => !isCr(t);
+    scheduledRows = scheduledRaw.filter(keep);
+    completedRows = completedRaw.filter(keep);
+  }
 
   const userMap = new Map<string, { scheduledDeals: Set<string>; completedDeals: Set<string> }>();
   const ensure = (name: string) => {
