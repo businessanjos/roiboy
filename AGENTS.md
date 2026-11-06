@@ -47,5 +47,5 @@
 - Client practice areas live in `clients.business_niche` as one comma-separated multi-area string, grouped only through `src/lib/dashboard/clientPracticeArea.ts`; a client counts in every area it has, so area counts exceed the client total by design. Why: one grouping rule and no one "fixes" the overlap into a broken single-area split.
 - Spin requests keep `competence_month`; `srq:*` approvals use transfer recipients. Why: one list.
 - Playbook free fields are `{{campo:slug}}` in event_vars.customFields; `playbook-ai-assist` rejects edits to {{...}}. Why: no schema change, fields stay safe.
-- Lost deals (lead with no other open deal) close the lead's non-group, non-client RoyZapp assignments via trigger `close_zapp_on_deal_lost`. Why: re-applications return to triage.
-- CS process content is parsed from `src/content/csProcesses.md`; progress per client/event lives in `cs_process_progress` keyed by phase-step index, and tour views in `user_tour_views`. Why: one source of text for list, flowchart and tours.
+- Lost deals close the lead's non-group, non-client RoyZapp chats (trigger `close_zapp_on_deal_lost`). Why: re-applications hit triage.
+- CS processes parse `src/content/csProcesses.md`; progress in `cs_process_progress`, tours in `user_tour_views`. Why: one text source.
