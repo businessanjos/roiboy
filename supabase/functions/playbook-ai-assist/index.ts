@@ -7,12 +7,25 @@ import { z } from "npm:zod";
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const Body = z.object({ text: z.string().min(1).max(8000) });
+const Body = z.object({ text: z.string().min(1).max(8000), mode: z.enum(["copy", "short", "fix", "vars"]).default("copy") });
 
-const INSTRUCTIONS = `Você revisa mensagens de WhatsApp em português do Brasil escritas por consultoras.
-Corrija apenas ortografia, acentuação, pontuação e digitação. Não mude o sentido, o tom, os emojis, as quebras de linha nem a formatação (*negrito*, _itálico_).
-Mantenha EXATAMENTE como estão todos os códigos entre chaves duplas, como {{data_evento}}, {{campo:local}} ou {primeiro_nome}.
-Responda somente com o texto revisado, sem comentários.`;
+const BASE = `Você escreve mensagens de WhatsApp em português do Brasil para consultoras de uma empresa de mentoria (clientes chamados de sócias/sócios).
+Mantenha EXATAMENTE como estão todos os códigos entre chaves, como {{data_evento}}, {{campo:local}} ou {primeiro_nome}: não remova, não traduza, não altere.
+Use a formatação do WhatsApp (*negrito*, _itálico_) e quebras de linha curtas. Responda somente com a mensagem final, sem comentários nem aspas.`;
+const MODES: Record<string, string> = {
+  copy: `Reescreva a mensagem para ficar mais atraente, calorosa e profissional: abertura que prende atenção, informações principais destacadas em *negrito*, parágrafos curtos, emojis estratégicos (sem exagero) e uma chamada para ação clara no final. Mude de verdade a redação; não devolva o mesmo texto.`,
+  short: `Deixe a mensagem bem mais curta e direta, para leitura rápida no celular. Corte repetições e enrolação, mantendo todas as informações essenciais (datas, horários, links, códigos). Mude de verdade a redação.`,
+  fix: `Corrija apenas ortografia, acentuação, pontuação e digitação. Não mude o sentido, o tom, os emojis nem as quebras de linha.`,
+  vars: `Troque informações escritas à mão pelos códigos automáticos correspondentes, mantendo o resto do texto igual:
+- data do encontro (ex.: 06/11) -> {{data_evento}}
+- dia da semana (ex.: sexta-feira) -> {{dia_semana_evento}}
+- horário (ex.: 15h às 17h) -> {{horario_evento}}
+- contagem regressiva (ex.: falta 1 dia, faltam 3 dias, é hoje) -> {{contagem_regressiva}}
+- nome do mês do encontro (ex.: NOVEMBRO) -> {{mes_evento}}
+- link/URL -> {{link_evento}}
+Não invente códigos fora desta lista.`,
+};
+const VAR_CODES = ["data_evento", "dia_semana_evento", "horario_evento", "contagem_regressiva", "mes_evento", "link_evento"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -39,7 +52,7 @@ Deno.serve(async (req) => {
     let failure: unknown = null;
     const result = streamText({
       model: provider.responses("openai/gpt-6-astra"),
-      system: INSTRUCTIONS,
+      system: `${BASE}\n\n${MODES[parsed.data.mode]}`,
       messages: [{ role: "user", content: parsed.data.text }],
       abortSignal: req.signal,
       onError: ({ error }) => { failure = error; },
@@ -58,8 +71,13 @@ Deno.serve(async (req) => {
       return json({ error: "Não foi possível revisar agora." }, 502);
     }
     // Garante que nenhum campo automático sumiu.
-    const codes = (s: string) => (s.match(/\{\{?[^{}]+\}\}?/g) || []).sort().join("|");
-    if (codes(text) !== codes(parsed.data.text)) return json({ text: parsed.data.text, note: "fields_changed" });
+    const list = (x: string) => x.match(/\{\{?[^{}]+\}\}?/g) || [];
+    const orig = list(parsed.data.text);
+    const out = list(text);
+    const missing = orig.filter((c) => !out.includes(c));
+    const added = out.filter((c) => !orig.includes(c));
+    const okAdded = parsed.data.mode === "vars" && added.every((c) => VAR_CODES.includes(c.replace(/[{}]/g, "")));
+    if (missing.length || (added.length && !okAdded)) return json({ error: "A IA alterou campos automáticos; tente novamente." }, 422);
     return json({ text: text.trim() });
   } catch (e) {
     console.error(e);
