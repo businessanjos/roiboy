@@ -1052,13 +1052,24 @@ export function PlaybookItemForm({
               </div>
             )}
 
-            {usesEventVars && (
-              <PlaybookEventFields
-                value={eventVars}
-                onChange={setEventVars}
-                previewText={applyEventVariables(contentType === 'image' ? mediaCaption : contentType === 'template' ? templateBody : textContent, eventVars) || null}
-              />
-            )}
+            {(['text', 'template'].includes(contentType) || (contentType === 'image' && (mediaPreview || existingMediaUrl)) || usesEventVars) && (() => {
+              const raw = contentType === 'image' ? mediaCaption : contentType === 'template' ? templateBody : textContent;
+              const insert = (v: string) => {
+                const add = (p: string) => p + (p && !/\s$/.test(p) ? ' ' : '') + v;
+                if (contentType === 'image') setMediaCaption(add);
+                else if (contentType === 'template') setTemplateBody(add);
+                else setTextContent(add);
+              };
+              return (
+                <PlaybookEventFields
+                  value={eventVars}
+                  onChange={setEventVars}
+                  rawText={raw}
+                  onInsert={['text', 'template', 'image'].includes(contentType) ? insert : undefined}
+                  previewText={raw.trim() ? applyEventVariables(raw, eventVars) : null}
+                />
+              );
+            })()}
           </div>
         </div>
 
