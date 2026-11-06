@@ -28,3 +28,11 @@ describe("ajustes das demais etapas", () => {
     expect(toStepInfo(csProcesses[1].phases[0].steps[0]).when).toBe("15 dias antes");
   });
 });
+
+describe("esperas da cliente", () => {
+  it("pedido de resposta na 1.2 gera espera de primeiro acesso; preparação da reunião não", () => {
+    const w = toStepInfo(csProcesses[0].phases[0].steps[1]).actions.find((a) => a.kind === "wait") as any;
+    expect(w?.what).toBe("fazer o primeiro acesso à plataforma");
+    expect(toStepInfo(csProcesses[0].phases[2].steps[1]).actions.some((a) => a.kind === "wait")).toBe(false);
+  });
+});

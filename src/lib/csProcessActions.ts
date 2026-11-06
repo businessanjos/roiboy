@@ -76,7 +76,7 @@ function withWaits(list: Action[]): Action[] {
   list.forEach((a, i) => {
     out.push(a);
     const next = list[i + 1];
-    if ((a.kind === "message" || a.kind === "task") && ASKS_REPLY.test(a.text)) {
+    if ((a.kind === "message" && ASKS_REPLY.test(a.text)) || (a.kind === "task" && /opções de agenda/i.test(a.text))) {
       if (next?.kind === "wait") { (next as any).what ??= whatOf(a.text); }
       else out.push({ kind: "wait", text: "Aguardar a cliente responder", what: whatOf(a.text) });
     }
