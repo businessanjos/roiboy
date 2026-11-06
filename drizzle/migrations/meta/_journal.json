@@ -421,6 +421,13 @@
       "when": 1793903290224,
       "tag": "0059_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1793968451949,
+      "tag": "0060_playbook_event_vars",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE public.playbook_items ADD COLUMN IF NOT EXISTS event_vars jsonb;
