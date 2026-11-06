@@ -72,6 +72,46 @@ export function buildEventVariables(ev: PlaybookEventVars | null | undefined, no
   };
 }
 
+export type EventInputField = "link" | "date" | "time";
+
+/** Quais campos de preenchimento cada variável precisa (dia, contagem e mês saem da data). */
+const NEEDS: Record<string, EventInputField> = {
+  link_evento: "link",
+  data_evento: "date",
+  dia_semana_evento: "date",
+  contagem_regressiva: "date",
+  mes_evento: "date",
+  horario_evento: "time",
+};
+
+/** Variáveis de evento presentes no texto, na ordem em que aparecem (sem repetir). */
+export function eventVariablesInText(text: string | null | undefined): string[] {
+  const out: string[] = [];
+  for (const m of (text || "").matchAll(EVENT_VAR_PATTERN)) if (!out.includes(m[1])) out.push(m[1]);
+  return out;
+}
+
+/** Campos que a pessoa precisa preencher para as variáveis usadas no texto. */
+export function requiredEventInputs(text: string | null | undefined): EventInputField[] {
+  const keys = eventVariablesInText(text);
+  return (["link", "date", "time"] as EventInputField[]).filter((f) => keys.some((k) => NEEDS[k] === f));
+}
+
+const MISSING_LABEL: Record<string, string> = {
+  link_evento: "[link]",
+  data_evento: "[data]",
+  dia_semana_evento: "[dia da semana]",
+  contagem_regressiva: "[contagem]",
+  horario_evento: "[horário]",
+  mes_evento: "[mês]",
+};
+
+/** Só para a prévia: campo sem valor aparece como "[dia da semana]" em vez do código cru. */
+export function previewEventVariables(text: string, ev: PlaybookEventVars | null | undefined, now = new Date()): string {
+  const vars = buildEventVariables(ev, now);
+  return text.replace(EVENT_VAR_PATTERN, (_all, k) => vars[k] || MISSING_LABEL[k]);
+}
+
 export function applyEventVariables(text: string, ev: PlaybookEventVars | null | undefined, now = new Date()): string {
   const vars = buildEventVariables(ev, now);
   return text.replace(EVENT_VAR_PATTERN, (all, k) => vars[k] ?? all);
