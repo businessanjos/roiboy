@@ -4216,9 +4216,11 @@ export type Database = {
           phone_e164: string
           pix_key: string | null
           pix_key_type: string | null
+          platform_login: string | null
           recent_activity_at: string | null
           responsible_user_id: string | null
           rg: string | null
+          ryka_url: string | null
           sales_user_id: string | null
           stage_changed_at: string | null
           stage_id: string | null
@@ -4289,9 +4291,11 @@ export type Database = {
           phone_e164: string
           pix_key?: string | null
           pix_key_type?: string | null
+          platform_login?: string | null
           recent_activity_at?: string | null
           responsible_user_id?: string | null
           rg?: string | null
+          ryka_url?: string | null
           sales_user_id?: string | null
           stage_changed_at?: string | null
           stage_id?: string | null
@@ -4362,9 +4366,11 @@ export type Database = {
           phone_e164?: string
           pix_key?: string | null
           pix_key_type?: string | null
+          platform_login?: string | null
           recent_activity_at?: string | null
           responsible_user_id?: string | null
           rg?: string | null
+          ryka_url?: string | null
           sales_user_id?: string | null
           stage_changed_at?: string | null
           stage_id?: string | null
@@ -7024,6 +7030,99 @@ export type Database = {
           step_key?: string
           target_id?: string
           target_type?: string
+        }
+        Relationships: []
+      }
+      cs_process_wait_settings: {
+        Row: {
+          account_id: string
+          alert_days: number
+          updated_at: string
+          updated_by: string | null
+          wait_key: string
+        }
+        Insert: {
+          account_id: string
+          alert_days?: number
+          updated_at?: string
+          updated_by?: string | null
+          wait_key: string
+        }
+        Update: {
+          account_id?: string
+          alert_days?: number
+          updated_at?: string
+          updated_by?: string | null
+          wait_key?: string
+        }
+        Relationships: []
+      }
+      cs_process_waits: {
+        Row: {
+          account_id: string
+          action_index: number
+          client_id: string
+          id: string
+          label: string
+          process_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          started_at: string
+          started_by: string | null
+          step_key: string
+        }
+        Insert: {
+          account_id: string
+          action_index: number
+          client_id: string
+          id?: string
+          label: string
+          process_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          started_at?: string
+          started_by?: string | null
+          step_key: string
+        }
+        Update: {
+          account_id?: string
+          action_index?: number
+          client_id?: string
+          id?: string
+          label?: string
+          process_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          started_at?: string
+          started_by?: string | null
+          step_key?: string
+        }
+        Relationships: []
+      }
+      cs_today_task_states: {
+        Row: {
+          account_id: string
+          snooze_until: string | null
+          status: string
+          task_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          snooze_until?: string | null
+          status: string
+          task_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          snooze_until?: string | null
+          status?: string
+          task_key?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -30446,6 +30545,14 @@ export type Database = {
       }
       contract_is_mvp: { Args: { _contract_id: string }; Returns: boolean }
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
+      cs_last_contacts: {
+        Args: { p_user_id: string }
+        Returns: {
+          client_id: string
+          full_name: string
+          last_at: string
+        }[]
+      }
       deal_merge_state: {
         Args: { p_source: string; p_target: string }
         Returns: Json
