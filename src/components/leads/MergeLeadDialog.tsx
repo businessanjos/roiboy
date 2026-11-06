@@ -71,6 +71,7 @@ export function MergeLeadDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const [targetLead, setTargetLead] = useState<Lead | null>(null);
   const [merging, setMerging] = useState(false);
+  const [keepLead, setKeepLead] = useState<"source" | "target" | null>(null);
   const [dealsCount, setDealsCount] = useState(0);
   const [timelineCount, setTimelineCount] = useState(0);
   const [loadingCounts, setLoadingCounts] = useState(false);
@@ -123,6 +124,7 @@ export function MergeLeadDialog({
 
   const handleSelectTarget = (lead: Lead) => {
     setTargetLead(lead);
+    setKeepLead(null);
     setSearchQuery("");
     fetchMergeCounts(sourceLead.id);
   };
@@ -132,7 +134,7 @@ export function MergeLeadDialog({
   };
 
   const handleMerge = async () => {
-    if (!targetLead) return;
+    if (!targetLead || !keepLead) return;
 
     setMerging(true);
     try {
@@ -156,7 +158,9 @@ export function MergeLeadDialog({
         notes: mergeNotes(sourceLead.notes, targetLead.notes),
       };
 
-      await onMerge(sourceLead.id, targetLead.id, mergedData, sourceLead.full_name);
+      const kept = keepLead === "source" ? sourceLead : targetLead;
+      const removed = keepLead === "source" ? targetLead : sourceLead;
+      await onMerge(removed.id, kept.id, mergedData, removed.full_name);
       onOpenChange(false);
     } finally {
       setMerging(false);
@@ -179,6 +183,7 @@ export function MergeLeadDialog({
   const resetDialog = () => {
     setSearchQuery("");
     setTargetLead(null);
+    setKeepLead(null);
     setDealsCount(0);
     setTimelineCount(0);
     setChoices({
@@ -275,10 +280,30 @@ export function MergeLeadDialog({
         {targetLead && (
           <ScrollArea className="max-h-[60vh]">
             <div className="space-y-4 pr-4">
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">Qual lead deve ficar?</legend>
+                <RadioGroup value={keepLead ?? ""} onValueChange={(v) => {
+                  const keep = v as "source" | "target";
+                  setKeepLead(keep);
+                  setChoices({ full_name: keep, phone: keep, email: keep, instagram: keep, source: keep, status: keep, responsible_user_id: keep });
+                  void fetchMergeCounts(keep === "source" ? targetLead.id : sourceLead.id);
+                }} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(["source", "target"] as const).map((side) => {
+                    const item = side === "source" ? sourceLead : targetLead;
+                    return <Label key={side} htmlFor={`keep-lead-${side}`} className={cn("flex items-start gap-2 border rounded-md p-3 cursor-pointer min-w-0", keepLead === side && "border-primary bg-primary/5")}>
+                      <RadioGroupItem id={`keep-lead-${side}`} value={side} className="mt-1" />
+                      <span className="min-w-0 space-y-1"><span className="block text-sm font-medium break-words">{item.full_name}</span>
+                        <span className="block text-xs text-muted-foreground">{item.phone || "Sem telefone"}{item.email ? ` · ${item.email}` : ""}</span>
+                        <span className="block text-xs text-muted-foreground">Criado em {format(new Date(item.created_at), "dd/MM/yyyy HH:mm")}</span>
+                      </span>
+                    </Label>;
+                  })}
+                </RadioGroup>
+              </fieldset>
               {/* Lead headers */}
               <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
                 <div className="p-3 border rounded-lg bg-destructive/5">
-                  <p className="text-xs text-muted-foreground mb-1">Será excluído</p>
+                  <p className="text-xs text-muted-foreground mb-1">{keepLead === "source" ? "Será mantido" : keepLead === "target" ? "Será excluído" : "Lead atual"}</p>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="text-xs bg-destructive/10 text-destructive">
@@ -292,7 +317,7 @@ export function MergeLeadDialog({
                 <GitMerge className="h-5 w-5 text-muted-foreground" />
                 
                 <div className="p-3 border rounded-lg bg-primary/5">
-                  <p className="text-xs text-muted-foreground mb-1">Será mantido</p>
+                  <p className="text-xs text-muted-foreground mb-1">{keepLead === "target" ? "Será mantido" : keepLead === "source" ? "Será excluído" : "Lead encontrado"}</p>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="text-xs bg-primary/10 text-primary">
