@@ -261,6 +261,11 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange, stag
                   Concluir onboarding
                 </Button>
               )}
+              {client && (
+                <Button size="sm" variant="outline" asChild>
+                  <Link to={`/operations/processos?client=${client.id}`}>Processo</Link>
+                </Button>
+              )}
             </div>
           )}
         </SheetHeader>
