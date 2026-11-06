@@ -12,9 +12,11 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
   const [bh, setBh] = useState(180);
   const bubble = useRef<HTMLDivElement>(null);
   const step = steps[i];
+  const stepsRef = useRef(steps); stepsRef.current = steps;
 
   useEffect(() => { if (open) setI(0); }, [open]);
   useLayoutEffect(() => {
+    const step = stepsRef.current[i];
     if (!open || !step) return;
     step.onEnter?.();
     if (!step.target) { setRect(null); return; }
@@ -28,7 +30,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
     }, 120);
     window.addEventListener("resize", update); window.addEventListener("scroll", update, true);
     return () => { clearTimeout(find); window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true); };
-  }, [open, i, step]);
+  }, [open, i]);
   useLayoutEffect(() => { if (bubble.current) setBh(bubble.current.offsetHeight); });
   useEffect(() => {
     if (!open) return;
