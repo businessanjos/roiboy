@@ -305,15 +305,28 @@ export default function CSProcesses() {
           <h1 className="text-2xl font-semibold">Processos Eternum</h1>
           <p className="text-sm text-muted-foreground">{target ? `Acompanhando: ${targetName ?? "…"}` : "Passo a passo, mensagens prontas e links de cada processo."}</p>
         </div>
-        <div className="flex items-center gap-2">
-        {canEdit && <Button size="sm" variant="outline" className="gap-1" onClick={() => { setDraft(processText); setEditOpen(true); }}><Pencil className="h-4 w-4" />Editar textos</Button>}
-        <div data-tour="toggle" className="inline-flex rounded-lg border p-0.5">
+        <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex rounded-lg border p-0.5">
+          <Button size="sm" variant={tab === "today" ? "secondary" : "ghost"} onClick={() => setTab("today")}>Hoje</Button>
+          <Button size="sm" variant={tab === "process" ? "secondary" : "ghost"} onClick={() => setTab("process")}>Processos</Button>
+        </div>
+        {tab === "process" && client && <Button size="sm" variant="outline" onClick={() => { setEditField(undefined); setEditClientOpen(true); }}>Dados da {client.full_name.split(" ")[0]}</Button>}
+        {tab === "process" && canEdit && <Button size="sm" variant="outline" className="gap-1" onClick={() => { setDraft(processText); setEditOpen(true); }}><Pencil className="h-4 w-4" />Editar textos</Button>}
+        {tab === "process" && <div data-tour="toggle" className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view === "list" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("list")}><List className="h-4 w-4" />Lista</Button>
           <Button size="sm" variant={view === "flow" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("flow")}><Workflow className="h-4 w-4" />Fluxograma</Button>
-        </div>
+        </div>}
         </div>
       </div>
 
+      {tab === "today" ? (
+        <TodayView onOpen={(t) => {
+          const next = new URLSearchParams();
+          next.set("proc", String(t.processIndex)); if (t.stepKey) next.set("step", t.stepKey);
+          if (t.clientId) next.set("client", t.clientId); if (t.eventId) next.set("event", t.eventId);
+          setParams(next); setActive(t.processIndex); if (t.stepKey) setSel(t.stepKey); setTab("process");
+        }} />
+      ) : (<>
       <div data-tour="menu" className="grid gap-3 sm:grid-cols-3">
         {csProcesses.map((p, i) => (
           <button key={p.id} onClick={() => setActive(i)} className={`rounded-xl border border-l-4 p-3 text-left shadow-sm transition ${accents[i % 3]} ${i === active ? "bg-accent" : "hover:bg-accent/50"}`}>
@@ -358,13 +371,17 @@ export default function CSProcesses() {
         </>
       )}
 
+      </>)}
+
       <Sheet open={!!opened} onOpenChange={(o) => !o && setOpenKey(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
           {opened && openKey && (
             <div className="space-y-3">
               <SheetHeader><SheetTitle>{opened.title || "Etapa"}</SheetTitle></SheetHeader>
               {isCycle(opened) && <CycleView step={opened} />}
-              {renderBlocks(openKey, opened.blocks)}
+              {(() => { const [pi, si] = openKey.split("-").map(Number); return (
+                <StepDetail step={opened} number={`${pi + 1}.${si + 1}`} phaseLabel={`Fase ${pi + 1} · ${proc.phases[pi].title.replace(/^Fase\s+\d+\s*[—-]\s*/i, "")}`} info={toStepInfo(opened)} vars={vars}
+                  canTick={!!target} doneKeys={doneKeys} stepKey={openKey} onTask={toggle} ctx={stepCtx(openKey)} />); })()}
               {stepFooter(openKey)}
             </div>
           )}
@@ -374,7 +391,8 @@ export default function CSProcesses() {
       <Button size="icon" variant="outline" aria-label="Rever tour" className="fixed bottom-20 right-4 z-40 rounded-full shadow-md lg:bottom-6" onClick={startMain}>
         <HelpCircle className="h-5 w-5" />
       </Button>
-      <GuidedTour steps={MAIN_TOUR} open={mainTour.open} onClose={mainTour.close} />
+      <ClientProcessDataDialog client={client} focus={editField} open={editClientOpen} onOpenChange={setEditClientOpen} />
+      <GuidedTour steps={MAIN_TOUR} open={mainTour.open && tab === "process"} onClose={mainTour.close} />
       <GuidedTour steps={MINI} open={miniTour.open && !mainTour.open} onClose={miniTour.close} />
     </div>
   );
