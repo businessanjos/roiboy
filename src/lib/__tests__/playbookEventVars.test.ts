@@ -37,3 +37,19 @@ describe("detectEventPlaceholders", () => {
     expect(applyEventVariables(conv, r.vars, now)).toBe(msg);
   });
 });
+
+import { requiredEventInputs as _req, previewEventVariables as _prev } from "../playbookEventVars";
+describe("campos pedidos pelas variáveis", () => {
+  it("dia da semana pede só a data", () => {
+    expect(_req("Encontro {{dia_semana_evento}}")).toEqual(["date"]);
+  });
+  it("mensagem sem variável de encontro não pede nenhum campo", () => {
+    expect(_req("Olá, tudo bem?")).toEqual([]);
+  });
+  it("link e horário pedem link e horário", () => {
+    expect(_req("{{link_evento}} às {{horario_evento}}")).toEqual(["link", "time"]);
+  });
+  it("prévia mostra campo vazio sem o código cru", () => {
+    expect(_prev("Dia {{dia_semana_evento}}", {})).toBe("Dia [dia da semana]");
+  });
+});

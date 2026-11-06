@@ -22,7 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { VariablePickerDropdown } from '@/components/playbook/VariablePickerDropdown';
 import { PlaybookEventFields } from '@/components/playbook/PlaybookEventFields';
 import { PlaybookSequencePreview } from '@/components/royzapp/PlaybookSequencePreview';
-import { usesEventVariables, hasEventVarsValue, applyEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
+import { usesEventVariables, hasEventVarsValue, applyEventVariables, previewEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
 import {
   FileText,
   Mic,
