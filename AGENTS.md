@@ -47,3 +47,4 @@
 - Client practice areas live in `clients.business_niche` as one comma-separated multi-area string, grouped only through `src/lib/dashboard/clientPracticeArea.ts`; a client counts in every area it has, so area counts exceed the client total by design. Why: one grouping rule and no one "fixes" the overlap into a broken single-area split.
 - Spin requests keep `competence_month`; `srq:*` approvals use transfer recipients. Why: one list.
 - Playbook free fields are `{{campo:slug}}` in event_vars.customFields; `playbook-ai-assist` rejects edits to {{...}}. Why: no schema change, fields stay safe.
+- When a deal becomes lost and its lead has no other open deal, trigger `close_zapp_on_deal_lost` closes that lead's non-group, non-client RoyZapp assignments and clears the agent. Why: a re-applying lead must go back to triage instead of returning to the old seller.
