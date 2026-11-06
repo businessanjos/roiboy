@@ -79,6 +79,7 @@ import { PlaybookSequencesDialog } from "@/components/royzapp/PlaybookSequencesD
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { usePlaybookSequences } from "@/hooks/usePlaybookSequences";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
+import { applyEventVariables } from "@/lib/playbookEventVars";
 import { useZappFirstNameTitle } from "@/hooks/useZappFirstNameTitle";
 import { ZappRulerEnrollDialog } from "@/components/royzapp/ruler/ZappRulerEnrollDialog";
 import { CUSTOMER_SUCCESS_SECTOR_ID } from "@/lib/royZappSectors";
@@ -1090,7 +1091,7 @@ export default function RoyZapp() {
       const blob = await response.blob();
       const fileName = item.name || 'playbook-image.jpg';
       const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
-      await messaging.sendMediaMessage(file, 'image', item.media_caption || undefined);
+      await messaging.sendMediaMessage(file, 'image', (item.media_caption ? applyEventVariables(item.media_caption, item.event_vars) : undefined));
     } else if (item.content_type === 'audio' && item.media_url) {
       const response = await fetch(item.media_url);
       if (!response.ok) throw new Error('Failed to fetch audio');
@@ -1103,7 +1104,7 @@ export default function RoyZapp() {
       const fileName = item.media_filename || item.name || `playbook-file`;
       const mimeType = blob.type || (item.content_type === 'video' ? 'video/mp4' : 'application/octet-stream');
       const file = new File([blob], fileName, { type: mimeType });
-      await messaging.sendMediaMessage(file, item.content_type === 'video' ? 'video' : 'document', item.media_caption || undefined);
+      await messaging.sendMediaMessage(file, item.content_type === 'video' ? 'video' : 'document', (item.media_caption ? applyEventVariables(item.media_caption, item.event_vars) : undefined));
     } else if (item.media_url) {
       navigator.clipboard.writeText(item.media_url);
       toast.info("Item copiado para a área de transferência (sem conteúdo enviável).");
@@ -1127,7 +1128,7 @@ export default function RoyZapp() {
               const fileName = item.name || 'playbook-image.jpg';
               const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
               const url = URL.createObjectURL(blob);
-              messaging.setImagePreview({ file, url, caption: item.media_caption || undefined });
+              messaging.setImagePreview({ file, url, caption: (item.media_caption ? applyEventVariables(item.media_caption, item.event_vars) : undefined) });
               toast.success(item.media_caption ? "Imagem com legenda anexada! Clique em enviar." : "Imagem anexada! Clique em enviar.");
               messaging.messageInputRef.current?.focus();
             } catch (error) {
