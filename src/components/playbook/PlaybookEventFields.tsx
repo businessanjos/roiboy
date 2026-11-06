@@ -1,7 +1,8 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { CalendarClock, Link2, Calendar, Clock, Hourglass, Eye } from "lucide-react";
+import { DateField } from "@/components/ui/date-field";
+import { cn } from "@/lib/utils";
+import { CalendarClock, Link2, Calendar, Clock, Hourglass, Eye, CalendarDays, Plus, Check } from "lucide-react";
 import { buildEventVariables, usesEventVariables, type PlaybookEventVars } from "@/lib/playbookEventVars";
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
   onChange: (v: PlaybookEventVars) => void;
   /** Texto da mensagem para mostrar a prévia já preenchida. */
   previewText?: string | null;
-  /** Texto bruto para saber quais campos mostrar. */
+  /** Texto bruto para saber quais campos estão no texto. */
   rawText?: string | null;
   /** Insere a variável no texto (botões de 1 clique). */
   onInsert?: (variable: string) => void;
@@ -20,7 +21,7 @@ interface Props {
 const QUICK = [
   { key: "link_evento", label: "Link", icon: Link2 },
   { key: "data_evento", label: "Data", icon: Calendar },
-  { key: "dia_semana_evento", label: "Dia da semana", icon: Calendar },
+  { key: "dia_semana_evento", label: "Dia da semana", icon: CalendarDays },
   { key: "horario_evento", label: "Horário", icon: Clock },
   { key: "contagem_regressiva", label: "Contagem", icon: Hourglass },
   { key: "mes_evento", label: "Mês", icon: Calendar },
@@ -28,65 +29,82 @@ const QUICK = [
 
 /** Campos variáveis da mensagem: a consultora troca só aqui e o texto se atualiza sozinho. */
 export function PlaybookEventFields({ value, onChange, previewText, rawText, onInsert, hidePreview }: Props) {
-  const vars = buildEventVariables(value);
+  const vars = buildEventVariables(value) as Record<string, string>;
   const set = (patch: Partial<PlaybookEventVars>) => onChange({ ...value, ...patch });
   const txt = rawText ?? "";
-  const hasLink = txt.includes("{{link_evento}}") || !!value.link;
-  const hasDate = /\{\{(contagem_regressiva|data_evento|dia_semana_evento|horario_evento|mes_evento)\}\}/.test(txt) || !!value.date;
-  const showFields = rawText == null ? true : hasLink || hasDate;
+  const inText = (k: string) => txt.includes(`{{${k}}}`);
 
   return (
-    <div className="space-y-3 rounded-lg border bg-muted/40 p-3">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <CalendarClock className="h-4 w-4 text-primary" /> Campos que mudam
+    <div className="space-y-4 rounded-xl border bg-card p-4 shadow-sm">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <CalendarClock className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold">Campos que mudam</p>
+          <p className="text-xs text-muted-foreground">
+            Coloque o campo no texto e preencha o valor aqui. Ao trocar o valor, a mensagem se atualiza sozinha.
+          </p>
+        </div>
       </div>
+
       {onInsert && (
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Clique para colocar no texto. Depois é só preencher abaixo.</p>
-          <div className="flex flex-wrap gap-1.5">
-            {QUICK.map(({ key, label, icon: Icon }) => (
-              <Button key={key} type="button" variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => onInsert(`{{${key}}}`)}>
-                <Icon className="h-3 w-3" /> {label}
-              </Button>
-            ))}
-          </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {QUICK.map(({ key, label, icon: Icon }) => {
+            const used = inText(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onInsert(`{{${key}}}`)}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                  used ? "border-primary/50 bg-primary/10" : "bg-background hover:border-primary/40 hover:bg-muted",
+                )}
+                title={used ? "Já está no texto — clique para inserir de novo" : "Inserir no texto"}
+              >
+                <Icon className="h-4 w-4 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{label}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">{vars[key] || "não preenchido"}</span>
+                </span>
+                {used ? <Check className="h-3.5 w-3.5 text-primary" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+              </button>
+            );
+          })}
         </div>
       )}
-      {showFields && (
-        <>
-          {(rawText == null || hasLink) && (
-            <div className="space-y-1">
-              <Label className="text-xs">Link</Label>
-              <Input type="url" placeholder="https://..." value={value.link || ""} onChange={(e) => set({ link: e.target.value || null })} />
-            </div>
-          )}
-          {(rawText == null || hasDate) && (
-            <div className="grid grid-cols-3 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Data</Label>
-                <Input type="date" value={value.date || ""} onChange={(e) => set({ date: e.target.value || null })} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Início</Label>
-                <Input type="time" value={value.start || ""} onChange={(e) => set({ start: e.target.value || null })} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Fim</Label>
-                <Input type="time" value={value.end || ""} onChange={(e) => set({ end: e.target.value || null })} />
-              </div>
-            </div>
-          )}
-          {hasDate && value.date && (
-            <p className="text-xs text-muted-foreground">
-              Calculado sozinho: {vars.contagem_regressiva} · {vars.dia_semana_evento} · {vars.mes_evento}
-            </p>
-          )}
-        </>
-      )}
+
+      <div className="space-y-3 rounded-lg bg-muted/40 p-3">
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /> Link</Label>
+          <Input type="url" placeholder="Cole aqui o endereço (https://...)" value={value.link || ""} onChange={(e) => set({ link: e.target.value || null })} />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.4fr_1fr_1fr]">
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-xs"><Calendar className="h-3.5 w-3.5" /> Data do encontro</Label>
+            <DateField value={value.date || ""} onChange={(e) => set({ date: e.target.value || null })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-xs"><Clock className="h-3.5 w-3.5" /> Início</Label>
+            <Input type="time" value={value.start || ""} onChange={(e) => set({ start: e.target.value || null })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-xs"><Clock className="h-3.5 w-3.5" /> Fim</Label>
+            <Input type="time" value={value.end || ""} onChange={(e) => set({ end: e.target.value || null })} />
+          </div>
+        </div>
+        {value.date && (
+          <p className="text-xs text-muted-foreground">
+            Calculado sozinho: <span className="font-medium text-foreground">{vars.contagem_regressiva}</span> · {vars.dia_semana_evento} · {vars.mes_evento}
+          </p>
+        )}
+      </div>
+
       {!hidePreview && previewText && (
-        <div className="space-y-1">
-          <Label className="flex items-center gap-1 text-xs text-muted-foreground"><Eye className="h-3 w-3" /> Como a mensagem sai hoje</Label>
-          <p className="whitespace-pre-wrap break-words rounded-md border bg-background p-2 text-xs">{previewText}</p>
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5 text-xs text-muted-foreground"><Eye className="h-3.5 w-3.5" /> Como a mensagem sai hoje</Label>
+          <p className="max-h-60 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border bg-background p-3 text-sm">{previewText}</p>
         </div>
       )}
     </div>
