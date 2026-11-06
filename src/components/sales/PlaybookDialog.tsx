@@ -63,7 +63,7 @@ import {
 import { usePlaybook, PlaybookItem, PlaybookContentType, PlaybookFolder } from '@/hooks/usePlaybook';
 import { PlaybookItemForm } from './PlaybookItemForm';
 import { PlaybookEventFields } from '@/components/playbook/PlaybookEventFields';
-import { usesEventVariables, hasEventVarsValue, applyEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
+import { usesEventVariables, hasEventVarsValue, applyEventVariables, previewEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
 import { cn } from '@/lib/utils';
 
 export interface MultiSendPayload {
@@ -831,7 +831,8 @@ export function PlaybookDialog({
                 <PlaybookEventFields
                   value={quickVars}
                   onChange={setQuickVars}
-                  previewText={applyEventVariables(selectedItem.text_content || selectedItem.media_caption || selectedItem.template_body || '', quickVars) || null}
+                  rawText={`${selectedItem.text_content || ''} ${selectedItem.media_caption || ''} ${selectedItem.template_body || ''}`}
+                  previewText={previewEventVariables(selectedItem.text_content || selectedItem.media_caption || selectedItem.template_body || '', quickVars) || null}
                 />
               </div>
             )}

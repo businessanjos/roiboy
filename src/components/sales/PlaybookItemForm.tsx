@@ -22,7 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { VariablePickerDropdown } from '@/components/playbook/VariablePickerDropdown';
 import { PlaybookEventFields } from '@/components/playbook/PlaybookEventFields';
 import { PlaybookSequencePreview } from '@/components/royzapp/PlaybookSequencePreview';
-import { usesEventVariables, hasEventVarsValue, applyEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
+import { usesEventVariables, hasEventVarsValue, applyEventVariables, previewEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
 import {
   FileText,
   Mic,
@@ -1086,7 +1086,7 @@ export function PlaybookItemForm({
             })()}
           </div>
           {['text', 'image', 'template', 'video', 'document'].includes(contentType) && (() => {
-            const ev = (t: string) => (t ? applyEventVariables(t, eventVars) : t);
+            const ev = (t: string) => (t ? previewEventVariables(t, eventVars) : t);
             const draft = {
               id: '__draft__', name: name || 'Prévia', content_type: contentType,
               text_content: contentType === 'text' ? textContent : null,
