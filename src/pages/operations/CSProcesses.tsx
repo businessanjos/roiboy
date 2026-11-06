@@ -208,7 +208,7 @@ export default function CSProcesses() {
         <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col">
           <DialogHeader>
             <DialogTitle>Editar textos dos processos</DialogTitle>
-            <DialogDescription>A mudança vale para toda a equipe. Mantenha "# PROCESSO 1 — Nome" para cada processo, ## para fases e ### para etapas. Linhas com > viram mensagem pronta, "- [ ]" vira tarefa e ⚠️ vira aviso.</DialogDescription>
+            <DialogDescription>A mudança vale para toda a equipe. Mantenha "# PROCESSO 1 — Nome" para cada processo, ## para fases e ### para etapas. Linhas com {">"} viram mensagem pronta, "- [ ]" vira tarefa e ⚠️ vira aviso.</DialogDescription>
           </DialogHeader>
           <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="min-h-[50vh] flex-1 font-mono text-xs" />
           <p className="text-xs text-muted-foreground">{parseProcesses(draft).length} processos reconhecidos</p>

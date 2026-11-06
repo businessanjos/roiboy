@@ -48,5 +48,4 @@
 - Spin requests keep `competence_month`; `srq:*` approvals use transfer recipients. Why: one list.
 - Playbook free fields are `{{campo:slug}}` in event_vars.customFields; `playbook-ai-assist` rejects edits to {{...}}. Why: no schema change, fields stay safe.
 - Lost deal closes lead's RoyZapp chats (`close_zapp_on_deal_lost`). Why: back to triage.
-- CS processes parse `src/content/csProcesses.md`; progress in `cs_process_progress`, tours in `user_tour_views`. Why: one text source.
-- Processos Eternum texts: account override in `cs_process_content` (null = `src/content/csProcesses.md`), editable by managers via RLS `is_cs_process_editor`. Why: managers edit without deploys; reset restores original.
+- CS processes parse `src/content/csProcesses.md`, overridable per account in `cs_process_content` (managers via `is_cs_process_editor`); progress `cs_process_progress`, tours `user_tour_views`. Why: one text source, editable.
