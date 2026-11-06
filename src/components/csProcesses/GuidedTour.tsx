@@ -37,8 +37,8 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
     <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true">
       {rect ? (
         <div className="pointer-events-none absolute rounded-xl transition-all duration-300"
-          style={{ top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, boxShadow: "0 0 0 9999px hsl(var(--background) / 0.75), 0 0 0 2px hsl(var(--primary))" }} />
-      ) : <div className="absolute inset-0 bg-background/75 backdrop-blur-sm" />}
+          style={{ top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, boxShadow: "0 0 0 2px hsl(var(--primary)), 0 0 0 9999px hsl(var(--tour-overlay) / 0.82)" }} />
+      ) : <div className="absolute inset-0 backdrop-blur-sm" style={{ background: "hsl(var(--tour-overlay) / 0.82)" }} />}
       <div
         className={`absolute w-80 animate-in fade-in zoom-in-95 rounded-2xl border bg-popover p-5 shadow-xl ${rect ? "" : "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"}`}
         style={rect ? { top: bubbleTop, left: bubbleLeft } : undefined}

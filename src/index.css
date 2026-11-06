@@ -157,6 +157,9 @@
     --input: 20 8% 18%;
     --ring: 39 60% 55%;
 
+    /* Escurecimento usado pelo tour guiado (fundo atrás do destaque) */
+    --tour-overlay: 20 14% 3%;
+
     /* Roy Brown highlight - lighter for dark mode */
     --roy-brown: 24 60% 40%;
     --roy-brown-foreground: 45 25% 95%;
