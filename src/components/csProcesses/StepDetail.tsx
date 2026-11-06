@@ -94,7 +94,7 @@ export function StepDetail({ step, number, phaseLabel, info, vars, canTick, done
   return (
     <article className="mx-auto w-full max-w-[760px]">
       <span className="inline-block rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-primary">{phaseLabel}</span>
-      <h2 className="mt-2 text-2xl font-semibold leading-tight">{number} {stepTitle(step.title) || "Etapa"}</h2>
+      <h2 className="mt-2 text-2xl font-semibold leading-tight">{number} {stepTitle(step.title) || phaseLabel.split(" · ")[1] || "Etapa"}</h2>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-1"><User className="h-4 w-4" />{info.who}</span>
         {info.when && <span className="inline-flex items-center gap-1"><CalendarClock className="h-4 w-4" />{info.when}</span>}
