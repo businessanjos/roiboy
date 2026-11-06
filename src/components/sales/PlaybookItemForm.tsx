@@ -21,7 +21,7 @@ import { WhatsAppFormattingToolbar } from '@/components/ui/whatsapp-formatting-t
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { VariablePickerDropdown } from '@/components/playbook/VariablePickerDropdown';
 import { PlaybookEventFields } from '@/components/playbook/PlaybookEventFields';
-import type { PlaybookEventVars } from '@/lib/playbookEventVars';
+import { usesEventVariables, hasEventVarsValue, applyEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
 import {
   FileText,
   Mic,
@@ -114,7 +114,7 @@ export function PlaybookItemForm({
   const [mediaCaption, setMediaCaption] = useState('');
   const [eventVars, setEventVars] = useState<PlaybookEventVars>({});
 
-  const usesEventVars = /\{\{(contagem_regressiva|data_evento|dia_semana_evento|horario_evento|mes_evento)\}\}/.test(`${textContent} ${mediaCaption} ${templateBody}`) || !!eventVars.date;
+  const usesEventVars = usesEventVariables(`${textContent} ${mediaCaption} ${templateBody}`) || hasEventVarsValue(eventVars);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -401,7 +401,7 @@ export function PlaybookItemForm({
           ? (mediaFiles.reduce((sum, f) => sum + f.size, 0) || editingItem?.media_size)
           : (mediaFile?.size || editingItem?.media_size),
         media_caption: contentType === 'image' ? mediaCaption : null,
-        event_vars: eventVars.date ? eventVars : null,
+        event_vars: hasEventVarsValue(eventVars) ? eventVars : null,
         list_items: contentType === 'list' ? listItems.filter(item => item.title.trim()) : null,
         // Link fields
         link_url: contentType === 'link' ? linkUrl : null,
@@ -1032,9 +1032,6 @@ export function PlaybookItemForm({
             )}
 
 
-            {usesEventVars && (
-              <PlaybookEventFields value={eventVars} onChange={setEventVars} />
-            )}
             {/* Caption field for image type - appears below file upload */}
             {contentType === 'image' && (mediaPreview || existingMediaUrl) && (
               <div className="space-y-2 mt-4">
