@@ -9,6 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GuidedTour, type TourStep } from "@/components/csProcesses/GuidedTour";
+import { StepDetail } from "@/components/csProcesses/StepDetail";
+import { StepNavigator, ProcessOverview, type NavStatus } from "@/components/csProcesses/StepNavigator";
+import { toStepInfo } from "@/lib/csProcessActions";
 import { ProcessFlow, StepCard, CycleView, EventTimeline, isCycle, type StepStatus } from "@/components/csProcesses/ProcessFlow";
 import { Copy, AlertTriangle, CheckSquare, Search, ExternalLink, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -60,17 +63,7 @@ function BlockView({ b, first }: { b: Block; first?: boolean }) {
   return <p className="text-sm text-muted-foreground"><Rich text={b.text} /></p>;
 }
 
-const MAIN_TOUR: TourStep[] = [
-  { text: "Bem-vinda aos Processos Eternum! 👋\nAqui está tudo que você precisa para conduzir cada cliente e cada encontro do jeito Eternum. Vamos fazer um tour rapidinho?", primary: undefined, secondary: "Agora não" },
-  { target: "menu", text: "Aqui ficam os 3 processos: Onboarding, Encontro Online e Encontro Presencial. Clique em um para abrir." },
-  { target: "toggle", text: "Prefere ver o caminho todo de uma vez? Troque para o Fluxograma e veja cada fase ligada à próxima." },
-  { target: "step", text: "Cada cartão é uma etapa. Clique para ver as mensagens, as tarefas e os links." },
-  { target: "copy", text: "As mensagens já estão prontas. Troque o que estiver destacado (como {Nome}) e clique em Copiar para mandar no WhatsApp." },
-  { target: "checklist", text: "Marque cada tarefa conforme for fazendo. O progresso fica salvo por cliente, então você sempre sabe onde parou." },
-  { target: "alert", text: "Fique de olho nos avisos em destaque. São os passos que não podem ser esquecidos, como salvar a gravação do onboarding no Drive." },
-  { text: "Pronto! Agora é com você 🚀\nSe precisar rever o tour, é só clicar no ? aqui no canto.", primary: "Começar" },
-];
-MAIN_TOUR[0].primary = "Bora!";
+
 
 function useTourSeen(key: string, enabled: boolean) {
   const [open, setOpen] = useState(false);
@@ -168,13 +161,47 @@ export default function CSProcesses() {
 
   const phases = useMemo(() => (proc?.phases ?? []).map((ph, pi) => ({ ...ph, pi, steps: ph.steps.map((s, si) => ({ s, key: `${pi}-${si}` })).filter(({ s }) => !q.trim() || norm(s.title + JSON.stringify(s.blocks)).includes(norm(q))) })).filter((ph) => ph.steps.length), [proc, q]);
 
+  const [sel, setSel] = useState<string | null>(null);
+  useEffect(() => { setSel(null); }, [active]);
+  const infoOf = useCallback((k: string) => { const [pi, si] = k.split("-").map(Number); const st = proc?.phases[pi]?.steps[si]; return st ? toStepInfo(st) : null; }, [proc]);
+  const visibleKeys = useMemo(() => allKeys.filter((k) => { if (!q.trim()) return true; const [pi, si] = k.split("-").map(Number); const st = proc.phases[pi].steps[si]; return norm(st.title + JSON.stringify(st.blocks)).includes(norm(q)); }), [allKeys, q, proc]);
+  const selKey = sel && visibleKeys.includes(sel) ? sel : (currentKey && visibleKeys.includes(currentKey) ? currentKey : visibleKeys[0] ?? "0-0");
+  const selIdx = allKeys.indexOf(selKey);
+  const [spi, ssi] = selKey.split("-").map(Number);
+  const selStep = proc?.phases[spi]?.steps[ssi];
+  const selInfo = selStep ? toStepInfo(selStep) : null;
+  const selNumber = `${spi + 1}.${ssi + 1}`;
+  const selPhaseLabel = `Fase ${spi + 1} · ${(proc?.phases[spi]?.title ?? "").replace(/^Fase\s+\d+\s*[—-]\s*/i, "")}`;
+  const navStatus = useCallback((k: string): NavStatus => doneKeys.has(k) ? "done" : (target ? k === currentKey : k === selKey) ? "current" : "pending", [doneKeys, target, currentKey, selKey]);
+  const pickPhase = (pi: number) => { const ks = allKeys.filter((k) => k.startsWith(`${pi}-`)); setSel(ks.find((k) => !doneKeys.has(k)) ?? ks[0]); };
+  const completeAndNext = async () => {
+    if (target && !doneKeys.has(selKey)) await toggle(selKey, true);
+    if (selIdx < allKeys.length - 1) setSel(allKeys[selIdx + 1]);
+  };
+  const { data: clientFirst } = useQuery({
+    queryKey: ["cs-process-client-name", clientId], enabled: !!clientId,
+    queryFn: async () => { const { data } = await supabase.from("clients").select("full_name").eq("id", clientId!).maybeSingle(); return (data?.full_name as string | undefined)?.trim().split(/\s+/)[0]; },
+  });
+  const vars = useMemo(() => ({ nome: clientFirst, cliente: clientFirst, "nome da consultora": (currentUser as any)?.name?.trim().split(/\s+/)[0] }), [clientFirst, currentUser]);
+  const firstWith = (kind: string) => allKeys.find((k) => infoOf(k)?.actions.some((a) => a.kind === kind));
+  const MAIN_TOUR: TourStep[] = [
+    { text: "Bem-vinda aos Processos Eternum! 👋\nAqui está tudo que você precisa para conduzir cada cliente e cada encontro do jeito Eternum. Vamos fazer um tour rapidinho?", primary: "Bora!", secondary: "Agora não" },
+    { target: "menu", text: "Aqui ficam os 3 processos: Onboarding, Encontro Online e Encontro Presencial. Clique em um para abrir." },
+    { target: "nav", text: "Aqui estão as fases e as etapas na ordem. Clique em uma etapa para abrir só ela ao lado.", onEnter: () => { setActive(0); setSel("0-0"); } },
+    { target: "status", text: "O sinal mostra a situação: ✓ feito, ● atual e ○ pendente." },
+    { target: "copy", text: "Mensagens ficam em cartões brancos. Clique em Copiar e mande no WhatsApp. Com uma cliente aberta, o nome dela já entra no lugar de {Nome}.", onEnter: () => { const k = firstWith("message"); if (k) setSel(k); } },
+    { target: "checklist", text: "Tarefas internas têm caixinha. Marque conforme for fazendo; o progresso fica salvo por cliente.", onEnter: () => { const k = firstWith("task"); if (k) setSel(k); } },
+    { target: "alert", text: "Avisos em vermelho são o que não pode ser esquecido.", onEnter: () => { const k = firstWith("alert"); if (k) setSel(k); } },
+    { target: "next", text: "Terminou a etapa? Clique aqui para concluir e ir para a próxima." },
+    { text: "Pronto! Agora é com você 🚀\nSe precisar rever o tour, é só clicar no ? aqui no canto.", primary: "Começar" },
+  ];
   const mainTour = useTourSeen("cs_processes_main", true);
   const miniTour = useTourSeen("cs_processes_client", !!clientId && !mainTour.open);
   const startMain = () => { setView("list"); setQ(""); mainTour.setOpen(true); };
   const MINI: TourStep[] = [
-    { target: "phases", text: `Este é o onboarding da ${targetName ?? "cliente"}. Siga as fases de cima para baixo.` },
-    { target: "current", text: "A etapa atual fica destacada. É por ela que você continua." },
-    { target: "cycle", text: "Quando terminar o onboarding, o ciclo mensal de acompanhamento começa aqui embaixo." },
+    { target: "nav", text: `Este é o onboarding da ${targetName ?? "cliente"}. Siga as etapas na ordem.` },
+    { target: "status", text: "A etapa atual fica marcada com ●. É por ela que você continua." },
+    { target: "next", text: "Ao terminar, conclua aqui e a próxima etapa abre sozinha." },
   ];
 
   const opened = openKey ? (() => { const [pi, si] = openKey.split("-").map(Number); return proc.phases[pi]?.steps[si]; })() : null;
@@ -251,38 +278,31 @@ export default function CSProcesses() {
         <ProcessFlow process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} />
       ) : (
         <>
-          {view === "list" && (
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar etapa ou mensagem…" className="pl-9" />
+          <ProcessOverview process={proc} statusOf={navStatus} onPick={pickPhase} />
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar etapa ou mensagem…" className="pl-9" />
+          </div>
+          {visibleKeys.length === 0 ? <p className="text-sm text-muted-foreground">Nada encontrado.</p> : (
+            <div className="flex flex-col gap-6 lg:flex-row">
+              <StepNavigator process={proc} selected={selKey} onSelect={setSel} statusOf={navStatus} visible={(k) => visibleKeys.includes(k)} mobile={isMobile} />
+              <div className="min-w-0 flex-1 rounded-xl bg-muted/40 p-4 md:p-6">
+                {selStep && (
+                  <>
+                    {isCycle(selStep) && <div className="mx-auto mb-4 max-w-[760px]"><CycleView step={selStep} /></div>}
+                    <StepDetail step={selStep} number={selNumber} phaseLabel={selPhaseLabel} info={selInfo!} vars={vars}
+                      canTick={!!target} doneKeys={doneKeys} stepKey={selKey} onTask={toggle} />
+                  </>
+                )}
+                <div className="sticky bottom-0 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 border-t bg-muted/80 py-3 backdrop-blur">
+                  <Button variant="ghost" disabled={selIdx <= 0} onClick={() => setSel(allKeys[selIdx - 1])}>← Etapa anterior</Button>
+                  <Button data-tour="next" disabled={!target && selIdx >= allKeys.length - 1} onClick={completeAndNext}>
+                    {target ? (doneKeys.has(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima →") : "Próxima etapa →"}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
-          <div data-tour="phases" className="space-y-6">
-            {phases.length === 0 && <p className="text-sm text-muted-foreground">Nada encontrado.</p>}
-            {phases.map((ph, idx) => (
-              <section key={ph.title} className="relative border-l pl-6">
-                <span className={`absolute -left-1.5 top-1 h-3 w-3 rounded-full ${dots[active % 3]}`} />
-                <h2 className="mb-3 font-semibold">{ph.title}</h2>
-                <div className="space-y-3">
-                  {ph.steps.map(({ s, key }) => {
-                    const st = statusOf(key);
-                    const tour = key === currentKey ? "current" : isCycle(s) ? "cycle" : !firstStepMarked ? "step" : undefined;
-                    if (tour === "step") firstStepMarked = true;
-                    if (view === "flow") return <div key={key} data-tour={tour}><StepCard step={s} status={st} onClick={() => setOpenKey(key)} /></div>;
-                    return (
-                      <div key={key} data-tour={tour} className={`animate-in fade-in space-y-2 rounded-xl border bg-card p-4 shadow-sm ${st === "done" ? "border-emerald-500/60" : st === "current" ? "border-primary ring-2 ring-primary/30" : st === "pending" ? "opacity-80" : ""}`}>
-                        {s.title && <h3 className="font-medium">{st === "done" && "✓ "}{s.title}</h3>}
-                        {isCycle(s) && <CycleView step={s} />}
-                        {renderBlocks(key, s.blocks)}
-                        {stepFooter(key)}
-                      </div>
-                    );
-                  })}
-                </div>
-                {view === "flow" && idx < phases.length - 1 && <ArrowDown className="mx-auto mt-3 h-4 w-4 text-muted-foreground" />}
-              </section>
-            ))}
-          </div>
         </>
       )}
 
