@@ -20,7 +20,7 @@ describe("tela Hoje", () => {
   });
   it("ciclo mensal: Wars no dia 1 e engajamento na última semana", () => {
     const t = monthlyTasks("2026-11-20", []);
-    expect(t.find((x) => x.key === "m:2026-11:wars")?.due).toBe("2026-11-01");
+    expect(t.some((x) => x.key.endsWith(":wars") || x.key.endsWith(":meta"))).toBe(false);
     expect(t.find((x) => x.key === "m:2026-11:engage")?.due).toBe("2026-11-24");
   });
   it("concluídas somem e adiadas mudam de dia", () => {

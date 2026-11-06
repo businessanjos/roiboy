@@ -65,8 +65,6 @@ export function monthlyTasks(today: string, farFromGoal: string[]): TodayTask[] 
   const out: TodayTask[] = [];
   for (const m of [today.slice(0, 7), addDays(`${today.slice(0, 7)}-28`, 7).slice(0, 7)]) {
     const last = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate();
-    out.push({ key: `m:${m}:wars`, kind: "monthly", filter: "monthly", title: "Gravar e enviar os vídeos Wars", subject: "Ciclo mensal", processIndex: 0, due: `${m}-01`, stepKey: "2-4" });
-    out.push({ key: `m:${m}:meta`, kind: "monthly", filter: "monthly", title: "Incentivar o cadastro da meta e o Piloto Automático", subject: "Ciclo mensal", processIndex: 0, due: `${m}-05`, stepKey: "2-4" });
     out.push({ key: `m:${m}:engage`, kind: "monthly", filter: "monthly", title: "Engajar clientes distantes da meta", subject: farFromGoal.length ? `${farFromGoal.length} clientes` : "Ciclo mensal", processIndex: 0, due: `${m}-${String(last - 6).padStart(2, "0")}`, stepKey: "2-4", list: farFromGoal });
   }
   return out;
