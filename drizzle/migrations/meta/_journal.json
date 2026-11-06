@@ -428,6 +428,13 @@
       "when": 1793968451949,
       "tag": "0060_playbook_event_vars",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1793999336704,
+      "tag": "0061_close_zapp_on_deal_lost",
+      "breakpoints": true
     }
   ]
 }
