@@ -53,3 +53,13 @@ describe("campos pedidos pelas variáveis", () => {
     expect(_prev("Dia {{dia_semana_evento}}", {})).toBe("Dia [dia da semana]");
   });
 });
+
+describe("campos livres e formatos", () => {
+  it("substitui campo livre e respeita formato do mês/dia", async () => {
+    const m = await import("../playbookEventVars");
+    const ev = { date: "2026-11-06", monthCase: "lower" as const, weekdayCase: "title" as const, customFields: [{ slug: "local", label: "Local", value: "Sala 2" }] };
+    expect(m.applyEventVariables("{{mes_evento}} {{dia_semana_evento}} {{campo:local}}", ev)).toBe("novembro Sexta-feira Sala 2");
+    expect(m.previewEventVariables("{{campo:x}}", {})).toBe("[x]");
+    expect(m.applyEventVariables("{{mes_evento}}", { date: "2026-11-06" })).toBe("NOVEMBRO");
+  });
+});
