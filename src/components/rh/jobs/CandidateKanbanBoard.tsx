@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowDownWideNarrow, MessageSquareText, Search, Users, X } from "lucide-react";
+import { ArrowDownWideNarrow, MessageSquareText, Plus, Search, Users, X } from "lucide-react";
+import AddCandidateDialog from "./AddCandidateDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { countScreeningAnswers, normalizeSearch, screeningAnswersLength, screeningAnswersText } from "@/lib/hr/screeningAnswers";
 import { Input } from "@/components/ui/input";
@@ -103,6 +104,7 @@ export default function CandidateKanbanBoard({ jobId, jobTitle = "Vaga" }: { job
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortByCompleteness, setSortByCompleteness] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
 
   const filteredCandidates = useMemo(() => {
     const term = normalizeSearch(search.trim());
@@ -210,6 +212,10 @@ export default function CandidateKanbanBoard({ jobId, jobTitle = "Vaga" }: { job
               <ArrowDownWideNarrow className="h-4 w-4" />
               Mais completos
             </Button>
+            <Button type="button" size="sm" onClick={() => setAddOpen(true)} className="gap-2 whitespace-nowrap">
+              <Plus className="h-4 w-4" />
+              Adicionar candidato
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -229,6 +235,7 @@ export default function CandidateKanbanBoard({ jobId, jobTitle = "Vaga" }: { job
           </DndContext>
         </CardContent>
       </Card>
+      <AddCandidateDialog open={addOpen} onOpenChange={setAddOpen} jobId={jobId} />
       <CandidateDetailDrawer open={drawerState.open} onOpenChange={o => setDrawerState({ ...drawerState, open: o })} candidate={drawerState.candidate} jobId={jobId} focusAnswers={drawerState.focusAnswers} />
     </>
   );
