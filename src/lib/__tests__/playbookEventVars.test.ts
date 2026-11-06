@@ -21,3 +21,19 @@ d2("link_evento", () => {
     e2(applyEventVariables("Acesse {{link_evento}}", { link: "https://x.com/a" })).toBe("Acesse https://x.com/a");
   });
 });
+
+import { detectEventPlaceholders } from "../playbookEventVars";
+describe("detectEventPlaceholders", () => {
+  const msg = "Contagem regressiva falta 1 dia para nosso Encontro Online Deste Mês de NOVEMBRO 🏆\n🗓️ Dia — 06/11 (sexta-feira)\n⏰ 15h às 17h (horário de Brasília)";
+  it("reconhece data, dia, horário, contagem e mês da mensagem do Encontro", () => {
+    const r = detectEventPlaceholders(msg, now);
+    expect(r.vars).toMatchObject({ date: "2026-11-06", start: "15:00", end: "17:00", monthCase: "upper" });
+    expect(r.fields.map((f) => f.key).sort()).toEqual(["contagem_regressiva", "data_evento", "dia_semana_evento", "horario_evento", "mes_evento"]);
+  });
+  it("converter e aplicar devolve o mesmo texto", () => {
+    const r = detectEventPlaceholders(msg, now);
+    const conv = r.convert(r.fields.map((f) => f.key));
+    expect(conv).toContain("{{data_evento}}");
+    expect(applyEventVariables(conv, r.vars, now)).toBe(msg);
+  });
+});
