@@ -9,6 +9,21 @@ export interface PlaybookEventVars {
   link?: string | null;
   /** Como escrever o mês (padrão: maiúsculas). */
   monthCase?: "upper" | "lower" | "title" | null;
+  /** Como escrever o dia da semana (padrão: minúsculas). */
+  weekdayCase?: "upper" | "lower" | "title" | null;
+  /** Campos livres criados pela pessoa: {{campo:slug}}. */
+  customFields?: PlaybookCustomField[] | null;
+}
+
+export interface PlaybookCustomField {
+  slug: string;
+  label: string;
+  value: string;
+}
+
+/** Transforma o nome do campo em código simples ("Local do encontro" -> "local_do_encontro"). */
+export function slugifyField(label: string): string {
+  return label.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "campo";
 }
 
 export const EVENT_VARIABLES = [
@@ -20,14 +35,14 @@ export const EVENT_VARIABLES = [
   { key: "link_evento", label: "Link", example: "https://..." },
 ];
 
-export const EVENT_VAR_PATTERN = /\{\{(contagem_regressiva|data_evento|dia_semana_evento|horario_evento|mes_evento|link_evento)\}\}/g;
+export const EVENT_VAR_PATTERN = /\{\{(contagem_regressiva|data_evento|dia_semana_evento|horario_evento|mes_evento|link_evento|campo:[a-z0-9_]+)\}\}/g;
 
 export function usesEventVariables(text: string | null | undefined): boolean {
   return !!text && new RegExp(EVENT_VAR_PATTERN.source).test(text);
 }
 
 export function hasEventVarsValue(ev: PlaybookEventVars | null | undefined): boolean {
-  return !!(ev?.date || ev?.link?.trim());
+  return !!(ev?.date || ev?.link?.trim() || ev?.customFields?.some((f) => f.value.trim()));
 }
 
 const DIAS = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
@@ -58,6 +73,7 @@ export function countdownText(date: string, now = new Date()): string {
 export function buildEventVariables(ev: PlaybookEventVars | null | undefined, now = new Date()): Record<string, string> {
   const out: Record<string, string> = {};
   if (ev?.link?.trim()) out.link_evento = ev.link.trim();
+  for (const f of ev?.customFields || []) if (f.value.trim()) out[`campo:${f.slug}`] = f.value;
   if (!ev?.date) return out;
   const [y, m, d] = ev.date.split("-").map(Number);
   const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
@@ -66,7 +82,7 @@ export function buildEventVariables(ev: PlaybookEventVars | null | undefined, no
     ...out,
     contagem_regressiva: countdownText(ev.date, now),
     data_evento: `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}`,
-    dia_semana_evento: DIAS[wd],
+    dia_semana_evento: caseWord(DIAS[wd], ev.weekdayCase ?? "lower"),
     horario_evento: start && end ? `${start} às ${end}` : start,
     mes_evento: caseMonth(MESES[m - 1], ev.monthCase),
   };
@@ -109,7 +125,12 @@ const MISSING_LABEL: Record<string, string> = {
 /** Só para a prévia: campo sem valor aparece como "[dia da semana]" em vez do código cru. */
 export function previewEventVariables(text: string, ev: PlaybookEventVars | null | undefined, now = new Date()): string {
   const vars = buildEventVariables(ev, now);
-  return text.replace(EVENT_VAR_PATTERN, (_all, k) => vars[k] || MISSING_LABEL[k]);
+  const label = (k: string) => {
+    if (!k.startsWith("campo:")) return MISSING_LABEL[k];
+    const f = ev?.customFields?.find((c) => `campo:${c.slug}` === k);
+    return `[${(f?.label || k.slice(6)).toLowerCase()}]`;
+  };
+  return text.replace(EVENT_VAR_PATTERN, (_all, k) => vars[k] || label(k));
 }
 
 export function applyEventVariables(text: string, ev: PlaybookEventVars | null | undefined, now = new Date()): string {
@@ -117,10 +138,13 @@ export function applyEventVariables(text: string, ev: PlaybookEventVars | null |
   return text.replace(EVENT_VAR_PATTERN, (all, k) => vars[k] ?? all);
 }
 
+function caseWord(w: string, c?: PlaybookEventVars["monthCase"]): string {
+  if (c === "lower") return w.toLowerCase();
+  if (c === "upper") return w.toUpperCase();
+  return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+}
 function caseMonth(m: string, c?: PlaybookEventVars["monthCase"]): string {
-  if (c === "lower") return m.toLowerCase();
-  if (c === "title") return m.charAt(0) + m.slice(1).toLowerCase();
-  return m;
+  return caseWord(m, c ?? "upper");
 }
 
 export interface DetectedEventField {
@@ -172,7 +196,9 @@ export function detectEventPlaceholders(text: string, now = new Date()) {
   if (dayIdx >= 0) {
     const nd = norm(DIAS[dayIdx]);
     const pos = n.indexOf(nd) >= 0 ? n.indexOf(nd) : n.indexOf(norm(DIAS[dayIdx].replace("-feira", " feira")));
-    add("dia_semana_evento", "Dia da semana", text.substr(pos, DIAS[dayIdx].length));
+    const found = text.substr(pos, DIAS[dayIdx].length);
+    vars.weekdayCase = found === found.toUpperCase() ? "upper" : found === found.toLowerCase() ? "lower" : "title";
+    add("dia_semana_evento", "Dia da semana", found);
   }
 
   const cd = text.match(/\b(faltam?\s+\d+\s+dias?|é hoje|e hoje|é amanhã)\b/i);
