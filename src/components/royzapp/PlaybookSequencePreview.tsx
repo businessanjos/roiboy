@@ -12,7 +12,7 @@ interface Props {
   steps: SequenceStep[];
   items: PlaybookItem[];
   variables?: Record<string, string>;
-  replaceVariables?: (text: string, vars: Record<string, string>) => string;
+  replaceVariables?: (text: string, vars: Record<string, string>, item?: PlaybookItem) => string;
   signText?: (text: string) => string;
   messageOnly?: boolean;
   tags?: { id: string; name: string; color: string }[];
@@ -108,9 +108,9 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
   }, [lastKey]);
 
   // Assinatura só na primeira mensagem da sequência (as seguintes chegam limpas).
-  const applyVars = (text: string | null, sign = false) => {
+  const applyVars = (text: string | null, sign = false, item?: PlaybookItem) => {
     if (!text) return null;
-    const processed = replaceVariables ? replaceVariables(text, variables) : text;
+    const processed = replaceVariables ? replaceVariables(text, variables, item) : text;
     return sign && signText ? signText(processed) : processed;
   };
 
@@ -170,8 +170,8 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
             </p>
           ) : (
             resolved.map(({ item, step, index }, pos) => {
-              const text = applyVars(item.text_content, pos === 0) || applyVars(item.template_body, pos === 0);
-              const caption = applyVars(item.media_caption, pos === 0);
+              const text = applyVars(item.text_content, pos === 0, item) || applyVars(item.template_body, pos === 0, item);
+              const caption = applyVars(item.media_caption, pos === 0, item);
               const isMedia = item.content_type !== "text";
               return (
                 <div key={`${item.id}-${pos}`}>

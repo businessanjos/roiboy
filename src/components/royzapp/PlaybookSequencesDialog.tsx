@@ -123,9 +123,9 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
           }
           const pos = usable.slice(0, idx).filter((x) => !isActionStep(x)).length;
           const item = itemById.get(st.playbook_item_id)!;
-          const processed = item.text_content ? replaceVariables(item.text_content, variables) : undefined;
+          const processed = item.text_content ? replaceVariables(item.text_content, variables, item) : undefined;
           const text = buildText ? buildText(item, processed) : (processed || "");
-          const caption = item.media_caption ? replaceVariables(item.media_caption, variables) : "";
+          const caption = item.media_caption ? replaceVariables(item.media_caption, variables, item) : "";
           // Assinatura só na primeira mensagem; as seguintes chegam limpas.
           const sign = (t: string) => (pos === 0 && signText ? signText(t) : t);
           return {

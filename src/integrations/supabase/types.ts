@@ -21303,6 +21303,7 @@ export type Database = {
           content_type: string
           created_at: string
           created_by: string | null
+          event_vars: Json | null
           folder_id: string | null
           id: string
           is_favorite: boolean | null
@@ -21333,6 +21334,7 @@ export type Database = {
           content_type: string
           created_at?: string
           created_by?: string | null
+          event_vars?: Json | null
           folder_id?: string | null
           id?: string
           is_favorite?: boolean | null
@@ -21363,6 +21365,7 @@ export type Database = {
           content_type?: string
           created_at?: string
           created_by?: string | null
+          event_vars?: Json | null
           folder_id?: string | null
           id?: string
           is_favorite?: boolean | null

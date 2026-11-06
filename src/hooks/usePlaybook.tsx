@@ -1,3 +1,4 @@
+import { applyEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +41,7 @@ export interface PlaybookItem {
   media_size: number | null;
   media_duration: number | null;
   media_caption: string | null;
+  event_vars?: PlaybookEventVars | null;
   list_items: any[] | null;
   // Link fields
   link_url: string | null;
@@ -70,6 +72,7 @@ export interface CreatePlaybookItemInput {
   media_size?: number | null;
   media_duration?: number | null;
   media_caption?: string | null;
+  event_vars?: PlaybookEventVars | null;
   list_items?: any[] | null;
   // Link fields
   link_url?: string | null;
@@ -246,6 +249,7 @@ export function usePlaybook(options: PlaybookOptions = {}) {
           media_size: input.media_size || null,
           media_duration: input.media_duration || null,
           media_caption: input.media_caption || null,
+          event_vars: (input.event_vars as any) || null,
           list_items: input.list_items || null,
           // Link fields
           link_url: input.link_url || null,
@@ -280,7 +284,7 @@ export function usePlaybook(options: PlaybookOptions = {}) {
     mutationFn: async ({ id, ...updates }: Partial<PlaybookItem> & { id: string }) => {
       const { data, error } = await supabase
         .from('playbook_items')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single();
@@ -430,9 +434,10 @@ export function usePlaybook(options: PlaybookOptions = {}) {
   // Replace variables in text with comprehensive variable support
   const replaceVariables = useCallback((
     text: string,
-    variables: Record<string, string>
+    variables: Record<string, string>,
+    item?: { event_vars?: PlaybookEventVars | null } | null
   ): string => {
-    let result = text;
+    let result = applyEventVariables(text, item?.event_vars);
     
     // Replace provided variables
     Object.entries(variables).forEach(([key, value]) => {
