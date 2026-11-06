@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
     const missing = orig.filter((c) => !out.includes(c));
     const added = out.filter((c) => !orig.includes(c));
     const okAdded = parsed.data.mode === "vars" && added.every((c) => VAR_CODES.includes(c.replace(/[{}]/g, "")));
-    if (missing.length || (added.length && !okAdded)) return json({ error: "A IA alterou campos automáticos; tente novamente." }, 422);
+    if (missing.length || (added.length && !okAdded)) return json({ error: "A IA alterou campos automáticos; tente novamente." });
     return json({ text: text.trim() });
   } catch (e) {
     console.error(e);

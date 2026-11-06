@@ -100,13 +100,13 @@ export function PlaybookEventFields({ value, onChange, previewText, rawText, onI
     onInsert?.(`{{campo:${slug}}}`);
     setNewName(null);
   };
-  const runAi = async () => {
+  const runAi = async (mode: "copy" | "short" | "fix" | "vars") => {
     if (!txt.trim()) return;
     setAiBusy(true);
     try {
-      const { data, error } = await supabase.functions.invoke("playbook-ai-assist", { body: { text: txt } });
+      const { data, error } = await supabase.functions.invoke("playbook-ai-assist", { body: { text: txt, mode } });
       if (error || !data?.text) throw new Error(data?.error || error?.message || "Não foi possível revisar agora.");
-      if (data.text.trim() === txt.trim()) toast.success("Texto já está correto.");
+      if (data.text.trim() === txt.trim()) toast.success(mode === "fix" ? "Texto já está correto." : "A IA não encontrou o que mudar.");
       else setAiText(data.text);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível revisar agora.");
@@ -151,11 +151,18 @@ export function PlaybookEventFields({ value, onChange, previewText, rawText, onI
         </div>
       </div>
     ) : (
-      <div className="flex justify-end">
-        <Button type="button" size="sm" variant="outline" className="h-7 gap-1.5 text-xs" disabled={aiBusy} onClick={runAi}>
-          {aiBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5 text-primary" />}
-          Revisar com IA
-        </Button>
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        <span className="mr-1 flex items-center gap-1 text-xs text-muted-foreground">
+          {aiBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5 text-primary" />} IA:
+        </span>
+        {([
+          ["copy", "Melhorar texto"],
+          ["short", "Deixar direto"],
+          ["vars", "Detectar campos"],
+          ["fix", "Corrigir português"],
+        ] as const).map(([m, l]) => (
+          <Button key={m} type="button" size="sm" variant="outline" className="h-7 text-xs" disabled={aiBusy} onClick={() => runAi(m)}>{l}</Button>
+        ))}
       </div>
     )
   );
