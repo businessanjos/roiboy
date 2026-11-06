@@ -33,7 +33,7 @@
 - Transfer-request navigation follows Leads access, including the SDR menu, instead of inheriting Ranking from its URL parent; route checks match the most specific item. Why: sellers must reach their RLS-scoped request history without gaining management access.
 - Deal merges choose the survivor independently of field values and use RLS-preserving transactional RPCs with soft deletion, snapshots, and guarded undo for the original actor. Why: preserve the selected lead, avoid partial merges, and never overwrite later changes during reversal.
 - Transfer WhatsApp notices to sellers are dispatched from the notifications insert trigger to `transfer-whatsapp-notify`, deduplicated per notification and gated by account settings (private and/or group). Why: every transfer path triggers it once without client calls.
-- Transfer notice templates are account-scoped nullable settings rendered by the same pure helper in the sender and editor; the editor reuses PlaybookSequencePreview in message-only mode. Why: preview and outgoing text stay consistent without changing recipients, permissions or dispatch rules.
+- Transfer notice templates are account-scoped nullable settings rendered by one pure helper in sender and editor (PlaybookSequencePreview message-only). Why: preview matches outgoing text.
 
 - Renewal presentation uses shared BRL aggregation and the selected date basis over the table-filtered rows; expiry visibility follows the selected years. Why: chart, details, export and summary must not disagree or hide prior-year pending contracts.
 
@@ -47,5 +47,5 @@
 - Client practice areas live in `clients.business_niche` as one comma-separated multi-area string, grouped only through `src/lib/dashboard/clientPracticeArea.ts`; a client counts in every area it has, so area counts exceed the client total by design. Why: one grouping rule and no one "fixes" the overlap into a broken single-area split.
 - Spin requests keep `competence_month`; `srq:*` approvals use transfer recipients. Why: one list.
 - Playbook free fields are `{{campo:slug}}` in event_vars.customFields; `playbook-ai-assist` rejects edits to {{...}}. Why: no schema change, fields stay safe.
-- Lost deal closes lead's RoyZapp chats (`close_zapp_on_deal_lost`). Why: back to triage.
-- CS processes parse `src/content/csProcesses.md`; progress in `cs_process_progress`, tours in `user_tour_views`. Why: one text source.
+- Lost deal closes lead chats (`close_zapp_on_deal_lost`). Why: triage.
+- CS processes parse `src/content/csProcesses.md`, overridable per account in `cs_process_content` (managers via `is_cs_process_editor`); progress `cs_process_progress`, tours `user_tour_views`. Why: one text source, editable.

@@ -6973,6 +6973,27 @@ export type Database = {
           },
         ]
       }
+      cs_process_content: {
+        Row: {
+          account_id: string
+          content: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          content: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          content?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       cs_process_progress: {
         Row: {
           account_id: string
@@ -30782,6 +30803,7 @@ export type Database = {
         Args: { p_chat_id: string; p_user_id: string }
         Returns: boolean
       }
+      is_cs_process_editor: { Args: never; Returns: boolean }
       is_hr_user: { Args: { _user_id?: string }; Returns: boolean }
       is_new_device: {
         Args: { p_device_fingerprint: string; p_user_id: string }

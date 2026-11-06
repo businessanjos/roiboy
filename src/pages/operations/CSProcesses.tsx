@@ -14,7 +14,11 @@ import { Copy, AlertTriangle, CheckSquare, Search, ExternalLink, Clock } from "l
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { csProcesses, type Block } from "@/lib/csProcesses";
+import { parseProcesses, defaultProcessesText, type Block } from "@/lib/csProcesses";
+import { isManagementUser } from "@/lib/access/managementRoles";
+import { Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 const accents = ["border-l-purple-500", "border-l-teal-500", "border-l-blue-500"];
 const dots = ["bg-purple-500", "bg-teal-500", "bg-blue-500"];
@@ -103,7 +107,34 @@ export default function CSProcesses() {
   const [openKey, setOpenKey] = useState<string | null>(null);
   useEffect(() => { localStorage.setItem("csProcessesView", view); }, [view]);
 
-  const proc = csProcesses[active];
+  const { data: customText } = useQuery({
+    queryKey: ["cs-process-content", currentUser?.account_id],
+    enabled: !!currentUser?.account_id,
+    queryFn: async () => {
+      const { data } = await supabase.from("cs_process_content").select("content").eq("account_id", currentUser!.account_id).maybeSingle();
+      return (data?.content as string | undefined) ?? null;
+    },
+  });
+  const processText = customText || defaultProcessesText;
+  const csProcesses = useMemo(() => { const p = parseProcesses(processText); return p.length ? p : parseProcesses(defaultProcessesText); }, [processText]);
+  const canEdit = isManagementUser(currentUser as any);
+  const [editOpen, setEditOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const saveText = async (text: string | null) => {
+    if (!currentUser) return;
+    setSaving(true);
+    const { error } = text === null
+      ? await supabase.from("cs_process_content").delete().eq("account_id", currentUser.account_id)
+      : await supabase.from("cs_process_content").upsert({ account_id: currentUser.account_id, content: text, updated_by: currentUser.id, updated_at: new Date().toISOString() });
+    setSaving(false);
+    if (error) { toast.error("Não foi possível salvar. Só gestores podem editar."); return; }
+    toast.success(text === null ? "Texto original restaurado" : "Texto atualizado para toda a equipe");
+    setEditOpen(false); setActive(0);
+    qc.invalidateQueries({ queryKey: ["cs-process-content"] });
+  };
+
+  const proc = csProcesses[Math.min(active, csProcesses.length - 1)];
   const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
   const { data: targetName } = useQuery({
@@ -173,14 +204,34 @@ export default function CSProcesses() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5 p-4 md:p-6">
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col">
+          <DialogHeader>
+            <DialogTitle>Editar textos dos processos</DialogTitle>
+            <DialogDescription>A mudança vale para toda a equipe. Mantenha "# PROCESSO 1 — Nome" para cada processo, ## para fases e ### para etapas. Linhas com {">"} viram mensagem pronta, "- [ ]" vira tarefa e ⚠️ vira aviso.</DialogDescription>
+          </DialogHeader>
+          <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="min-h-[50vh] flex-1 font-mono text-xs" />
+          <p className="text-xs text-muted-foreground">{parseProcesses(draft).length} processos reconhecidos</p>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button variant="ghost" disabled={saving || !customText} onClick={() => saveText(null)}>Restaurar original</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+              <Button disabled={saving || !parseProcesses(draft).length} onClick={() => saveText(draft)}>Salvar</Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Processos Eternum</h1>
           <p className="text-sm text-muted-foreground">{target ? `Acompanhando: ${targetName ?? "…"}` : "Passo a passo, mensagens prontas e links de cada processo."}</p>
         </div>
+        <div className="flex items-center gap-2">
+        {canEdit && <Button size="sm" variant="outline" className="gap-1" onClick={() => { setDraft(processText); setEditOpen(true); }}><Pencil className="h-4 w-4" />Editar textos</Button>}
         <div data-tour="toggle" className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view === "list" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("list")}><List className="h-4 w-4" />Lista</Button>
           <Button size="sm" variant={view === "flow" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("flow")}><Workflow className="h-4 w-4" />Fluxograma</Button>
+        </div>
         </div>
       </div>
 
