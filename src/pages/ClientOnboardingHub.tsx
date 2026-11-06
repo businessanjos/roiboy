@@ -18,6 +18,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrated";
 import { StageChecklistEditor } from "@/components/client/StageChecklistEditor";
+import { waitingFor } from "@/components/csProcesses/StepDetail";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { ClientOnboardingDrawer } from "@/components/client/ClientOnboardingDrawer";
 import { OnboardingHistoryButton } from "@/components/client/OnboardingHistoryButton";
 import { useOnboardingHub, computeHealth, daysInStage, OnboardingClient } from "@/hooks/useOnboardingHub";
@@ -438,6 +441,11 @@ function SmartClientList({
                   {notStarted && (
                     <Badge variant="outline" className="text-[10px] border-warning text-warning-strong dark:text-warning">
                       Aguardando início
+                    </Badge>
+                  )}
+                  {stalledSince.get(c.id) && (
+                    <Badge variant="outline" className="text-[10px]" title="Aguardando resposta da cliente no processo">
+                      ⏳ Parada há {waitingFor(stalledSince.get(c.id)!)}
                     </Badge>
                   )}
                 </div>

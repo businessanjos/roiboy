@@ -249,7 +249,7 @@ export default function CSProcesses() {
   ];
   const mainTour = useTourSeen("cs_processes_main", true);
   const miniTour = useTourSeen("cs_processes_client", !!clientId && !mainTour.open);
-  const startMain = () => { setView("list"); setQ(""); mainTour.setOpen(true); };
+  const startMain = () => { setTab("process"); setView("list"); setQ(""); mainTour.setOpen(true); };
   const MINI: TourStep[] = [
     { target: "nav", text: `Este é o onboarding da ${targetName ?? "cliente"}. Siga as etapas na ordem.` },
     { target: "status", text: "A etapa atual fica marcada com ●. É por ela que você continua." },
