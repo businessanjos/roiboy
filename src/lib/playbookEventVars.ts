@@ -30,7 +30,8 @@ function hourLabel(t?: string | null): string {
 }
 
 export function countdownText(date: string, now = new Date()): string {
-  const a = Date.UTC(...(todayBR(now).split("-").map(Number) as [number, number, number]));
+  const [ty, tm, td] = todayBR(now).split("-").map(Number);
+  const a = Date.UTC(ty, tm - 1, td);
   const [y, mo, d] = date.split("-").map(Number);
   const diff = Math.round((Date.UTC(y, mo - 1, d) - a) / 86400000);
   if (diff === 0) return "é hoje";
