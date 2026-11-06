@@ -326,7 +326,7 @@ export default function Sectors() {
     );
 
   return (
-    <div className="min-h-[100dvh] bg-background" data-testid="sectors-page">
+    <div className="min-h-[100dvh] bg-background select-none" data-testid="sectors-page">
       <div className="mx-auto w-full max-w-5xl px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 md:py-12">
         {/* Header compacto no celular, centralizado no desktop */}
         <header className="mb-6 flex items-center gap-3 md:mb-12 md:flex-col md:text-center">
