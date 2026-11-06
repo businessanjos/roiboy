@@ -13,7 +13,7 @@ export const MOBILE_WIDTH_AUDIT_ROUTES: readonly string[] = [
   "/setores", "/dashboard", "/dashboard/cadeira-dupla",
   "/clients", "/clients/medicos", "/clients/checkpoints", "/vips", "/clients/new", "/clients/:id",
   "/renewals", "/operations/mentoria-ec", "/operations/practice-areas", "/operations/briefing-audit",
-  "/operations/onboarding", "/operations/presenca-eventos", "/operations/clinica-ryka",
+  "/operations/onboarding", "/operations/processos", "/operations/presenca-eventos", "/operations/clinica-ryka",
   "/operations/consultant-bonus", "/operations/cs-incentive-presentation", "/operations/scripts",
   "/operations/instagram-ranking", "/contracts", "/settings/contract-defaults", "/settings/team/pendencias",
   "/sales/contracts", "/sales/contracts/templates", "/sales/contracts/defaults", "/pipeline",

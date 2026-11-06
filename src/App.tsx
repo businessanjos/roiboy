@@ -120,6 +120,7 @@ const PublicEventFeedback = lazyRetry(() => import("./pages/PublicEventFeedback"
 const Admin = lazyRetry(() => import("./pages/Admin"));
 const EventCheckin = lazyRetry(() => import("./pages/EventCheckin"));
 const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
+const CSProcesses = lazyRetry(() => import("./pages/operations/CSProcesses"));
 const ClientOnboardingHub = lazyRetry(() => import("./pages/ClientOnboardingHub"));
 const EternumAttendance = lazyRetry(() => import("./pages/operations/EternumAttendance"));
 const ClinicaRyka = lazyRetry(() => import("./pages/ClinicaRyka"));
@@ -312,6 +313,7 @@ const App = () => (
                             <Route path="/operations/practice-areas" element={<PracticeAreasAdmin />} />
                             <Route path="/operations/briefing-audit" element={<BriefingLinkAudit />} />
                             <Route path="/operations/onboarding" element={<ClientOnboardingHub />} />
+                            <Route path="/operations/processos" element={<CSProcesses />} />
                             <Route path="/operations/presenca-eventos" element={<EternumAttendance />} />
                             <Route path="/operations/clinica-ryka" element={<ClinicaRyka />} />
                             <Route path="/operations/consultant-bonus" element={<ConsultantBonus />} />
