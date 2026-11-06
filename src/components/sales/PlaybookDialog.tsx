@@ -62,6 +62,8 @@ import {
 } from 'lucide-react';
 import { usePlaybook, PlaybookItem, PlaybookContentType, PlaybookFolder } from '@/hooks/usePlaybook';
 import { PlaybookItemForm } from './PlaybookItemForm';
+import { PlaybookEventFields } from '@/components/playbook/PlaybookEventFields';
+import { usesEventVariables, hasEventVarsValue, applyEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
 import { cn } from '@/lib/utils';
 
 export interface MultiSendPayload {
@@ -137,7 +139,9 @@ export function PlaybookDialog({
     trackUsage,
     replaceVariables,
     isCreatingFolder,
+    updateItem,
   } = usePlaybook({ sectorId });
+  const [quickVars, setQuickVars] = useState<PlaybookEventVars>({});
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<PlaybookContentType | 'all' | 'folder'>('all');
@@ -319,6 +323,7 @@ export function PlaybookDialog({
             toggleItemSelection(item);
           } else {
             setSelectedItem(isSelected ? null : item);
+            setQuickVars((isSelected ? null : item)?.event_vars || {});
           }
         }}
         className={cn(
@@ -820,9 +825,25 @@ export function PlaybookDialog({
               </div>
             </div>
           ) : onUseItem && (
-            <div className="flex-none p-4 border-t bg-muted/30 flex justify-end">
+            <div className="flex-none border-t bg-muted/30">
+            {selectedItem && (usesEventVariables(`${selectedItem.text_content || ''} ${selectedItem.media_caption || ''} ${selectedItem.template_body || ''}`) || hasEventVarsValue(selectedItem.event_vars)) && (
+              <div className="max-h-[45vh] overflow-y-auto p-4 pb-0">
+                <PlaybookEventFields
+                  value={quickVars}
+                  onChange={setQuickVars}
+                  previewText={applyEventVariables(selectedItem.text_content || selectedItem.media_caption || selectedItem.template_body || '', quickVars) || null}
+                />
+              </div>
+            )}
+            <div className="p-4 flex justify-end">
               <Button
-                onClick={() => selectedItem && handleUseItem(selectedItem)}
+                onClick={() => {
+                  if (!selectedItem) return;
+                  const changed = JSON.stringify(quickVars) !== JSON.stringify(selectedItem.event_vars || {});
+                  const item = changed ? { ...selectedItem, event_vars: hasEventVarsValue(quickVars) ? quickVars : null } : selectedItem;
+                  if (changed) updateItem({ id: selectedItem.id, event_vars: item.event_vars });
+                  handleUseItem(item);
+                }}
                 disabled={!selectedItem}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 size="lg"
@@ -830,6 +851,7 @@ export function PlaybookDialog({
               <Send className="h-4 w-4 mr-2" />
                 Enviar
               </Button>
+            </div>
             </div>
           )}
         </DialogContent>

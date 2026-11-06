@@ -14,3 +14,10 @@ describe("variáveis de encontro", () => {
     expect(applyEventVariables("{{contagem_regressiva}}", ev, new Date("2026-11-03T13:00:00Z"))).toBe("faltam 3 dias");
   });
 });
+
+import { describe as d2, it as i2, expect as e2 } from "vitest";
+d2("link_evento", () => {
+  i2("troca o link mesmo sem data", () => {
+    e2(applyEventVariables("Acesse {{link_evento}}", { link: "https://x.com/a" })).toBe("Acesse https://x.com/a");
+  });
+});
