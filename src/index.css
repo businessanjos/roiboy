@@ -41,6 +41,9 @@
 
     --radius: 0.625rem;
 
+    /* Escurecimento usado pelo tour guiado (fundo atrás do destaque) */
+    --tour-overlay: 20 15% 6%;
+
     /* Roy Brown highlight */
     --roy-brown: 24 68% 25%; /* #6a3714 */
     --roy-brown-foreground: 47 30% 92%; /* #efede6 */
@@ -153,6 +156,9 @@
     --border: 20 8% 22%; /* bordas sutis */
     --input: 20 8% 18%;
     --ring: 39 60% 55%;
+
+    /* Escurecimento usado pelo tour guiado (fundo atrás do destaque) */
+    --tour-overlay: 20 14% 3%;
 
     /* Roy Brown highlight - lighter for dark mode */
     --roy-brown: 24 60% 40%;
