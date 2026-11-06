@@ -1051,6 +1051,14 @@ export function PlaybookItemForm({
                 />
               </div>
             )}
+
+            {usesEventVars && (
+              <PlaybookEventFields
+                value={eventVars}
+                onChange={setEventVars}
+                previewText={applyEventVariables(contentType === 'image' ? mediaCaption : contentType === 'template' ? templateBody : textContent, eventVars) || null}
+              />
+            )}
           </div>
         </div>
 
