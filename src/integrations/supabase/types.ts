@@ -6973,6 +6973,39 @@ export type Database = {
           },
         ]
       }
+      cs_process_progress: {
+        Row: {
+          account_id: string
+          done_at: string
+          done_by: string | null
+          id: string
+          process_id: string
+          step_key: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          account_id: string
+          done_at?: string
+          done_by?: string | null
+          id?: string
+          process_id: string
+          step_key: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          account_id?: string
+          done_at?: string
+          done_by?: string | null
+          id?: string
+          process_id?: string
+          step_key?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
       custom_field_folders: {
         Row: {
           account_id: string
@@ -27377,6 +27410,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_tour_views: {
+        Row: {
+          seen_at: string
+          tour_key: string
+          user_id: string
+        }
+        Insert: {
+          seen_at?: string
+          tour_key: string
+          user_id: string
+        }
+        Update: {
+          seen_at?: string
+          tour_key?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       users: {
         Row: {
