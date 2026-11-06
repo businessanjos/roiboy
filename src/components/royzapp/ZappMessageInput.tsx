@@ -981,7 +981,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Textarea
                   ref={messageInputRef}
                   aria-label="Mensagem"
-                  placeholder={onOpenPlaybook ? "Mensagem (digite / para o Playbook)" : "Mensagem"}
+                  placeholder="Mensagem"
                   value={messageInput}
                   onChange={(e) => {
                     const value = e.target.value;
