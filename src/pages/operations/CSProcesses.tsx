@@ -22,11 +22,9 @@ import { Copy, AlertTriangle, CheckSquare, Search, ExternalLink, Clock } from "l
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { parseProcesses, defaultProcessesText, type Block } from "@/lib/csProcesses";
+import { parseProcesses, defaultProcessesText, serializeProcesses, type Block, type Step } from "@/lib/csProcesses";
 import { isManagementUser } from "@/lib/access/managementRoles";
-import { Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 
 const accents = ["border-l-purple-500", "border-l-teal-500", "border-l-blue-500"];
 const dots = ["bg-purple-500", "bg-teal-500", "bg-blue-500"];
