@@ -33,7 +33,7 @@ export function toStepInfo(step: Step): StepInfo {
       if (l === "formato") { channel = b.text.charAt(0).toUpperCase() + b.text.slice(1); continue; }
       if (l === "quando") { when = b.text; continue; }
       if (l === "quem") { who = b.text; continue; }
-      if (l.startsWith("tarefa")) { actions.push({ kind: "task", text: b.text }); continue; }
+      if (l.startsWith("tarefa")) { actions.push({ kind: "task", text: b.text.charAt(0).toUpperCase() + b.text.slice(1) }); continue; }
       if (l === "link" && URL_RE.test(b.text)) { actions.push({ kind: "link", url: b.text.match(URL_RE)![0], label: "Abrir link" }); continue; }
       if (!b.text) { pendingLabel = l.startsWith("mensagem") && l === "mensagem" ? undefined : b.label; continue; }
       actions.push({ kind: "note", text: `**${b.label}:** ${b.text}` });
