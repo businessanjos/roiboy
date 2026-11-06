@@ -49,12 +49,12 @@ export function daysInStage(stageChangedAt: string | null): number {
 const ONBOARDING_DONE_ORDER = 9;
 
 /** Dados das clientes em onboarding (mesma regra da tela Onboarding), sem assinatura em tempo real. */
-export function useOnboardingClientsData() {
+export function useOnboardingClientsData(active = true) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const stagesQuery = useQuery({
     queryKey: ["onboarding-stages", accountId],
-    enabled: !!accountId,
+    enabled: active && !!accountId,
     staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -69,7 +69,7 @@ export function useOnboardingClientsData() {
 
   const clientsQuery = useQuery({
     queryKey: ["onboarding-clients", accountId],
-    enabled: !!accountId && !!stagesQuery.data,
+    enabled: active && !!accountId && !!stagesQuery.data,
     staleTime: 30_000,
     queryFn: async () => {
       const onboardingStageIds = (stagesQuery.data ?? [])

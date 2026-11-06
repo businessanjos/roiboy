@@ -5,7 +5,6 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useOnboardingClientsData } from "@/hooks/useOnboardingHub";
 import { parseProcesses, defaultProcessesText } from "@/lib/csProcesses";
 import { stepTitle } from "@/lib/csProcessActions";
-import { isCycle } from "@/components/csProcesses/ProcessFlow";
 import { addDays, bucketTasks, contactTasks, daysBetween, eventTasks, monthlyTasks, spDate, waitReminder, type TaskState, type TodayTask } from "@/lib/csToday";
 
 /** Tarefas do dia dos Processos Eternum. scope: id da consultora ou "all" (todas). */
@@ -16,7 +15,7 @@ export function useCsTodayTasks(scope: string | "all" | undefined) {
   const userFilter = scope === "all" ? null : scope;
   const enabled = !!accountId && scope !== undefined;
   const today = spDate();
-  const { clientsQuery } = useOnboardingClientsData();
+  const { clientsQuery } = useOnboardingClientsData(enabled);
 
   const { data: customText } = useQuery({
     queryKey: ["cs-process-content", accountId], enabled: !!accountId,
@@ -53,7 +52,7 @@ export function useCsTodayTasks(scope: string | "all" | undefined) {
     if (!data) return [] as TodayTask[];
     const procs = parseProcesses(customText || defaultProcessesText);
     const onboarding = procs.length ? procs[0] : parseProcesses(defaultProcessesText)[0];
-    const stepKeys = onboarding.phases.flatMap((ph, pi) => ph.steps.map((s, si) => ({ k: `${pi}-${si}`, s, n: `${pi + 1}.${si + 1}` }))).filter(({ s }) => !isCycle(s));
+    const stepKeys = onboarding.phases.flatMap((ph, pi) => ph.steps.map((s, si) => ({ k: `${pi}-${si}`, s, n: `${pi + 1}.${si + 1}` }))).filter(({ s }) => !/ciclo mensal/i.test(s.title));
     const waitsByClient = new Set(data.waits.map((w) => w.client_id));
     const out: TodayTask[] = [];
     const done = new Map<string, Set<string>>();
