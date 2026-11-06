@@ -284,7 +284,7 @@ export function usePlaybook(options: PlaybookOptions = {}) {
     mutationFn: async ({ id, ...updates }: Partial<PlaybookItem> & { id: string }) => {
       const { data, error } = await supabase
         .from('playbook_items')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single();
