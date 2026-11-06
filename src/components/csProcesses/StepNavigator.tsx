@@ -8,9 +8,9 @@ export type NavStatus = "done" | "current" | "pending";
 const phaseName = (t: string) => t.replace(/^Fase\s+\d+\s*[—-]\s*/i, "");
 
 function StatusMark({ s }: { s: NavStatus }) {
-  if (s === "done") return <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-3 w-3" /></span>;
-  if (s === "current") return <span className="flex h-5 w-5 items-center justify-center"><span className="h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-primary/25" /></span>;
-  return <span className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />;
+  if (s === "done") return <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-3 w-3" /></span>;
+  if (s === "current") return <span className="flex h-5 w-5 shrink-0 items-center justify-center"><span className="h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-primary/25" /></span>;
+  return <span className="h-5 w-5 shrink-0 rounded-full border-2 border-muted-foreground/30" />;
 }
 
 export function ProcessOverview({ process, statusOf, onPick }: { process: Process; statusOf: (k: string) => NavStatus; onPick: (pi: number) => void }) {
