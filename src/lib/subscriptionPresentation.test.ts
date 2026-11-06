@@ -5,6 +5,10 @@ describe("internal trial notice", () => {
   it("does not present Arthur's internal access as a trial", () => {
     expect(hideInternalTrialNotice("arthur.mudri@hotmail.com")).toBe(true);
   });
+  it("does not present Carmen (RH) internal access as a trial", () => {
+    expect(hideInternalTrialNotice("rh2@eternumoficial.com")).toBe(true);
+    expect(hideInternalTrialNotice("RH2@EternumOficial.com")).toBe(true);
+  });
   it("preserves existing corporate exceptions", () => {
     expect(hideInternalTrialNotice("lucasdossantos@anjosbusiness.com")).toBe(true);
     expect(hideInternalTrialNotice("equipe@anjosbusiness.com.br")).toBe(true);
