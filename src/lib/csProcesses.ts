@@ -42,4 +42,5 @@ export function parseProcesses(md: string): Process[] {
   return out;
 }
 
+export const defaultProcessesText = raw;
 export const csProcesses = parseProcesses(raw);
