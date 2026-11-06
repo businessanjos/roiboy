@@ -243,7 +243,7 @@ export function PlaybookDialog({
   const handleUseItem = useCallback(async (item: PlaybookItem) => {
     await trackUsage(item.id);
     const processedText = item.text_content
-      ? replaceVariables(item.text_content, variables)
+      ? replaceVariables(item.text_content, variables, item)
       : undefined;
     onUseItem?.(item, processedText);
     onOpenChange(false);
@@ -252,7 +252,7 @@ export function PlaybookDialog({
   const handleMultiSend = useCallback(async () => {
     if (selectedItems.length === 0) return;
     const processedTexts = selectedItems.map(item =>
-      item.text_content ? replaceVariables(item.text_content, variables) : undefined
+      item.text_content ? replaceVariables(item.text_content, variables, item) : undefined
     );
     // Track usage for all items
     for (const item of selectedItems) {
@@ -270,7 +270,7 @@ export function PlaybookDialog({
 
   const handleCopyItem = useCallback(async (item: PlaybookItem) => {
     if (item.text_content) {
-      const processedText = replaceVariables(item.text_content, variables);
+      const processedText = replaceVariables(item.text_content, variables, item);
       await navigator.clipboard.writeText(processedText);
       await trackUsage(item.id);
     } else if (item.media_url) {

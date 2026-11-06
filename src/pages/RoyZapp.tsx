@@ -2211,7 +2211,7 @@ export default function RoyZapp() {
              const item = slashPlaybookItems.find((i) => i.id === opt.id);
              if (!item) return;
              const vars = extractPlaybookVariables({ conversation: selectedConversation, currentUser, deal: null, keepTitle: keepFirstNameTitle });
-             const processed = item.text_content ? slashReplaceVars(item.text_content, vars) : undefined;
+             const processed = item.text_content ? slashReplaceVars(item.text_content, vars, item) : undefined;
              void handlePlaybookItemInChat(item, processed);
            }}
            filePreview={messaging.filePreview}
