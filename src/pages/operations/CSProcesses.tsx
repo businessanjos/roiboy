@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { HelpCircle, List, Workflow, ArrowDown } from "lucide-react";
@@ -11,7 +11,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { GuidedTour, type TourStep } from "@/components/csProcesses/GuidedTour";
 import { StepDetail } from "@/components/csProcesses/StepDetail";
 import { StepNavigator, ProcessOverview, type NavStatus } from "@/components/csProcesses/StepNavigator";
-import { toStepInfo } from "@/lib/csProcessActions";
+import { toStepInfo, waitKey } from "@/lib/csProcessActions";
+import { waitingFor, type StepContext } from "@/components/csProcesses/StepDetail";
+import { processVars, type ProcessClient, type ClientField } from "@/lib/csClientLinks";
+import { ClientProcessDataDialog } from "@/components/csProcesses/ClientProcessDataDialog";
+import { TodayView } from "@/components/csProcesses/TodayView";
 import { ProcessFlow, StepCard, CycleView, EventTimeline, isCycle, type StepStatus } from "@/components/csProcesses/ProcessFlow";
 import { Copy, AlertTriangle, CheckSquare, Search, ExternalLink, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -87,17 +91,21 @@ function useTourSeen(key: string, enabled: boolean) {
 }
 
 export default function CSProcesses() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const clientId = params.get("client");
   const eventId = params.get("event");
   const target = clientId ? { type: "client" as const, id: clientId } : eventId ? { type: "event" as const, id: eventId } : null;
   const { currentUser } = useCurrentUser();
   const isMobile = useIsMobile();
   const qc = useQueryClient();
-  const [active, setActive] = useState(eventId ? 1 : 0);
+  const procParam = params.get("proc"), stepParam = params.get("step");
+  const [active, setActive] = useState(procParam ? Number(procParam) : eventId ? 1 : 0);
+  const [tab, setTab] = useState<"today" | "process">(clientId || eventId || stepParam ? "process" : "today");
+  useEffect(() => { if (procParam) setActive(Number(procParam)); if (stepParam) { setSel(stepParam); setTab("process"); } }, [procParam, stepParam, clientId]);
   const [q, setQ] = useState("");
   const [view, setView] = useState<"list" | "flow">(() => (localStorage.getItem("csProcessesView") === "flow" ? "flow" : "list"));
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [sel, setSel] = useState<string | null>(stepParam);
   useEffect(() => { localStorage.setItem("csProcessesView", view); }, [view]);
 
   const { data: customText } = useQuery({
@@ -161,8 +169,8 @@ export default function CSProcesses() {
 
   const phases = useMemo(() => (proc?.phases ?? []).map((ph, pi) => ({ ...ph, pi, steps: ph.steps.map((s, si) => ({ s, key: `${pi}-${si}` })).filter(({ s }) => !q.trim() || norm(s.title + JSON.stringify(s.blocks)).includes(norm(q))) })).filter((ph) => ph.steps.length), [proc, q]);
 
-  const [sel, setSel] = useState<string | null>(null);
-  useEffect(() => { setSel(null); }, [active]);
+  const lastActive = useRef(active);
+  useEffect(() => { if (lastActive.current !== active) { lastActive.current = active; if (!stepParam) setSel(null); } }, [active, stepParam]);
   const infoOf = useCallback((k: string) => { const [pi, si] = k.split("-").map(Number); const st = proc?.phases[pi]?.steps[si]; return st ? toStepInfo(st) : null; }, [proc]);
   const visibleKeys = useMemo(() => allKeys.filter((k) => { if (!q.trim()) return true; const [pi, si] = k.split("-").map(Number); const st = proc.phases[pi].steps[si]; return norm(st.title + JSON.stringify(st.blocks)).includes(norm(q)); }), [allKeys, q, proc]);
   const selKey = sel && visibleKeys.includes(sel) ? sel : (currentKey && visibleKeys.includes(currentKey) ? currentKey : visibleKeys[0] ?? "0-0");
@@ -178,11 +186,55 @@ export default function CSProcesses() {
     if (target && !doneKeys.has(selKey)) await toggle(selKey, true);
     if (selIdx < allKeys.length - 1) setSel(allKeys[selIdx + 1]);
   };
-  const { data: clientFirst } = useQuery({
-    queryKey: ["cs-process-client-name", clientId], enabled: !!clientId,
-    queryFn: async () => { const { data } = await supabase.from("clients").select("full_name").eq("id", clientId!).maybeSingle(); return (data?.full_name as string | undefined)?.trim().split(/\s+/)[0]; },
+  const { data: client = null } = useQuery({
+    queryKey: ["cs-process-client", clientId], enabled: !!clientId,
+    queryFn: async () => {
+      const { data } = await supabase.from("clients").select("id, full_name, instagram, ryka_url, platform_login, phone_e164, responsible_user_id").eq("id", clientId!).maybeSingle();
+      if (!data) return null;
+      const { data: prov } = await supabase.from("client_ryka_provisions").select("email").eq("client_id", clientId!).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      return { ...(data as ProcessClient), loginFallback: (prov?.email as string | undefined) ?? null };
+    },
   });
-  const vars = useMemo(() => ({ nome: clientFirst, cliente: clientFirst, "nome da consultora": (currentUser as any)?.name?.trim().split(/\s+/)[0] }), [clientFirst, currentUser]);
+  const vars = useMemo(() => processVars(client, (client as any)?.loginFallback, (currentUser as any)?.name), [client, currentUser]);
+  const [editField, setEditField] = useState<ClientField | undefined>();
+  const [editClientOpen, setEditClientOpen] = useState(false);
+
+  const { data: openWaits = [] } = useQuery({
+    queryKey: ["cs-process-waits", clientId], enabled: !!clientId,
+    queryFn: async () => (await supabase.from("cs_process_waits").select("id, process_id, step_key, action_index, started_at").eq("client_id", clientId!).is("resolved_at", null)).data ?? [],
+  });
+  const { data: waitSettings = [] } = useQuery({
+    queryKey: ["cs-process-wait-settings", currentUser?.account_id], enabled: !!currentUser?.account_id,
+    queryFn: async () => (await supabase.from("cs_process_wait_settings").select("wait_key, alert_days")).data ?? [],
+  });
+  const waitDays = useMemo(() => new Map(waitSettings.map((w: any) => [w.wait_key, w.alert_days as number])), [waitSettings]);
+  const waitsOfStep = useCallback((k: string) => new Map(openWaits.filter((w: any) => w.process_id === proc?.id && w.step_key === k).map((w: any) => [w.action_index as number, { started_at: w.started_at as string, id: w.id as string }])), [openWaits, proc]);
+  const badgeOf = useCallback((k: string) => { const ws = [...waitsOfStep(k).values()]; return ws.length ? waitingFor(ws.sort((a, b) => a.started_at.localeCompare(b.started_at))[0].started_at) : undefined; }, [waitsOfStep]);
+  const refreshWaits = () => { qc.invalidateQueries({ queryKey: ["cs-process-waits"] }); qc.invalidateQueries({ queryKey: ["cs-today"] }); };
+  const startWait = async (k: string, idx: number) => {
+    if (!client || !currentUser) return;
+    const info = infoOf(k); const a = info?.actions[idx] as any;
+    const { error } = await supabase.from("cs_process_waits").insert({ account_id: currentUser.account_id, client_id: client.id, process_id: proc.id, step_key: k, action_index: idx, label: a?.what ?? "responder", started_by: currentUser.id });
+    if (!error) { toast.success(`Aguardando ${client.full_name.split(" ")[0]} desde agora`); refreshWaits(); }
+  };
+  const stepCtx = (k: string): StepContext => {
+    const ws = waitsOfStep(k);
+    return {
+      client, onEditClient: (f) => { setEditField(f); setEditClientOpen(true); },
+      waits: ws, alertDays: (i) => waitDays.get(waitKey(proc.id, k, i)) ?? 2, canConfigWait: canEdit,
+      onSetAlertDays: async (i, n) => {
+        const { error } = await supabase.from("cs_process_wait_settings").upsert({ account_id: currentUser!.account_id, wait_key: waitKey(proc.id, k, i), alert_days: n, updated_by: currentUser!.id, updated_at: new Date().toISOString() });
+        if (error) toast.error("Só gestores podem mudar os dias de espera."); else { toast.success(`Aviso após ${n} ${n === 1 ? "dia" : "dias"}`); qc.invalidateQueries({ queryKey: ["cs-process-wait-settings"] }); }
+      },
+      onStartWait: (i) => startWait(k, i),
+      onResolveWait: async (i) => {
+        const w = ws.get(i) as any; if (!w) return;
+        await supabase.from("cs_process_waits").update({ resolved_at: new Date().toISOString(), resolved_by: currentUser?.id }).eq("id", w.id);
+        toast.success("Ótimo! Pode seguir para o próximo passo."); refreshWaits();
+      },
+      onDoneAction: (i) => { const next = infoOf(k)?.actions[i + 1]; if (client && next?.kind === "wait" && !ws.has(i + 1)) startWait(k, i + 1); },
+    };
+  };
   const firstWith = (kind: string) => allKeys.find((k) => infoOf(k)?.actions.some((a) => a.kind === kind));
   const MAIN_TOUR: TourStep[] = [
     { text: "Bem-vinda aos Processos Eternum! 👋\nAqui está tudo que você precisa para conduzir cada cliente e cada encontro do jeito Eternum. Vamos fazer um tour rapidinho?", primary: "Bora!", secondary: "Agora não" },
@@ -275,7 +327,7 @@ export default function CSProcesses() {
       {active > 0 && <EventTimeline accent={dots[active % 3]} />}
 
       {view === "flow" && !isMobile ? (
-        <ProcessFlow process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} />
+        <ProcessFlow process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} />
       ) : (
         <>
           <ProcessOverview process={proc} statusOf={navStatus} onPick={pickPhase} />
@@ -285,12 +337,12 @@ export default function CSProcesses() {
           </div>
           {visibleKeys.length === 0 ? <p className="text-sm text-muted-foreground">Nada encontrado.</p> : (
             <div className="flex flex-col gap-6 lg:flex-row">
-              <StepNavigator process={proc} selected={selKey} onSelect={setSel} statusOf={navStatus} visible={(k) => visibleKeys.includes(k)} mobile={isMobile} />
+              <StepNavigator process={proc} selected={selKey} onSelect={setSel} statusOf={navStatus} badgeOf={badgeOf} visible={(k) => visibleKeys.includes(k)} mobile={isMobile} />
               <div className="min-w-0 flex-1 rounded-xl bg-muted/40 p-4 md:p-6">
                 {selStep && (
                   <>
                     {isCycle(selStep) && <div className="mx-auto mb-4 max-w-[760px]"><CycleView step={selStep} /></div>}
-                    <StepDetail step={selStep} number={selNumber} phaseLabel={selPhaseLabel} info={selInfo!} vars={vars}
+                    <StepDetail step={selStep} number={selNumber} phaseLabel={selPhaseLabel} info={selInfo!} vars={vars} ctx={stepCtx(selKey)}
                       canTick={!!target} doneKeys={doneKeys} stepKey={selKey} onTask={toggle} />
                   </>
                 )}
