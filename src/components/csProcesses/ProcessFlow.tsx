@@ -15,7 +15,7 @@ export function stepIcon(s: Step) {
 export const taskCount = (s: Step) => s.blocks.filter((b) => b.kind === "task").length;
 export const isCycle = (s: Step) => /ciclo mensal/i.test(s.title);
 
-export function StepCard({ step, status, onClick, tourId }: { step: Step; status: StepStatus; onClick: () => void; tourId?: string }) {
+export function StepCard({ step, status, onClick, tourId, badge }: { step: Step; status: StepStatus; onClick: () => void; tourId?: string; badge?: string }) {
   const Icon = stepIcon(step);
   const n = taskCount(step);
   const tone = status === "done" ? "border-emerald-500/60 bg-emerald-500/10"
@@ -28,6 +28,7 @@ export function StepCard({ step, status, onClick, tourId }: { step: Step; status
         <div className="min-w-0">
           <div className="text-sm font-medium leading-snug">{step.title || "Etapa"}</div>
           {n > 0 && <div className="text-xs text-muted-foreground">{n} tarefa{n > 1 ? "s" : ""}</div>}
+          {badge && <div className="mt-1 inline-block rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium">⏳ {badge}</div>}
         </div>
       </div>
     </button>
@@ -74,7 +75,7 @@ export function EventTimeline({ accent }: { accent: string }) {
   );
 }
 
-type PhaseData = { title: string; accent: string; steps: { step: Step; key: string }[]; statusOf: (k: string) => StepStatus; open: (k: string) => void };
+type PhaseData = { title: string; accent: string; steps: { step: Step; key: string }[]; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined };
 function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
   return (
     <div className="w-64 rounded-2xl border bg-muted/40 p-3 shadow-sm">
@@ -84,7 +85,7 @@ function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
         {data.steps.map(({ step, key }, i) => (
           <div key={key} className="space-y-2">
             {i > 0 && <ArrowDown className="mx-auto h-3.5 w-3.5 text-muted-foreground" />}
-            <StepCard step={step} status={data.statusOf(key)} onClick={() => data.open(key)} />
+            <StepCard step={step} status={data.statusOf(key)} onClick={() => data.open(key)} badge={data.badgeOf?.(key)} />
           </div>
         ))}
       </div>
@@ -94,17 +95,17 @@ function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
 }
 const nodeTypes = { phase: PhaseNode };
 
-export function ProcessFlow({ process, accent, statusOf, open }: { process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void }) {
+export function ProcessFlow({ process, accent, statusOf, open, badgeOf }: { process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined }) {
   const { nodes, edges } = useMemo(() => {
     const nodes: Node<PhaseData>[] = process.phases.map((ph, pi) => ({
       id: `p${pi}`, type: "phase", position: { x: pi * 330, y: 0 }, draggable: false,
-      data: { title: ph.title, accent, steps: ph.steps.map((s, si) => ({ step: s, key: `${pi}-${si}` })), statusOf, open },
+      data: { title: ph.title, accent, steps: ph.steps.map((s, si) => ({ step: s, key: `${pi}-${si}` })), statusOf, open, badgeOf },
     }));
     const edges: Edge[] = process.phases.slice(1).map((_, i) => ({
       id: `e${i}`, source: `p${i}`, target: `p${i + 1}`, animated: true, markerEnd: { type: MarkerType.ArrowClosed },
     }));
     return { nodes, edges };
-  }, [process, accent, statusOf, open]);
+  }, [process, accent, statusOf, open, badgeOf]);
   return (
     <div className="h-[70vh] overflow-hidden rounded-2xl border bg-background">
       <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView minZoom={0.3} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
