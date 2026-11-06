@@ -44,3 +44,28 @@ export function parseProcesses(md: string): Process[] {
 
 export const defaultProcessesText = raw;
 export const csProcesses = parseProcesses(raw);
+
+/** Gera o texto salvo a partir dos processos (só o conteúdo, sem a introdução do documento original). */
+export function serializeProcesses(list: Process[]): string {
+  const out: string[] = [];
+  list.forEach((p, i) => {
+    out.push(`# PROCESSO ${i + 1} — ${p.title}`, "");
+    for (const ph of p.phases) {
+      out.push(`## ${ph.title}`, "");
+      for (const s of ph.steps) {
+        if (s.title) out.push(`### ${s.title}`);
+        for (const b of s.blocks) {
+          const one = (t: string) => t.replace(/\n+/g, " ").trim();
+          if (b.kind === "message") out.push(...b.text.split("\n").map((l) => `  > ${l}`.trimEnd()));
+          else if (b.kind === "task") out.push(`- [ ] ${one(b.text)}`);
+          else if (b.kind === "alert") out.push(`- ⚠️ ${one(b.text)}`);
+          else if (b.kind === "meta") out.push(`- **${b.label}:** ${one(b.text)}`.trimEnd());
+          else out.push(`- ${one(b.text)}`);
+        }
+        out.push("");
+      }
+    }
+    out.push("---", "");
+  });
+  return out.join("\n");
+}
