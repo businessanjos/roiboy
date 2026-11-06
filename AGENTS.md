@@ -48,3 +48,4 @@
 - Spin requests keep `competence_month`; `srq:*` approvals use transfer recipients. Why: one list.
 - Playbook free fields are `{{campo:slug}}` in event_vars.customFields; `playbook-ai-assist` rejects edits to {{...}}. Why: no schema change, fields stay safe.
 - Lost deals (lead with no other open deal) close the lead's non-group, non-client RoyZapp assignments via trigger `close_zapp_on_deal_lost`. Why: re-applications return to triage.
+- CS process content is parsed from `src/content/csProcesses.md`; progress per client/event lives in `cs_process_progress` keyed by phase-step index, and tour views in `user_tour_views`. Why: one source of text for list, flowchart and tours.

@@ -110,7 +110,7 @@ export default function CSProcesses() {
     queryKey: ["cs-process-target", target?.type, target?.id],
     enabled: !!target,
     queryFn: async () => {
-      if (target!.type === "client") { const { data } = await supabase.from("clients").select("name").eq("id", target!.id).maybeSingle(); return data?.name as string | undefined; }
+      if (target!.type === "client") { const { data } = await supabase.from("clients").select("full_name").eq("id", target!.id).maybeSingle(); return data?.full_name as string | undefined; }
       const { data } = await supabase.from("events").select("title").eq("id", target!.id).maybeSingle(); return data?.title as string | undefined;
     },
   });
