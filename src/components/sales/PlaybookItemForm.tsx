@@ -21,6 +21,7 @@ import { WhatsAppFormattingToolbar } from '@/components/ui/whatsapp-formatting-t
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { VariablePickerDropdown } from '@/components/playbook/VariablePickerDropdown';
 import { PlaybookEventFields } from '@/components/playbook/PlaybookEventFields';
+import { PlaybookSequencePreview } from '@/components/royzapp/PlaybookSequencePreview';
 import { usesEventVariables, hasEventVarsValue, applyEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
 import {
   FileText,
@@ -116,6 +117,18 @@ export function PlaybookItemForm({
 
   const usesEventVars = usesEventVariables(`${textContent} ${mediaCaption} ${templateBody}`) || hasEventVarsValue(eventVars);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const msgRef = useRef<HTMLTextAreaElement | null>(null);
+  /** Insere no cursor do campo de mensagem (ou no fim, se ainda não foi clicado). */
+  const insertAtCursor = (setter: React.Dispatch<React.SetStateAction<string>>, v: string) => {
+    const el = msgRef.current;
+    setter((p) => {
+      const has = el && document.body.contains(el) && el.value === p;
+      const a = has ? el!.selectionStart : p.length, b = has ? el!.selectionEnd : p.length;
+      const next = p.slice(0, a) + v + p.slice(b);
+      if (has) setTimeout(() => { el!.focus(); el!.setSelectionRange(a + v.length, a + v.length); }, 0);
+      return next;
+    });
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -507,7 +520,7 @@ export function PlaybookItemForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl w-[96vw] max-h-[92vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-5xl w-[96vw] max-h-[94vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {editingItem ? 'Editar Item' : 'Novo Item do Playbook'}
@@ -515,7 +528,8 @@ export function PlaybookItemForm({
         </DialogHeader>
 
         <div className="flex-1 min-h-0 -mx-6 px-6 overflow-y-auto">
-          <div className="space-y-4 py-2 pb-4 pr-2">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="space-y-4 py-2 pb-4 pr-2 min-w-0">
             {/* Name */}
             <div className="space-y-2">
               <Label htmlFor="name">Nome *</Label>
@@ -608,13 +622,14 @@ export function PlaybookItemForm({
                   <Label>Conteúdo do Texto *</Label>
                   <VariablePickerDropdown
                     onSelectVariable={(variable) => {
-                      setTextContent(prev => prev + variable);
+                      insertAtCursor(setTextContent, variable);
                     }}
                   />
                 </div>
                 <WhatsAppFormattingToolbar
                   value={textContent}
                   onChange={setTextContent}
+                  textareaRef={msgRef}
                   placeholder="Digite o texto... Use {{nome_cliente}} para variáveis"
                   rows={6}
                 />
@@ -722,13 +737,14 @@ export function PlaybookItemForm({
                     <Label>Corpo da Mensagem *</Label>
                     <VariablePickerDropdown
                       onSelectVariable={(variable) => {
-                        setTemplateBody(prev => prev + variable);
+                        insertAtCursor(setTemplateBody, variable);
                       }}
                     />
                   </div>
                   <WhatsAppFormattingToolbar
                     value={templateBody}
                     onChange={setTemplateBody}
+                    textareaRef={msgRef}
                     placeholder="Corpo da mensagem com suporte a variáveis..."
                     rows={4}
                   />
@@ -1039,13 +1055,14 @@ export function PlaybookItemForm({
                   <Label htmlFor="mediaCaption">Legenda (opcional)</Label>
                   <VariablePickerDropdown
                     onSelectVariable={(variable) => {
-                      setMediaCaption(prev => prev + variable);
+                      insertAtCursor(setMediaCaption, variable);
                     }}
                   />
                 </div>
                 <WhatsAppFormattingToolbar
                   value={mediaCaption}
                   onChange={setMediaCaption}
+                  textareaRef={msgRef}
                   placeholder="Digite a legenda que será enviada junto com a imagem..."
                   rows={3}
                 />
@@ -1054,22 +1071,41 @@ export function PlaybookItemForm({
 
             {(['text', 'template'].includes(contentType) || (contentType === 'image' && (mediaPreview || existingMediaUrl)) || usesEventVars) && (() => {
               const raw = contentType === 'image' ? mediaCaption : contentType === 'template' ? templateBody : textContent;
-              const insert = (v: string) => {
-                const add = (p: string) => p + (p && !/\s$/.test(p) ? ' ' : '') + v;
-                if (contentType === 'image') setMediaCaption(add);
-                else if (contentType === 'template') setTemplateBody(add);
-                else setTextContent(add);
-              };
+              const setter = contentType === 'image' ? setMediaCaption : contentType === 'template' ? setTemplateBody : setTextContent;
+              const insert = (v: string) => insertAtCursor(setter, v);
               return (
                 <PlaybookEventFields
                   value={eventVars}
                   onChange={setEventVars}
                   rawText={raw}
                   onInsert={['text', 'template', 'image'].includes(contentType) ? insert : undefined}
-                  previewText={raw.trim() ? applyEventVariables(raw, eventVars) : null}
+                  hidePreview
+                  onConvert={(text) => setter(text)}
                 />
               );
             })()}
+          </div>
+          {['text', 'image', 'template', 'video', 'document'].includes(contentType) && (() => {
+            const ev = (t: string) => (t ? applyEventVariables(t, eventVars) : t);
+            const draft = {
+              id: '__draft__', name: name || 'Prévia', content_type: contentType,
+              text_content: contentType === 'text' ? textContent : null,
+              template_body: contentType === 'template' ? templateBody : null,
+              media_caption: mediaCaption || null,
+              media_url: mediaPreview || existingMediaUrl,
+            } as unknown as PlaybookItem;
+            return (
+              <aside className="py-2 lg:sticky lg:top-0 lg:self-start">
+                <p className="mb-2 text-center text-xs font-medium text-muted-foreground">Como o cliente vai receber hoje</p>
+                <PlaybookSequencePreview
+                  messageOnly
+                  steps={[{ playbook_item_id: '__draft__', delay_seconds: 0 } as any]}
+                  items={[draft]}
+                  replaceVariables={(t) => ev(t)}
+                />
+              </aside>
+            );
+          })()}
           </div>
         </div>
 
