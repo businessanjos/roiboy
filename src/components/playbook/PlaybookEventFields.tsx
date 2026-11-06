@@ -6,10 +6,12 @@ import { buildEventVariables, type PlaybookEventVars } from "@/lib/playbookEvent
 interface Props {
   value: PlaybookEventVars;
   onChange: (v: PlaybookEventVars) => void;
+  /** Texto da mensagem para mostrar a prévia já preenchida. */
+  previewText?: string | null;
 }
 
 /** Dados do encontro: a consultora troca só aqui e o texto se atualiza sozinho. */
-export function PlaybookEventFields({ value, onChange }: Props) {
+export function PlaybookEventFields({ value, onChange, previewText }: Props) {
   const vars = buildEventVariables(value);
   const set = (patch: Partial<PlaybookEventVars>) => onChange({ ...value, ...patch });
   return (
@@ -18,7 +20,7 @@ export function PlaybookEventFields({ value, onChange }: Props) {
         <CalendarClock className="h-4 w-4 text-primary" /> Dados do encontro
       </div>
       <p className="text-xs text-muted-foreground">
-        Troque a data e o horário aqui. A contagem regressiva, o dia da semana e o mês são calculados sozinhos no dia do envio.
+        Troque a data, o horário e o link aqui. A contagem regressiva, o dia da semana e o mês são calculados sozinhos no dia do envio.
       </p>
       <div className="grid grid-cols-3 gap-2">
         <div className="space-y-1">
@@ -34,12 +36,21 @@ export function PlaybookEventFields({ value, onChange }: Props) {
           <Input type="time" value={value.end || ""} onChange={(e) => set({ end: e.target.value || null })} />
         </div>
       </div>
-      {value.date && (
+      <div className="space-y-1">
+        <Label className="text-xs">Link</Label>
+        <Input type="url" placeholder="https://..." value={value.link || ""} onChange={(e) => set({ link: e.target.value || null })} />
+      </div>
+      {previewText ? (
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Como a mensagem sai hoje</Label>
+          <p className="whitespace-pre-wrap break-words rounded-md border bg-background p-2 text-xs">{previewText}</p>
+        </div>
+      ) : value.date ? (
         <p className="text-xs text-muted-foreground">
           Hoje sairia: <span className="text-foreground">{vars.contagem_regressiva}</span> · {vars.data_evento} ({vars.dia_semana_evento})
           {vars.horario_evento ? ` · ${vars.horario_evento}` : ""} · {vars.mes_evento}
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

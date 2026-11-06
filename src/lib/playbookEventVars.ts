@@ -1,10 +1,12 @@
-/** Dados de evento configurados no item do Playbook (data, horário). */
+/** Dados de evento configurados no item do Playbook (data, horário, link). */
 export interface PlaybookEventVars {
   /** yyyy-MM-dd */
   date?: string | null;
   /** HH:mm */
   start?: string | null;
   end?: string | null;
+  /** Link do encontro/formulário, trocado no dia a dia. */
+  link?: string | null;
 }
 
 export const EVENT_VARIABLES = [
@@ -13,7 +15,18 @@ export const EVENT_VARIABLES = [
   { key: "dia_semana_evento", label: "Dia da semana do evento", example: "sexta-feira" },
   { key: "horario_evento", label: "Horário do evento", example: "15h às 17h" },
   { key: "mes_evento", label: "Mês do evento", example: "NOVEMBRO" },
+  { key: "link_evento", label: "Link", example: "https://..." },
 ];
+
+export const EVENT_VAR_PATTERN = /\{\{(contagem_regressiva|data_evento|dia_semana_evento|horario_evento|mes_evento|link_evento)\}\}/g;
+
+export function usesEventVariables(text: string | null | undefined): boolean {
+  return !!text && new RegExp(EVENT_VAR_PATTERN.source).test(text);
+}
+
+export function hasEventVarsValue(ev: PlaybookEventVars | null | undefined): boolean {
+  return !!(ev?.date || ev?.link?.trim());
+}
 
 const DIAS = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
 const MESES = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
@@ -41,11 +54,14 @@ export function countdownText(date: string, now = new Date()): string {
 }
 
 export function buildEventVariables(ev: PlaybookEventVars | null | undefined, now = new Date()): Record<string, string> {
-  if (!ev?.date) return {};
+  const out: Record<string, string> = {};
+  if (ev?.link?.trim()) out.link_evento = ev.link.trim();
+  if (!ev?.date) return out;
   const [y, m, d] = ev.date.split("-").map(Number);
   const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
   const start = hourLabel(ev.start), end = hourLabel(ev.end);
   return {
+    ...out,
     contagem_regressiva: countdownText(ev.date, now),
     data_evento: `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}`,
     dia_semana_evento: DIAS[wd],
@@ -56,5 +72,5 @@ export function buildEventVariables(ev: PlaybookEventVars | null | undefined, no
 
 export function applyEventVariables(text: string, ev: PlaybookEventVars | null | undefined, now = new Date()): string {
   const vars = buildEventVariables(ev, now);
-  return text.replace(/\{\{(contagem_regressiva|data_evento|dia_semana_evento|horario_evento|mes_evento)\}\}/g, (all, k) => vars[k] ?? all);
+  return text.replace(EVENT_VAR_PATTERN, (all, k) => vars[k] ?? all);
 }
