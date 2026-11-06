@@ -954,6 +954,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
               onChange={(e) => onFileSelect(e, "document")}
             />
             
+            <div className="min-w-0 flex-1 relative">
             {isGroup && groupJid ? (
               <ZappGroupMentionInput
                 ref={messageInputRef}
@@ -977,7 +978,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 onMentionInsert={onMentionInsert}
               />
             ) : (
-              <div className="min-w-0 flex-1 relative">
+              <>
                 <Textarea
                   ref={messageInputRef}
                   aria-label="Mensagem"
@@ -1007,6 +1008,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   maxLength={SECURITY_LIMITS.MESSAGE_MAX}
                   className="flex-1 w-full bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-2xl sm:rounded-lg min-h-[40px] sm:min-h-[52px] max-h-[120px] py-2 sm:py-2.5 resize-none overflow-y-auto"
                 />
+              </>
+            )}
                 {slashActive && (
                   <div role="listbox" aria-label="Sugestões do Playbook" className="absolute bottom-full left-0 right-0 mb-2 z-50 rounded-lg border border-zapp-border bg-zapp-panel shadow-lg overflow-hidden">
                     <div className="border-b border-zapp-border px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-zapp-text-muted">Playbook</div>
@@ -1060,7 +1063,6 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   </span>
                 )}
               </div>
-            )}
             
             {messageInput.trim() ? (
               <Button
