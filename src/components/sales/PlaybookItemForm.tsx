@@ -507,7 +507,7 @@ export function PlaybookItemForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-3xl w-[96vw] max-h-[92vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {editingItem ? 'Editar Item' : 'Novo Item do Playbook'}
@@ -530,7 +530,7 @@ export function PlaybookItemForm({
             {/* Content Type */}
             <div className="space-y-2">
               <Label>Tipo de Conteúdo *</Label>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 {contentTypeOptions.map(option => (
                   <Button
                     key={option.value}
