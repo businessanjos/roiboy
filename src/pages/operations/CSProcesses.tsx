@@ -10,6 +10,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GuidedTour, type TourStep } from "@/components/csProcesses/GuidedTour";
 import { StepDetail } from "@/components/csProcesses/StepDetail";
+import { StepEditDialog } from "@/components/csProcesses/StepEditDialog";
 import { StepNavigator, ProcessOverview, type NavStatus } from "@/components/csProcesses/StepNavigator";
 import { toStepInfo, waitKey } from "@/lib/csProcessActions";
 import { waitingFor, type StepContext } from "@/components/csProcesses/StepDetail";
@@ -21,11 +22,9 @@ import { Copy, AlertTriangle, CheckSquare, Search, ExternalLink, Clock } from "l
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { parseProcesses, defaultProcessesText, type Block } from "@/lib/csProcesses";
+import { parseProcesses, defaultProcessesText, serializeProcesses, type Block, type Step } from "@/lib/csProcesses";
 import { isManagementUser } from "@/lib/access/managementRoles";
-import { Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 
 const accents = ["border-l-purple-500", "border-l-teal-500", "border-l-blue-500"];
 const dots = ["bg-purple-500", "bg-teal-500", "bg-blue-500"];
@@ -119,19 +118,24 @@ export default function CSProcesses() {
   const processText = customText || defaultProcessesText;
   const csProcesses = useMemo(() => { const p = parseProcesses(processText); return p.length ? p : parseProcesses(defaultProcessesText); }, [processText]);
   const canEdit = isManagementUser(currentUser as any);
-  const [editOpen, setEditOpen] = useState(false);
-  const [draft, setDraft] = useState("");
+  const [editKey, setEditKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const saveText = async (text: string | null) => {
-    if (!currentUser) return;
+  const defaultParsed = useMemo(() => parseProcesses(defaultProcessesText), []);
+  const editIdx = editKey ? editKey.split("-").map(Number) : null;
+  const editProc = csProcesses[Math.min(active, csProcesses.length - 1)];
+  const editStep = editIdx ? editProc?.phases[editIdx[0]]?.steps[editIdx[1]] ?? null : null;
+  const editOriginal = editIdx ? defaultParsed.find((p) => p.id === editProc?.id)?.phases[editIdx[0]]?.steps[editIdx[1]] ?? null : null;
+  const saveStep = async (st: Step) => {
+    if (!currentUser || !editIdx) return;
+    const next = structuredClone(csProcesses);
+    const target = next[Math.min(active, next.length - 1)];
+    target.phases[editIdx[0]].steps[editIdx[1]] = st;
     setSaving(true);
-    const { error } = text === null
-      ? await supabase.from("cs_process_content").delete().eq("account_id", currentUser.account_id)
-      : await supabase.from("cs_process_content").upsert({ account_id: currentUser.account_id, content: text, updated_by: currentUser.id, updated_at: new Date().toISOString() });
+    const { error } = await supabase.from("cs_process_content").upsert({ account_id: currentUser.account_id, content: serializeProcesses(next), updated_by: currentUser.id, updated_at: new Date().toISOString() });
     setSaving(false);
     if (error) { toast.error("Não foi possível salvar. Só gestores podem editar."); return; }
-    toast.success(text === null ? "Texto original restaurado" : "Texto atualizado para toda a equipe");
-    setEditOpen(false); setActive(0);
+    toast.success("Etapa atualizada para toda a equipe");
+    setEditKey(null);
     qc.invalidateQueries({ queryKey: ["cs-process-content"] });
   };
 
@@ -283,23 +287,7 @@ export default function CSProcesses() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5 p-4 md:p-6">
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col">
-          <DialogHeader>
-            <DialogTitle>Editar textos dos processos</DialogTitle>
-            <DialogDescription>A mudança vale para toda a equipe. Mantenha "# PROCESSO 1 — Nome" para cada processo, ## para fases e ### para etapas. Linhas com {">"} viram mensagem pronta, "- [ ]" vira tarefa e ⚠️ vira aviso.</DialogDescription>
-          </DialogHeader>
-          <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="min-h-[50vh] flex-1 font-mono text-xs" />
-          <p className="text-xs text-muted-foreground">{parseProcesses(draft).length} processos reconhecidos</p>
-          <DialogFooter className="gap-2 sm:justify-between">
-            <Button variant="ghost" disabled={saving || !customText} onClick={() => saveText(null)}>Restaurar original</Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
-              <Button disabled={saving || !parseProcesses(draft).length} onClick={() => saveText(draft)}>Salvar</Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <StepEditDialog open={!!editKey} onOpenChange={(o) => !o && setEditKey(null)} step={editStep} original={editOriginal} saving={saving} onSave={saveStep} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Processos Eternum</h1>
@@ -311,7 +299,6 @@ export default function CSProcesses() {
           <Button size="sm" variant={tab === "process" ? "secondary" : "ghost"} onClick={() => setTab("process")}>Processos</Button>
         </div>
         {tab === "process" && client && <Button size="sm" variant="outline" onClick={() => { setEditField(undefined); setEditClientOpen(true); }}>Dados da {client.full_name.split(" ")[0]}</Button>}
-        {tab === "process" && canEdit && <Button size="sm" variant="outline" className="gap-1" onClick={() => { setDraft(processText); setEditOpen(true); }}><Pencil className="h-4 w-4" />Editar textos</Button>}
         {tab === "process" && <div data-tour="toggle" className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view === "list" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("list")}><List className="h-4 w-4" />Lista</Button>
           <Button size="sm" variant={view === "flow" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("flow")}><Workflow className="h-4 w-4" />Fluxograma</Button>
@@ -350,7 +337,7 @@ export default function CSProcesses() {
           </div>
           {visibleKeys.length === 0 ? <p className="text-sm text-muted-foreground">Nada encontrado.</p> : (
             <div className="flex flex-col gap-6 lg:flex-row">
-              <StepNavigator process={proc} selected={selKey} onSelect={setSel} statusOf={navStatus} badgeOf={badgeOf} visible={(k) => visibleKeys.includes(k)} mobile={isMobile} />
+              <StepNavigator process={proc} selected={selKey} onSelect={setSel} statusOf={navStatus} badgeOf={badgeOf} onEdit={canEdit ? setEditKey : undefined} visible={(k) => visibleKeys.includes(k)} mobile={isMobile} />
               <div className="min-w-0 flex-1 rounded-xl bg-muted/40 p-4 md:p-6">
                 {selStep && (
                   <>

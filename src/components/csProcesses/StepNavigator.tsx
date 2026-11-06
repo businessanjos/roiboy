@@ -1,3 +1,4 @@
+import { Pencil } from "lucide-react";
 import { ArrowRight, Check } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,8 +36,8 @@ export function ProcessOverview({ process, statusOf, onPick }: { process: Proces
   );
 }
 
-export function StepNavigator({ process, selected, onSelect, statusOf, visible, mobile, badgeOf }: {
-  process: Process; selected: string; onSelect: (k: string) => void; statusOf: (k: string) => NavStatus; visible: (k: string) => boolean; mobile?: boolean; badgeOf?: (k: string) => string | undefined;
+export function StepNavigator({ process, selected, onSelect, statusOf, visible, mobile, badgeOf, onEdit }: {
+  process: Process; selected: string; onSelect: (k: string) => void; statusOf: (k: string) => NavStatus; visible: (k: string) => boolean; mobile?: boolean; badgeOf?: (k: string) => string | undefined; onEdit?: (k: string) => void;
 }) {
   const all = process.phases.flatMap((ph, pi) => ph.steps.map((_, si) => `${pi}-${si}`));
   const done = all.filter((k) => statusOf(k) === "done").length;
@@ -77,14 +78,20 @@ export function StepNavigator({ process, selected, onSelect, statusOf, visible, 
               {steps.map(({ s, si, k }) => {
                 const st = statusOf(k);
                 return (
-                  <li key={k}>
+                  <li key={k} className="group/step relative">
                     <button type="button" data-tour={k === selected ? "status" : undefined} onClick={() => onSelect(k)}
-                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition ${k === selected ? "bg-primary/10 font-medium" : "hover:bg-muted"}`}>
+                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition ${k === selected ? "bg-primary/10 font-medium" : "hover:bg-muted"} ${onEdit ? "pr-8" : ""}`}>
                       <StatusMark s={st} />
                       <span className="tabular-nums text-muted-foreground">{pi + 1}.{si + 1}</span>
                       <span className={`truncate ${st === "done" ? "text-muted-foreground" : ""}`}>{stepTitle(s.title) || phaseName(ph.title)}</span>
                       {badgeOf?.(k) && <span className="ml-auto shrink-0 text-xs" title={`Aguardando há ${badgeOf(k)}`}>⏳ {badgeOf(k)}</span>}
                     </button>
+                    {onEdit && (
+                      <button type="button" onClick={() => onEdit(k)} aria-label="Editar etapa" title="Editar etapa"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground/70 opacity-0 transition hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/step:opacity-100">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </li>
                 );
               })}
