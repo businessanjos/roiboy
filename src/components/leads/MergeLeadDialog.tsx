@@ -433,7 +433,7 @@ export function MergeLeadDialog({
           </Button>
           <Button
             onClick={handleMerge}
-            disabled={!targetLead || merging}
+            disabled={!targetLead || !keepLead || merging}
             className="bg-primary"
           >
             {merging ? "Mesclando..." : "Mesclar Leads"}
