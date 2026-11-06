@@ -1,3 +1,4 @@
+import type React from "react";
 import { useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +13,8 @@ interface WhatsAppFormattingToolbarProps {
   className?: string;
   id?: string;
   disabled?: boolean;
+  /** Ref externa para saber onde está o cursor. */
+  textareaRef?: React.MutableRefObject<HTMLTextAreaElement | null>;
 }
 
 export function WhatsAppFormattingToolbar({
@@ -22,8 +25,10 @@ export function WhatsAppFormattingToolbar({
   className = "",
   id,
   disabled = false,
+  textareaRef: externalRef,
 }: WhatsAppFormattingToolbarProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const innerRef = useRef<HTMLTextAreaElement | null>(null);
+  const textareaRef = externalRef ?? innerRef;
 
   const insertFormatting = useCallback((formatType: 'bold' | 'italic' | 'strikethrough' | 'monospace' | 'quote' | 'bulletList' | 'numberedList') => {
     const textarea = textareaRef.current;
