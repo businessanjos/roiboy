@@ -57,7 +57,7 @@ export function StepActionItem({ a, n, vars, taskDone, onTask, canTick, tour }: 
   const Icon = ICONS[a.kind];
   const dot = a.kind === "alert" ? "bg-destructive/15 text-destructive" : a.kind === "message" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground";
   return (
-    <li className="relative flex gap-4 pb-6 last:pb-0">
+    <li className="group relative flex gap-4 pb-6 last:pb-0">
       <span className="absolute left-4 top-9 bottom-0 w-px bg-border group-last:hidden" aria-hidden />
       <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${dot}`} title={`Passo ${n}`}>
         <Icon className="h-4 w-4" />
