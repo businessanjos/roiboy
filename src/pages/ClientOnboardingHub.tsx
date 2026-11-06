@@ -370,6 +370,11 @@ function SmartClientList({
   const stageIds = useMemo(() => sortedStages.map(s => s.id), [sortedStages]);
   const pg = usePagedList(clients, { defaultPageSize: 20, resetKey: search ?? "" });
   const clientIds = useMemo(() => pg.items.map(c => c.id), [pg.items]);
+  const { data: stalledRows = [] } = useQuery({
+    queryKey: ["cs-process-waits", "hub", clientIds.join(",")], enabled: clientIds.length > 0,
+    queryFn: async () => (await supabase.from("cs_process_waits").select("client_id, started_at").is("resolved_at", null).in("client_id", clientIds)).data ?? [],
+  });
+  const stalledSince = useMemo(() => { const m = new Map<string, string>(); for (const r of stalledRows) { const p = m.get(r.client_id); if (!p || r.started_at < p) m.set(r.client_id, r.started_at); } return m; }, [stalledRows]);
   const { data: checklistItems = [] } = useStageChecklistItems(stageIds);
   const { data: checklistProgress = [] } = useClientChecklistProgress(clientIds);
 
