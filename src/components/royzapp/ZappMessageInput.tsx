@@ -1009,7 +1009,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 />
                 {slashActive && (
                   <div role="listbox" aria-label="Sugestões do Playbook" className="absolute bottom-full left-0 right-0 mb-2 z-50 rounded-lg border border-zapp-border bg-zapp-panel shadow-lg overflow-hidden">
-                    <div className="max-h-64 overflow-y-auto py-1">
+                    <div className="border-b border-zapp-border px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-zapp-text-muted">Playbook</div>
+                    <div className="max-h-64 overflow-y-auto p-1.5 space-y-0.5">
                       {slashMatches.length === 0 && (
                         <p className="px-3 py-2 text-xs text-zapp-text-muted">Nada encontrado para "{messageInput.slice(1)}"</p>
                       )}
@@ -1021,11 +1022,19 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                           aria-selected={i === slashIndex}
                           onMouseDown={(e) => { e.preventDefault(); pickSlash(opt); }}
                           onMouseEnter={() => setSlashIndex(i)}
-                          className={cn("flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zapp-text", i === slashIndex && "bg-zapp-hover")}
+                          className={cn(
+                            "group flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm text-zapp-text transition-colors",
+                            i === slashIndex ? "bg-zapp-hover" : "hover:bg-zapp-hover/60",
+                          )}
                         >
-                          {opt.kind === "sequence" ? <ListOrdered className="h-4 w-4 shrink-0 text-zapp-accent" /> : <BookOpen className="h-4 w-4 shrink-0 text-zapp-text-muted" />}
-                          <span className="truncate flex-1">{opt.label}</span>
-                          <span className="text-[10px] uppercase tracking-wide text-zapp-text-muted">{opt.kind === "sequence" ? "Sequência" : "Mensagem"}</span>
+                          <span className={cn(
+                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-zapp-border",
+                            opt.kind === "sequence" ? "text-zapp-accent" : "text-zapp-text-muted",
+                          )}>
+                            {opt.kind === "sequence" ? <ListOrdered className="h-3.5 w-3.5" /> : <BookOpen className="h-3.5 w-3.5" />}
+                          </span>
+                          <span className="truncate flex-1 font-medium">{opt.label}</span>
+                          <span className="shrink-0 rounded-full border border-zapp-border px-2 py-0.5 text-[10px] text-zapp-text-muted">{opt.kind === "sequence" ? "Sequência" : "Mensagem"}</span>
                         </button>
                       ))}
                     </div>
