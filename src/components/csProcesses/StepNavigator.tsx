@@ -35,8 +35,8 @@ export function ProcessOverview({ process, statusOf, onPick }: { process: Proces
   );
 }
 
-export function StepNavigator({ process, selected, onSelect, statusOf, visible, mobile }: {
-  process: Process; selected: string; onSelect: (k: string) => void; statusOf: (k: string) => NavStatus; visible: (k: string) => boolean; mobile?: boolean;
+export function StepNavigator({ process, selected, onSelect, statusOf, visible, mobile, badgeOf }: {
+  process: Process; selected: string; onSelect: (k: string) => void; statusOf: (k: string) => NavStatus; visible: (k: string) => boolean; mobile?: boolean; badgeOf?: (k: string) => string | undefined;
 }) {
   const all = process.phases.flatMap((ph, pi) => ph.steps.map((_, si) => `${pi}-${si}`));
   const done = all.filter((k) => statusOf(k) === "done").length;
@@ -83,6 +83,7 @@ export function StepNavigator({ process, selected, onSelect, statusOf, visible, 
                       <StatusMark s={st} />
                       <span className="tabular-nums text-muted-foreground">{pi + 1}.{si + 1}</span>
                       <span className={`truncate ${st === "done" ? "text-muted-foreground" : ""}`}>{stepTitle(s.title) || phaseName(ph.title)}</span>
+                      {badgeOf?.(k) && <span className="ml-auto shrink-0 text-xs" title={`Aguardando há ${badgeOf(k)}`}>⏳ {badgeOf(k)}</span>}
                     </button>
                   </li>
                 );

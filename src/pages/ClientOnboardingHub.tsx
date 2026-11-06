@@ -18,6 +18,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrated";
 import { StageChecklistEditor } from "@/components/client/StageChecklistEditor";
+import { waitingFor } from "@/components/csProcesses/StepDetail";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { ClientOnboardingDrawer } from "@/components/client/ClientOnboardingDrawer";
 import { OnboardingHistoryButton } from "@/components/client/OnboardingHistoryButton";
 import { useOnboardingHub, computeHealth, daysInStage, OnboardingClient } from "@/hooks/useOnboardingHub";
@@ -367,6 +370,11 @@ function SmartClientList({
   const stageIds = useMemo(() => sortedStages.map(s => s.id), [sortedStages]);
   const pg = usePagedList(clients, { defaultPageSize: 20, resetKey: search ?? "" });
   const clientIds = useMemo(() => pg.items.map(c => c.id), [pg.items]);
+  const { data: stalledRows = [] } = useQuery({
+    queryKey: ["cs-process-waits", "hub", clientIds.join(",")], enabled: clientIds.length > 0,
+    queryFn: async () => (await supabase.from("cs_process_waits").select("client_id, started_at").is("resolved_at", null).in("client_id", clientIds)).data ?? [],
+  });
+  const stalledSince = useMemo(() => { const m = new Map<string, string>(); for (const r of stalledRows) { const p = m.get(r.client_id); if (!p || r.started_at < p) m.set(r.client_id, r.started_at); } return m; }, [stalledRows]);
   const { data: checklistItems = [] } = useStageChecklistItems(stageIds);
   const { data: checklistProgress = [] } = useClientChecklistProgress(clientIds);
 
@@ -438,6 +446,11 @@ function SmartClientList({
                   {notStarted && (
                     <Badge variant="outline" className="text-[10px] border-warning text-warning-strong dark:text-warning">
                       Aguardando início
+                    </Badge>
+                  )}
+                  {stalledSince.get(c.id) && (
+                    <Badge variant="outline" className="text-[10px]" title="Aguardando resposta da cliente no processo">
+                      ⏳ Parada há {waitingFor(stalledSince.get(c.id)!)}
                     </Badge>
                   )}
                 </div>

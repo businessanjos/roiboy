@@ -3,7 +3,7 @@ import type { Step } from "@/lib/csProcesses";
 export type Action =
   | { kind: "message"; text: string; label?: string; channel: string }
   | { kind: "task"; text: string }
-  | { kind: "wait"; text: string }
+  | { kind: "wait"; text: string; what?: string }
   | { kind: "alert"; text: string }
   | { kind: "link"; label: string; url: string }
   | { kind: "note"; text: string };
@@ -52,7 +52,7 @@ export function toStepInfo(step: Step): StepInfo {
   }
   if (!when && /\b(antes|no dia|dia seguinte|anterior|depois)\b/i.test(step.title) && step.title.length < 40) when = stepTitle(step.title).split(" — ")[0];
   if (/\bCX\b/.test(step.title)) who = "CX";
-  return { actions, who, when };
+  return { actions: withWaits(actions), who, when };
 }
 
 /** Preenche variáveis conhecidas; as desconhecidas ficam como estão. */
@@ -61,3 +61,32 @@ export function fillVars(text: string, vars: Record<string, string | undefined>)
 }
 
 export const plainText = (t: string) => t.replace(/\*\*(.+?)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2");
+
+const ASKS_REPLY = /(me avise|me responda|me retorne|assim que finalizar|preench|opções de agenda)/i;
+function whatOf(t: string) {
+  if (/manual/i.test(t)) return "ler o manual de boas-vindas";
+  if (/agenda/i.test(t)) return "escolher o horário da agenda";
+  if (/cadastro|preench|formul/i.test(t)) return "preencher o cadastro";
+  if (/acesso|login|senha/i.test(t)) return "fazer o primeiro acesso à plataforma";
+  return "ver a minha última mensagem";
+}
+/** Depois de pedir resposta à cliente, garante um passo de espera e diz o que ela precisa fazer. */
+function withWaits(list: Action[]): Action[] {
+  const out: Action[] = [];
+  list.forEach((a, i) => {
+    out.push(a);
+    const next = list[i + 1];
+    if ((a.kind === "message" && ASKS_REPLY.test(a.text)) || (a.kind === "task" && /opções de agenda/i.test(a.text))) {
+      if (next?.kind === "wait") { (next as any).what ??= whatOf(a.text); }
+      else out.push({ kind: "wait", text: "Aguardar a cliente responder", what: whatOf(a.text) });
+    }
+  });
+  for (let i = 0; i < out.length; i++) {
+    const w = out[i];
+    if (w.kind === "wait" && !w.what) { const prev = out.slice(0, i).reverse().find((x) => x.kind === "message" || x.kind === "task") as any; w.what = whatOf(prev?.text ?? ""); }
+  }
+  return out;
+}
+
+/** Chave de configuração de dias de espera de um passo. */
+export const waitKey = (processId: string, stepKey: string, idx: number) => `${processId}:${stepKey}:${idx}`;

@@ -48,14 +48,13 @@ export function daysInStage(stageChangedAt: string | null): number {
 
 const ONBOARDING_DONE_ORDER = 9;
 
-export function useOnboardingHub() {
+/** Dados das clientes em onboarding (mesma regra da tela Onboarding), sem assinatura em tempo real. */
+export function useOnboardingClientsData(active = true) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
-  const queryClient = useQueryClient();
-
   const stagesQuery = useQuery({
     queryKey: ["onboarding-stages", accountId],
-    enabled: !!accountId,
+    enabled: active && !!accountId,
     staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -70,7 +69,7 @@ export function useOnboardingHub() {
 
   const clientsQuery = useQuery({
     queryKey: ["onboarding-clients", accountId],
-    enabled: !!accountId && !!stagesQuery.data,
+    enabled: active && !!accountId && !!stagesQuery.data,
     staleTime: 30_000,
     queryFn: async () => {
       const onboardingStageIds = (stagesQuery.data ?? [])
@@ -104,6 +103,16 @@ export function useOnboardingHub() {
       return data;
     },
   });
+
+  return { stagesQuery, clientsQuery };
+}
+
+export function useOnboardingHub() {
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
+  const queryClient = useQueryClient();
+
+  const { stagesQuery, clientsQuery } = useOnboardingClientsData();
 
   // Realtime: invalida ao detectar mudança de stage_id
   useEffect(() => {
