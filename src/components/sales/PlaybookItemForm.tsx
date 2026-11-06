@@ -20,6 +20,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { WhatsAppFormattingToolbar } from '@/components/ui/whatsapp-formatting-toolbar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { VariablePickerDropdown } from '@/components/playbook/VariablePickerDropdown';
+import { PlaybookEventFields } from '@/components/playbook/PlaybookEventFields';
+import type { PlaybookEventVars } from '@/lib/playbookEventVars';
 import {
   FileText,
   Mic,
@@ -110,7 +112,9 @@ export function PlaybookItemForm({
   const [visibility, setVisibility] = useState<PlaybookVisibility>('sector');
   // Media caption for images
   const [mediaCaption, setMediaCaption] = useState('');
+  const [eventVars, setEventVars] = useState<PlaybookEventVars>({});
 
+  const usesEventVars = /\{\{(contagem_regressiva|data_evento|dia_semana_evento|horario_evento|mes_evento)\}\}/.test(`${textContent} ${mediaCaption} ${templateBody}`) || !!eventVars.date;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +146,7 @@ export function PlaybookItemForm({
         }
         // Media caption
         setMediaCaption(editingItem.media_caption || '');
+        setEventVars(editingItem.event_vars || {});
         // Link fields
         setLinkUrl(editingItem.link_url || '');
         setLinkTitle(editingItem.link_title || '');
@@ -168,6 +173,7 @@ export function PlaybookItemForm({
         setExistingMediaFilenames([]);
         // Media caption
         setMediaCaption('');
+        setEventVars({});
         // Link fields
         setLinkUrl('');
         setLinkTitle('');
@@ -395,6 +401,7 @@ export function PlaybookItemForm({
           ? (mediaFiles.reduce((sum, f) => sum + f.size, 0) || editingItem?.media_size)
           : (mediaFile?.size || editingItem?.media_size),
         media_caption: contentType === 'image' ? mediaCaption : null,
+        event_vars: eventVars.date ? eventVars : null,
         list_items: contentType === 'list' ? listItems.filter(item => item.title.trim()) : null,
         // Link fields
         link_url: contentType === 'link' ? linkUrl : null,
@@ -1024,6 +1031,10 @@ export function PlaybookItemForm({
               </div>
             )}
 
+
+            {usesEventVars && (
+              <PlaybookEventFields value={eventVars} onChange={setEventVars} />
+            )}
             {/* Caption field for image type - appears below file upload */}
             {contentType === 'image' && (mediaPreview || existingMediaUrl) && (
               <div className="space-y-2 mt-4">

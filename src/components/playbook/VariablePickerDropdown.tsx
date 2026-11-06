@@ -8,7 +8,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Braces, User, Briefcase, Calendar, UserCog } from 'lucide-react';
+import { Braces, User, Briefcase, Calendar, UserCog, CalendarClock } from 'lucide-react';
+import { EVENT_VARIABLES } from '@/lib/playbookEventVars';
 
 interface VariableCategory {
   label: string;
@@ -53,6 +54,11 @@ const variableCategories: VariableCategory[] = [
       { key: 'hora_atual', label: 'Hora atual', example: '14:30' },
       { key: 'dia_semana', label: 'Dia da semana', example: 'Segunda-feira' },
     ],
+  },
+  {
+    label: 'Evento / Encontro (configure nos botões abaixo)',
+    icon: <CalendarClock className="h-4 w-4" />,
+    variables: EVENT_VARIABLES,
   },
 ];
 
