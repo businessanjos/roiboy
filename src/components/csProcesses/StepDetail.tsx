@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MessageCircle, Hourglass, AlertTriangle, ExternalLink, Copy, User, CalendarClock, ListChecks, CheckCircle2, Plus, Layers, Mic, AudioLines } from "lucide-react";
-import { genderConsultant } from "@/lib/consultantGender";
+import { genderConsultant, genderClient } from "@/lib/consultantGender";
 import { Button } from "@/components/ui/button";
 import { AudioTeleprompter } from "@/components/csProcesses/AudioTeleprompter";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -79,7 +79,7 @@ function MessageCard({ a, vars, tour, ctx, onCopied }: { a: Extract<Action, { ki
   const long = a.text.split("\n").length > 3 || a.text.length > 260;
   const [open, setOpen] = useState(!long);
   const [rec, setRec] = useState(false);
-  const shown = genderConsultant(replaceClientLinks(a.text, ctx.client), vars["nome da consultora"]);
+  const shown = genderClient(genderConsultant(replaceClientLinks(a.text, ctx.client), vars["nome da consultora"]), ctx.client?.full_name);
   const isAudio = /áudio|audio/i.test(a.channel ?? "");
   const copy = () => { navigator.clipboard.writeText(plainText(fillVars(shown, vars))); toast.success(isAudio ? "Roteiro copiado ✓" : "Mensagem copiada ✓"); onCopied(); };
   return (

@@ -24,7 +24,7 @@ Abaixo está todo o conteúdo dos processos.
 - **Formato:** áudio
 - **Mensagem:**
   > Oi, {Nome}, tudo bem?
-  > Seja muito bem-vinda agora membra/sócia do **Eternum Mentoring**.
+  > Seja muito bem-vinda agora membra do **Eternum Mentoring**.
   > Eu sou {Nome da consultora}, Consultora aqui do Eternum, e vou te acompanhar de perto nessa nova jornada — do início ao fim.
   > Quero te dizer que fico muito feliz em te receber aqui. A partir de agora, você não caminha mais sozinha: a gente vai organizar, estruturar e evoluir sua estratégia com clareza e direcionamento.
 - ⚠️ Aguardar a cliente receber a acolhida. Se demorar, dar continuidade orientando:
