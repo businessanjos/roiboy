@@ -147,18 +147,18 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
     <div data-tour="flow" className={full
       ? "fixed inset-x-0 bottom-0 top-14 z-40 flex flex-col overflow-hidden bg-background"
       : "flex h-[76vh] min-h-[560px] max-h-[820px] flex-col overflow-hidden rounded-[24px] border bg-card shadow-sm"}>
-      <div className="flex shrink-0 items-center gap-3 border-b bg-card px-4 py-3 md:px-5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Workflow className="h-4 w-4" /></span>
+      <div className={`flex shrink-0 items-center gap-3 border-b bg-card px-4 py-3 md:px-5 ${full ? "relative justify-center py-4 text-center" : ""}`}>
+        <span className={full ? "absolute left-5 hidden h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary sm:flex" : "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"}><Workflow className="h-4 w-4" /></span>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold">Mapa do processo</h2>
-          <p className="text-xs text-muted-foreground">{nodes.length} fases <span className="mx-1">·</span> {stepTotal} {groups ? "cartões" : "etapas"}</p>
+          <h2 className={full ? "text-base font-semibold md:text-lg" : "text-sm font-semibold"}>{full ? process.title : "Mapa do processo"}</h2>
+          <p className="text-xs text-muted-foreground">{full && <>Fluxograma completo <span className="mx-1">·</span></>}{nodes.length} fases <span className="mx-1">·</span> {stepTotal} {groups ? "cartões" : "etapas"}</p>
         </div>
-        <div className="ml-auto hidden items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground lg:flex">
+        {!full && <div className="ml-auto hidden items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground lg:flex">
           <MousePointer2 className="h-3.5 w-3.5" />Clique em uma etapa para ver os detalhes
-        </div>
+        </div>}
       </div>
       <div className="min-h-0 flex-1 bg-muted/20">
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} minZoom={0.2} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} translateExtent={flowExtent} nodesDraggable={false} minZoom={0.2} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
           <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="hsl(var(--muted-foreground) / 0.24)" />
           <Controls showInteractive={false} className="!mb-4 !ml-4 !flex-row !overflow-hidden !rounded-xl !border !bg-card !shadow-md [&_.react-flow__controls-button]:border-b-0 [&_.react-flow__controls-button]:border-r [&_.react-flow__controls-button]:bg-card [&_.react-flow__controls-button:last-child]:border-r-0">
             <ControlButton onClick={() => setFull((v) => !v)} title={full ? "Sair da tela cheia" : "Tela cheia"} aria-label={full ? "Sair da tela cheia" : "Tela cheia"}>
