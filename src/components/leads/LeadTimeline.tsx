@@ -45,6 +45,7 @@ export interface LeadTimelineEvent {
 interface LeadTimelineProps {
   leadId: string;
   className?: string;
+  readOnly?: boolean;
 }
 
 const EVENT_TYPES = [
@@ -77,7 +78,7 @@ const getEventConfig = (eventType: string) => {
   }
 };
 
-export function LeadTimeline({ leadId, className }: LeadTimelineProps) {
+export function LeadTimeline({ leadId, className, readOnly = false }: LeadTimelineProps) {
   const [events, setEvents] = useState<LeadTimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -87,8 +88,8 @@ export function LeadTimeline({ leadId, className }: LeadTimelineProps) {
 
   useEffect(() => {
     fetchEvents();
-    fetchCurrentUser();
-  }, [leadId]);
+    if (!readOnly) fetchCurrentUser();
+  }, [leadId, readOnly]);
 
   const fetchCurrentUser = async () => {
     const { data } = await supabase
@@ -153,7 +154,7 @@ export function LeadTimeline({ leadId, className }: LeadTimelineProps) {
   return (
     <div className={cn("space-y-4", className)}>
       {/* Add new event */}
-      <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
+      {!readOnly && <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
         <div className="flex items-center gap-2">
           <Select value={eventType} onValueChange={setEventType}>
             <SelectTrigger className="w-[140px] h-8 text-xs">
@@ -193,7 +194,7 @@ export function LeadTimeline({ leadId, className }: LeadTimelineProps) {
             Adicionar
           </Button>
         </div>
-      </div>
+      </div>}
 
       {/* Timeline */}
       {loading ? (
