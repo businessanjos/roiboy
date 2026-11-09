@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import {
   Bar,
+  Cell,
   CartesianGrid,
   LabelList,
   Line,
@@ -91,6 +92,9 @@ export function RecordsGoalsCharts({ weekly, goals, year, month }: Props) {
   const [metric, setMetric] = useState<MetricKey>('views');
   const [period, setPeriod] = useState<Period>('month');
   const reducedMotion = useReducedMotion();
+  const chartId = useId().replace(/:/g, '');
+  const softBarId = `${chartId}-soft-bar`;
+  const strongBarId = `${chartId}-strong-bar`;
 
   const now = new Date();
   const isCurrentMonth = now.getFullYear() === year && now.getMonth() + 1 === month;
@@ -240,6 +244,16 @@ export function RecordsGoalsCharts({ weekly, goals, year, month }: Props) {
         <div className="h-[280px] w-full sm:h-[300px]" role="img" aria-label={`${metricLabel} por ${period === 'quarter' || period === 'year' ? 'mês' : 'semana'}: ${data.map((row) => `${row.name}: ${fmt(row.valor)}`).join(', ')}`}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart accessibilityLayer data={data} barCategoryGap="28%" margin={{ top: 26, right: 12, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id={softBarId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.55} />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                </linearGradient>
+                <linearGradient id={strongBarId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={1} />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.8} />
+                </linearGradient>
+              </defs>
               <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 5" strokeOpacity={0.65} vertical={false} />
               <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} tickMargin={12} tickLine={false} axisLine={false} />
               <YAxis
@@ -258,6 +272,9 @@ export function RecordsGoalsCharts({ weekly, goals, year, month }: Props) {
                 content={<RecordsTooltip metricLabel={metricLabel} goalLabel={goalLabel} />}
               />
               <Bar dataKey="valor" name={metricLabel} fill="hsl(var(--primary))" radius={[5, 5, 0, 0]} maxBarSize={64} isAnimationActive={!reducedMotion} animationDuration={550}>
+                {data.map((row) => (
+                  <Cell key={row.name} fill={`url(#${row.meta > 0 && row.valor >= row.meta ? strongBarId : softBarId})`} />
+                ))}
                 <LabelList dataKey="valor" position="top" offset={10} fill="hsl(var(--foreground))" fontSize={11} fontWeight={600} formatter={(value: number) => value > 0 ? compact(value) : ''} />
               </Bar>
               {hasGoal && <Line
