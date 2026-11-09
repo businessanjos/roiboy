@@ -6,25 +6,23 @@ const ContentHQ = lazy(() => import("@/pages/marketing/ContentHQ"));
 const SocialNetworksTab = lazy(() => import("@/components/marketing/SocialNetworksTab"));
 
 const ChecklistView = lazy(async () => {
-  const mod = await import("@/components/marketing/ContentChecklistTab");
-  return {
-    default: () => (
-      <div className="container mx-auto py-6">
-        <mod.ContentChecklistTab />
-      </div>
-    ),
-  };
+  const { ContentChecklistTab } = await import("@/components/marketing/ContentChecklistTab");
+  const View = () => (
+    <div className="container mx-auto py-6">
+      <ContentChecklistTab />
+    </div>
+  );
+  return { default: View };
 });
 
 const MetricsView = lazy(async () => {
-  const mod = await import("@/components/marketing/ManualMetricsTab");
-  return {
-    default: () => (
-      <div className="container mx-auto py-6">
-        <mod.ManualMetricsTab />
-      </div>
-    ),
-  };
+  const { ManualMetricsTab } = await import("@/components/marketing/ManualMetricsTab");
+  const View = () => (
+    <div className="container mx-auto py-6">
+      <ManualMetricsTab />
+    </div>
+  );
+  return { default: View };
 });
 
 const TABS: MarketingHubTab[] = [
