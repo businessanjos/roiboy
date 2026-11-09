@@ -86,18 +86,16 @@ function MessageCard({ a, vars, tour, ctx, onCopied }: { a: Extract<Action, { ki
     <div data-tour={tour} className="rounded-xl border border-primary/40 bg-card p-4 shadow-sm">
       <div className="mb-2 flex items-center justify-between gap-2">
         {isAudio ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 py-1 pl-1 pr-3 text-xs font-medium text-primary">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground"><Mic className="h-3.5 w-3.5" /></span>
-            {a.label ? `${a.label} · ` : ""}Gravar áudio
-            <AudioLines className="h-4 w-4 opacity-70" />
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <AudioLines className="h-3.5 w-3.5 text-primary" />{a.label ? `${a.label} · ` : ""}Roteiro de áudio
           </span>
         ) : (
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{a.label ? `${a.label} · ` : ""}{a.channel}</span>
         )}
         {isAudio
           ? <div className="flex items-center gap-1">
-              <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={copy} title="Copiar roteiro"><Copy className="h-3.5 w-3.5" />Copiar</Button>
-              <Button size="sm" className="gap-1.5 rounded-full" onClick={() => setRec(true)}><Mic className="h-4 w-4" />Gravar agora</Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={copy} title="Copiar roteiro" aria-label="Copiar roteiro"><Copy className="h-3.5 w-3.5" /></Button>
+              <Button size="sm" className="gap-1.5" onClick={() => setRec(true)}><Mic className="h-4 w-4" />Gravar</Button>
             </div>
           : <Button size="sm" className="gap-1.5" onClick={copy}><Copy className="h-4 w-4" />Copiar</Button>}
       </div>
