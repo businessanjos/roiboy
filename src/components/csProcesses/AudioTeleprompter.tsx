@@ -13,7 +13,7 @@ const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${Str
 export function AudioTeleprompter({ open, onOpenChange, script, client, onSent }: {
   open: boolean; onOpenChange: (v: boolean) => void; script: React.ReactNode; client: ProcessClient | null; onSent: () => void;
 }) {
-  const { data: user } = useCurrentUser();
+  const { currentUser: user } = useCurrentUser();
   const [state, setState] = useState<"idle" | "rec" | "review" | "sending">("idle");
   const [secs, setSecs] = useState(0);
   const [level, setLevel] = useState(0);
