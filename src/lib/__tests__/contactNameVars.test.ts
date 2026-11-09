@@ -12,3 +12,13 @@ describe("contactNameVars", () => {
     expect(dropEmptyNameToken("Olá {{primeiro_nome}}, tudo bem?", "{{primeiro_nome}}")).toBe("Olá, tudo bem?");
   });
 });
+
+import { fillContactNameTokens } from "@/lib/contactNameVars";
+describe("envio manual com {Nome}", () => {
+  it("troca pelo primeiro nome do contato", () => {
+    expect(fillContactNameTokens("Oi, {Nome}, tudo bem?", "Yasmin Pastori")).toBe("Oi, Yasmin, tudo bem?");
+  });
+  it("contato Desconhecido tira o marcador", () => {
+    expect(fillContactNameTokens("Oi, {Nome}, tudo bem?", "Desconhecido")).toBe("Oi, tudo bem?");
+  });
+});

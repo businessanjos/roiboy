@@ -18,3 +18,14 @@ export function dropEmptyNameToken(text: string, token: string): string {
   const esc = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return text.replace(new RegExp(`[ \\t]*,?[ \\t]*${esc}`, "gi"), "");
 }
+
+const NAME_TOKEN_RE = /\{\{?\s*(nome|primeiro[_ ]nome|cliente|nome[_ ]cliente)\s*\}?\}/gi;
+
+/** Preenche {Nome}/{primeiro_nome}/{cliente} com o primeiro nome do contato; sem nome real, tira o marcador da frase. */
+export function fillContactNameTokens(text: string, contactName: string | null | undefined, phone?: string | null): string {
+  if (!NAME_TOKEN_RE.test(text)) return text;
+  NAME_TOKEN_RE.lastIndex = 0;
+  const first = realContactName(contactName, phone).split(/\s+/)[0] || "";
+  if (first) return text.replace(NAME_TOKEN_RE, first);
+  return text.replace(new RegExp(`[ \\t]*,?[ \\t]*${NAME_TOKEN_RE.source}`, "gi"), "");
+}

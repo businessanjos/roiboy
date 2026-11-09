@@ -1,3 +1,4 @@
+import { fillContactNameTokens } from "@/lib/contactNameVars";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -265,8 +266,10 @@ export function useZappMessaging({
   const [sendingContact, setSendingContact] = useState(false);
 
   const buildSignedText = useCallback((text: string) => {
-    return applyZappSignature(text, userSignature, signatureEnabled);
-  }, [signatureEnabled, userSignature]);
+    const conv: any = selectedConversation?.zapp_conversation;
+    const named = fillContactNameTokens(text, conv?.contact_name, conv?.phone_e164);
+    return applyZappSignature(named, userSignature, signatureEnabled);
+  }, [signatureEnabled, userSignature, selectedConversation]);
 
   // Quick replies state
   const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
