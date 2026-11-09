@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { BookOpenCheck, MonitorUp, TrendingUp, HeartHandshake, Sparkles, Check } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useCallback, useEffect, useState } from "react";
+import { BookOpenCheck, MonitorUp, TrendingUp, HeartHandshake, Sparkles, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 /** Roteiro nativo da reunião de onboarding (antes ficava num Canva externo). */
@@ -8,29 +8,29 @@ export const ONBOARDING_GUIDE_URL = /canva\.com\/design\/DAHQ3-2Ft-Y/i;
 
 type Item = { id: string; text: string };
 type Block = {
-  n: string; title: string; subtitle?: string; icon: typeof MonitorUp;
+  title: string; subtitle?: string; icon: typeof MonitorUp;
   highlight?: string;
   groups: { label?: string; items: Item[] }[];
 };
 
 const BLOCKS: Block[] = [
   {
-    n: "01", title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
-    highlight: "Explique a função e os benefícios de implementar o sistema de vendas que já gerou mais de R$ 1,3 bilhão em vendas de procedimentos.",
+    title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
+    highlight: "Explicar a função e os benefícios ao implementar o sistema de vendas que já gerou mais de 1,3 bilhão em vendas de procedimentos.",
     groups: [{ items: [
-      { id: "ryka-tela", text: "Compartilhar a tela do sistema Clínica Ryka" },
+      { id: "ryka-tela", text: "Compartilhar tela do sistema Clínica Ryka" },
       { id: "ryka-func", text: "Explicar o sistema e as funcionalidades" },
     ] }],
   },
   {
-    n: "02", title: "Vendas", subtitle: "ROI rápido", icon: TrendingUp,
+    title: "Vendas", subtitle: "ROI rápido", icon: TrendingUp,
     groups: [
       { label: "Se já tem lista de clientes", items: [{ id: "v-mortos", text: "Reativação dos mortos-vivos" }] },
       { label: "Se não tem clientes", items: [{ id: "v-novos", text: "Parceria, urna, influencer ou tráfego pago" }] },
     ],
   },
   {
-    n: "03", title: "Agradecimento", subtitle: "Encerramento com segurança", icon: HeartHandshake,
+    title: "Agradecimento", subtitle: "Encerramento com segurança", icon: HeartHandshake,
     groups: [{ items: [
       { id: "a-plantao", text: "Como funciona o plantão de dúvidas do WhatsApp" },
       { id: "a-ansiedade", text: "Tirar a ansiedade de parecer muita coisa" },
@@ -55,74 +55,95 @@ export function OnboardingGuideButton({ clientName }: { clientName?: string }) {
 
 export function OnboardingMeetingGuide({ open, onOpenChange, clientName }: { open: boolean; onOpenChange: (v: boolean) => void; clientName?: string }) {
   const [done, setDone] = useState<Set<string>>(new Set());
+  const [i, setI] = useState(0);
   const toggle = (id: string) => setDone((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const pct = Math.round((done.size / TOTAL) * 100);
+  const go = useCallback((d: number) => setI((v) => Math.min(BLOCKS.length - 1, Math.max(0, v + d))), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, go]);
+
+  const b = BLOCKS[i];
+  const Icon = b.icon;
+  const blockDone = (x: Block) => x.groups.every((g) => g.items.every((it) => done.has(it.id)));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[92vh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="border-b px-8 pb-5 pt-7 text-left">
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-primary">
-            <Sparkles className="h-3 w-3" />Reunião de onboarding
+      <DialogContent className="flex h-[92vh] max-w-5xl flex-col gap-0 overflow-hidden p-0">
+        <header className="border-b px-10 pb-6 pt-8">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+            <Sparkles className="h-3.5 w-3.5" />Roteiro da reunião de onboarding
           </span>
-          <DialogTitle className="mt-2 text-3xl font-semibold tracking-tight">Roteiro da reunião</DialogTitle>
-          <DialogDescription className="text-base">
-            {clientName ? <>Conduza com calma a conversa com <strong className="text-foreground">{clientName}</strong>, ponto a ponto.</> : "Conduza com calma, ponto a ponto."}
+          <DialogTitle className="sr-only">Roteiro da reunião</DialogTitle>
+          <DialogDescription className="mt-2 text-base">
+            {clientName ? <>Em reunião com <strong className="text-foreground">{clientName}</strong> · {done.size} de {TOTAL} pontos abordados</> : `${done.size} de ${TOTAL} pontos abordados`}
           </DialogDescription>
-          <div className="mt-4 flex items-center gap-3">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
+          <nav className="mt-5 flex gap-2">
+            {BLOCKS.map((x, k) => (
+              <button key={x.title} type="button" onClick={() => setI(k)}
+                className={`flex flex-1 items-center gap-2 rounded-xl border px-4 py-2.5 text-left text-sm font-medium transition-all ${k === i ? "border-primary bg-primary/10 text-foreground" : "text-muted-foreground hover:border-primary/40"}`}>
+                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${blockDone(x) ? "bg-primary text-primary-foreground" : k === i ? "bg-primary/20 text-primary" : "bg-muted"}`}>
+                  {blockDone(x) ? <Check className="h-3.5 w-3.5" /> : k + 1}
+                </span>
+                <span className="truncate">{x.title}</span>
+              </button>
+            ))}
+          </nav>
+        </header>
+
+        <section key={i} className="flex-1 overflow-y-auto px-10 py-10 animate-fade-in">
+          <div className="mx-auto max-w-3xl">
+            <div className="flex items-center gap-5">
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary"><Icon className="h-8 w-8" /></span>
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Etapa {i + 1} de {BLOCKS.length}{b.subtitle ? ` · ${b.subtitle}` : ""}</p>
+                <h2 className="mt-1 text-5xl font-semibold tracking-tight">{b.title}</h2>
+              </div>
             </div>
-            <span className="text-xs tabular-nums text-muted-foreground">{done.size} de {TOTAL}</span>
+
+            {b.highlight && (
+              <p className="mt-8 rounded-2xl border-l-4 border-primary bg-primary/10 px-6 py-5 text-xl leading-relaxed">{b.highlight}</p>
+            )}
+
+            <div className="mt-8 space-y-7">
+              {b.groups.map((g, gi) => (
+                <div key={gi}>
+                  {g.label && <p className="mb-3 text-lg font-semibold text-primary">{g.label}</p>}
+                  <ul className="space-y-3">
+                    {g.items.map((it) => {
+                      const on = done.has(it.id);
+                      return (
+                        <li key={it.id}>
+                          <button type="button" onClick={() => toggle(it.id)}
+                            className={`flex w-full items-center gap-4 rounded-2xl border px-6 py-5 text-left text-xl transition-all hover:border-primary/50 ${on ? "border-primary/40 bg-primary/5 text-muted-foreground" : "bg-card shadow-sm"}`}>
+                            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 transition-colors ${on ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"}`}>
+                              {on && <Check className="h-4 w-4" />}
+                            </span>
+                            <span className={on ? "line-through" : "font-medium"}>{it.text}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </div>
-        </DialogHeader>
+        </section>
 
-        <div className="flex-1 space-y-10 overflow-y-auto px-8 py-8">
-          {BLOCKS.map((b, bi) => {
-            const Icon = b.icon;
-            return (
-              <section key={b.n} className="animate-fade-in opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: `${bi * 120}ms` }}>
-                <div className="flex items-start gap-4">
-                  <span className="text-4xl font-light leading-none text-primary/40 tabular-nums">{b.n}</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-5 w-5 text-primary" />
-                      <h3 className="text-2xl font-semibold tracking-tight">{b.title}</h3>
-                    </div>
-                    {b.subtitle && <p className="mt-0.5 text-xs font-medium uppercase tracking-widest text-muted-foreground">{b.subtitle}</p>}
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-4 pl-0 sm:pl-14">
-                  {b.highlight && (
-                    <p className="rounded-xl border-l-4 border-primary bg-primary/10 px-4 py-3 text-[15px] leading-relaxed">{b.highlight}</p>
-                  )}
-                  {b.groups.map((g, gi) => (
-                    <div key={gi}>
-                      {g.label && <p className="mb-2 text-sm font-semibold text-foreground/80">{g.label}</p>}
-                      <ul className="space-y-2">
-                        {g.items.map((it) => {
-                          const on = done.has(it.id);
-                          return (
-                            <li key={it.id}>
-                              <button type="button" onClick={() => toggle(it.id)}
-                                className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-[15px] transition-all hover:border-primary/50 ${on ? "border-primary/40 bg-primary/5 text-muted-foreground" : "bg-card"}`}>
-                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${on ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"}`}>
-                                  {on && <Check className="h-3.5 w-3.5" />}
-                                </span>
-                                <span className={on ? "line-through" : "font-medium"}>{it.text}</span>
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+        <footer className="flex items-center justify-between gap-3 border-t px-10 py-4">
+          <Button variant="ghost" size="lg" className="gap-2" disabled={i === 0} onClick={() => go(-1)}><ChevronLeft className="h-5 w-5" />Anterior</Button>
+          <span className="hidden text-xs text-muted-foreground sm:block">Use as setas ← → do teclado para trocar de etapa</span>
+          {i < BLOCKS.length - 1
+            ? <Button size="lg" className="gap-2" onClick={() => go(1)}>Próxima<ChevronRight className="h-5 w-5" /></Button>
+            : <Button size="lg" className="gap-2" onClick={() => onOpenChange(false)}><Check className="h-5 w-5" />Concluir roteiro</Button>}
+        </footer>
       </DialogContent>
     </Dialog>
   );
