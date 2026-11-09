@@ -339,7 +339,7 @@ export default function CSProcesses() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Processos Eternum</h1>
-          <p className="text-sm text-muted-foreground">{target ? `Acompanhando: ${targetName ?? "…"}` : "Passo a passo, mensagens prontas e links de cada processo."}</p>
+          <p className="text-sm text-muted-foreground">{clientId ? "Processo individual, com mensagens, links e progresso da cliente." : target ? `Encontro selecionado: ${targetName ?? "…"}` : "Passo a passo, mensagens prontas e links de cada processo."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-lg border p-0.5">
