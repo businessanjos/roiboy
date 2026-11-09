@@ -163,44 +163,51 @@ export default function ContentHQ() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-[232px_minmax(0,1fr)] lg:gap-6">
           {/* Vertical sidebar */}
-          <aside className="space-y-1 border-b pb-3 md:border-b-0 md:border-r md:pb-0 md:pr-3" aria-label="Seções da Produção">
-            {GROUPS.map((g) => (
+          <aside className="space-y-2 border-b pb-4 md:border-b-0 md:border-r md:pb-0 md:pr-4" aria-label="Seções da Produção">
+            {GROUPS.map((g) => {
+              const GroupIcon = g.items[0]?.icon ?? Layers;
+              const containsActive = g.items.some((s) => s.id === section);
+              const expanded = expandedGroup === g.group;
+              return (
               <div key={g.group}>
                 <Button variant="ghost" aria-expanded={expandedGroup === g.group}
                   aria-controls={`content-group-${g.group}`}
                   onClick={() => setExpandedGroup(expandedGroup === g.group ? null : g.group)}
-                  className="h-9 w-full justify-between gap-2 px-2.5 text-xs font-semibold text-muted-foreground">
-                  <span className="flex items-center gap-2">
-                    {g.items.some((s) => s.id === section) && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                  className={cn("h-12 w-full justify-between gap-3 rounded-lg border px-3 text-sm font-semibold transition-colors motion-reduce:transition-none",
+                    containsActive ? "border-primary/20 bg-primary/10 text-foreground" : expanded ? "border-border bg-muted/40 text-foreground" : "border-transparent text-foreground hover:border-border hover:bg-muted/40"
+                  )}>
+                  <span className="flex min-w-0 items-center gap-3">
+                    <GroupIcon className={cn("h-5 w-5 shrink-0", containsActive ? "text-primary" : "text-muted-foreground")} />
                     {g.group}
                   </span>
-                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expandedGroup === g.group && "rotate-180")} />
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none", expanded && "rotate-180")} />
                 </Button>
-                {expandedGroup === g.group && <nav id={`content-group-${g.group}`} className="mb-2 space-y-0.5">
+                {expanded && <nav id={`content-group-${g.group}`} className="mb-3 ml-5 mt-2 space-y-1 border-l border-border pl-3 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
                   {g.items.map((s) => {
                     const Icon = s.icon;
                     const active = section === s.id;
                     return (
                       <Button variant="ghost"
                         key={s.id}
+                        aria-current={active ? "page" : undefined}
                         onClick={() => setSection(s.id)}
                         className={cn(
-                          "h-auto min-h-9 w-full justify-start text-left text-sm rounded-md px-2.5 py-1.5 flex items-center gap-2 transition-colors",
+                          "h-auto min-h-11 w-full justify-start text-left text-sm rounded-md px-3 py-2.5 flex items-center gap-2.5 transition-colors motion-reduce:transition-none",
                           active
-                            ? "bg-primary/10 text-primary font-medium"
+                            ? "bg-primary/10 text-foreground font-semibold"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                         )}
                       >
-                        <Icon className="h-4 w-4 shrink-0" />
+                        <Icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
                         <span className="whitespace-normal leading-5">{s.label}</span>
                       </Button>
                     );
                   })}
                 </nav>}
               </div>
-            ))}
+            ); })}
           </aside>
 
           {/* Content area */}
