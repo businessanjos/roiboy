@@ -100,6 +100,13 @@ const BLOCKS: Block[] = [
     ],
   },
   {
+    title: "Dúvidas sobre a conversa", subtitle: "Abrir espaço para perguntas", icon: BookOpenCheck,
+    highlight: "Dúvidas sobre a conversa.",
+    groups: [{ items: [
+      { id: "dc-duvidas", text: "Tirar as dúvidas sobre a conversa" },
+    ] }],
+  },
+  {
     title: "Plano de ação", subtitle: "Próximos passos", icon: ClipboardList,
     groups: [{ items: [{ id: "p-48h", text: "Enviar plano de ação em até 48 horas" }] }],
     warning: "De acordo com as prioridades listadas anteriormente.",
