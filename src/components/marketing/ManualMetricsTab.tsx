@@ -50,7 +50,7 @@ export function ManualMetricsTab() {
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState<'edit' | 'compare'>('edit');
   const [compareIds, setCompareIds] = useState<string[]>([]);
-  const [chartMetric, setChartMetric] = useState<MetricKey>('views');
+  const [chartMetric, setChartMetric] = useState<MetricKey | null>('views');
 
 
 
