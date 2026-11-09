@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildContentArchiveContext } from '../_shared/contentArchiveContext.ts';
 import { fetchVoiceAndPersona, buildBrandVoiceBlock, buildPersonaBlock, fetchInstagramContext, buildInstagramContextBlock, fetchAiReviewSignals } from "../_shared/marketing-context.ts";
 
 const corsHeaders = {
@@ -122,7 +123,8 @@ Deno.serve(async (req) => {
     const typeCfg = COPY_TYPES[copyType] || COPY_TYPES.caption;
     const objectiveInstruction = OBJECTIVE_INSTRUCTIONS[objective] || OBJECTIVE_INSTRUCTIONS.educar;
 
-    const systemPrompt = `Você é uma copywriter sênior especializada em conteúdo para Instagram, TikTok e YouTube, com profundo conhecimento do mercado de estética brasileiro. Escreva sempre em português do Brasil.${voiceContext}${personaContext}${profileContext}${reviewSignals}`;
+    const archiveContext = await buildContentArchiveContext(req, String(brief));
+    const systemPrompt = `Você é uma copywriter sênior especializada em conteúdo para Instagram, TikTok e YouTube, com profundo conhecimento do mercado de estética brasileiro. Escreva sempre em português do Brasil.${voiceContext}${personaContext}${profileContext}${reviewSignals}${archiveContext}`;
 
     const userPrompt = `Tarefa: ${typeCfg.instruction}
 

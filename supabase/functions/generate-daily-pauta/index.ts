@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { buildContentArchiveContext } from '../_shared/contentArchiveContext.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,7 +34,8 @@ serve(async (req) => {
       ? ideias.map((i: any, idx: number) => `${idx + 1}. ${i.title}${i.description ? ` — ${i.description}` : ""}`).join("\n")
       : "Nenhuma ideia em backlog.";
 
-    const systemPrompt = `Você é um estrategista de conteúdo digital sênior. Gere pautas práticas, criativas e prontas para execução, em português brasileiro. Use tom direto, jamais genérico.
+    const archiveContext = await buildContentArchiveContext(req, profile?.username || '');
+    const systemPrompt = `Você é um estrategista de conteúdo digital sênior. Gere pautas práticas, criativas e prontas para execução, em português brasileiro. Use tom direto, jamais genérico.${archiveContext}
 
 Inclua evidências explícitas do que influenciou cada pauta, citando apenas dados reais recebidos em trends, marcos, ideias ou perfil.`;
 

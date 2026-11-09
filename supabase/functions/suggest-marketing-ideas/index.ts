@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { buildContentArchiveContext } from '../_shared/contentArchiveContext.ts';
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   buildBrandVoiceBlock,
@@ -135,14 +136,15 @@ serve(async (req) => {
         .limit(12),
     ]);
 
-    let profilePerformanceContext = "";
+    const archiveContext = await buildContentArchiveContext(req, String(username));
+    let profilePerformanceContext = archiveContext;
     if (selectedPlatform === "instagram") {
       const instagramContext = await fetchInstagramContext(supabase, accountId, profileId);
-      profilePerformanceContext = buildInstagramContextBlock(instagramContext);
+      profilePerformanceContext += buildInstagramContextBlock(instagramContext);
     } else if (selectedPlatform === "tiktok") {
-      profilePerformanceContext = await fetchTiktokContext(supabase, accountId, profileId);
+      profilePerformanceContext += await fetchTiktokContext(supabase, accountId, profileId);
     } else if (selectedPlatform === "youtube") {
-      profilePerformanceContext = await fetchYoutubeContext(supabase, accountId, profileId);
+      profilePerformanceContext += await fetchYoutubeContext(supabase, accountId, profileId);
     }
 
     const ideas = (ideasRes.data || []) as any[];
