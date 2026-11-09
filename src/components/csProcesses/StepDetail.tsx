@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MessageCircle, Hourglass, AlertTriangle, ExternalLink, Copy, User, CalendarClock, ListChecks, CheckCircle2, Plus, Layers, Mic, AudioLines } from "lucide-react";
 import { genderConsultant } from "@/lib/consultantGender";
 import { Button } from "@/components/ui/button";
+import { AudioTeleprompter } from "@/components/csProcesses/AudioTeleprompter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { fillVars, plainText, stepTitle, type Action, type StepInfo } from "@/lib/csProcessActions";
@@ -78,6 +79,7 @@ export function InlineMarkdown({ text, vars = {}, ctx }: { text: string; vars?: 
 function MessageCard({ a, vars, tour, ctx, onCopied }: { a: Extract<Action, { kind: "message" }>; vars: Vars; tour?: string; ctx: StepContext; onCopied: () => void }) {
   const long = a.text.split("\n").length > 3 || a.text.length > 260;
   const [open, setOpen] = useState(!long);
+  const [rec, setRec] = useState(false);
   const shown = genderConsultant(replaceClientLinks(a.text, ctx.client), vars["nome da consultora"]);
   const isAudio = /áudio|audio/i.test(a.channel ?? "");
   const copy = () => { navigator.clipboard.writeText(plainText(fillVars(shown, vars))); toast.success(isAudio ? "Roteiro copiado ✓" : "Mensagem copiada ✓"); onCopied(); };
@@ -94,13 +96,20 @@ function MessageCard({ a, vars, tour, ctx, onCopied }: { a: Extract<Action, { ki
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{a.label ? `${a.label} · ` : ""}{a.channel}</span>
         )}
         {isAudio
-          ? <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={copy} title="Copiar roteiro"><Copy className="h-3.5 w-3.5" />Copiar</Button>
+          ? <div className="flex items-center gap-1">
+              <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={copy} title="Copiar roteiro"><Copy className="h-3.5 w-3.5" />Copiar</Button>
+              <Button size="sm" className="gap-1.5 rounded-full" onClick={() => setRec(true)}><Mic className="h-4 w-4" />Gravar agora</Button>
+            </div>
           : <Button size="sm" className="gap-1.5" onClick={copy}><Copy className="h-4 w-4" />Copiar</Button>}
       </div>
       <p className={`whitespace-pre-wrap text-base leading-relaxed ${open ? "" : "line-clamp-3"}`}>
         {shown.split(URL_SPLIT).map((p, i) => /^https?:/.test(p) ? <a key={i} href={p} target="_blank" rel="noreferrer" className="break-all text-primary underline">{p}</a> : <InlineMarkdown key={i} text={p} vars={vars} />)}
       </p>
       {long && <button type="button" onClick={() => setOpen(!open)} className="mt-2 text-sm font-medium text-primary hover:underline">{open ? "Recolher mensagem" : "Ver mensagem completa"}</button>}
+      {isAudio && (
+        <AudioTeleprompter open={rec} onOpenChange={setRec} client={ctx.client} onSent={onCopied}
+          script={<InlineMarkdown text={plainText(fillVars(shown, vars)).replace(/https?:\/\/\S+/g, "")} vars={vars} />} />
+      )}
     </div>
   );
 }
