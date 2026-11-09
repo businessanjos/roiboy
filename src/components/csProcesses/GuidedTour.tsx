@@ -96,6 +96,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
             <Button size="sm" className="gap-1.5" autoFocus onClick={next}>{step.primary ?? (last ? "Concluir" : "Próximo")}<ArrowRight className="h-3.5 w-3.5" /></Button>
           </div>
         </div>
+        </div>
       </div>
     </div>,
     document.body,
