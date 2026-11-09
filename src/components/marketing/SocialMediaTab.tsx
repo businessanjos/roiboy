@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
-  CalendarIcon,
   Play,
   Instagram,
   Plus,
@@ -54,8 +53,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -79,6 +76,7 @@ import { cn } from '@/lib/utils';
 import { IntegrationAccessAlert } from '@/components/integrations/IntegrationAccessAlert';
 import { usePagedList } from '@/hooks/usePagedList';
 import { PagerFor } from '@/components/ui/list-pagination';
+import { SocialPostsDateFilter } from './SocialPostsDateFilter';
 
 interface SocialMediaTabProps {
   initialPostId?: string | null;
@@ -438,8 +436,8 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
       {/* Posts Section with Tabs */}
       <Card>
         <Tabs defaultValue="list" className="w-full">
-          <CardHeader className="pb-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <CardHeader className="space-y-4 p-4 sm:p-5">
+            <div className="flex flex-col gap-4">
               <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
                 <CardTitle className="text-lg font-semibold flex items-center gap-2">
                   Análise de Conteúdos
@@ -467,73 +465,13 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                 </TabsList>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Date From Filter */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-[130px] h-9 justify-start text-left font-normal",
-                        !dateFrom && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateFrom ? format(dateFrom, "dd/MM/yy") : "De"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dateFrom}
-                      onSelect={setDateFrom}
-                      initialFocus
-                      className="pointer-events-auto"
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                {/* Date To Filter */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-[130px] h-9 justify-start text-left font-normal",
-                        !dateTo && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateTo ? format(dateTo, "dd/MM/yy") : "Até"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dateTo}
-                      onSelect={setDateTo}
-                      initialFocus
-                      className="pointer-events-auto"
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                {/* Clear Date Filters */}
-                {(dateFrom || dateTo) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 px-2"
-                    onClick={() => {
-                      setDateFrom(undefined);
-                      setDateTo(undefined);
-                    }}
-                  >
-                    Limpar datas
-                  </Button>
-                )}
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 p-2">
+                <SocialPostsDateFilter
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  onFromChange={setDateFrom}
+                  onToChange={setDateTo}
+                />
 
                 {/* Format Filter */}
                 <Select value={formatFilter} onValueChange={setFormatFilter}>
@@ -579,7 +517,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 h-9"
+                  className="ml-auto h-9 gap-1.5"
                   onClick={() => setAddPostDialogOpen(true)}
                   disabled={!currentProfile}
                 >
@@ -615,12 +553,12 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             <button
                               onClick={() => handleSortToggle('reach')}
                               className={cn(
-                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
                                 sortBy === 'reach' && "text-primary"
                               )}
                             >
                               <Eye className="h-3.5 w-3.5" />
-                              {sortBy === 'reach' && <ChevronDown className="h-3 w-3" />}
+                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'reach' ? "opacity-100" : "opacity-0")} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>Alcance (clique para ordenar)</TooltipContent>
@@ -632,12 +570,12 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             <button
                               onClick={() => handleSortToggle('likes')}
                               className={cn(
-                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
                                 sortBy === 'likes' && "text-primary"
                               )}
                             >
                               <Heart className="h-3.5 w-3.5" />
-                              {sortBy === 'likes' && <ChevronDown className="h-3 w-3" />}
+                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'likes' ? "opacity-100" : "opacity-0")} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>Curtidas (clique para ordenar)</TooltipContent>
@@ -649,12 +587,12 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             <button
                               onClick={() => handleSortToggle('comments')}
                               className={cn(
-                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
                                 sortBy === 'comments' && "text-primary"
                               )}
                             >
                               <MessageCircle className="h-3.5 w-3.5" />
-                              {sortBy === 'comments' && <ChevronDown className="h-3 w-3" />}
+                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'comments' ? "opacity-100" : "opacity-0")} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>Comentários (clique para ordenar)</TooltipContent>
@@ -666,12 +604,12 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             <button
                               onClick={() => handleSortToggle('shares')}
                               className={cn(
-                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
                                 sortBy === 'shares' && "text-primary"
                               )}
                             >
                               <Share2 className="h-3.5 w-3.5" />
-                              {sortBy === 'shares' && <ChevronDown className="h-3 w-3" />}
+                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'shares' ? "opacity-100" : "opacity-0")} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>Compartilhamentos (clique para ordenar)</TooltipContent>
@@ -683,12 +621,12 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             <button
                               onClick={() => handleSortToggle('saves')}
                               className={cn(
-                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
                                 sortBy === 'saves' && "text-primary"
                               )}
                             >
                               <Bookmark className="h-3.5 w-3.5" />
-                              {sortBy === 'saves' && <ChevronDown className="h-3 w-3" />}
+                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'saves' ? "opacity-100" : "opacity-0")} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>Salvamentos (clique para ordenar)</TooltipContent>
@@ -700,12 +638,12 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             <button
                               onClick={() => handleSortToggle('link_clicks')}
                               className={cn(
-                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
                                 sortBy === 'link_clicks' && "text-primary"
                               )}
                             >
                               <Link2 className="h-3.5 w-3.5" />
-                              {sortBy === 'link_clicks' && <ChevronDown className="h-3 w-3" />}
+                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'link_clicks' ? "opacity-100" : "opacity-0")} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>Cliques no Link (clique para ordenar)</TooltipContent>
@@ -717,12 +655,12 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             <button
                               onClick={() => handleSortToggle('views')}
                               className={cn(
-                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
                                 sortBy === 'views' && "text-primary"
                               )}
                             >
                               <Play className="h-3.5 w-3.5" />
-                              {sortBy === 'views' && <ChevronDown className="h-3 w-3" />}
+                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'views' ? "opacity-100" : "opacity-0")} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>Views (clique para ordenar)</TooltipContent>
@@ -734,12 +672,12 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             <button
                               onClick={() => handleSortToggle('engagement_rate')}
                               className={cn(
-                                "flex items-center gap-1 ml-auto font-semibold hover:text-primary transition-colors",
+                                "inline-flex h-6 min-w-[70px] items-center justify-end gap-1 ml-auto font-semibold hover:text-primary transition-colors",
                                 sortBy === 'engagement_rate' ? "text-primary" : "text-primary"
                               )}
                             >
                               Engaj. %
-                              {sortBy === 'engagement_rate' && <ChevronDown className="h-3 w-3" />}
+                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'engagement_rate' ? "opacity-100" : "opacity-0")} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>Engajamento (clique para ordenar)</TooltipContent>
@@ -751,12 +689,12 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             <button
                               onClick={() => handleSortToggle('virality_rate')}
                               className={cn(
-                                "flex items-center gap-1 ml-auto font-semibold hover:text-primary transition-colors",
+                                "inline-flex h-6 min-w-[70px] items-center justify-end gap-1 ml-auto font-semibold hover:text-primary transition-colors",
                                 sortBy === 'virality_rate' ? "text-primary" : "text-primary"
                               )}
                             >
                               Viral %
-                              {sortBy === 'virality_rate' && <ChevronDown className="h-3 w-3" />}
+                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'virality_rate' ? "opacity-100" : "opacity-0")} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>Viralidade (clique para ordenar)</TooltipContent>
@@ -800,8 +738,8 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             </TableCell>
                             <TableCell>
                               {post.theme ? (
-                                <Badge variant="outline" className="text-xs">
-                                  {getThemeLabel(post.theme)}
+                                <Badge variant="outline" className="h-7 max-w-[170px] gap-1 whitespace-nowrap px-2.5 text-xs font-normal">
+                                  <span className="truncate">{getThemeLabel(post.theme)}</span>
                                 </Badge>
                               ) : (
                                 <span className="text-muted-foreground text-xs">-</span>
@@ -827,9 +765,18 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             </TableCell>
                             <TableCell>
                               <div className="flex items-start gap-2">
-                                <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
-                                  {post.caption || 'Sem legenda'}
-                                </p>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span tabIndex={0} className="min-w-0 flex-1 cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/40" aria-label="Ler legenda completa">
+                                      <p className="line-clamp-2 text-sm text-muted-foreground">
+                                        {post.caption || 'Sem legenda'}
+                                      </p>
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" align="start" className="max-h-80 max-w-md overflow-y-auto whitespace-pre-wrap break-words border border-border bg-popover text-xs leading-relaxed text-popover-foreground shadow-lg">
+                                    {post.caption || 'Sem legenda'}
+                                  </TooltipContent>
+                                </Tooltip>
                                 {post.permalink && (
                                   <a
                                     href={post.permalink}
