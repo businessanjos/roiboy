@@ -79,6 +79,9 @@ import {
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { eventMatchesPeriod, eventMonthKey } from "./marketingEventPeriod";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { ChevronDown, Shapes } from "lucide-react";
 
 interface Attendance {
   id: string;
@@ -154,6 +157,7 @@ export default function MarketingEventsTab() {
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEventType, setFilterEventType] = useState<string>("all");
+  const [typeFilterOpen, setTypeFilterOpen] = useState(false);
   const [filterModality, setFilterModality] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [modalityTab, setModalityTab] = useState<"all" | "presencial" | "online">("all");
@@ -601,17 +605,41 @@ export default function MarketingEventsTab() {
             <SelectItem value="operation">Operação ({operationCount})</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterEventType} onValueChange={setFilterEventType}>
-          <SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-40">
-            <SelectValue placeholder="Tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            {Object.entries(eventTypeConfig).map(([key, config]) => (
-              <SelectItem key={key} value={key}>{config.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover open={typeFilterOpen} onOpenChange={setTypeFilterOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" role="combobox" aria-label="Tipo de evento" aria-expanded={typeFilterOpen} className="w-[calc(50%-0.25rem)] sm:w-52 justify-between gap-2 px-3 font-normal">
+              <span className="min-w-0 truncate">{filterEventType === 'all' ? 'Todos os tipos' : getTypeInfo(filterEventType).label}</span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg p-0 pointer-events-auto">
+            <Command>
+              <CommandInput placeholder="Pesquisar tipo de evento..." />
+              <CommandList className="max-h-72 overscroll-contain">
+                <CommandEmpty>Nenhum tipo encontrado.</CommandEmpty>
+                <CommandGroup>
+                  <CommandItem value="Todos os tipos" onSelect={() => { setFilterEventType('all'); setTypeFilterOpen(false); }} className="gap-3 px-3 py-2.5">
+                    <Shapes className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1">Todos os tipos</span>
+                    {filterEventType === 'all' && <Check className="h-4 w-4 text-primary" />}
+                  </CommandItem>
+                </CommandGroup>
+                <CommandGroup heading="Tipos de evento">
+                  {Object.entries(eventTypeConfig).sort(([, a], [, b]) => a.label.localeCompare(b.label, 'pt-BR')).map(([key, config]) => {
+                    const TypeIcon = eventIconMap[config.icon] || Calendar;
+                    return (
+                      <CommandItem key={key} value={config.label} onSelect={() => { setFilterEventType(key); setTypeFilterOpen(false); }} className="gap-3 px-3 py-2.5">
+                        <TypeIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="flex-1">{config.label}</span>
+                        {filterEventType === key && <Check className="h-4 w-4 text-primary" />}
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters}>
             Limpar filtros
