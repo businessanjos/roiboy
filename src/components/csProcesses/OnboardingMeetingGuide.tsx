@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BookOpenCheck, MonitorUp, TrendingUp, HeartHandshake, ClipboardList, AlertTriangle, Search, Sparkles, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { BookOpenCheck, MonitorUp, TrendingUp, HeartHandshake, ClipboardList, AlertTriangle, Search, Sparkles, Target, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import rykaLogo from "@/assets/ryka-logo.png.asset.json";
@@ -48,7 +48,7 @@ const BLOCKS: Block[] = [
     ] }],
   },
   {
-    title: "Alinhamento “Tá pago”", subtitle: "Entender a dor principal", icon: Sparkles,
+    title: "Alinhamento “Tá pago”", subtitle: "Entender a dor principal", icon: Target,
     highlight: "O que eu precisaria te ensinar e passar aqui que se eu esclarecesse você falaria que \"tá pago\"?",
     groups: [{ items: [
       { id: "tp-dor", text: "Foca em resolver essa dor e faz ela soltar um \"tá pago\"" },
