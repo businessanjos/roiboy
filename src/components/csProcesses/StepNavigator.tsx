@@ -110,15 +110,25 @@ export function StepNavigator({ process, selected, onSelect, statusOf, visible, 
             <ul className="space-y-0.5">
               {steps.map(({ s, si, k }) => {
                 const st = statusOf(k);
+                const row = (
+                  <button type="button" data-tour={k === selected ? "status" : undefined} onClick={() => onSelect(k)}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition ${k === selected ? "bg-primary/10 font-medium" : "hover:bg-muted"} ${onEdit ? "pr-8" : ""}`}>
+                    <StatusMark s={st} />
+                    <span className="tabular-nums text-muted-foreground">{pi + 1}.{si + 1}</span>
+                    <span className={`truncate ${st === "done" ? "text-muted-foreground" : ""}`}>{stepTitle(s.title) || phaseName(ph.title)}</span>
+                    {badgeOf?.(k) && <span className="ml-auto shrink-0 text-xs" title={`Aguardando há ${badgeOf(k)}`}>⏳ {badgeOf(k)}</span>}
+                  </button>
+                );
                 return (
                   <li key={k} className="group/step relative">
-                    <button type="button" data-tour={k === selected ? "status" : undefined} onClick={() => onSelect(k)}
-                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition ${k === selected ? "bg-primary/10 font-medium" : "hover:bg-muted"} ${onEdit ? "pr-8" : ""}`}>
-                      <StatusMark s={st} />
-                      <span className="tabular-nums text-muted-foreground">{pi + 1}.{si + 1}</span>
-                      <span className={`truncate ${st === "done" ? "text-muted-foreground" : ""}`}>{stepTitle(s.title) || phaseName(ph.title)}</span>
-                      {badgeOf?.(k) && <span className="ml-auto shrink-0 text-xs" title={`Aguardando há ${badgeOf(k)}`}>⏳ {badgeOf(k)}</span>}
-                    </button>
+                    {k === selected ? row : (
+                      <HoverCard openDelay={220} closeDelay={120}>
+                        <HoverCardTrigger asChild>{row}</HoverCardTrigger>
+                        <HoverCardContent side="right" align="start" collisionPadding={12} className="w-auto">
+                          <StepPreview step={s} number={`${pi + 1}.${si + 1}`} phaseLabel={`Fase ${pi + 1} · ${phaseName(ph.title)}`} status={st} />
+                        </HoverCardContent>
+                      </HoverCard>
+                    )}
                     {onEdit && (
                       <button type="button" onClick={() => onEdit(k)} aria-label="Editar etapa" title="Editar etapa"
                         className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground/70 opacity-0 transition hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/step:opacity-100">
