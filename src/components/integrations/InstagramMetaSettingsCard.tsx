@@ -59,7 +59,7 @@ export function InstagramMetaSettingsCard() {
           </p>
         ) : (
           profiles.map((profile) => {
-            const configured = !!profile.meta_access_token && !!profile.ig_business_id;
+            const configured = !!profile.meta_access_token && !!profile.meta_user_id;
             return (
               <div key={profile.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
                 <div className="min-w-0 flex-1">
