@@ -20,7 +20,7 @@ import { InProgressBoard } from "@/components/csProcesses/InProgressBoard";
 import { ProcessTrack } from "@/components/csProcesses/ProcessTrack";
 import type { BoardCard } from "@/lib/csInProgress";
 import { spDate } from "@/lib/csToday";
-import { OnboardingFlow } from "@/components/csProcesses/OnboardingFlow";
+import { onboardingGroups } from "@/components/csProcesses/OnboardingFlow";
 import { ProcessFlow, StepCard, CycleView, EventTimeline, isCycle, type StepStatus } from "@/components/csProcesses/ProcessFlow";
 import { Copy, AlertTriangle, CheckSquare, Search, ExternalLink, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -334,9 +334,7 @@ export default function CSProcesses() {
       {active > 0 && <EventTimeline accent={dots[active % 3]} />}
 
       {view === "flow" && !isMobile ? (
-        active === 0
-          ? <OnboardingFlow process={proc} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} />
-          : <ProcessFlow process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} />
+        <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} />
       ) : (
         <>
           <ProcessOverview process={proc} statusOf={navStatus} onPick={pickPhase} />
