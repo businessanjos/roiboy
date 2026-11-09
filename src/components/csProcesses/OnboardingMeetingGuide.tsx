@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BookOpenCheck, MonitorUp, TrendingUp, HeartHandshake, ClipboardList, AlertTriangle, Search, Sparkles, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import rykaLogo from "@/assets/ryka-logo.png.asset.json";
 
 /** Roteiro nativo da reunião de onboarding (antes ficava num Canva externo). */
 export const ONBOARDING_GUIDE_URL = /canva\.com\/design\/DAHQ3-2Ft-Y/i;
@@ -9,6 +10,8 @@ export const ONBOARDING_GUIDE_URL = /canva\.com\/design\/DAHQ3-2Ft-Y/i;
 type Item = { id: string; text: string };
 type Block = {
   title: string; subtitle?: string; icon: typeof MonitorUp;
+  /** Marca real do produto, quando existir (ex.: logo da Clínica Ryka). */
+  logo?: string;
   highlight?: string;
   warning?: string;
   groups: { label?: string; items: Item[] }[];
@@ -85,7 +88,7 @@ const BLOCKS: Block[] = [
     ] }],
   },
   {
-    title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
+    title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp, logo: rykaLogo.url,
     highlight: "Explicar a função e os benefícios ao implementar o sistema de vendas que já gerou mais de 1,3 bilhão em vendas de procedimentos.",
     groups: [{ items: [
       { id: "ryka-tela", text: "Compartilhar tela do sistema Clínica Ryka" },
