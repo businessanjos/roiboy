@@ -297,6 +297,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
         profile={currentProfile} 
         isLoading={isLoading}
         onProfilePictureChange={handleProfilePictureChange}
+        onEditProfile={() => setCredentialsDialogOpen(true)}
       />
 
       {/* Header with Profile Selector */}
@@ -411,6 +412,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
           onOpenChange={setCredentialsDialogOpen}
           profileId={currentProfile?.id || null}
           profileUsername={currentProfile?.username}
+          onSaved={() => syncProfiles.mutate()}
         />
       </div>
 

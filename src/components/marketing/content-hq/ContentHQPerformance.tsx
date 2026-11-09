@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, RefreshCw, Link2, AlertCircle, Eye, Heart, MessageCircle, Share2, Users } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { PostThumbnail } from "../PostThumbnail";
 
 const SUPPORTED = [
   { id: "instagram", label: "Instagram", help: "Conta Business/Creator vinculada a uma Página do Facebook. Informe o IG User ID e um Access Token de longa duração (Graph API v20)." },
@@ -225,7 +226,7 @@ function MetricsTab({ talent }: { talent: Talent }) {
             const cfg = PLATFORMS.find(p => p.id === post.platform)!;
             return (
               <a key={post.id} href={post.url || "#"} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 border">
-                {post.thumbnail_url && <img src={post.thumbnail_url} className="w-12 h-12 object-cover rounded" alt="" />}
+                <PostThumbnail src={post.thumbnail_url} className="h-12 w-12" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className={cfg?.color}>{cfg?.label}</Badge>

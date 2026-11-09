@@ -85,13 +85,10 @@ async function fetchMediaInsights(mediaId: string, mediaType: string, token: str
   }
 }
 
-function mapMediaTypeToPostType(mediaType: string, mediaUrl?: string): string {
-  if (mediaType === 'VIDEO') {
-    // Reels are usually VIDEO with permalink containing /reel/
-    return 'reel';
-  }
+function mapMediaTypeToPostType(mediaType: string): string {
+  if (mediaType === 'VIDEO' || mediaType === 'REELS') return 'reels';
   if (mediaType === 'CAROUSEL_ALBUM') return 'carousel';
-  return 'image';
+  return 'static';
 }
 
 Deno.serve(async (req) => {
@@ -201,7 +198,7 @@ Deno.serve(async (req) => {
       let postsSynced = 0;
       for (const media of mediaRes.data || []) {
         const insights = await fetchMediaInsights(media.id, media.media_type, token);
-        const post_type = mapMediaTypeToPostType(media.media_type, media.media_url);
+        const post_type = mapMediaTypeToPostType(media.media_type);
 
         const postRow = {
           profile_id: profile.id,

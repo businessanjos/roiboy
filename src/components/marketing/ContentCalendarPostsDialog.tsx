@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Instagram, Music2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PostThumbnail } from "./PostThumbnail";
 
 interface ContentCalendarPostsDialogProps {
   open: boolean;
@@ -52,17 +53,7 @@ export function ContentCalendarPostsDialog({
               onClick={() => handlePostClick(post.id)}
               className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
             >
-              {post.thumbnail_url ? (
-                <img
-                  src={post.thumbnail_url}
-                  alt=""
-                  className="w-12 h-12 rounded object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                  <PlatformIcon className="h-5 w-5 text-muted-foreground" />
-                </div>
-              )}
+              <PostThumbnail src={post.thumbnail_url} className="h-12 w-12" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm line-clamp-2">
                   {post.caption || "Sem legenda"}
