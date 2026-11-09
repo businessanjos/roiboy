@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Instagram, ExternalLink, Camera, AlertCircle, KeyRound } from 'lucide-react';
+import { Instagram, ExternalLink, Camera, AlertCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,14 +10,12 @@ import { InstagramProfileAvatarUpload } from './InstagramProfileAvatarUpload';
 interface InstagramProfileHeaderProps {
   profile: InstagramProfile | undefined;
   isLoading?: boolean;
-  onEditProfile?: () => void;
   onProfilePictureChange?: (url: string | null) => void;
 }
 
 export function InstagramProfileHeader({ 
   profile, 
   isLoading,
-  onEditProfile,
   onProfilePictureChange
 }: InstagramProfileHeaderProps) {
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
@@ -177,15 +175,9 @@ export function InstagramProfileHeader({
               <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
               <p className="min-w-0 flex-1 text-xs text-muted-foreground">
                 {profile.sync_error.includes('expirado') || profile.sync_error.includes('session is invalid')
-                  ? 'A conexão com a Meta expirou. Reconecte para atualizar seguidores, postagens e métricas.'
-                  : 'A conexão com a Meta precisa ser configurada para atualizar seguidores, postagens e métricas.'}
+                  ? 'A conexão com a Meta expirou. Reconecte em Configurações → Integrações → Instagram.'
+                  : 'Configure a conexão em Configurações → Integrações → Instagram.'}
               </p>
-              {onEditProfile && (
-                <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={onEditProfile}>
-                  <KeyRound className="h-3.5 w-3.5" />
-                  Reconectar Meta
-                </Button>
-              )}
             </div>
           )}
         </div>

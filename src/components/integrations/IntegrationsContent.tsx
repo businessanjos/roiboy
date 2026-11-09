@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building, Cloud, Bot, Send, MessageCircle } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building, Cloud, Bot, Send, MessageCircle, Instagram } from "lucide-react";
 import { McpConnectionTab } from "./McpConnectionTab";
 import { TrafficHubTab } from "./TrafficHubTab";
 import {
@@ -29,6 +29,7 @@ import { CallRykaConnectionCard } from "./CallRykaConnectionCard";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { GoogleDriveCard } from "./GoogleDriveCard";
+import { InstagramMetaSettingsCard } from "./InstagramMetaSettingsCard";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -48,6 +49,7 @@ const integrations_list = [
   { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar },
   { id: "3cplus", name: "3C Plus", description: "Plataforma de telefonia cloud para call center", icon: Phone },
   { id: "ryka_call", name: "Call Ryka", description: "Motor de ligação via WhatsApp", icon: Phone },
+  { id: "instagram", name: "Instagram", description: "Configure a Meta API dos perfis de Marketing", icon: Instagram },
   { id: "mcp", name: "Assistente IA no Claude", description: "Conecte o Claude Desktop aos dados do ROY", icon: Bot },
 ];
 
@@ -508,6 +510,10 @@ export function IntegrationsContent() {
               <Cloud className="h-4 w-4" />
               <span>Google Drive</span>
             </TabsTrigger>
+            <TabsTrigger value="instagram" className="gap-2 px-3 py-2">
+              <Instagram className="h-4 w-4" />
+              <span>Instagram</span>
+            </TabsTrigger>
             <TabsTrigger value="mcp" className="gap-2 px-3 py-2">
               <Bot className="h-4 w-4" />
               <span>MCP</span>
@@ -834,6 +840,11 @@ export function IntegrationsContent() {
         {/* Google Drive Tab */}
         <TabsContent value="gdrive" className="space-y-4">
           <GoogleDriveCard />
+        </TabsContent>
+
+        {/* Instagram Tab */}
+        <TabsContent value="instagram" className="space-y-4">
+          <InstagramMetaSettingsCard />
         </TabsContent>
 
         {/* MCP Tab */}
