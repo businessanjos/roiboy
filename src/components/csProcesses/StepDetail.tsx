@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { MessageCircle, Hourglass, AlertTriangle, ExternalLink, Copy, User, CalendarClock, ListChecks, CheckCircle2, Plus, Layers } from "lucide-react";
+import { MessageCircle, Hourglass, AlertTriangle, ExternalLink, Copy, User, CalendarClock, ListChecks, CheckCircle2, Plus, Layers, Mic, AudioLines } from "lucide-react";
+import { genderConsultant } from "@/lib/consultantGender";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -77,13 +78,24 @@ export function InlineMarkdown({ text, vars = {}, ctx }: { text: string; vars?: 
 function MessageCard({ a, vars, tour, ctx, onCopied }: { a: Extract<Action, { kind: "message" }>; vars: Vars; tour?: string; ctx: StepContext; onCopied: () => void }) {
   const long = a.text.split("\n").length > 3 || a.text.length > 260;
   const [open, setOpen] = useState(!long);
-  const shown = replaceClientLinks(a.text, ctx.client);
-  const copy = () => { navigator.clipboard.writeText(plainText(fillVars(shown, vars))); toast.success("Mensagem copiada ✓"); onCopied(); };
+  const shown = genderConsultant(replaceClientLinks(a.text, ctx.client), vars["nome da consultora"]);
+  const isAudio = /áudio|audio/i.test(a.channel ?? "");
+  const copy = () => { navigator.clipboard.writeText(plainText(fillVars(shown, vars))); toast.success(isAudio ? "Roteiro copiado ✓" : "Mensagem copiada ✓"); onCopied(); };
   return (
     <div data-tour={tour} className="rounded-xl border border-primary/40 bg-card p-4 shadow-sm">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{a.label ? `${a.label} · ` : ""}{a.channel}</span>
-        <Button size="sm" className="gap-1.5" onClick={copy}><Copy className="h-4 w-4" />Copiar</Button>
+        {isAudio ? (
+          <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 py-1 pl-1 pr-3 text-xs font-medium text-primary">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground"><Mic className="h-3.5 w-3.5" /></span>
+            {a.label ? `${a.label} · ` : ""}Gravar áudio
+            <AudioLines className="h-4 w-4 opacity-70" />
+          </span>
+        ) : (
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{a.label ? `${a.label} · ` : ""}{a.channel}</span>
+        )}
+        {isAudio
+          ? <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={copy} title="Copiar roteiro"><Copy className="h-3.5 w-3.5" />Copiar</Button>
+          : <Button size="sm" className="gap-1.5" onClick={copy}><Copy className="h-4 w-4" />Copiar</Button>}
       </div>
       <p className={`whitespace-pre-wrap text-base leading-relaxed ${open ? "" : "line-clamp-3"}`}>
         {shown.split(URL_SPLIT).map((p, i) => /^https?:/.test(p) ? <a key={i} href={p} target="_blank" rel="noreferrer" className="break-all text-primary underline">{p}</a> : <InlineMarkdown key={i} text={p} vars={vars} />)}
