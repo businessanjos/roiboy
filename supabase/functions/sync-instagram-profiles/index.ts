@@ -104,9 +104,10 @@ async function syncViaApify(supabase: any, profile: any): Promise<{ ok: boolean;
       display_name: ig.fullName || profile.display_name,
       profile_picture_url: isCustomAvatar ? profile.profile_picture_url : (ig.profilePicUrlHD || ig.profilePicUrl || profile.profile_picture_url),
       followers_previous_count: profile.followers_count,
-      followers_count: ig.followersCount ?? profile.followers_count,
-      following_count: ig.followsCount ?? profile.following_count,
-      posts_count: ig.postsCount ?? profile.posts_count,
+      // A busca pública às vezes devolve contagens parciais (ex.: 2 seguidores): mantém o valor anterior nesses casos.
+      followers_count: (ig.followersCount && (!profile.followers_count || ig.followersCount >= profile.followers_count * 0.5)) ? ig.followersCount : profile.followers_count,
+      following_count: ig.followsCount || profile.following_count,
+      posts_count: ig.postsCount || profile.posts_count,
       bio: ig.biography || profile.bio,
       last_synced_at: new Date().toISOString(),
       sync_error: null,
