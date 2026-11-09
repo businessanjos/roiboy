@@ -18,7 +18,7 @@ import { processVars, type ProcessClient, type ClientField } from "@/lib/csClien
 import { ClientProcessDataDialog } from "@/components/csProcesses/ClientProcessDataDialog";
 import { InProgressBoard } from "@/components/csProcesses/InProgressBoard";
 import { ProcessTrack } from "@/components/csProcesses/ProcessTrack";
-import type { BoardCard } from "@/lib/csInProgress";
+import { impliedDoneKeys, stageToAdvance, type BoardCard, type HubStage } from "@/lib/csInProgress";
 import { spDate } from "@/lib/csToday";
 import { onboardingGroups } from "@/components/csProcesses/OnboardingFlow";
 import { ProcessFlow, StepCard, CycleView, EventTimeline, isCycle, type StepStatus } from "@/components/csProcesses/ProcessFlow";
@@ -172,17 +172,46 @@ export default function CSProcesses() {
       return new Set((data ?? []).map((r) => r.step_key));
     },
   });
+  // Sincronia com o Onboarding Hub: etapa da ficha define o ponto de partida e avança sozinha.
+  const syncOnboarding = target?.type === "client" && active === 0;
+  const { data: hub } = useQuery({
+    queryKey: ["cs-process-hub-stage", target?.id, currentUser?.account_id],
+    enabled: !!syncOnboarding && !!currentUser?.account_id,
+    queryFn: async () => {
+      const [c, st] = await Promise.all([
+        supabase.from("clients").select("stage_id").eq("id", target!.id).maybeSingle(),
+        supabase.from("client_stages").select("id, name, display_order").eq("account_id", currentUser!.account_id).eq("is_active", true),
+      ]);
+      const stages = (st.data ?? []) as HubStage[];
+      return { stages, current: stages.find((x) => x.id === c.data?.stage_id) ?? null };
+    },
+  });
   const toggle = async (key: string, on: boolean) => {
     if (!target || !currentUser) return;
+    if (on && syncOnboarding && hub) {
+      const keys = (proc?.phases ?? []).flatMap((ph, pi) => ph.steps.map((_, si) => `${pi}-${si}`));
+      const done = new Set([...doneKeys, ...impliedDoneKeys(keys, hub.current), key]);
+      const nextStage = stageToAdvance(keys, done, hub.stages, hub.current);
+      if (nextStage) {
+        const { error } = await supabase.from("clients").update({ stage_id: nextStage }).eq("id", target.id);
+        if (!error) {
+          toast.success(`Onboarding atualizado: ${hub.stages.find((x) => x.id === nextStage)?.name}`);
+          qc.invalidateQueries({ queryKey: ["cs-process-hub-stage"] });
+          qc.invalidateQueries({ predicate: (q) => String(q.queryKey[0] ?? "").toLowerCase().includes("onboarding") });
+        }
+      }
+    }
     if (on) await supabase.from("cs_process_progress").upsert({ account_id: currentUser.account_id, process_id: proc.id, target_type: target.type, target_id: target.id, step_key: key }, { onConflict: "account_id,process_id,target_type,target_id,step_key" });
     else await supabase.from("cs_process_progress").delete().eq("target_type", target.type).eq("target_id", target.id).eq("process_id", proc.id).eq("step_key", key);
     qc.invalidateQueries({ queryKey: progressKey });
   };
 
   const allKeys = useMemo(() => (proc?.phases ?? []).flatMap((ph, pi) => ph.steps.map((_, si) => `${pi}-${si}`)), [proc]);
-  const currentKey = target ? allKeys.find((k) => !doneKeys.has(k)) : undefined;
-  const statusOf = useCallback((k: string): StepStatus => !target ? undefined : doneKeys.has(k) ? "done" : k === currentKey ? "current" : "pending", [target, doneKeys, currentKey]);
-  const pct = allKeys.length ? Math.round((allKeys.filter((k) => doneKeys.has(k)).length / allKeys.length) * 100) : 0;
+  const hubDone = useMemo(() => syncOnboarding && hub ? impliedDoneKeys(allKeys, hub.current) : new Set<string>(), [syncOnboarding, hub, allKeys]);
+  const isDone = useCallback((k: string) => doneKeys.has(k) || hubDone.has(k), [doneKeys, hubDone]);
+  const currentKey = target ? allKeys.find((k) => !isDone(k)) : undefined;
+  const statusOf = useCallback((k: string): StepStatus => !target ? undefined : isDone(k) ? "done" : k === currentKey ? "current" : "pending", [target, isDone, currentKey]);
+  const pct = allKeys.length ? Math.round((allKeys.filter((k) => isDone(k)).length / allKeys.length) * 100) : 0;
 
   const phases = useMemo(() => (proc?.phases ?? []).map((ph, pi) => ({ ...ph, pi, steps: ph.steps.map((s, si) => ({ s, key: `${pi}-${si}` })).filter(({ s }) => !q.trim() || norm(s.title + JSON.stringify(s.blocks)).includes(norm(q))) })).filter((ph) => ph.steps.length), [proc, q]);
 
@@ -197,10 +226,10 @@ export default function CSProcesses() {
   const selInfo = selStep ? toStepInfo(selStep) : null;
   const selNumber = `${spi + 1}.${ssi + 1}`;
   const selPhaseLabel = `Fase ${spi + 1} · ${(proc?.phases[spi]?.title ?? "").replace(/^Fase\s+\d+\s*[—-]\s*/i, "")}`;
-  const navStatus = useCallback((k: string): NavStatus => doneKeys.has(k) ? "done" : (target ? k === currentKey : k === selKey) ? "current" : "pending", [doneKeys, target, currentKey, selKey]);
-  const pickPhase = (pi: number) => { const ks = allKeys.filter((k) => k.startsWith(`${pi}-`)); setSel(ks.find((k) => !doneKeys.has(k)) ?? ks[0]); };
+  const navStatus = useCallback((k: string): NavStatus => isDone(k) ? "done" : (target ? k === currentKey : k === selKey) ? "current" : "pending", [isDone, target, currentKey, selKey]);
+  const pickPhase = (pi: number) => { const ks = allKeys.filter((k) => k.startsWith(`${pi}-`)); setSel(ks.find((k) => !isDone(k)) ?? ks[0]); };
   const completeAndNext = async () => {
-    if (target && !doneKeys.has(selKey)) await toggle(selKey, true);
+    if (target && !isDone(selKey)) await toggle(selKey, true);
     if (selIdx < allKeys.length - 1) setSel(allKeys[selIdx + 1]);
   };
   const { data: client = null } = useQuery({
@@ -328,8 +357,8 @@ export default function CSProcesses() {
   });
 
   const stepFooter = (key: string) => target && (
-    <Button size="sm" variant={doneKeys.has(key) ? "secondary" : "default"} onClick={() => toggle(key, !doneKeys.has(key))}>
-      {doneKeys.has(key) ? "Desmarcar etapa" : "Marcar etapa como feita"}
+    <Button size="sm" variant={isDone(key) ? "secondary" : "default"} disabled={hubDone.has(key) && !doneKeys.has(key)} onClick={() => toggle(key, !doneKeys.has(key))}>
+      {hubDone.has(key) && !doneKeys.has(key) ? "Feita conforme o Onboarding" : isDone(key) ? "Desmarcar etapa" : "Marcar etapa como feita"}
     </Button>
   );
 
@@ -425,7 +454,7 @@ export default function CSProcesses() {
                 <div className="sticky bottom-0 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 border-t bg-muted/80 py-3 backdrop-blur">
                   <Button variant="ghost" disabled={selIdx <= 0} onClick={() => setSel(allKeys[selIdx - 1])}>← Etapa anterior</Button>
                   <Button data-tour="next" disabled={!target && selIdx >= allKeys.length - 1} onClick={completeAndNext}>
-                    {target ? (doneKeys.has(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima →") : "Próxima etapa →"}
+                    {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima →") : "Próxima etapa →"}
                   </Button>
                 </div>
               </div>
