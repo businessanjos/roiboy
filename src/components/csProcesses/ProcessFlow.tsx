@@ -1,5 +1,6 @@
-import { useMemo } from "react";
-import { ReactFlow, Background, Controls, Handle, Position, MarkerType, type Node, type Edge, type NodeProps } from "@xyflow/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
+import { ReactFlow, Background, Controls, ControlButton, useReactFlow, Handle, Position, MarkerType, type Node, type Edge, type NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { MessageSquare, CheckSquare, Link2, AlertTriangle, Check, ArrowDown, RefreshCw } from "lucide-react";
 import type { Process, Step } from "@/lib/csProcesses";
@@ -107,12 +108,45 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups }
     }));
     return { nodes, edges };
   }, [process, groups, accent, statusOf, open, badgeOf]);
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    if (!full) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setFull(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [full]);
   return (
-    <div className="h-[70vh] overflow-hidden rounded-2xl border bg-background">
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView minZoom={0.3} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
+    <div className={full ? "fixed inset-0 z-50 bg-background" : "h-[70vh] overflow-hidden rounded-2xl border bg-background"}>
+      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} minZoom={0.2} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
         <Background gap={24} />
-        <Controls showInteractive={false} />
+        <Controls showInteractive={false}>
+          <ControlButton onClick={() => setFull((v) => !v)} title={full ? "Sair da tela cheia" : "Tela cheia"} aria-label={full ? "Sair da tela cheia" : "Tela cheia"}>
+            {full ? <Minimize2 /> : <Maximize2 />}
+          </ControlButton>
+        </Controls>
+        <InitialView count={nodes.length} intro={!!groups} full={full} />
       </ReactFlow>
     </div>
   );
+}
+
+/** Abre legível nas primeiras fases; no Onboarding mostra antes o fluxo inteiro e volta ao início. */
+function InitialView({ count, intro, full }: { count: number; intro: boolean; full: boolean }) {
+  const rf = useReactFlow();
+  const first = useRef(true);
+  useEffect(() => {
+    if (!count) return;
+    const start = { nodes: [{ id: "p0" }, { id: "p1" }, { id: "p2" }], padding: 0.1, maxZoom: 1 };
+    const timers: number[] = [];
+    if (first.current && intro) {
+      first.current = false;
+      timers.push(window.setTimeout(() => rf.fitView({ padding: 0.08, duration: 0 }), 50));
+      timers.push(window.setTimeout(() => rf.fitView({ ...start, duration: 1200 }), 1500));
+    } else {
+      first.current = false;
+      timers.push(window.setTimeout(() => rf.fitView({ ...start, duration: 300 }), 50));
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [count, intro, full, rf]);
+  return null;
 }
