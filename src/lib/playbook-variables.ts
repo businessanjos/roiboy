@@ -1,5 +1,6 @@
 import type { ConversationAssignment } from '@/components/royzapp/types';
 import { extractFirstName } from '@/lib/zappFirstNameTitle';
+import { realContactName } from '@/lib/contactNameVars';
 
 interface PlaybookVariableContext {
   conversation?: ConversationAssignment | null;
@@ -19,10 +20,13 @@ export function extractPlaybookVariables(context: PlaybookVariableContext): Reco
   const oldClient = conversation?.conversation?.client;
   
   // Nome completo (com fallback hierárquico)
-  const nomeCompleto = client?.full_name || lead?.full_name || zapp?.contact_name || oldClient?.full_name || '';
+  const phone = zapp?.phone_e164 || null;
+  const nomeCompleto = [client?.full_name, lead?.full_name, zapp?.contact_name, oldClient?.full_name]
+    .map((n) => realContactName(n, phone))
+    .find(Boolean) || '';
   
-  // Primeiro nome (extrai apenas a primeira palavra, fallback para "Olá")
-  const primeiroNome = extractFirstName(nomeCompleto, context.keepTitle ?? true) || 'Olá';
+  // Primeiro nome; sem nome real fica vazio (nunca "Desconhecido")
+  const primeiroNome = extractFirstName(nomeCompleto, context.keepTitle ?? true);
   
   // Telefone
   const telefone = zapp?.phone_e164 || client?.phone_e164 || oldClient?.phone_e164 || '';

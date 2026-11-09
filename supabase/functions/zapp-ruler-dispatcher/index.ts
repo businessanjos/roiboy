@@ -49,8 +49,13 @@ function firstName(full: string, keepTitle: boolean): string {
 }
 
 function personalize(text: string, name: string | null, keepTitle = true): string {
-  const full = (name || "").trim();
+  let full = (name || "").trim();
+  // "Desconhecido", "Contato" ou o próprio número nunca viram nome na mensagem.
+  if (/^(desconhecido|sem nome|contato|unknown)$/i.test(full) || /^[\d\s()+\-.]{8,}$/.test(full)) full = "";
   const first = firstName(full, keepTitle);
+  if (!full) {
+    return text.replace(/[ \t]*,?[ \t]*\{(nome|primeiro_nome)\}/gi, "");
+  }
   return text
     .replace(/\{nome\}/gi, full)
     .replace(/\{primeiro_nome\}/gi, first);
