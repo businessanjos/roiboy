@@ -28,7 +28,10 @@ export function useCsInProgress() {
       return {
         waiting: new Set((waits.data ?? []).map((w) => w.client_id as string)),
         events: (events.data ?? []).filter((e: any) => e.status !== "cancelled"),
-        users: ((users.data ?? []) as any[]).map((u) => ({ ...u, isCs: (u.user_team_roles ?? []).some((r: any) => /^(Consultor|CX|Supervisor CX)$/i.test(r.team_roles?.name ?? "")) })) as { id: string; name: string; avatar_url: string | null; isCs: boolean }[],
+        users: ((users.data ?? []) as any[]).map((u) => ({
+          ...u,
+          isCs: showInCsConsultantFilter(u.name ?? "") && (u.user_team_roles ?? []).some((r: any) => /^(Consultor|CX|Supervisor CX)$/i.test(r.team_roles?.name ?? "")),
+        })) as { id: string; name: string; avatar_url: string | null; isCs: boolean }[],
       };
     },
   });
