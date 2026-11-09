@@ -346,7 +346,6 @@ export default function CSProcesses() {
           <Button size="sm" variant={tab === "process" ? "secondary" : "ghost"} onClick={() => setTab("process")}>Processos</Button>
           <Button size="sm" variant={tab === "today" ? "secondary" : "ghost"} onClick={() => setTab("today")}>Em andamento</Button>
         </div>
-        {tab === "process" && client && <Button size="sm" variant="outline" onClick={() => { setEditField(undefined); setEditClientOpen(true); }}>Dados da {client.full_name.split(" ")[0]}</Button>}
         {tab === "process" && <div data-tour="toggle" className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view === "list" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("list")}><List className="h-4 w-4" />Lista</Button>
           <Button size="sm" variant={view === "flow" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("flow")}><Workflow className="h-4 w-4" />Fluxograma</Button>
