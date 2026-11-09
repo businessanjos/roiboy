@@ -117,7 +117,18 @@ function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
     </div>
   );
 }
-const nodeTypes = { phase: PhaseNode };
+function ProcessLabelNode({ data }: NodeProps<Node<ProcessLabelData>>) {
+  return (
+    <div className="pointer-events-none w-[300px] select-none rounded-xl border bg-card/95 px-4 py-3 shadow-sm">
+      <div className="flex items-center gap-2.5">
+        <span className={`h-2.5 w-2.5 rounded-full ${data.accent}`} />
+        <h3 className="text-sm font-semibold">{data.title}</h3>
+      </div>
+      <p className="mt-1 pl-5 text-xs text-muted-foreground">{data.details}</p>
+    </div>
+  );
+}
+const nodeTypes = { phase: PhaseNode, processLabel: ProcessLabelNode };
 
 export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, resetKey = 0 }: { groups?: { title: string; steps: { step: Step; key: string }[] }[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined; resetKey?: number }) {
   const { nodes, edges } = useMemo(() => {
