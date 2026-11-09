@@ -116,10 +116,10 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
     return () => window.removeEventListener("keydown", onKey);
   }, [full]);
   return (
-    <div className={full ? "fixed inset-x-0 bottom-0 top-14 z-40 bg-background" : "h-[clamp(420px,52vh,520px)] overflow-hidden rounded-2xl border bg-background"}>
+    <div className={full ? "fixed inset-x-0 bottom-0 top-14 z-40 bg-background" : "h-[70vh] overflow-hidden rounded-2xl border bg-background"}>
       <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} minZoom={0.2} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
         <Background gap={24} />
-        <Controls showInteractive={false}>
+        <Controls showInteractive={false} className="!flex-row [&_.react-flow__controls-button]:border-b-0 [&_.react-flow__controls-button]:border-r [&_.react-flow__controls-button:last-child]:border-r-0">
           <ControlButton onClick={() => setFull((v) => !v)} title={full ? "Sair da tela cheia" : "Tela cheia"} aria-label={full ? "Sair da tela cheia" : "Tela cheia"}>
             {full ? <Minimize2 /> : <Maximize2 />}
           </ControlButton>
