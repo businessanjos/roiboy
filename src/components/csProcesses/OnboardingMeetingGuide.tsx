@@ -34,6 +34,17 @@ const BLOCKS: Block[] = [
     ] }],
   },
   {
+    title: "Alinhamento e conexão", subtitle: "Abertura da reunião", icon: HeartHandshake,
+    groups: [{ items: [
+      { id: "al-historico", text: "Histórico breve" },
+      { id: "al-acolhimento", text: "Acolhimento de boas-vindas" },
+      { id: "al-apresentar", text: "Se apresentar" },
+      { id: "al-qg", text: "Apresentar o QG" },
+      { id: "al-horarios", text: "Alinhar horários" },
+      { id: "al-compromisso", text: "Compromisso 50%" },
+    ] }],
+  },
+  {
     title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
     highlight: "Explicar a função e os benefícios ao implementar o sistema de vendas que já gerou mais de 1,3 bilhão em vendas de procedimentos.",
     groups: [{ items: [
