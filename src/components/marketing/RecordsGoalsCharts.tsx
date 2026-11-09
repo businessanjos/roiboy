@@ -85,14 +85,18 @@ interface Props {
   goals: GoalRow[];
   year: number;
   month: number;
-  metric?: MetricKey;
-  onMetricChange?: (m: MetricKey) => void;
+  metric?: MetricKey | null;
+  onMetricChange?: (m: MetricKey | null) => void;
 }
 
 export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricProp, onMetricChange }: Props) {
-  const [metricLocal, setMetricLocal] = useState<MetricKey>('views');
-  const metric = metricProp ?? metricLocal;
-  const setMetric = (m: MetricKey) => { setMetricLocal(m); onMetricChange?.(m); };
+  const [metricLocal, setMetricLocal] = useState<MetricKey | null>('views');
+  const metric = metricProp === undefined ? metricLocal : metricProp;
+  const setMetric = (m: MetricKey) => {
+    const next = m === metric ? null : m;
+    setMetricLocal(next);
+    onMetricChange?.(next);
+  };
   const [period, setPeriod] = useState<Period>('month');
   const reducedMotion = useReducedMotion();
   const chartId = useId().replace(/:/g, '');
