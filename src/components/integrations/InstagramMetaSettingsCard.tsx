@@ -14,7 +14,7 @@ interface InstagramSettingsProfile {
   username: string;
   sync_error: string | null;
   meta_access_token: string | null;
-  ig_business_id: string | null;
+  meta_user_id: string | null;
 }
 
 export function InstagramMetaSettingsCard() {
