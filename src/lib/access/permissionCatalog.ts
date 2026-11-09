@@ -52,6 +52,13 @@ export const PERMISSION_CATALOG: CatalogModule[] = [
       { sub: "logs", label: "Logs" },
     ],
   },
+  {
+    module: "cs",
+    label: "Customer Success",
+    items: [
+      { sub: "processos_ver_todas", label: "Processos: ver clientes de todas as consultoras" },
+    ],
+  },
 ];
 
 export const LEVEL_LABELS: Record<AccessLevel, string> = {
