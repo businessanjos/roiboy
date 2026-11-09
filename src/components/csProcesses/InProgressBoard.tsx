@@ -73,7 +73,7 @@ export function InProgressBoard({ processes, onOpenCard }: { processes: Process[
             <SelectContent>
               <SelectItem value="mine">Minhas clientes</SelectItem>
               {canSeeAll && <SelectItem value="all">Todas</SelectItem>}
-              {canSeeAll && users.filter((u) => u.id !== currentUser?.id).map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+              {canSeeAll && users.filter((u) => u.isCs && u.id !== currentUser?.id).map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
             </SelectContent>
           </Select>
         )}
