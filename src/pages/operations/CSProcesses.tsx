@@ -1,3 +1,4 @@
+import { detectOnboardingSteps } from "@/lib/csProcessWhatsAppSync";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -213,6 +214,35 @@ export default function CSProcesses() {
     else await supabase.from("cs_process_progress").delete().eq("target_type", target.type).eq("target_id", target.id).eq("process_id", proc.id).eq("step_key", key);
     qc.invalidateQueries({ queryKey: progressKey });
   };
+
+  // Leitura retroativa: ao abrir a cliente, confere só a conversa dela no RoyZapp e marca o que já foi enviado.
+  const syncedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!syncOnboarding || !hub || !currentUser || !proc || !target) return;
+    const tag = `${target.id}:${proc.id}`;
+    if (syncedFor.current === tag) return;
+    syncedFor.current = tag;
+    (async () => {
+      const { data: convs } = await supabase.from("zapp_conversations").select("id").eq("client_id", target.id).eq("is_group", false).limit(5);
+      if (!convs?.length) return;
+      const { data: msgs } = await supabase.from("zapp_messages").select("content, direction")
+        .in("zapp_conversation_id", convs.map((c) => c.id)).eq("direction", "outbound")
+        .order("sent_at", { ascending: false }).limit(300);
+      const keys = (proc.phases ?? []).flatMap((ph, pi) => ph.steps.map((_, si) => `${pi}-${si}`));
+      const implied = impliedDoneKeys(keys, hub.current);
+      const found = [...detectOnboardingSteps(msgs ?? [])].filter((k) => keys.includes(k) && !doneKeys.has(k) && !implied.has(k));
+      if (!found.length) return;
+      await supabase.from("cs_process_progress").upsert(found.map((k) => ({ account_id: currentUser.account_id, process_id: proc.id, target_type: "client", target_id: target.id, step_key: k })), { onConflict: "account_id,process_id,target_type,target_id,step_key" });
+      const done = new Set([...doneKeys, ...implied, ...found]);
+      const nextStage = stageToAdvance(keys, done, hub.stages, hub.current);
+      if (nextStage) {
+        const { error } = await supabase.from("clients").update({ stage_id: nextStage }).eq("id", target.id);
+        if (!error) qc.invalidateQueries({ queryKey: ["cs-process-hub-stage"] });
+      }
+      toast.success(`${found.length} ${found.length === 1 ? "etapa identificada" : "etapas identificadas"} no WhatsApp e atualizadas`);
+      qc.invalidateQueries({ queryKey: ["cs-process-progress", "client", target.id] });
+    })();
+  }, [syncOnboarding, hub, currentUser, proc, target, doneKeys, qc]);
 
   const allKeys = useMemo(() => (proc?.phases ?? []).flatMap((ph, pi) => ph.steps.map((_, si) => `${pi}-${si}`)), [proc]);
   const hubDone = useMemo(() => syncOnboarding && hub ? impliedDoneKeys(allKeys, hub.current) : new Set<string>(), [syncOnboarding, hub, allKeys]);
