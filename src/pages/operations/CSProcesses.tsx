@@ -260,6 +260,17 @@ export default function CSProcesses() {
     next.set(card.kind === "client" ? "client" : "event", card.id);
     setTrack(null); setParams(next); setActive(pi); setSel(stepKey); setTab("process");
   };
+  const clearClientSelection = (chooseAnother = false) => {
+    const next = new URLSearchParams(params);
+    next.delete("client");
+    next.delete("event");
+    setParams(next, { replace: true });
+    setOpenKey(null);
+    setTrack(null);
+    setEditClientOpen(false);
+    setTab(chooseAnother ? "today" : "process");
+    if (chooseAnother) setView("list");
+  };
   const tourFullName = (currentUser as any)?.name as string | undefined;
   const tourFirstName = tourFullName?.trim().split(/\s+/)[0] ?? "";
   const tourMasculine = isMasculineName(tourFullName);
