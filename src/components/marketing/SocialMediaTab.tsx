@@ -100,11 +100,11 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [visibleMetric, setVisibleMetric] = useState('reach');
   const metricColumns: Record<string, string> = {
-    reach: '[&_tr>*:nth-child(7)]:table-cell', likes: '[&_tr>*:nth-child(8)]:table-cell',
-    comments: '[&_tr>*:nth-child(9)]:table-cell', shares: '[&_tr>*:nth-child(10)]:table-cell',
-    saves: '[&_tr>*:nth-child(11)]:table-cell', link_clicks: '[&_tr>*:nth-child(12)]:table-cell',
-    views: '[&_tr>*:nth-child(13)]:table-cell', engagement_rate: '[&_tr>*:nth-child(14)]:table-cell',
-    virality_rate: '[&_tr>*:nth-child(15)]:table-cell',
+    reach: '[&_tr>*:nth-child(7)]:!table-cell', likes: '[&_tr>*:nth-child(8)]:!table-cell',
+    comments: '[&_tr>*:nth-child(9)]:!table-cell', shares: '[&_tr>*:nth-child(10)]:!table-cell',
+    saves: '[&_tr>*:nth-child(11)]:!table-cell', link_clicks: '[&_tr>*:nth-child(12)]:!table-cell',
+    views: '[&_tr>*:nth-child(13)]:!table-cell', engagement_rate: '[&_tr>*:nth-child(14)]:!table-cell',
+    virality_rate: '[&_tr>*:nth-child(15)]:!table-cell',
   };
   
   const {
