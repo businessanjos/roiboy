@@ -114,9 +114,17 @@ async function syncViaApify(supabase: any, profile: any): Promise<{ ok: boolean;
     }).eq('id', profile.id);
 
     let posts = 0;
-    for (const p of (ig.latestPosts || []) as any[]) {
+    let postItems: any[] = ig.latestPosts || [];
+    if (!postItems.length) {
+      try {
+        postItems = await runApifyActor('apify~instagram-scraper', {
+          directUrls: [`https://www.instagram.com/${profile.username}/`], resultsType: 'posts', resultsLimit: 30,
+        }, 150);
+      } catch (e: any) { console.error(`Apify posts ${profile.username}: ${e.message}`); }
+    }
+    for (const p of postItems) {
       const code = p.shortCode;
-      if (!code) continue;
+      if (!code || p.error) continue;
       const type = String(p.type || '');
       const row: Record<string, unknown> = {
         profile_id: profile.id,
@@ -125,10 +133,10 @@ async function syncViaApify(supabase: any, profile: any): Promise<{ ok: boolean;
         caption: p.caption || null,
         permalink: p.url || `https://www.instagram.com/p/${code}/`,
         posted_at: p.timestamp,
-        likes: Math.max(0, p.likesCount ?? 0),
-        comments: p.commentsCount ?? 0,
         updated_at: new Date().toISOString(),
       };
+      if (typeof p.likesCount === 'number' && p.likesCount >= 0) row.likes = p.likesCount;
+      if (typeof p.commentsCount === 'number' && p.commentsCount >= 0) row.comments = p.commentsCount;
       if (p.videoViewCount || p.videoPlayCount) row.views = p.videoPlayCount || p.videoViewCount;
       const { error } = await supabase.from('instagram_posts').upsert(row, { onConflict: 'profile_id,instagram_id' });
       if (!error) posts++;
