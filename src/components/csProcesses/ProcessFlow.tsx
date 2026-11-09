@@ -86,7 +86,7 @@ function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
         {data.steps.map(({ step, key }, i) => (
           <div key={`${key}-${i}`} className="space-y-2">
             {i > 0 && <ArrowDown className="mx-auto h-3.5 w-3.5 text-muted-foreground" />}
-            <StepCard step={step} status={data.statusOf(key)} onClick={() => data.open(key)} badge={data.badgeOf?.(key)} />
+            <StepCard step={step} status={data.statusOf(key)} onClick={() => data.open(key)} badge={data.badgeOf?.(key)} tourId={i === 0 && key === "0-0" ? "flow-step" : undefined} />
           </div>
         ))}
       </div>
@@ -116,7 +116,7 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
     return () => window.removeEventListener("keydown", onKey);
   }, [full]);
   return (
-    <div className={full ? "fixed inset-x-0 bottom-0 top-14 z-40 bg-background" : "h-[70vh] overflow-hidden rounded-2xl border bg-background"}>
+    <div data-tour="flow" className={full ? "fixed inset-x-0 bottom-0 top-14 z-40 bg-background" : "h-[70vh] overflow-hidden rounded-2xl border bg-background"}>
       <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} minZoom={0.2} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
         <Background gap={24} />
         <Controls showInteractive={false} className="!flex-row [&_.react-flow__controls-button]:border-b-0 [&_.react-flow__controls-button]:border-r [&_.react-flow__controls-button:last-child]:border-r-0">
