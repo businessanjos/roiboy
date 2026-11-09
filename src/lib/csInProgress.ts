@@ -65,3 +65,34 @@ export function sinceLabel(since: string | null | undefined, today = spDate()) {
   const d = daysBetween(since, today);
   return d <= 0 ? "desde hoje" : d === 1 ? "há 1 dia" : `há ${d} dias`;
 }
+
+export interface HubStage { id: string; name: string; display_order: number | null }
+
+/** Índice (na ordem das etapas do processo) em que a cliente está pela etapa do Onboarding Hub. -1 = sem correspondência. */
+export function stageStepIndex(allKeys: string[], stage: HubStage | null | undefined): number {
+  const k = stepOfStage(stage?.name);
+  return k ? allKeys.indexOf(k) : -1;
+}
+
+/** Etapas anteriores à etapa do Onboarding Hub contam como feitas (a consultora já passou por elas). */
+export function impliedDoneKeys(allKeys: string[], stage: HubStage | null | undefined): Set<string> {
+  const idx = stageStepIndex(allKeys, stage);
+  return new Set(idx > 0 ? allKeys.slice(0, idx) : []);
+}
+
+/** Próxima etapa do Onboarding Hub após marcar etapas nos Processos. Nunca volta a cliente para trás.
+ * Retorna o id da etapa para onde avançar, ou null se nada muda. */
+export function stageToAdvance(allKeys: string[], done: Set<string>, stages: HubStage[], current: HubStage | null | undefined): string | null {
+  const next = allKeys.findIndex((k) => !done.has(k));
+  const reach = next === -1 ? allKeys.length - 1 : next;
+  const curIdx = stageStepIndex(allKeys, current);
+  const curOrder = current?.display_order ?? -1;
+  let best: HubStage | null = null, bestIdx = -1;
+  for (const s of stages) {
+    const i = stageStepIndex(allKeys, s);
+    if (i < 0 || i > reach || i <= curIdx || i <= bestIdx) continue;
+    if (current && curIdx < 0 && (s.display_order ?? -1) <= curOrder) continue; // etapa atual fora do mapa: só avança na ordem do Hub
+    best = s; bestIdx = i;
+  }
+  return best && best.id !== current?.id ? best.id : null;
+}
