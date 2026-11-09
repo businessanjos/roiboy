@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Crown, Target, Layers, CalendarRange, FileText, KanbanSquare, Library, BarChart3, LayoutGrid,
   Instagram, Youtube, Music2, MessageSquare, Linkedin, Image as ImageIcon, Headphones, Sparkles,
-  Lightbulb, Sun, Bot, Flame, Zap, Wand2, CalendarDays,
+  Lightbulb, Sun, Bot, Flame, Zap, Wand2, CalendarDays, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ContentProfileProvider } from "@/contexts/ContentProfileContext";
@@ -108,12 +108,13 @@ const PLATFORM_ICONS: Record<string, any> = {
 export default function ContentHQ() {
   const { data: talents = [], isLoading } = useTalents();
   const [section, setSection] = useState<Section>("today");
+  const [expandedGroup, setExpandedGroup] = useState<string | null>("Hoje");
   const [talentId, setTalentId] = useState<string | "all">("all");
   const [platformFilter, setPlatformFilter] = useState<string | "all">("all");
   const [drawerPiece, setDrawerPiece] = useState<{ piece: ContentPiece; talent: Talent } | null>(null);
 
-  const currentSection = ALL_SECTIONS.find((s) => s.id === section)!;
-  const showHqHeader = !!currentSection.hqHeader;
+  const currentSection = ALL_SECTIONS.find((s) => s.id === section) ?? ALL_SECTIONS[0];
+  const showHqHeader = !!currentSection?.hqHeader;
   const currentTalent = talents.find((t) => t.id === talentId);
   const effPlatform = platformFilter === "all" ? undefined : platformFilter;
 
@@ -161,15 +162,22 @@ export default function ContentHQ() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
+        <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-[220px_minmax(0,1fr)]">
           {/* Vertical sidebar */}
-          <aside className="space-y-5">
+          <aside className="space-y-1 border-b pb-3 md:border-b-0 md:border-r md:pb-0 md:pr-3" aria-label="Seções da Produção">
             {GROUPS.map((g) => (
               <div key={g.group}>
-                <div className="px-2 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {g.group}
-                </div>
-                  <nav className="space-y-0.5">
+                <Button variant="ghost" aria-expanded={expandedGroup === g.group}
+                  aria-controls={`content-group-${g.group}`}
+                  onClick={() => setExpandedGroup(expandedGroup === g.group ? null : g.group)}
+                  className="h-9 w-full justify-between gap-2 px-2.5 text-xs font-semibold text-muted-foreground">
+                  <span className="flex items-center gap-2">
+                    {g.items.some((s) => s.id === section) && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                    {g.group}
+                  </span>
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expandedGroup === g.group && "rotate-180")} />
+                </Button>
+                {expandedGroup === g.group && <nav id={`content-group-${g.group}`} className="mb-2 space-y-0.5">
                   {g.items.map((s) => {
                     const Icon = s.icon;
                     const active = section === s.id;
@@ -178,18 +186,18 @@ export default function ContentHQ() {
                         key={s.id}
                         onClick={() => setSection(s.id)}
                         className={cn(
-                          "h-auto min-h-11 w-full justify-start text-left text-sm rounded-md px-2.5 py-1.5 flex items-center gap-2 transition-colors",
+                          "h-auto min-h-9 w-full justify-start text-left text-sm rounded-md px-2.5 py-1.5 flex items-center gap-2 transition-colors",
                           active
                             ? "bg-primary/10 text-primary font-medium"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                         )}
                       >
                         <Icon className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{s.label}</span>
+                        <span className="whitespace-normal leading-5">{s.label}</span>
                       </Button>
                     );
                   })}
-                </nav>
+                </nav>}
               </div>
             ))}
           </aside>
@@ -241,9 +249,9 @@ export default function ContentHQ() {
             )}
 
             <div>
-              {isLoading && currentSection.needsTalent ? (
+              {isLoading && currentSection?.needsTalent ? (
                 <Card className="p-8 text-center text-muted-foreground">Carregando talentos...</Card>
-              ) : currentSection.needsTalent && talentId === "all" ? (
+              ) : currentSection?.needsTalent && talentId === "all" ? (
                 <Card className="p-8 text-center text-muted-foreground">
                   Selecione <strong>Bruna</strong> ou <strong>Everton</strong> para ver esta seção.
                 </Card>
