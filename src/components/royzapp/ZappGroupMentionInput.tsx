@@ -200,6 +200,32 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
       setMentionStartIndex(-1);
     }, [value, groupJid]);
 
+    // Texto colado com "@Nome" (ex.: copiado dos Processos) vira menção real automaticamente
+    const autoMentioned = useRef<Set<string>>(new Set());
+    useEffect(() => {
+      if (!value) { autoMentioned.current.clear(); return; }
+      if (!groupJid || !value.includes("@") || participants.length === 0) return;
+      const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const named = participants.filter((p) => p.name && !/^\+?\d[\d\s()-]*$/.test(p.name));
+      const re = /(^|\s)@([\p{L}][\p{L}'-]*(?:\s[\p{L}][\p{L}'-]*)*)/gu;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(value)) !== null) {
+        const words = m[2].split(/\s/);
+        for (let n = words.length; n >= 1; n--) {
+          const typed = words.slice(0, n).join(" ");
+          if (autoMentioned.current.has(norm(typed))) break;
+          const full = named.filter((p) => norm(p.name) === norm(typed));
+          const hits = full.length ? full : n === 1 ? named.filter((p) => norm(p.name.split(/\s+/)[0]) === norm(typed)) : [];
+          if (hits.length === 1) {
+            const p = hits[0];
+            autoMentioned.current.add(norm(typed));
+            onMentionInsert?.({ phone: p.phone, jid: p.jid || `${p.phone}@s.whatsapp.net`, name: typed, is_lid: p.isLid });
+            break;
+          }
+        }
+      }
+    }, [value, groupJid, participants, onMentionInsert]);
+
     // Handle selecting a mention
     const selectMention = useCallback((participant: GroupParticipant) => {
       const beforeMention = value.slice(0, mentionStartIndex);
