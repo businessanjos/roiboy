@@ -35,6 +35,7 @@ export function AudioTeleprompter({ open, onOpenChange, script, client, onSent }
   const cleanup = useRef<() => void>(() => {});
 
   useEffect(() => { if (state !== "rec") return; const id = setInterval(() => setSecs(Math.round((Date.now() - t0.current) / 1000)), 250); return () => clearInterval(id); }, [state]);
+  useEffect(() => { if (state !== "idle") return; const id = setInterval(() => setHint((h) => h + 1), 4200); return () => clearInterval(id); }, [state]);
   useEffect(() => { if (!open) { cleanup.current(); rec.current?.state === "recording" && rec.current.stop(); setState("idle"); setSecs(0); setTake(null); } }, [open]);
 
   const start = async () => {
@@ -86,7 +87,10 @@ export function AudioTeleprompter({ open, onOpenChange, script, client, onSent }
           {state === "idle" && (
             <div className="flex flex-col items-center gap-2">
               <Button size="lg" className="h-14 gap-2 rounded-full px-8 text-base" onClick={start}><Mic className="h-5 w-5" />Começar a gravar</Button>
-              <span className="text-xs text-muted-foreground">Dica: leia com calma, sorrindo — dá pra ouvir antes de enviar.</span>
+              <div className="flex min-h-[1.25rem] items-center gap-1.5 overflow-hidden">
+                <Sparkles key={`i${hint}`} className="h-3.5 w-3.5 shrink-0 animate-hint-in text-primary" />
+                <span key={hint} className="animate-hint-in text-xs text-muted-foreground">{HINTS[hint % HINTS.length]}</span>
+              </div>
             </div>
           )}
           {state === "rec" && (
