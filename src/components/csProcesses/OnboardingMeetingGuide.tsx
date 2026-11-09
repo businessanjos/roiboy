@@ -52,6 +52,14 @@ const BLOCKS: Block[] = [
     ] }],
   },
   {
+    title: "Dúvidas e esclarecimentos", subtitle: "Cadastro e briefing", icon: BookOpenCheck,
+    highlight: "Dúvidas e esclarecimentos sobre as respostas do cadastro empresarial e briefing comercial.",
+    groups: [{ items: [
+      { id: "de-cadastro", text: "Esclarecer respostas do cadastro empresarial" },
+      { id: "de-briefing", text: "Esclarecer respostas do briefing comercial" },
+    ] }],
+  },
+  {
     title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
     highlight: "Explicar a função e os benefícios ao implementar o sistema de vendas que já gerou mais de 1,3 bilhão em vendas de procedimentos.",
     groups: [{ items: [
