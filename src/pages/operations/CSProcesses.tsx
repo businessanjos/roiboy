@@ -163,6 +163,14 @@ export default function CSProcesses() {
       const { data } = await supabase.from("events").select("title").eq("id", target!.id).maybeSingle(); return data?.title as string | undefined;
     },
   });
+  const { data: targetPhoto } = useQuery({
+    queryKey: ["cs-process-target-photo", target?.id],
+    enabled: target?.type === "client",
+    queryFn: async () => {
+      const { data } = await supabase.from("clients").select("logo_url").eq("id", target!.id).maybeSingle();
+      return (data?.logo_url as string | null) || null;
+    },
+  });
   const progressKey = ["cs-process-progress", target?.type, target?.id, proc?.id];
   const { data: doneKeys = new Set<string>() } = useQuery({
     queryKey: progressKey,
@@ -386,7 +394,11 @@ export default function CSProcesses() {
         <section aria-label="Cliente selecionada" className="rounded-2xl border border-primary/35 bg-primary/[0.07] p-4 shadow-sm">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
             <div className="flex min-w-0 flex-1 items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm"><UserRound className="h-5 w-5" /></span>
+              {targetPhoto ? (
+                <img src={targetPhoto} alt={targetName ?? "Cliente"} draggable={false} className="h-11 w-11 shrink-0 select-none rounded-xl object-cover shadow-sm ring-1 ring-primary/30" />
+              ) : (
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm"><UserRound className="h-5 w-5" /></span>
+              )}
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">Cliente selecionada</span>
