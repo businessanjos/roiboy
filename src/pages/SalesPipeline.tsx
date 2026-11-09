@@ -1322,13 +1322,32 @@ export default function SalesPipeline() {
     [filteredOpenDeals],
   );
 
-  const filteredWonDeals = useMemo(() =>
+  // Ganhas/Perdidas: busca primeiro (base das opções de Origem), depois Formulário e Origem.
+  const wonBeforeTagFilter = useMemo(() =>
     applyFilterToDeals(wonDeals, null, debouncedSearchTerm, openDealProductMap, undefined, undefined, searchOptions),
     [wonDeals, debouncedSearchTerm, openDealProductMap, searchOptions]
   );
-  const filteredLostDeals = useMemo(() =>
+  const lostBeforeTagFilter = useMemo(() =>
     applyFilterToDeals(lostDeals, null, debouncedSearchTerm, openDealProductMap, undefined, undefined, searchOptions),
     [lostDeals, debouncedSearchTerm, openDealProductMap, searchOptions]
+  );
+  const applyTagAndReapply = useCallback((list: Deal[]) => {
+    let out = list;
+    if (onlyReapplied) out = out.filter(d => (d.typeform_reapplication_count ?? 0) > 0);
+    if (!titleTagFilter.length) return out;
+    const selected = new Set(titleTagFilter);
+    return out.filter(d => {
+      const info = getTitleTagInfo(d.title);
+      return info ? selected.has(info.key) : false;
+    });
+  }, [onlyReapplied, titleTagFilter]);
+  const filteredWonDeals = useMemo(() => applyTagAndReapply(wonBeforeTagFilter), [wonBeforeTagFilter, applyTagAndReapply]);
+  const filteredLostDeals = useMemo(() => applyTagAndReapply(lostBeforeTagFilter), [lostBeforeTagFilter, applyTagAndReapply]);
+  const tabBaseDeals = activeTab === 'won' ? wonBeforeTagFilter : activeTab === 'lost' ? lostBeforeTagFilter : dealsBeforeTagFilter;
+  const tabTitleTagOptions = useMemo(() => buildTitleTagOptions(tabBaseDeals), [tabBaseDeals]);
+  const tabReappliedCount = useMemo(
+    () => tabBaseDeals.filter(d => (d.typeform_reapplication_count ?? 0) > 0).length,
+    [tabBaseDeals],
   );
 
   // Available months for won deals filter (always include current month)
@@ -1548,13 +1567,6 @@ export default function SalesPipeline() {
         const product = dealProductMap[deal.id];
         if (!product) return false;
         return selectedIds.has(product.productId) || selectedNames.has(product.productName.trim().toLowerCase());
-      });
-    }
-    if (lostTitleTagFilter.length > 0) {
-      const selected = new Set(lostTitleTagFilter);
-      result = result.filter(deal => {
-        const info = getTitleTagInfo(deal.title);
-        return info ? selected.has(info.key) : false;
       });
     }
     if (lostMqlFilter.length > 0) {
@@ -2395,7 +2407,7 @@ export default function SalesPipeline() {
                         </Select>
                       </div>
                     )}
-                    {activeTab === 'open' && (
+                    {(
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Formulário</label>
                         <Button
@@ -2411,17 +2423,17 @@ export default function SalesPipeline() {
                         >
                           <ReapplyIcon className="h-4 w-4" />
                           Aplicou novamente
-                          <Badge variant="secondary" className="text-[10px] px-1.5">{reappliedCount}</Badge>
+                          <Badge variant="secondary" className="text-[10px] px-1.5">{tabReappliedCount}</Badge>
                           {onlyReapplied && <X className="h-3.5 w-3.5 opacity-70" />}
                         </Button>
                       </div>
                     )}
-                    {activeTab === 'open' && titleTagOptions.length > 0 && (
+                    {(tabTitleTagOptions.length > 0 || titleTagFilter.length > 0) && (
                       <MultiSelectFilter
                         label="Origem"
                         placeholder="Todas as origens"
                         width="w-full sm:w-[220px]"
-                        options={titleTagOptions.map(o => ({ value: o.value, label: `${o.label} (${o.count})` }))}
+                        options={tabTitleTagOptions.map(o => ({ value: o.value, label: `${o.label} (${o.count})` }))}
                         selected={titleTagFilter}
                         onChange={setTitleTagFilter}
                       />
@@ -2922,16 +2934,6 @@ export default function SalesPipeline() {
                       selected={lostProductFilter}
                       onChange={setLostProductFilter}
                     />
-                    {lostTitleTagOptions.length > 0 && (
-                      <MultiSelectFilter
-                        label=""
-                        placeholder="Todas as origens"
-                        width="w-full sm:w-[190px]"
-                        options={lostTitleTagOptions.map(o => ({ value: o.value, label: `${o.label} (${o.count})` }))}
-                        selected={lostTitleTagFilter}
-                        onChange={setLostTitleTagFilter}
-                      />
-                    )}
                     {lostMqlOptions.length > 0 && (
                       <MultiSelectFilter
                         label=""
