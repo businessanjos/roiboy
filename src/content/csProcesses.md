@@ -16,7 +16,7 @@ Abaixo está todo o conteúdo dos processos.
 
 ---
 
-# PROCESSO 1 — Onboarding do Cliente
+# PROCESSO 1 — ONBOARDING DO CLIENTE
 
 ## Fase 1 — Boas-vindas
 
