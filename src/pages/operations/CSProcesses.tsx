@@ -172,17 +172,46 @@ export default function CSProcesses() {
       return new Set((data ?? []).map((r) => r.step_key));
     },
   });
+  // Sincronia com o Onboarding Hub: etapa da ficha define o ponto de partida e avança sozinha.
+  const syncOnboarding = target?.type === "client" && active === 0;
+  const { data: hub } = useQuery({
+    queryKey: ["cs-process-hub-stage", target?.id, currentUser?.account_id],
+    enabled: !!syncOnboarding && !!currentUser?.account_id,
+    queryFn: async () => {
+      const [c, st] = await Promise.all([
+        supabase.from("clients").select("stage_id").eq("id", target!.id).maybeSingle(),
+        supabase.from("client_stages").select("id, name, display_order").eq("account_id", currentUser!.account_id).eq("is_active", true),
+      ]);
+      const stages = (st.data ?? []) as HubStage[];
+      return { stages, current: stages.find((x) => x.id === c.data?.stage_id) ?? null };
+    },
+  });
   const toggle = async (key: string, on: boolean) => {
     if (!target || !currentUser) return;
+    if (on && syncOnboarding && hub) {
+      const keys = (proc?.phases ?? []).flatMap((ph, pi) => ph.steps.map((_, si) => `${pi}-${si}`));
+      const done = new Set([...doneKeys, ...impliedDoneKeys(keys, hub.current), key]);
+      const nextStage = stageToAdvance(keys, done, hub.stages, hub.current);
+      if (nextStage) {
+        const { error } = await supabase.from("clients").update({ stage_id: nextStage }).eq("id", target.id);
+        if (!error) {
+          toast.success(`Onboarding atualizado: ${hub.stages.find((x) => x.id === nextStage)?.name}`);
+          qc.invalidateQueries({ queryKey: ["cs-process-hub-stage"] });
+          qc.invalidateQueries({ predicate: (q) => String(q.queryKey[0] ?? "").toLowerCase().includes("onboarding") });
+        }
+      }
+    }
     if (on) await supabase.from("cs_process_progress").upsert({ account_id: currentUser.account_id, process_id: proc.id, target_type: target.type, target_id: target.id, step_key: key }, { onConflict: "account_id,process_id,target_type,target_id,step_key" });
     else await supabase.from("cs_process_progress").delete().eq("target_type", target.type).eq("target_id", target.id).eq("process_id", proc.id).eq("step_key", key);
     qc.invalidateQueries({ queryKey: progressKey });
   };
 
   const allKeys = useMemo(() => (proc?.phases ?? []).flatMap((ph, pi) => ph.steps.map((_, si) => `${pi}-${si}`)), [proc]);
-  const currentKey = target ? allKeys.find((k) => !doneKeys.has(k)) : undefined;
-  const statusOf = useCallback((k: string): StepStatus => !target ? undefined : doneKeys.has(k) ? "done" : k === currentKey ? "current" : "pending", [target, doneKeys, currentKey]);
-  const pct = allKeys.length ? Math.round((allKeys.filter((k) => doneKeys.has(k)).length / allKeys.length) * 100) : 0;
+  const hubDone = useMemo(() => syncOnboarding && hub ? impliedDoneKeys(allKeys, hub.current) : new Set<string>(), [syncOnboarding, hub, allKeys]);
+  const isDone = useCallback((k: string) => doneKeys.has(k) || hubDone.has(k), [doneKeys, hubDone]);
+  const currentKey = target ? allKeys.find((k) => !isDone(k)) : undefined;
+  const statusOf = useCallback((k: string): StepStatus => !target ? undefined : isDone(k) ? "done" : k === currentKey ? "current" : "pending", [target, isDone, currentKey]);
+  const pct = allKeys.length ? Math.round((allKeys.filter((k) => isDone(k)).length / allKeys.length) * 100) : 0;
 
   const phases = useMemo(() => (proc?.phases ?? []).map((ph, pi) => ({ ...ph, pi, steps: ph.steps.map((s, si) => ({ s, key: `${pi}-${si}` })).filter(({ s }) => !q.trim() || norm(s.title + JSON.stringify(s.blocks)).includes(norm(q))) })).filter((ph) => ph.steps.length), [proc, q]);
 
@@ -197,7 +226,7 @@ export default function CSProcesses() {
   const selInfo = selStep ? toStepInfo(selStep) : null;
   const selNumber = `${spi + 1}.${ssi + 1}`;
   const selPhaseLabel = `Fase ${spi + 1} · ${(proc?.phases[spi]?.title ?? "").replace(/^Fase\s+\d+\s*[—-]\s*/i, "")}`;
-  const navStatus = useCallback((k: string): NavStatus => doneKeys.has(k) ? "done" : (target ? k === currentKey : k === selKey) ? "current" : "pending", [doneKeys, target, currentKey, selKey]);
+  const navStatus = useCallback((k: string): NavStatus => isDone(k) ? "done" : (target ? k === currentKey : k === selKey) ? "current" : "pending", [isDone, target, currentKey, selKey]);
   const pickPhase = (pi: number) => { const ks = allKeys.filter((k) => k.startsWith(`${pi}-`)); setSel(ks.find((k) => !doneKeys.has(k)) ?? ks[0]); };
   const completeAndNext = async () => {
     if (target && !doneKeys.has(selKey)) await toggle(selKey, true);
