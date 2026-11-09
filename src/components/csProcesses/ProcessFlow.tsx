@@ -130,7 +130,7 @@ function ProcessLabelNode({ data }: NodeProps<Node<ProcessLabelData>>) {
 }
 const nodeTypes = { phase: PhaseNode, processLabel: ProcessLabelNode };
 
-export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, entries, resetKey = 0 }: { groups?: PhaseGroup[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined; entries?: ProcessFlowEntry[]; resetKey?: number }) {
+export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, entries, resetKey = 0, clientName }: { groups?: PhaseGroup[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined; entries?: ProcessFlowEntry[]; resetKey?: number; clientName?: string }) {
   const [full, setFull] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const showingAll = showAll && (entries?.length ?? 0) > 1;
