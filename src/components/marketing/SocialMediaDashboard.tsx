@@ -15,6 +15,7 @@ import {
   Maximize2,
   Minimize2,
   X,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +40,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
 import { ZoomControls } from '@/components/ui/zoom-controls';
+import { SocialProfileComparison } from './SocialProfileComparison';
 
 interface ProfileWithMetrics {
   id: string;
@@ -49,6 +51,7 @@ interface ProfileWithMetrics {
   followers_previous_count: number;
   following_count: number;
   posts_count: number;
+  period_posts_count: number;
   avg_likes: number;
   avg_comments: number;
   avg_engagement: number;
@@ -56,7 +59,7 @@ interface ProfileWithMetrics {
   avg_link_clicks: number;
 }
 
-type SortField = 'followers' | 'engagement' | 'likes' | 'comments' | 'link_clicks';
+type SortField = 'followers' | 'engagement' | 'likes' | 'comments' | 'link_clicks' | 'reach';
 type SortDirection = 'asc' | 'desc';
 
 export function SocialMediaDashboard() {
@@ -153,6 +156,7 @@ export function SocialMediaDashboard() {
           followers_previous_count: profile.followers_previous_count || 0,
           following_count: profile.following_count || 0,
           posts_count: profile.posts_count || 0,
+          period_posts_count: postCount,
           avg_likes: postCount > 0 ? Math.round(totalLikes / postCount) : 0,
           avg_comments: postCount > 0 ? Math.round(totalComments / postCount) : 0,
           avg_engagement: postCount > 0 ? Math.round((totalEngagement / postCount) * 10) / 10 : 0,
@@ -192,6 +196,10 @@ export function SocialMediaDashboard() {
           aValue = a.avg_link_clicks;
           bValue = b.avg_link_clicks;
           break;
+        case 'reach':
+          aValue = a.total_reach;
+          bValue = b.total_reach;
+          break;
         default:
           aValue = a.followers_count;
           bValue = b.followers_count;
@@ -206,7 +214,8 @@ export function SocialMediaDashboard() {
   // Calculate totals
   const totals = useMemo(() => {
     const totalFollowers = profilesWithMetrics.reduce((sum, p) => sum + p.followers_count, 0);
-    const totalPosts = profilesWithMetrics.reduce((sum, p) => sum + p.posts_count, 0);
+    const totalPosts = profilesWithMetrics.reduce((sum, p) => sum + p.period_posts_count, 0);
+    const totalReach = profilesWithMetrics.reduce((sum, p) => sum + p.total_reach, 0);
     const avgEngagement =
       profilesWithMetrics.length > 0
         ? profilesWithMetrics.reduce((sum, p) => sum + p.avg_engagement, 0) /
@@ -216,6 +225,7 @@ export function SocialMediaDashboard() {
     return {
       totalFollowers,
       totalPosts,
+      totalReach,
       avgEngagement: Math.round(avgEngagement * 10) / 10,
       profileCount: profilesWithMetrics.length,
     };
@@ -324,7 +334,10 @@ export function SocialMediaDashboard() {
     <div className="space-y-6">
       {/* Filters */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Visão Consolidada</h2>
+        <div>
+          <h2 className="text-lg font-semibold">Visão Consolidada</h2>
+          <p className="text-xs text-muted-foreground">{totals.profileCount} perfis ativos · números de publicação e alcance no período selecionado</p>
+        </div>
         <div className="flex items-center gap-2">
           <Select value={monthFilter} onValueChange={setMonthFilter}>
             <SelectTrigger className="w-[180px] bg-card">
@@ -385,7 +398,7 @@ export function SocialMediaDashboard() {
                 <FileText className="h-5 w-5 text-info" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Posts</p>
+                <p className="text-sm text-muted-foreground">Posts no período</p>
                 <p className="text-2xl font-bold">{formatNumber(totals.totalPosts)}</p>
               </div>
             </div>
@@ -395,22 +408,24 @@ export function SocialMediaDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <BarChart3 className="h-5 w-5 text-purple-600" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Eye className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Perfis Ativos</p>
-                <p className="text-2xl font-bold">{totals.profileCount}</p>
+                <p className="text-sm text-muted-foreground">Alcance no período</p>
+                <p className="text-2xl font-bold">{formatNumber(totals.totalReach)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      <SocialProfileComparison profiles={profilesWithMetrics} />
+
       {/* Profiles Table */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Métricas por Perfil</CardTitle>
+          <CardTitle className="text-lg">Detalhamento por perfil</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -422,7 +437,8 @@ export function SocialMediaDashboard() {
                     Seguidores
                   </SortableHeader>
                   <TableHead className="text-right">Seguindo</TableHead>
-                  <TableHead className="text-right">Posts</TableHead>
+                  <TableHead className="text-right">Posts no período</TableHead>
+                  <SortableHeader field="reach" className="text-right">Alcance</SortableHeader>
                   <SortableHeader field="engagement" className="text-right">
                     Engaj. %
                   </SortableHeader>
@@ -464,7 +480,8 @@ export function SocialMediaDashboard() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">{formatNumber(profile.following_count)}</TableCell>
-                    <TableCell className="text-right">{formatNumber(profile.posts_count)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(profile.period_posts_count)}</TableCell>
+                    <TableCell className="text-right font-medium">{formatNumber(profile.total_reach)}</TableCell>
                     <TableCell className="text-right">
                       <span
                         className={cn(
