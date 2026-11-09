@@ -268,7 +268,11 @@ export default function CSProcesses() {
     { target: "checklist", title: "Marque as tarefas", text: "Tarefas internas têm caixinha. Marque conforme for fazendo; o progresso fica salvo por cliente.", onEnter: () => { const k = firstWith("task"); if (k) setSel(k); } },
     { target: "alert", title: "Atenção aos avisos", text: "Avisos em vermelho são o que não pode ser esquecido.", onEnter: () => { const k = firstWith("alert"); if (k) setSel(k); } },
     { target: "next", title: "Conclua e avance", text: "Terminou a etapa? Clique aqui para concluir e ir para a próxima." },
-    { title: tourFirstName ? `Pronto, ${tourFirstName}! 🚀` : "Pronto! 🚀", text: "Agora é com você.\nSe precisar rever o tour, é só clicar no ? aqui no canto.", primary: "Começar" },
+    ...(!isMobile ? [
+      { target: "flow", title: "Onboarding pelo fluxograma", text: "Aqui o Onboarding aparece por fases, na ordem em que acontece. Arraste para navegar e use os controles para aproximar ou abrir em tela cheia.", onEnter: () => { setTab("process"); setActive(0); setSel("0-0"); setView("flow"); } },
+      { target: "flow-step", title: "Abra a etapa e siga o processo", text: "Clique no cartão de uma etapa para abrir as mensagens, tarefas e links no painel lateral. Assim você conduz o Onboarding completo pelo fluxograma." },
+    ] satisfies TourStep[] : []),
+    { target: "tour-help", title: tourFirstName ? `Pronto, ${tourFirstName}! 🚀` : "Pronto! 🚀", text: "Agora é com você.\nSempre que quiser rever este tour, clique no ? destacado aqui embaixo.", primary: "Começar", onEnter: () => { setTab("process"); setView("list"); setQ(""); } },
   ];
   const mainTour = useTourSeen("cs_processes_main", true);
   const miniTour = useTourSeen("cs_processes_client", !!clientId && !mainTour.open);
@@ -389,7 +393,7 @@ export default function CSProcesses() {
         </SheetContent>
       </Sheet>
 
-      <Button size="icon" variant="outline" aria-label="Rever tour" className="fixed bottom-20 right-4 z-40 rounded-full shadow-md lg:bottom-6" onClick={startMain}>
+      <Button data-tour="tour-help" size="icon" variant="outline" aria-label="Rever tour" className="fixed bottom-20 right-4 z-40 rounded-full shadow-md lg:bottom-6" onClick={startMain}>
         <HelpCircle className="h-5 w-5" />
       </Button>
       <ClientProcessDataDialog client={client} focus={editField} open={editClientOpen} onOpenChange={setEditClientOpen} />
