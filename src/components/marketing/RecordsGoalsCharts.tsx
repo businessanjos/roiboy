@@ -16,7 +16,6 @@ import { BarChart3, Target, TrendingDown, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export const METRICS = [
@@ -86,10 +85,14 @@ interface Props {
   goals: GoalRow[];
   year: number;
   month: number;
+  metric?: MetricKey;
+  onMetricChange?: (m: MetricKey) => void;
 }
 
-export function RecordsGoalsCharts({ weekly, goals, year, month }: Props) {
-  const [metric, setMetric] = useState<MetricKey>('views');
+export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricProp, onMetricChange }: Props) {
+  const [metricLocal, setMetricLocal] = useState<MetricKey>('views');
+  const metric = metricProp ?? metricLocal;
+  const setMetric = (m: MetricKey) => { setMetricLocal(m); onMetricChange?.(m); };
   const [period, setPeriod] = useState<Period>('month');
   const reducedMotion = useReducedMotion();
   const chartId = useId().replace(/:/g, '');
@@ -172,18 +175,6 @@ export function RecordsGoalsCharts({ weekly, goals, year, month }: Props) {
             <CardTitle className="text-base">Comparativo de crescimento</CardTitle>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={metric} onValueChange={(v) => setMetric(v as MetricKey)}>
-              <SelectTrigger aria-label="Métrica do gráfico" className="h-9 w-[210px] max-w-full bg-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {METRICS.map((m) => (
-                  <SelectItem key={m.key} value={m.key}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <ToggleGroup
               type="single"
               size="sm"
@@ -198,6 +189,24 @@ export function RecordsGoalsCharts({ weekly, goals, year, month }: Props) {
               ))}
             </ToggleGroup>
           </div>
+        </div>
+
+        <div role="tablist" aria-label="Métrica do gráfico" className="flex flex-wrap gap-1.5">
+          {METRICS.map((m) => {
+            const on = m.key === metric;
+            return (
+              <button
+                key={m.key}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setMetric(m.key)}
+                className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${on ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground'}`}
+              >
+                {m.label}
+              </button>
+            );
+          })}
         </div>
 
         <div className="grid gap-4 border-y py-4 sm:grid-cols-3 sm:gap-6">

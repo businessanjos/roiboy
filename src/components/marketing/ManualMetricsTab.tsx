@@ -50,6 +50,7 @@ export function ManualMetricsTab() {
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState<'edit' | 'compare'>('edit');
   const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [chartMetric, setChartMetric] = useState<MetricKey>('views');
 
 
 
@@ -329,7 +330,14 @@ export function ManualMetricsTab() {
         )
       ) : (
         <>
-
+      <RecordsGoalsCharts
+        weekly={(yearRows ?? []) as any}
+        goals={(goalRows ?? []) as any}
+        year={Number(year)}
+        month={Number(month)}
+        metric={chartMetric}
+        onMetricChange={setChartMetric}
+      />
 
       <Card>
         <CardContent className="p-0 overflow-x-auto">
@@ -341,7 +349,7 @@ export function ManualMetricsTab() {
                 <tr className="border-b bg-muted/40">
                   <th className="text-left font-medium p-3 w-[110px]">Semana</th>
                   {METRICS.map((m) => (
-                    <th key={m.key} className="text-left font-medium p-3 whitespace-nowrap">{m.label}</th>
+                    <th key={m.key} className={`text-left font-medium p-3 whitespace-nowrap transition-colors ${m.key === chartMetric ? 'bg-primary/10 text-primary' : ''}`}>{m.label}</th>
                   ))}
                 </tr>
               </thead>
@@ -350,7 +358,7 @@ export function ManualMetricsTab() {
                   <tr key={w} className="border-b last:border-0">
                     <td className="p-3 font-medium text-muted-foreground">Semana {w}</td>
                     {METRICS.map((m) => (
-                      <td key={m.key} className="p-2">
+                      <td key={m.key} className={`p-2 transition-colors ${m.key === chartMetric ? 'bg-primary/5' : ''}`}>
                         <Input
                           inputMode="numeric"
                           className="h-9 w-[130px]"
@@ -416,12 +424,6 @@ export function ManualMetricsTab() {
         </CardContent>
       </Card>
 
-      <RecordsGoalsCharts
-        weekly={(yearRows ?? []) as any}
-        goals={(goalRows ?? []) as any}
-        year={Number(year)}
-        month={Number(month)}
-      />
 
       <p className="text-xs text-muted-foreground">
         Preenchimento manual, semana a semana, com os números absolutos do mês de cada perfil. As metas são mensais e
