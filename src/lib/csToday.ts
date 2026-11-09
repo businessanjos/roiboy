@@ -34,7 +34,7 @@ export function isEncontroPresencial(e: { modality: string | null; title: string
   return e.modality === "presencial" && (/encontro|eternum|club/i.test(e.title) || e.event_type === "mentoria");
 }
 
-const ONLINE: [number, string, string][] = [
+export const ONLINE: [number, string, string][] = [
   [-15, "Avisar o grupo do encontro (15 dias antes)", "0-0"],
   [-10, "Enviar o formulário de dificuldades e o lembrete", "0-1"],
   [-3, "Cobrar quem não respondeu o formulário", "0-2"],
@@ -42,7 +42,7 @@ const ONLINE: [number, string, string][] = [
   [0, "Mensagem do dia do encontro", "0-4"],
   [1, "Subir a gravação e avisar no grupo", "2-0"],
 ];
-const PRESENCIAL: [number, string, string][] = [
+export const PRESENCIAL: [number, string, string][] = [
   [-60, "Enviar o PDF informativo do encontro", "0-0"],
   [1, "Enviar a pesquisa NPS", "2-1"],
   [7, "Publicar a gravação editada na plataforma", "2-0"],
