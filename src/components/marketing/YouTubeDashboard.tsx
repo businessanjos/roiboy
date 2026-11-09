@@ -1,3 +1,4 @@
+import { DashboardPeriodFilter, resolvePeriod, type PeriodValue } from './DashboardPeriodFilter';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, subMonths, startOfMonth, endOfMonth, startOfWeek, differenceInCalendarDays } from 'date-fns';
@@ -56,12 +57,9 @@ const ChartTip = ({ active, payload, label }: any) => {
 
 export function YouTubeDashboard() {
   const { currentUser: user } = useCurrentUser();
-  const [monthFilter, setMonthFilter] = useState('3');
+  const [period, setPeriod] = useState<PeriodValue>({ preset: '3m' });
 
-  const range = useMemo(() => {
-    const m = parseInt(monthFilter);
-    return { start: startOfMonth(subMonths(new Date(), m - 1)), end: endOfMonth(new Date()) };
-  }, [monthFilter]);
+  const range = useMemo(() => resolvePeriod(period), [period]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['youtube-dashboard', user?.account_id, range],
@@ -141,10 +139,7 @@ export function YouTubeDashboard() {
             {lastSync ? `Atualizado em ${format(new Date(lastSync), "dd/MM 'às' HH:mm")}` : 'Ainda não sincronizado — use Sincronizar na aba Canais'}
           </p>
         </div>
-        <Select value={monthFilter} onValueChange={setMonthFilter}>
-          <SelectTrigger className="w-[180px] bg-card"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="1">Último mês</SelectItem><SelectItem value="3">Últimos 3 meses</SelectItem><SelectItem value="6">Últimos 6 meses</SelectItem><SelectItem value="12">Último ano</SelectItem></SelectContent>
-        </Select>
+        <DashboardPeriodFilter value={period} onChange={setPeriod} />
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">

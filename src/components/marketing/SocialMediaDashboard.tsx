@@ -1,3 +1,4 @@
+import { DashboardPeriodFilter, resolvePeriod, type PeriodValue } from './DashboardPeriodFilter';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -64,7 +65,7 @@ type SortDirection = 'asc' | 'desc';
 
 export function SocialMediaDashboard() {
   const { currentUser: user } = useCurrentUser();
-  const [monthFilter, setMonthFilter] = useState<string>('3');
+  const [period, setPeriod] = useState<PeriodValue>({ preset: '3m' });
   const [sortField, setSortField] = useState<SortField>('followers');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [isFocusMode, setIsFocusMode] = useState(false);
@@ -101,12 +102,7 @@ export function SocialMediaDashboard() {
   };
 
   // Calculate date range based on filter
-  const dateRange = useMemo(() => {
-    const months = parseInt(monthFilter);
-    const endDate = endOfMonth(new Date());
-    const startDate = startOfMonth(subMonths(new Date(), months - 1));
-    return { startDate, endDate };
-  }, [monthFilter]);
+  const dateRange = useMemo(() => resolvePeriod(period), [period]);
 
   // Fetch all profiles with aggregated metrics
   const { data: profilesWithMetrics = [], isLoading } = useQuery({
@@ -339,17 +335,7 @@ export function SocialMediaDashboard() {
           <p className="text-xs text-muted-foreground">{totals.profileCount} perfis ativos · números de publicação e alcance no período selecionado</p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger className="w-[180px] bg-card">
-              <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">Último mês</SelectItem>
-              <SelectItem value="3">Últimos 3 meses</SelectItem>
-              <SelectItem value="6">Últimos 6 meses</SelectItem>
-              <SelectItem value="12">Último ano</SelectItem>
-            </SelectContent>
-          </Select>
+          <DashboardPeriodFilter value={period} onChange={setPeriod} />
           <Button
             variant="outline"
             size="icon"
@@ -526,17 +512,7 @@ export function SocialMediaDashboard() {
               <h2 className="text-3xl font-bold">Visão Consolidada Instagram</h2>
               <div className="flex items-center gap-3">
                 <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} />
-                <Select value={monthFilter} onValueChange={setMonthFilter}>
-                  <SelectTrigger className="w-[180px] bg-card">
-                    <SelectValue placeholder="Período" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Último mês</SelectItem>
-                    <SelectItem value="3">Últimos 3 meses</SelectItem>
-                    <SelectItem value="6">Últimos 6 meses</SelectItem>
-                    <SelectItem value="12">Último ano</SelectItem>
-                  </SelectContent>
-                </Select>
+                <DashboardPeriodFilter value={period} onChange={setPeriod} />
                 <Button
                   variant="outline"
                   size="icon"
