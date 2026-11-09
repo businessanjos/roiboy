@@ -239,7 +239,7 @@ export function RecordsGoalsCharts({ weekly, goals, year, month }: Props) {
         </div>
         <div className="h-[280px] w-full sm:h-[300px]" role="img" aria-label={`${metricLabel} por ${period === 'quarter' || period === 'year' ? 'mês' : 'semana'}: ${data.map((row) => `${row.name}: ${fmt(row.valor)}`).join(', ')}`}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart accessibilityLayer data={data} barCategoryGap="28%" margin={{ top: 26, right: 12, left: -12, bottom: 0 }}>
+            <ComposedChart accessibilityLayer data={data} barCategoryGap="28%" margin={{ top: 26, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 5" strokeOpacity={0.65} vertical={false} />
               <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} tickMargin={12} tickLine={false} axisLine={false} />
               <YAxis
@@ -248,7 +248,7 @@ export function RecordsGoalsCharts({ weekly, goals, year, month }: Props) {
                 width={64}
                 tickMargin={8}
                 tickCount={5}
-                domain={[0, (max: number) => Math.max(1, Math.ceil(max * 1.15))]}
+                domain={[0, 'auto']}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={compact}
