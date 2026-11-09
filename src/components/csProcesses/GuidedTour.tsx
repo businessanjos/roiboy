@@ -67,7 +67,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
           style={{ top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2, boxShadow: "0 0 0 3px hsl(var(--primary)), 0 0 22px 4px hsl(var(--primary) / 0.45), 0 0 0 9999px hsl(var(--tour-overlay) / 0.82)" }} />
       ) : <div className="absolute inset-0 backdrop-blur-sm" style={{ background: "hsl(var(--tour-overlay) / 0.82)" }} />}
       <div ref={bubble}
-        className={`absolute animate-in fade-in zoom-in-95 rounded-2xl border bg-popover p-5 shadow-xl transition-[top,left] duration-300 ${pos ? "" : "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"}`}
+        className={`absolute animate-in fade-in zoom-in-95 rounded-3xl border bg-popover shadow-2xl transition-[top,left] duration-300 ${pos ? "" : "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"}`}
         style={{ width: w, ...(pos ? { top: pos.top, left: pos.left } : {}) }}>
         {arrow && <span className="absolute h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t bg-popover" style={{ ...arrow, transform: `translate(${pos!.side === "bottom" || pos!.side === "top" ? "-50%" : "0"}, ${pos!.side === "left" || pos!.side === "right" ? "-50%" : "0"}) rotate(${({ bottom: 45, top: 225, right: -45, left: 135 } as const)[pos!.side]}deg)` }} />}
         <div className="h-1 rounded-t-2xl bg-gradient-to-r from-primary via-primary/60 to-transparent" />
