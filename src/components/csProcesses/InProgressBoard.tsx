@@ -14,7 +14,7 @@ import { stepTitle } from "@/lib/csProcessActions";
 import type { Process } from "@/lib/csProcesses";
 import { cn } from "@/lib/utils";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
-import { SeeAllAccessDialog, SEE_ALL } from "./SeeAllAccessDialog";
+const SEE_ALL = { module: "cs", sub_item: "processos_ver_todas" };
 
 const borders = ["border-l-purple-500", "border-l-teal-500", "border-l-blue-500"];
 const fills = ["bg-purple-500", "bg-teal-500", "bg-blue-500"];
@@ -77,7 +77,6 @@ export function InProgressBoard({ processes, onOpenCard }: { processes: Process[
             </SelectContent>
           </Select>
         )}
-        {pi === 0 && isMgr && currentUser?.account_id && <SeeAllAccessDialog accountId={currentUser.account_id} users={users} />}
         {pi === 0 && (
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <Switch checked={onlyWaiting} onCheckedChange={setOnlyWaiting} /> Só aguardando cliente
