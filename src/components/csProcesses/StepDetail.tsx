@@ -35,7 +35,7 @@ export function waitingFor(startedAt: string) {
 export function VariableChip({ name, value }: { name: string; value?: string }) {
   return (
     <span
-      title={value ? `Nome da cliente selecionada: ${value}` : "Preenchido automaticamente com o nome do contato ao enviar"}
+      title={value ? `Preenchido: ${value}` : /^(nome|cliente|primeiro[_ ]nome)$/i.test(name.trim()) ? "Ao enviar no RoyZapp, entra o nome do contato automaticamente" : "Selecione uma cliente para preencher"}
       className={`mx-0.5 inline-flex cursor-default items-center rounded-md px-1.5 py-0 text-[0.9em] font-medium ${value ? "bg-primary/15 text-foreground" : "border border-dashed border-primary/50 text-primary"}`}>
       {value ?? name}
     </span>
