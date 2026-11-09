@@ -98,6 +98,14 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [insightsPeriod, setInsightsPeriod] = useState<string>('28');
   const [sortBy, setSortBy] = useState<string | null>(null);
+  const [visibleMetric, setVisibleMetric] = useState('reach');
+  const metricColumns: Record<string, string> = {
+    reach: '[&_tr>*:nth-child(7)]:!table-cell', likes: '[&_tr>*:nth-child(8)]:!table-cell',
+    comments: '[&_tr>*:nth-child(9)]:!table-cell', shares: '[&_tr>*:nth-child(10)]:!table-cell',
+    saves: '[&_tr>*:nth-child(11)]:!table-cell', link_clicks: '[&_tr>*:nth-child(12)]:!table-cell',
+    views: '[&_tr>*:nth-child(13)]:!table-cell', engagement_rate: '[&_tr>*:nth-child(14)]:!table-cell',
+    virality_rate: '[&_tr>*:nth-child(15)]:!table-cell',
+  };
   
   const {
     profiles,
@@ -445,7 +453,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                     {filteredPosts.length} posts
                   </Badge>
                 </CardTitle>
-                <TabsList className="h-8">
+                <TabsList className="h-auto max-w-full flex-wrap justify-start gap-y-1">
                   <TabsTrigger value="list" className="gap-1.5 text-xs px-3">
                     <List className="h-3.5 w-3.5" />
                     Lista
@@ -466,6 +474,12 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
               </div>
 
               <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 p-2">
+                <Select value={visibleMetric} onValueChange={setVisibleMetric}>
+                  <SelectTrigger className="h-9 w-[155px] bg-card" aria-label="Métrica da lista"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries({ reach: 'Alcance', likes: 'Curtidas', comments: 'Comentários', shares: 'Compartilhamentos', saves: 'Salvamentos', link_clicks: 'Cliques no link', views: 'Visualizações', engagement_rate: 'Engajamento', virality_rate: 'Viralidade' }).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 <SocialPostsDateFilter
                   dateFrom={dateFrom}
                   dateTo={dateTo}
@@ -530,8 +544,8 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
           
           <TabsContent value="list" className="mt-0">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
+              <div className={cn("w-full min-w-0 [&_th]:px-2 [&_td]:px-2 [&_tr>*:nth-child(1)]:w-8 [&_tr>*:nth-child(2)]:w-16 [&_tr>*:nth-child(3)]:hidden sm:[&_tr>*:nth-child(3)]:table-cell sm:[&_tr>*:nth-child(3)]:w-24 [&_tr>*:nth-child(4)]:hidden xl:[&_tr>*:nth-child(4)]:table-cell [&_tr>*:nth-child(5)]:hidden xl:[&_tr>*:nth-child(5)]:table-cell [&_tr>*:nth-child(6)]:min-w-0 [&_tr>*:nth-child(n+7):nth-child(-n+15)]:hidden [&_tr>*:nth-child(n+7):nth-child(-n+15)]:w-24 [&_tr>*:nth-child(16)]:w-10", metricColumns[visibleMetric])}>
+                <Table className="table-fixed">
                   <TableHeader>
                     <TableRow className="bg-muted/30">
                       <TableHead className="w-[40px]">
@@ -730,7 +744,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                                 onCheckedChange={() => togglePostSelection(post.id)}
                               />
                             </TableCell>
-                            <TableCell className="font-medium text-sm">
+                            <TableCell className="whitespace-nowrap font-medium text-sm">
                               {format(new Date(post.posted_at), 'dd/MM', { locale: ptBR })}
                             </TableCell>
                             <TableCell>
@@ -842,7 +856,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="h-8 w-8 transition-opacity"
                                   >
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
