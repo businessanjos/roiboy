@@ -60,6 +60,15 @@ const BLOCKS: Block[] = [
     ] }],
   },
   {
+    title: "Prioridades", subtitle: "Tela normal", icon: ClipboardList,
+    warning: "Isso será incluído no plano de ação.",
+    groups: [{ items: [
+      { id: "pr-pilares", text: "Fale sobre os 4 pilares" },
+      { id: "pr-mkt", text: "Listem juntos até 3 prioridades para área de marketing e vendas" },
+      { id: "pr-ops", text: "Listem juntos até 2 prioridades para área de operação e finanças" },
+    ] }],
+  },
+  {
     title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
     highlight: "Explicar a função e os benefícios ao implementar o sistema de vendas que já gerou mais de 1,3 bilhão em vendas de procedimentos.",
     groups: [{ items: [
