@@ -1,6 +1,8 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, AlertTriangle, Info } from "lucide-react";
+import { ShieldCheck, AlertTriangle, Info, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { MarketingDashboardMetrics } from "@/hooks/useMarketingDashboardMetrics";
@@ -14,6 +16,7 @@ interface Props {
  * distorcer a leitura, para que decisões sejam tomadas com contexto.
  */
 export function DashboardDataTrustPanel({ data }: Props) {
+  const [open, setOpen] = useState(false);
   const q = data.dataQuality;
   const totalLeads = data.leadsThisMonth || 0;
   const pct = (n: number) => (totalLeads > 0 ? Math.round((n / totalLeads) * 100) : 0);
@@ -87,36 +90,41 @@ export function DashboardDataTrustPanel({ data }: Props) {
   const warnCount = issues.filter((i) => i.level === "warn").length;
 
   return (
-    <Card className={warnCount > 0 ? "border-warning/40" : "border-success/30"}>
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2 text-sm font-semibold">
+    <Collapsible open={open} onOpenChange={setOpen} className="border-y border-border">
+      <CollapsibleTrigger asChild>
+        <Button variant="ghost" className="h-auto w-full justify-between gap-3 rounded-none px-2 py-3 hover:bg-muted/40" aria-label={open ? "Recolher confiabilidade dos dados" : "Expandir confiabilidade dos dados"}>
+          <span className="flex min-w-0 items-center gap-2 text-left text-sm font-semibold">
             {warnCount > 0 ? (
-              <AlertTriangle className="h-4 w-4 text-warning" />
+              <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
             ) : (
-              <ShieldCheck className="h-4 w-4 text-success" />
+              <ShieldCheck className="h-4 w-4 shrink-0 text-success" />
             )}
             Confiabilidade dos dados
-          </div>
-          <Badge variant={warnCount > 0 ? "outline" : "secondary"} className="text-xs">
-            {warnCount > 0 ? `${warnCount} ponto(s) de atenção` : "Sem lacunas críticas"}
-          </Badge>
-        </div>
+          </span>
+          <span className="flex shrink-0 items-center gap-2">
+            <Badge variant="secondary" className={warnCount > 0 ? "bg-warning/10 text-warning-strong text-xs" : "text-xs text-muted-foreground"}>
+              {warnCount > 0 ? `${warnCount} ${warnCount === 1 ? 'atenção' : 'atenções'}` : "Sem alertas"}
+            </Badge>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`} />
+          </span>
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-3 px-2 pb-3 data-[state=open]:animate-accordion-down motion-reduce:animate-none">
 
         {issues.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             Todos os leads do período estão com canal e qualificação preenchidos.
           </p>
         ) : (
-          <ul className="space-y-1.5">
+          <ul className="divide-y divide-border/60">
             {issues.map((i, idx) => (
-              <li key={idx} className="flex items-start gap-2 text-xs text-muted-foreground">
+              <li key={idx} className="flex items-start gap-2 py-2 text-xs leading-relaxed text-muted-foreground">
                 {i.level === "warn" ? (
                   <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-warning" />
                 ) : (
                   <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
                 )}
-                <span>{i.text}</span>
+                <span className="min-w-0 break-words">{i.text}</span>
               </li>
             ))}
           </ul>
@@ -127,7 +135,7 @@ export function DashboardDataTrustPanel({ data }: Props) {
           investimento vem das campanhas sincronizadas do Meta Ads; conteúdo vem dos posts
           publicados no período.
         </p>
-      </CardContent>
-    </Card>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
