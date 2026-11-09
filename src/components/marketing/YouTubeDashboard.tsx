@@ -1,13 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, startOfWeek, differenceInCalendarDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import {
-  Users, Percent, Eye, TrendingUp, TrendingDown, Minus, ExternalLink, BarChart3, Youtube,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from 'recharts';
+import { Users, Eye, PlaySquare, Heart, MessageCircle, Percent, Youtube, ExternalLink, Zap, Film, Trophy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -15,188 +15,263 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
 
-interface ChannelWithMetrics {
-  id: string;
-  username: string;
-  display_name: string | null;
-  profile_picture_url: string | null;
-  subscribers_count: number;
-  subscribers_previous_count: number;
-  videos_count: number;
-  total_views: number;
-  avg_views: number;
-  avg_likes: number;
-  avg_comments: number;
-  avg_completion_rate: number;
-  avg_engagement: number;
-  shorts_count: number;
-  videos_long_count: number;
+const compact = (n: number) => new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 }).format(n || 0);
+const full = (n: number) => Math.round(n || 0).toLocaleString('pt-BR');
+const pct = (n: number) => `${(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+
+interface VideoRow {
+  id: string; channel_id: string; title: string | null; video_url: string | null; thumbnail_url: string | null;
+  posted_at: string | null; video_type: string; views: number; likes: number; comments: number;
 }
 
-type SortField = 'subscribers' | 'engagement' | 'views' | 'completion' | 'likes';
-type SortDirection = 'asc' | 'desc';
+function Kpi({ icon: Icon, label, value, hint }: { icon: any; label: string; value: string; hint?: string }) {
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+          <div className="rounded-lg bg-primary/10 p-1.5"><Icon className="h-4 w-4 text-primary" /></div>
+        </div>
+        <p className="mt-2 text-2xl font-bold tabular-nums">{value}</p>
+        {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+const ChartTip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border bg-popover px-3 py-2 text-xs shadow-md">
+      <p className="mb-1 font-medium">{label}</p>
+      {payload.map((p: any) => (
+        <p key={p.dataKey} className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ background: p.color || p.fill }} />
+          {p.name}: <span className="font-semibold tabular-nums">{full(p.value)}</span>
+        </p>
+      ))}
+    </div>
+  );
+};
 
 export function YouTubeDashboard() {
   const { currentUser: user } = useCurrentUser();
-  const [monthFilter, setMonthFilter] = useState<string>('3');
-  const [sortField, setSortField] = useState<SortField>('subscribers');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [monthFilter, setMonthFilter] = useState('3');
 
-  const dateRange = useMemo(() => {
-    const months = parseInt(monthFilter);
-    return { startDate: startOfMonth(subMonths(new Date(), months - 1)), endDate: endOfMonth(new Date()) };
+  const range = useMemo(() => {
+    const m = parseInt(monthFilter);
+    return { start: startOfMonth(subMonths(new Date(), m - 1)), end: endOfMonth(new Date()) };
   }, [monthFilter]);
 
-  const { data: channelsWithMetrics = [], isLoading } = useQuery({
-    queryKey: ['youtube-dashboard', user?.account_id, dateRange],
+  const { data, isLoading } = useQuery({
+    queryKey: ['youtube-dashboard', user?.account_id, range],
     queryFn: async () => {
-      if (!user?.account_id) return [];
-      const { data: channels, error: chErr } = await supabase.from('youtube_channels').select('*').eq('account_id', user.account_id).eq('is_active', true).order('subscribers_count', { ascending: false });
-      if (chErr) throw chErr;
-      if (!channels?.length) return [];
-
-      const channelIds = channels.map(c => c.id);
-      const { data: videos, error: vErr } = await supabase.from('youtube_videos').select('channel_id, video_type, views, likes, comments, shares, saves, completion_rate, engagement_rate').in('channel_id', channelIds).gte('posted_at', dateRange.startDate.toISOString()).lte('posted_at', dateRange.endDate.toISOString());
+      if (!user?.account_id) return null;
+      const { data: channels, error } = await supabase.from('youtube_channels').select('*')
+        .eq('account_id', user.account_id).eq('is_active', true).order('subscribers_count', { ascending: false });
+      if (error) throw error;
+      if (!channels?.length) return { channels: [], videos: [] as VideoRow[] };
+      const { data: videos, error: vErr } = await supabase.from('youtube_videos')
+        .select('id, channel_id, title, video_url, thumbnail_url, posted_at, video_type, views, likes, comments')
+        .in('channel_id', channels.map(c => c.id))
+        .gte('posted_at', range.start.toISOString()).lte('posted_at', range.end.toISOString())
+        .order('posted_at', { ascending: true });
       if (vErr) throw vErr;
-
-      return channels.map((ch) => {
-        const chVideos = videos?.filter(v => v.channel_id === ch.id) || [];
-        const count = chVideos.length;
-        const totalViews = chVideos.reduce((s, v) => s + (v.views || 0), 0);
-        const totalLikes = chVideos.reduce((s, v) => s + (v.likes || 0), 0);
-        const totalComments = chVideos.reduce((s, v) => s + (v.comments || 0), 0);
-        const totalCompletion = chVideos.reduce((s, v) => s + (v.completion_rate || 0), 0);
-        const totalEngagement = chVideos.reduce((s, v) => s + (v.engagement_rate || 0), 0);
-        return {
-          id: ch.id, username: ch.username, display_name: ch.display_name, profile_picture_url: ch.profile_picture_url,
-          subscribers_count: ch.subscribers_count || 0, subscribers_previous_count: ch.subscribers_previous_count || 0,
-          videos_count: ch.videos_count || 0, total_views: ch.total_views || 0,
-          avg_views: count > 0 ? Math.round(totalViews / count) : 0,
-          avg_likes: count > 0 ? Math.round(totalLikes / count) : 0,
-          avg_comments: count > 0 ? Math.round(totalComments / count) : 0,
-          avg_completion_rate: count > 0 ? Math.round((totalCompletion / count) * 10) / 10 : 0,
-          avg_engagement: count > 0 ? Math.round((totalEngagement / count) * 10) / 10 : 0,
-          shorts_count: chVideos.filter(v => v.video_type === 'short').length,
-          videos_long_count: chVideos.filter(v => v.video_type === 'video').length,
-        } as ChannelWithMetrics;
-      });
+      return { channels, videos: (videos || []) as VideoRow[] };
     },
     enabled: !!user?.account_id,
   });
 
-  const sortedChannels = useMemo(() => {
-    return [...channelsWithMetrics].sort((a, b) => {
-      const vals: Record<SortField, [number, number]> = {
-        subscribers: [a.subscribers_count, b.subscribers_count],
-        engagement: [a.avg_engagement, b.avg_engagement],
-        views: [a.avg_views, b.avg_views],
-        completion: [a.avg_completion_rate, b.avg_completion_rate],
-        likes: [a.avg_likes, b.avg_likes],
-      };
-      const [aV, bV] = vals[sortField];
-      return sortDirection === 'desc' ? bV - aV : aV - bV;
+  const channels = data?.channels || [];
+  const videos = data?.videos || [];
+
+  const stats = useMemo(() => {
+    const views = videos.reduce((s, v) => s + (v.views || 0), 0);
+    const likes = videos.reduce((s, v) => s + (v.likes || 0), 0);
+    const comments = videos.reduce((s, v) => s + (v.comments || 0), 0);
+    const n = videos.length;
+    const shorts = videos.filter(v => v.video_type === 'short');
+    const longs = videos.filter(v => v.video_type !== 'short');
+    const sum = (arr: VideoRow[]) => arr.reduce((s, v) => s + (v.views || 0), 0);
+    return {
+      subs: channels.reduce((s, c: any) => s + (c.subscribers_count || 0), 0),
+      totalViews: channels.reduce((s, c: any) => s + (c.total_views || 0), 0),
+      totalVideos: channels.reduce((s, c: any) => s + (c.videos_count || 0), 0),
+      views, likes, comments, n,
+      avgViews: n ? views / n : 0,
+      engagement: views ? ((likes + comments) / views) * 100 : 0,
+      shorts: { count: shorts.length, views: sum(shorts), avg: shorts.length ? sum(shorts) / shorts.length : 0 },
+      longs: { count: longs.length, views: sum(longs), avg: longs.length ? sum(longs) / longs.length : 0 },
+    };
+  }, [channels, videos]);
+
+  const timeline = useMemo(() => {
+    const weekly = differenceInCalendarDays(range.end, range.start) <= 120;
+    const map = new Map<string, { label: string; views: number; likes: number; videos: number; sort: number }>();
+    videos.forEach(v => {
+      if (!v.posted_at) return;
+      const d = new Date(v.posted_at);
+      const key = weekly ? startOfWeek(d, { weekStartsOn: 1 }) : startOfMonth(d);
+      const id = key.toISOString();
+      const cur = map.get(id) || { label: format(key, weekly ? 'dd/MM' : 'MMM/yy', { locale: ptBR }), views: 0, likes: 0, videos: 0, sort: key.getTime() };
+      cur.views += v.views || 0; cur.likes += v.likes || 0; cur.videos += 1;
+      map.set(id, cur);
     });
-  }, [channelsWithMetrics, sortField, sortDirection]);
+    return { weekly, rows: [...map.values()].sort((a, b) => a.sort - b.sort) };
+  }, [videos, range]);
 
-  const totals = useMemo(() => {
-    const totalSubs = channelsWithMetrics.reduce((s, c) => s + c.subscribers_count, 0);
-    const totalVids = channelsWithMetrics.reduce((s, c) => s + c.videos_count, 0);
-    const avgEng = channelsWithMetrics.length > 0 ? channelsWithMetrics.reduce((s, c) => s + c.avg_engagement, 0) / channelsWithMetrics.length : 0;
-    const avgComp = channelsWithMetrics.length > 0 ? channelsWithMetrics.reduce((s, c) => s + c.avg_completion_rate, 0) / channelsWithMetrics.length : 0;
-    return { totalSubs, totalVids, avgEng: Math.round(avgEng * 10) / 10, avgComp: Math.round(avgComp * 10) / 10, channelCount: channelsWithMetrics.length };
-  }, [channelsWithMetrics]);
+  const top = useMemo(() => [...videos].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 6), [videos]);
 
-  const fmt = (n: number) => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'K' : n.toString();
+  if (isLoading) return <div className="space-y-6"><div className="grid grid-cols-2 gap-4 lg:grid-cols-6">{[...Array(6)].map((_, i) => <Skeleton key={i} className="h-28" />)}</div><Skeleton className="h-80" /></div>;
 
-  const handleSort = (f: SortField) => {
-    if (sortField === f) setSortDirection(d => d === 'desc' ? 'asc' : 'desc');
-    else { setSortField(f); setSortDirection('desc'); }
-  };
+  if (!channels.length) return <Card className="p-12"><div className="space-y-4 text-center"><Youtube className="mx-auto h-12 w-12 text-primary" /><div><h3 className="text-lg font-semibold">Nenhum canal encontrado</h3><p className="text-muted-foreground">Adicione um canal na aba "Canais" para ver o painel.</p></div></div></Card>;
 
-  const growth = (cur: number, prev: number) => {
-    if (prev === 0) return null;
-    const g = ((cur - prev) / prev) * 100;
-    if (g > 0) return <span className="flex items-center gap-0.5 text-success text-xs"><TrendingUp className="h-3 w-3" />{Math.round(g)}%</span>;
-    if (g < 0) return <span className="flex items-center gap-0.5 text-danger text-xs"><TrendingDown className="h-3 w-3" />{Math.abs(Math.round(g))}%</span>;
-    return <span className="flex items-center gap-0.5 text-muted-foreground text-xs"><Minus className="h-3 w-3" /></span>;
-  };
-
-  const SortableHeader = ({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) => (
-    <TableHead className={cn('cursor-pointer hover:bg-muted/50 transition-colors select-none', className)} onClick={() => handleSort(field)}>
-      <div className="flex items-center gap-1 justify-end">{children}{sortField === field && <span className="text-primary">{sortDirection === 'desc' ? '↓' : '↑'}</span>}</div>
-    </TableHead>
-  );
-
-  if (isLoading) return <div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-5 gap-4">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-28" />)}</div><Skeleton className="h-96" /></div>;
-
-  if (!channelsWithMetrics.length) return <Card className="p-12"><div className="text-center space-y-4"><Youtube className="h-12 w-12 mx-auto text-danger" /><div><h3 className="text-lg font-semibold">Nenhum canal encontrado</h3><p className="text-muted-foreground">Adicione canais do YouTube na aba "Perfis" para visualizar o dashboard.</p></div></div></Card>;
+  const split = [
+    { name: 'Vídeos longos', value: stats.longs.views, color: 'hsl(var(--primary))' },
+    { name: 'Shorts', value: stats.shorts.views, color: 'hsl(var(--primary) / 0.4)' },
+  ];
+  const lastSync = channels.map((c: any) => c.last_synced_at).filter(Boolean).sort().pop();
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Visão Consolidada YouTube</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Visão Consolidada YouTube</h2>
+          <p className="text-xs text-muted-foreground">
+            {lastSync ? `Atualizado em ${format(new Date(lastSync), "dd/MM 'às' HH:mm")}` : 'Ainda não sincronizado — use Sincronizar na aba Canais'}
+          </p>
+        </div>
         <Select value={monthFilter} onValueChange={setMonthFilter}>
-          <SelectTrigger className="w-[180px] bg-card"><SelectValue placeholder="Período" /></SelectTrigger>
+          <SelectTrigger className="w-[180px] bg-card"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="1">Último mês</SelectItem><SelectItem value="3">Últimos 3 meses</SelectItem><SelectItem value="6">Últimos 6 meses</SelectItem><SelectItem value="12">Último ano</SelectItem></SelectContent>
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-danger/10"><Users className="h-5 w-5 text-danger" /></div><div><p className="text-sm text-muted-foreground">Total Inscritos</p><p className="text-2xl font-bold">{fmt(totals.totalSubs)}</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-success/10"><Percent className="h-5 w-5 text-success" /></div><div><p className="text-sm text-muted-foreground">Engaj. Médio</p><p className="text-2xl font-bold">{totals.avgEng}%</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-info/10"><Eye className="h-5 w-5 text-info" /></div><div><p className="text-sm text-muted-foreground">Retenção Média</p><p className="text-2xl font-bold">{totals.avgComp}%</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-info/10"><Eye className="h-5 w-5 text-info" /></div><div><p className="text-sm text-muted-foreground">Total Vídeos</p><p className="text-2xl font-bold">{fmt(totals.totalVids)}</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-purple-500/10"><BarChart3 className="h-5 w-5 text-purple-600" /></div><div><p className="text-sm text-muted-foreground">Canais Ativos</p><p className="text-2xl font-bold">{totals.channelCount}</p></div></div></CardContent></Card>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <Kpi icon={Users} label="Inscritos" value={compact(stats.subs)} hint={`${full(stats.subs)} no total`} />
+        <Kpi icon={Eye} label="Views do canal" value={compact(stats.totalViews)} hint={`${full(stats.totalVideos)} vídeos publicados`} />
+        <Kpi icon={PlaySquare} label="Views no período" value={compact(stats.views)} hint={`${stats.n} vídeos no período`} />
+        <Kpi icon={Eye} label="Média por vídeo" value={compact(stats.avgViews)} hint="views no período" />
+        <Kpi icon={Heart} label="Curtidas" value={compact(stats.likes)} hint={`${compact(stats.comments)} comentários`} />
+        <Kpi icon={Percent} label="Engajamento" value={pct(stats.engagement)} hint="curtidas + comentários / views" />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Visualizações por {timeline.weekly ? 'semana' : 'mês'} de publicação</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[280px]">
+            {timeline.rows.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={timeline.rows} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="ytViews" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.45} />
+                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis tickFormatter={compact} tickLine={false} axisLine={false} fontSize={11} width={44} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip content={<ChartTip />} />
+                  <Area type="monotone" dataKey="views" name="Views" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#ytViews)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : <p className="flex h-full items-center justify-center text-sm text-muted-foreground">Nenhum vídeo publicado no período.</p>}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Vídeos longos x Shorts</CardTitle></CardHeader>
+          <CardContent>
+            <div className="h-[150px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={split} dataKey="value" nameKey="name" innerRadius={45} outerRadius={68} paddingAngle={2} stroke="none">
+                    {split.map(s => <Cell key={s.name} fill={s.color} />)}
+                  </Pie>
+                  <Tooltip content={<ChartTip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-3 space-y-2">
+              {[{ icon: Film, name: 'Vídeos longos', d: stats.longs, color: split[0].color }, { icon: Zap, name: 'Shorts', d: stats.shorts, color: split[1].color }].map(r => (
+                <div key={r.name} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                  <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: r.color }} /><r.icon className="h-3.5 w-3.5 text-muted-foreground" />{r.name}</span>
+                  <span className="text-right text-xs text-muted-foreground"><span className="font-semibold text-foreground tabular-nums">{r.d.count}</span> vídeos · média {compact(r.d.avg)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-5">
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2"><CardTitle className="text-base">Publicações por {timeline.weekly ? 'semana' : 'mês'}</CardTitle></CardHeader>
+          <CardContent className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={timeline.rows} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} stroke="hsl(var(--muted-foreground))" />
+                <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={11} width={28} stroke="hsl(var(--muted-foreground))" />
+                <Tooltip content={<ChartTip />} cursor={{ fill: 'hsl(var(--muted) / 0.5)' }} />
+                <Bar dataKey="videos" name="Vídeos" radius={[6, 6, 0, 0]} fill="hsl(var(--primary))" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-3">
+          <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Trophy className="h-4 w-4 text-primary" />Mais vistos no período</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {top.length ? top.map((v, i) => (
+              <a key={v.id} href={v.video_url || '#'} target="_blank" rel="noopener noreferrer"
+                className="group flex items-center gap-3 rounded-lg border p-2 transition-colors hover:bg-muted/50">
+                <span className="w-5 text-center text-sm font-bold text-muted-foreground tabular-nums">{i + 1}</span>
+                <div className="h-11 w-[76px] shrink-0 overflow-hidden rounded-md bg-muted">
+                  {v.thumbnail_url && <img src={v.thumbnail_url} alt="" className="h-full w-full object-cover" loading="lazy" draggable={false} />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium" title={v.title || ''}>{v.title || 'Sem título'}</p>
+                  <p className="text-xs text-muted-foreground">{v.posted_at ? format(new Date(v.posted_at), 'dd/MM/yyyy') : '—'}
+                    {v.video_type === 'short' && <Badge variant="outline" className="ml-2 px-1 py-0 text-[10px]">Short</Badge>}
+                  </p>
+                </div>
+                <div className="grid shrink-0 grid-cols-3 gap-3 text-right text-xs tabular-nums">
+                  <span className="flex items-center justify-end gap-1 font-semibold"><Eye className="h-3 w-3 text-muted-foreground" />{compact(v.views)}</span>
+                  <span className="flex items-center justify-end gap-1"><Heart className="h-3 w-3 text-muted-foreground" />{compact(v.likes)}</span>
+                  <span className="flex items-center justify-end gap-1"><MessageCircle className="h-3 w-3 text-muted-foreground" />{compact(v.comments)}</span>
+                </div>
+                <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+              </a>
+            )) : <p className="py-8 text-center text-sm text-muted-foreground">Nenhum vídeo no período.</p>}
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-lg">Métricas por Canal</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead className="w-[250px]">Canal</TableHead>
-                  <SortableHeader field="subscribers" className="text-right">Inscritos</SortableHeader>
-                  <TableHead className="text-right">Vídeos</TableHead>
-                  <SortableHeader field="views" className="text-right">Méd. Views</SortableHeader>
-                  <SortableHeader field="engagement" className="text-right">Engaj. %</SortableHeader>
-                  <SortableHeader field="completion" className="text-right">Retenção %</SortableHeader>
-                  <SortableHeader field="likes" className="text-right">Méd. Curtidas</SortableHeader>
-                  <TableHead className="text-right">Méd. Comentários</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedChannels.map((ch) => (
-                  <TableRow key={ch.id} className="group">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border-2 border-danger"><AvatarImage src={ch.profile_picture_url || undefined} /><AvatarFallback className="bg-gradient-to-br from-danger to-danger text-white text-sm">{ch.username.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
-                        <div><p className="font-medium">@{ch.username}</p>{ch.display_name && <p className="text-xs text-muted-foreground">{ch.display_name}</p>}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right"><div className="flex flex-col items-end gap-0.5"><span className="font-medium">{fmt(ch.subscribers_count)}</span>{growth(ch.subscribers_count, ch.subscribers_previous_count)}</div></TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span>{fmt(ch.videos_count)}</span>
-                        <div className="flex gap-1">
-                          {ch.videos_long_count > 0 && <Badge variant="outline" className="text-[10px] px-1">📹 {ch.videos_long_count}</Badge>}
-                          {ch.shorts_count > 0 && <Badge variant="outline" className="text-[10px] px-1">⚡ {ch.shorts_count}</Badge>}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">{fmt(ch.avg_views)}</TableCell>
-                    <TableCell className="text-right"><span className={cn('font-medium', ch.avg_engagement > 5 ? 'text-success' : ch.avg_engagement > 2 ? 'text-warning' : 'text-danger')}>{ch.avg_engagement}%</span></TableCell>
-                    <TableCell className="text-right">{ch.avg_completion_rate}%</TableCell>
-                    <TableCell className="text-right">{fmt(ch.avg_likes)}</TableCell>
-                    <TableCell className="text-right">{fmt(ch.avg_comments)}</TableCell>
-                    <TableCell><a href={`https://youtube.com/@${ch.username}`} target="_blank" rel="noopener noreferrer" className="opacity-0 group-hover:opacity-100 transition-opacity"><ExternalLink className="h-4 w-4 text-muted-foreground hover:text-foreground" /></a></TableCell>
-                  </TableRow>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Canais</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          {channels.map((ch: any) => {
+            const cv = videos.filter(v => v.channel_id === ch.id);
+            const vViews = cv.reduce((s, v) => s + (v.views || 0), 0);
+            return (
+              <div key={ch.id} className="grid grid-cols-2 items-center gap-3 rounded-lg border p-3 md:grid-cols-[minmax(200px,1.5fr)_repeat(4,1fr)]">
+                <div className="col-span-2 flex items-center gap-3 md:col-span-1">
+                  <Avatar className="h-10 w-10 ring-2 ring-primary/40"><AvatarImage src={ch.profile_picture_url || undefined} draggable={false} /><AvatarFallback>{ch.username.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
+                  <div className="min-w-0"><p className="truncate font-medium">@{ch.username}</p><p className="truncate text-xs text-muted-foreground">{ch.display_name}</p></div>
+                </div>
+                {[['Inscritos', compact(ch.subscribers_count)], ['Views totais', compact(ch.total_views)], ['Vídeos no período', String(cv.length)], ['Média por vídeo', compact(cv.length ? vViews / cv.length : 0)]].map(([l, v]) => (
+                  <div key={l} className="text-right md:text-center">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{l}</p>
+                    <p className={cn('text-base font-semibold tabular-nums')}>{v}</p>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
-          </div>
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
     </div>
