@@ -77,6 +77,14 @@ const BLOCKS: Block[] = [
     ] }],
   },
   {
+    title: "Instagram", subtitle: "Compartilhar a tela", icon: MonitorUp,
+    highlight: "Objetivo: tirar um \"tá pago\".",
+    groups: [{ items: [
+      { id: "ig-sugestoes", text: "Pontue direcionamentos e sugestões" },
+      { id: "ig-link", text: "Enviar link posicionamento do nicho dela" },
+    ] }],
+  },
+  {
     title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
     highlight: "Explicar a função e os benefícios ao implementar o sistema de vendas que já gerou mais de 1,3 bilhão em vendas de procedimentos.",
     groups: [{ items: [
