@@ -58,7 +58,12 @@ export function ProcessLinkButton({ url, ctx, fallbackLabel }: { url: string; ct
   if (r.kind === "needsClient") return <Button size="sm" variant="outline" disabled className="gap-1.5" title="Abra a tela a partir da cliente para usar o link dela"><ExternalLink className="h-4 w-4" />{r.label}</Button>;
   const label = r.kind === "client" ? r.label : fallbackLabel;
   if (!label) return <a href={r.url} target="_blank" rel="noreferrer" className="break-all text-primary underline">{r.url}</a>;
-  return <Button asChild size="sm" variant="outline" className="gap-1.5 align-middle"><a href={r.url} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />{label}</a></Button>;
+  return (
+    <a href={r.url} target="_blank" rel="noreferrer"
+      className="group mx-0.5 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 align-middle text-sm font-medium text-primary shadow-sm transition-all hover:-translate-y-px hover:border-primary/50 hover:bg-primary/15 hover:shadow">
+      <ExternalLink className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />{label}
+    </a>
+  );
 }
 
 export function InlineMarkdown({ text, vars = {}, ctx }: { text: string; vars?: Vars; ctx?: StepContext }) {
