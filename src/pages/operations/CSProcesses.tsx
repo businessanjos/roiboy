@@ -168,8 +168,12 @@ export default function CSProcesses() {
     queryKey: ["cs-process-target-photo", target?.id],
     enabled: target?.type === "client",
     queryFn: async () => {
-      const { data } = await supabase.from("clients").select("logo_url").eq("id", target!.id).maybeSingle();
-      return (data?.logo_url as string | null) || null;
+      const { data } = await supabase.from("clients").select("logo_url, avatar_url").eq("id", target!.id).maybeSingle();
+      const own = ((data as any)?.avatar_url as string | null) || ((data as any)?.logo_url as string | null);
+      if (own) return own;
+      // Sem foto na ficha: usa a foto do WhatsApp da conversa vinculada.
+      const { data: conv } = await supabase.from("zapp_conversations").select("avatar_url").eq("client_id", target!.id).not("avatar_url", "is", null).limit(1).maybeSingle();
+      return ((conv as any)?.avatar_url as string | null) || null;
     },
   });
   const progressKey = ["cs-process-progress", target?.type, target?.id, proc?.id];
