@@ -9,6 +9,16 @@ import type { ProcessClient } from "@/lib/csClientLinks";
 
 const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
+/** Frases que motivam a consultora antes de gravar. Ela decide a ordem; a tela só troca sozinha. */
+const HINTS = [
+  "Leia com calma, sorrindo — dá pra ouvir antes de enviar.",
+  "Fale como se estivesse ao lado dela, sem pressa.",
+  "Sua voz já passa confiança. Só seja você.",
+  "Respire fundo e comece devagar: o resto vem.",
+  "Uma cliente atenta lembra de quem fala com carinho.",
+  "Não precisa ser perfeito — precisa ser seu.",
+];
+
 /** Teleprompter: a consultora lê o roteiro, grava e envia como nota de voz. */
 export function AudioTeleprompter({ open, onOpenChange, script, client, onSent }: {
   open: boolean; onOpenChange: (v: boolean) => void; script: React.ReactNode; client: ProcessClient | null; onSent: () => void;
