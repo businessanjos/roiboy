@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useOnboardingClientsData } from "@/hooks/useOnboardingHub";
-import { eventStep, stepOfStage, type BoardCard } from "@/lib/csInProgress";
+import { eventStep, showInCsConsultantFilter, stepOfStage, type BoardCard } from "@/lib/csInProgress";
 import { spDate } from "@/lib/csToday";
 
 /** Cartões do quadro "Em andamento" (somente leitura, campos existentes). */
