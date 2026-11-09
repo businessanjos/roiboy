@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BookOpenCheck, MonitorUp, TrendingUp, HeartHandshake, ClipboardList, AlertTriangle, Search, Sparkles, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import rykaLogo from "@/assets/ryka-logo.png.asset.json";
 
 /** Roteiro nativo da reunião de onboarding (antes ficava num Canva externo). */
 export const ONBOARDING_GUIDE_URL = /canva\.com\/design\/DAHQ3-2Ft-Y/i;
@@ -9,6 +10,8 @@ export const ONBOARDING_GUIDE_URL = /canva\.com\/design\/DAHQ3-2Ft-Y/i;
 type Item = { id: string; text: string };
 type Block = {
   title: string; subtitle?: string; icon: typeof MonitorUp;
+  /** Marca real do produto, quando existir (ex.: logo da Clínica Ryka). */
+  logo?: string;
   highlight?: string;
   warning?: string;
   groups: { label?: string; items: Item[] }[];
@@ -85,7 +88,7 @@ const BLOCKS: Block[] = [
     ] }],
   },
   {
-    title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
+    title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp, logo: rykaLogo.url,
     highlight: "Explicar a função e os benefícios ao implementar o sistema de vendas que já gerou mais de 1,3 bilhão em vendas de procedimentos.",
     groups: [{ items: [
       { id: "ryka-tela", text: "Compartilhar tela do sistema Clínica Ryka" },
@@ -186,7 +189,13 @@ export function OnboardingMeetingGuide({ open, onOpenChange, clientName }: { ope
         <section key={i} className="flex-1 overflow-y-auto px-10 py-10 animate-fade-in">
           <div className="mx-auto max-w-3xl">
             <div className="flex items-center gap-5">
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary"><Icon className="h-8 w-8" /></span>
+              {b.logo ? (
+                <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-primary/15 p-3.5 ring-1 ring-primary/25">
+                  <img src={b.logo} alt={b.title} className="h-full w-full object-contain dark:brightness-0 dark:invert" />
+                </span>
+              ) : (
+                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary"><Icon className="h-8 w-8" /></span>
+              )}
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Etapa {i + 1} de {BLOCKS.length}{b.subtitle ? ` · ${b.subtitle}` : ""}</p>
                 <h2 className="mt-1 text-5xl font-semibold tracking-tight">{b.title}</h2>
