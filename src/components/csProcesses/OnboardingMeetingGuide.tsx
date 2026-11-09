@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BookOpenCheck, MonitorUp, TrendingUp, HeartHandshake, ClipboardList, AlertTriangle, Search, Sparkles, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -138,6 +138,10 @@ export function OnboardingGuideButton({ clientName }: { clientName?: string }) {
 export function OnboardingMeetingGuide({ open, onOpenChange, clientName }: { open: boolean; onOpenChange: (v: boolean) => void; clientName?: string }) {
   const [done, setDone] = useState<Set<string>>(new Set());
   const [i, setI] = useState(0);
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    navRef.current?.querySelector<HTMLElement>(`[data-step="${i}"]`)?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [i]);
   const toggle = (id: string) => setDone((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const go = useCallback((d: number) => setI((v) => Math.min(BLOCKS.length - 1, Math.max(0, v + d))), []);
 
@@ -166,10 +170,10 @@ export function OnboardingMeetingGuide({ open, onOpenChange, clientName }: { ope
           <DialogDescription className="mt-2 text-base">
             {clientName ? <>Em reunião com <strong className="text-foreground">{clientName}</strong> · {done.size} de {TOTAL} pontos abordados</> : `${done.size} de ${TOTAL} pontos abordados`}
           </DialogDescription>
-          <nav className="mt-5 flex gap-2">
+          <nav ref={navRef} className="-mx-1 mt-5 flex gap-2 overflow-x-auto scroll-smooth px-1 pb-2">
             {BLOCKS.map((x, k) => (
-              <button key={x.title} type="button" onClick={() => setI(k)}
-                className={`flex flex-1 items-center gap-2 rounded-xl border px-4 outline-none focus-visible:ring-2 focus-visible:ring-primary/40 py-2.5 text-left text-sm font-medium transition-all ${k === i ? "border-primary bg-primary/10 text-foreground" : "text-muted-foreground hover:border-primary/40"}`}>
+              <button key={x.title} type="button" data-step={k} onClick={() => setI(k)}
+                className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-4 outline-none focus-visible:ring-2 focus-visible:ring-primary/40 py-2.5 text-left text-sm font-medium transition-all ${k === i ? "border-primary bg-primary/10 text-foreground" : "text-muted-foreground hover:border-primary/40"}`}>
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${blockDone(x) ? "bg-primary text-primary-foreground" : k === i ? "bg-primary/20 text-primary" : "bg-muted"}`}>
                   {blockDone(x) ? <Check className="h-3.5 w-3.5" /> : k + 1}
                 </span>
