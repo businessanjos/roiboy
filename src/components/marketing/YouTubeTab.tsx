@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import {
-  CalendarIcon, Youtube, Plus, Users, Percent, Sparkles, Eye, Heart, MessageCircle, Share2,
+  Youtube, Plus, Users, Percent, Sparkles, Eye, Heart, MessageCircle, Share2,
   ExternalLink, Pencil, Trash2, MoreHorizontal, Clock, ChevronDown, ThumbsDown, RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,8 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+import { TypedDateFilter } from './TypedDateFilter';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -204,8 +202,8 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
               Análise de Vídeos<Badge variant="secondary" className="font-normal">{filteredVideos.length} vídeos</Badge>
             </CardTitle>
             <div className="flex flex-wrap items-center gap-2">
-              <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-[130px] h-9 justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{dateFrom ? format(dateFrom, "dd/MM/yy") : "De"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className="pointer-events-auto" locale={ptBR} /></PopoverContent></Popover>
-              <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-[130px] h-9 justify-start text-left font-normal", !dateTo && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{dateTo ? format(dateTo, "dd/MM/yy") : "Até"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="pointer-events-auto" locale={ptBR} /></PopoverContent></Popover>
+              <TypedDateFilter label="De" value={dateFrom} onChange={setDateFrom} />
+              <TypedDateFilter label="Até" value={dateTo} onChange={setDateTo} />
               {(dateFrom || dateTo) && <Button variant="ghost" size="sm" className="h-9 px-2" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>Limpar datas</Button>}
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="w-[130px] h-9 bg-card"><SelectValue placeholder="Tipo" /></SelectTrigger>
