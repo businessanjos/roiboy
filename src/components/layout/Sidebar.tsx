@@ -55,7 +55,6 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { usePendingOnboardingCount } from "@/hooks/usePendingOnboardingCount";
-import { useCsTodayTasks } from "@/hooks/useCsTodayTasks";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useTheme } from "next-themes";
@@ -273,9 +272,6 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
     location.search,
   );
   const specializedMenu = getSpecializedMenu(location.pathname);
-  const showsProcesses = filteredNavItems.some((i) => i.to === "/operations/processos");
-  const { buckets: todayBuckets } = useCsTodayTasks(showsProcesses ? currentUser?.id : undefined);
-  const processesCount = todayBuckets.overdue.length + todayBuckets.today.length;
 
 
   if (specializedMenu?.kind === "settings") {
@@ -370,12 +366,6 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
                 {!collapsed && <span className="flex-1">{item.label}</span>}
-                {item.to === "/operations/processos" && processesCount > 0 && (
-                  <Badge variant="secondary" title={`${todayBuckets.overdue.length} atrasadas e ${todayBuckets.today.length} para hoje`}
-                    className={cn("h-5 min-w-5 px-1.5 text-[10px] font-semibold", todayBuckets.overdue.length ? "bg-destructive text-destructive-foreground hover:bg-destructive" : "bg-primary text-primary-foreground hover:bg-primary", collapsed && "absolute top-1 right-1 h-4 min-w-4 px-1")}>
-                    {processesCount > 99 ? "99+" : processesCount}
-                  </Badge>
-                )}
                 {item.to === "/operations/onboarding" && pendingOnboardingCount > 0 && (
                   <Badge
                     variant="secondary"

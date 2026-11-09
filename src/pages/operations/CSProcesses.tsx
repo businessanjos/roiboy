@@ -16,7 +16,10 @@ import { toStepInfo, waitKey } from "@/lib/csProcessActions";
 import { waitingFor, type StepContext } from "@/components/csProcesses/StepDetail";
 import { processVars, type ProcessClient, type ClientField } from "@/lib/csClientLinks";
 import { ClientProcessDataDialog } from "@/components/csProcesses/ClientProcessDataDialog";
-import { TodayView } from "@/components/csProcesses/TodayView";
+import { InProgressBoard } from "@/components/csProcesses/InProgressBoard";
+import { ProcessTrack } from "@/components/csProcesses/ProcessTrack";
+import type { BoardCard } from "@/lib/csInProgress";
+import { spDate } from "@/lib/csToday";
 import { ProcessFlow, StepCard, CycleView, EventTimeline, isCycle, type StepStatus } from "@/components/csProcesses/ProcessFlow";
 import { Copy, AlertTriangle, CheckSquare, Search, ExternalLink, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -214,7 +217,7 @@ export default function CSProcesses() {
   const waitDays = useMemo(() => new Map(waitSettings.map((w: any) => [w.wait_key, w.alert_days as number])), [waitSettings]);
   const waitsOfStep = useCallback((k: string) => new Map(openWaits.filter((w: any) => w.process_id === proc?.id && w.step_key === k).map((w: any) => [w.action_index as number, { started_at: w.started_at as string, id: w.id as string }])), [openWaits, proc]);
   const badgeOf = useCallback((k: string) => { const ws = [...waitsOfStep(k).values()]; return ws.length ? waitingFor(ws.sort((a, b) => a.started_at.localeCompare(b.started_at))[0].started_at) : undefined; }, [waitsOfStep]);
-  const refreshWaits = () => { qc.invalidateQueries({ queryKey: ["cs-process-waits"] }); qc.invalidateQueries({ queryKey: ["cs-today"] }); };
+  const refreshWaits = () => { qc.invalidateQueries({ queryKey: ["cs-process-waits"] }); qc.invalidateQueries({ queryKey: ["cs-in-progress"] }); };
   const startWait = async (k: string, idx: number) => {
     if (!client || !currentUser) return;
     const info = infoOf(k); const a = info?.actions[idx] as any;
@@ -240,9 +243,17 @@ export default function CSProcesses() {
     };
   };
   const firstWith = (kind: string) => allKeys.find((k) => infoOf(k)?.actions.some((a) => a.kind === kind));
+  const [track, setTrack] = useState<{ pi: number; card: BoardCard } | null>(null);
+  const goToStep = (pi: number, card: BoardCard, stepKey: string) => {
+    const next = new URLSearchParams();
+    next.set("proc", String(pi)); next.set("step", stepKey);
+    next.set(card.kind === "client" ? "client" : "event", card.id);
+    setTrack(null); setParams(next); setActive(pi); setSel(stepKey); setTab("process");
+  };
   const MAIN_TOUR: TourStep[] = [
     { text: "Bem-vinda aos Processos Eternum! 👋\nAqui está tudo que você precisa para conduzir cada cliente e cada encontro do jeito Eternum. Vamos fazer um tour rapidinho?", primary: "Bora!", secondary: "Agora não" },
-    { target: "menu", text: "Aqui ficam os 3 processos: Onboarding, Encontro Online e Encontro Presencial. Clique em um para abrir." },
+    { target: "board", text: "Aqui você vê cada cliente e cada encontro na fase em que está. Clique num cartão para ver a trilha completa e ir direto para a etapa atual.", onEnter: () => setTab("today") },
+    { target: "menu", onEnter: () => setTab("process"), text: "Aqui ficam os 3 processos: Onboarding, Encontro Online e Encontro Presencial. Clique em um para abrir." },
     { target: "nav", text: "Aqui estão as fases e as etapas na ordem. Clique em uma etapa para abrir só ela ao lado.", onEnter: () => { setActive(0); setSel("0-0"); } },
     { target: "status", text: "O sinal mostra a situação: ✓ feito, ● atual e ○ pendente." },
     { target: "copy", text: "Mensagens ficam em cartões brancos. Clique em Copiar e mande no WhatsApp. Com uma cliente aberta, o nome dela já entra no lugar de {Nome}.", onEnter: () => { const k = firstWith("message"); if (k) setSel(k); } },
@@ -253,7 +264,7 @@ export default function CSProcesses() {
   ];
   const mainTour = useTourSeen("cs_processes_main", true);
   const miniTour = useTourSeen("cs_processes_client", !!clientId && !mainTour.open);
-  const startMain = () => { setTab("process"); setView("list"); setQ(""); mainTour.setOpen(true); };
+  const startMain = () => { setTab("today"); setView("list"); setQ(""); mainTour.setOpen(true); };
   const MINI: TourStep[] = [
     { target: "nav", text: `Este é o onboarding da ${targetName ?? "cliente"}. Siga as etapas na ordem.` },
     { target: "status", text: "A etapa atual fica marcada com ●. É por ela que você continua." },
@@ -295,7 +306,7 @@ export default function CSProcesses() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-lg border p-0.5">
-          <Button size="sm" variant={tab === "today" ? "secondary" : "ghost"} onClick={() => setTab("today")}>Hoje</Button>
+          <Button size="sm" variant={tab === "today" ? "secondary" : "ghost"} onClick={() => setTab("today")}>Em andamento</Button>
           <Button size="sm" variant={tab === "process" ? "secondary" : "ghost"} onClick={() => setTab("process")}>Processos</Button>
         </div>
         {tab === "process" && client && <Button size="sm" variant="outline" onClick={() => { setEditField(undefined); setEditClientOpen(true); }}>Dados da {client.full_name.split(" ")[0]}</Button>}
@@ -307,12 +318,7 @@ export default function CSProcesses() {
       </div>
 
       {tab === "today" ? (
-        <TodayView onOpen={(t) => {
-          const next = new URLSearchParams();
-          next.set("proc", String(t.processIndex)); if (t.stepKey) next.set("step", t.stepKey);
-          if (t.clientId) next.set("client", t.clientId); if (t.eventId) next.set("event", t.eventId);
-          setParams(next); setActive(t.processIndex); if (t.stepKey) setSel(t.stepKey); setTab("process");
-        }} />
+        <InProgressBoard processes={csProcesses} onOpenCard={(i, c) => setTrack({ pi: i, card: c })} />
       ) : (<>
       <div data-tour="menu" className="grid gap-3 sm:grid-cols-3">
         {csProcesses.map((p, i) => (
@@ -379,7 +385,8 @@ export default function CSProcesses() {
         <HelpCircle className="h-5 w-5" />
       </Button>
       <ClientProcessDataDialog client={client} focus={editField} open={editClientOpen} onOpenChange={setEditClientOpen} />
-      <GuidedTour steps={MAIN_TOUR} open={mainTour.open && tab === "process"} onClose={mainTour.close} />
+      {track && <ProcessTrack card={track.card} process={csProcesses[track.pi]} processIndex={track.pi} today={spDate()} onClose={() => setTrack(null)} onGo={(k) => goToStep(track.pi, track.card, k)} />}
+      <GuidedTour steps={MAIN_TOUR} open={mainTour.open} onClose={mainTour.close} />
       <GuidedTour steps={MINI} open={miniTour.open && !mainTour.open} onClose={miniTour.close} />
     </div>
   );
