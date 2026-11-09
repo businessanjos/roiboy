@@ -107,6 +107,7 @@ export default function CSProcesses() {
   useEffect(() => { if (procParam) setActive(Number(procParam)); if (stepParam) { setSel(stepParam); setTab("process"); } }, [procParam, stepParam, clientId]);
   const [q, setQ] = useState("");
   const [view, setView] = useState<"list" | "flow">(() => (localStorage.getItem("csProcessesView") === "flow" ? "flow" : "list"));
+  const [flowReset, setFlowReset] = useState(0);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [sel, setSel] = useState<string | null>(stepParam);
   useEffect(() => { localStorage.setItem("csProcessesView", view); }, [view]);

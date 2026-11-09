@@ -96,7 +96,7 @@ function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
 }
 const nodeTypes = { phase: PhaseNode };
 
-export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups }: { groups?: { title: string; steps: { step: Step; key: string }[] }[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined }) {
+export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, resetKey = 0 }: { groups?: { title: string; steps: { step: Step; key: string }[] }[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined; resetKey?: number }) {
   const { nodes, edges } = useMemo(() => {
     const gs = groups ?? process.phases.map((ph, pi) => ({ title: ph.title, steps: ph.steps.map((s, si) => ({ step: s, key: `${pi}-${si}` })) }));
     const nodes: Node<PhaseData>[] = gs.map((g, pi) => ({
