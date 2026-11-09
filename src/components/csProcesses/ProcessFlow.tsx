@@ -87,7 +87,10 @@ export function EventTimeline({ accent }: { accent: string }) {
   );
 }
 
+type PhaseGroup = { title: string; steps: { step: Step; key: string }[] };
+export type ProcessFlowEntry = { process: Process; accent: string; groups?: PhaseGroup[]; open: (key: string) => void };
 type PhaseData = { title: string; accent: string; steps: { step: Step; key: string }[]; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined };
+type ProcessLabelData = { title: string; accent: string; details: string };
 function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
   const titleParts = data.title.match(/^Fase\s+(\d+)\s+[—–-]\s+(.+)$/i);
   return (
