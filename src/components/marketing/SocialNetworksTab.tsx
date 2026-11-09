@@ -17,9 +17,18 @@ const PLATFORM_DESCRIPTIONS: Record<Platform, string> = {
   youtube: 'Gerencie e analise seus canais do YouTube',
 };
 
+/** Rótulo da primeira aba interna de cada rede (perfis x canais). */
+const SECTION_LABELS: Record<Platform, string> = {
+  instagram: 'Perfis',
+  tiktok: 'Perfis',
+  youtube: 'Canais',
+};
+
 /**
  * Abas de redes sociais (Instagram / TikTok / YouTube) usadas dentro do hub de Conteúdo.
  * A rede ativa é sincronizada em `?platform=` para manter os links antigos de /social-media.
+ * A rede e a seção interna (perfis/canais x dashboard) dividem a mesma linha do topo,
+ * para não empilhar duas barras de pílulas uma abaixo da outra.
  */
 export function SocialNetworksTab() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -60,59 +69,59 @@ export function SocialNetworksTab() {
         <p className="text-muted-foreground">{PLATFORM_DESCRIPTIONS[platform]}</p>
       </div>
 
-      <Tabs value={platform} onValueChange={handlePlatformChange} className="space-y-4">
-        <TabsList className="bg-muted/50">
-          <TabsTrigger value="instagram" className="gap-2">
-            <Instagram className="h-4 w-4" />
-            Instagram
-          </TabsTrigger>
-          <TabsTrigger value="tiktok" className="gap-2">
-            <Music2 className="h-4 w-4" />
-            TikTok
-          </TabsTrigger>
-          <TabsTrigger value="youtube" className="gap-2">
-            <Youtube className="h-4 w-4" />
-            YouTube
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={platform} onValueChange={handlePlatformChange} className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TabsList className="bg-muted/50 h-auto">
+            <TabsTrigger value="instagram" className="gap-2">
+              <Instagram className="h-4 w-4" />
+              Instagram
+            </TabsTrigger>
+            <TabsTrigger value="tiktok" className="gap-2">
+              <Music2 className="h-4 w-4" />
+              TikTok
+            </TabsTrigger>
+            <TabsTrigger value="youtube" className="gap-2">
+              <Youtube className="h-4 w-4" />
+              YouTube
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="instagram" className="mt-0 space-y-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="bg-muted/50">
-              <TabsTrigger value="profiles" className="gap-2"><Users className="h-4 w-4" />Perfis</TabsTrigger>
-              <TabsTrigger value="dashboard" className="gap-2"><LayoutDashboard className="h-4 w-4" />Dashboard</TabsTrigger>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="bg-muted/50 h-auto">
+              <TabsTrigger value="profiles" className="gap-2">
+                <Users className="h-4 w-4" />
+                {SECTION_LABELS[platform]}
+              </TabsTrigger>
+              <TabsTrigger value="dashboard" className="gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </TabsTrigger>
             </TabsList>
-            <TabsContent value="profiles" className="mt-0">
-              <SocialMediaTab initialPostId={platform === 'instagram' ? urlPostId : null} onPostOpened={handlePostOpened} />
-            </TabsContent>
-            <TabsContent value="dashboard" className="mt-0"><SocialMediaDashboard /></TabsContent>
           </Tabs>
+        </div>
+
+        <TabsContent value="instagram" className="mt-0">
+          {activeTab === 'profiles' ? (
+            <SocialMediaTab initialPostId={platform === 'instagram' ? urlPostId : null} onPostOpened={handlePostOpened} />
+          ) : (
+            <SocialMediaDashboard />
+          )}
         </TabsContent>
 
-        <TabsContent value="tiktok" className="mt-0 space-y-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="bg-muted/50">
-              <TabsTrigger value="profiles" className="gap-2"><Users className="h-4 w-4" />Perfis</TabsTrigger>
-              <TabsTrigger value="dashboard" className="gap-2"><LayoutDashboard className="h-4 w-4" />Dashboard</TabsTrigger>
-            </TabsList>
-            <TabsContent value="profiles" className="mt-0">
-              <TikTokTab initialPostId={platform === 'tiktok' ? urlPostId : null} onPostOpened={handlePostOpened} />
-            </TabsContent>
-            <TabsContent value="dashboard" className="mt-0"><TikTokDashboard /></TabsContent>
-          </Tabs>
+        <TabsContent value="tiktok" className="mt-0">
+          {activeTab === 'profiles' ? (
+            <TikTokTab initialPostId={platform === 'tiktok' ? urlPostId : null} onPostOpened={handlePostOpened} />
+          ) : (
+            <TikTokDashboard />
+          )}
         </TabsContent>
 
-        <TabsContent value="youtube" className="mt-0 space-y-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="bg-muted/50">
-              <TabsTrigger value="profiles" className="gap-2"><Users className="h-4 w-4" />Canais</TabsTrigger>
-              <TabsTrigger value="dashboard" className="gap-2"><LayoutDashboard className="h-4 w-4" />Dashboard</TabsTrigger>
-            </TabsList>
-            <TabsContent value="profiles" className="mt-0">
-              <YouTubeTab initialPostId={platform === 'youtube' ? urlPostId : null} onPostOpened={handlePostOpened} />
-            </TabsContent>
-            <TabsContent value="dashboard" className="mt-0"><YouTubeDashboard /></TabsContent>
-          </Tabs>
+        <TabsContent value="youtube" className="mt-0">
+          {activeTab === 'profiles' ? (
+            <YouTubeTab initialPostId={platform === 'youtube' ? urlPostId : null} onPostOpened={handlePostOpened} />
+          ) : (
+            <YouTubeDashboard />
+          )}
         </TabsContent>
       </Tabs>
     </div>
