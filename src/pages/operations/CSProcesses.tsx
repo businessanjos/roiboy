@@ -353,6 +353,40 @@ export default function CSProcesses() {
         </div>
       </div>
 
+      {tab === "process" && clientId && (
+        <section aria-label="Cliente selecionada" className="rounded-2xl border border-primary/35 bg-primary/[0.07] p-4 shadow-sm">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm"><UserRound className="h-5 w-5" /></span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">Cliente selecionada</span>
+                  <span className="rounded-full border border-primary/25 bg-card/70 px-2 py-0.5 text-[11px] font-medium">Atendimento individual</span>
+                </div>
+                <h2 className="mt-1 truncate text-lg font-semibold">{targetName ?? "Carregando cliente…"}</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">Mensagens, links e progresso desta tela pertencem a esta cliente.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+              <Button size="sm" variant="outline" className="bg-card/70" disabled={!client} onClick={() => { setEditField(undefined); setEditClientOpen(true); }}>Dados da cliente</Button>
+              <Button size="sm" variant="outline" className="gap-1.5 bg-card/70" onClick={() => clearClientSelection(true)}><UsersRound className="h-4 w-4" />Trocar cliente</Button>
+              <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => clearClientSelection()}><X className="h-4 w-4" />Remover seleção</Button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {tab === "process" && !target && (
+        <section aria-label="Nenhuma cliente selecionada" className="flex flex-col gap-3 rounded-2xl border border-dashed bg-muted/25 p-4 sm:flex-row sm:items-center">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground"><UserRound className="h-5 w-5" /></span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold">Visualização geral · nenhuma cliente selecionada</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">Selecione uma cliente para preencher nomes e links e registrar o progresso dela.</p>
+          </div>
+          <Button size="sm" variant="outline" className="gap-1.5 self-start sm:self-auto" onClick={() => clearClientSelection(true)}><UsersRound className="h-4 w-4" />Selecionar cliente</Button>
+        </section>
+      )}
+
       {tab === "today" ? (
         <InProgressBoard processes={csProcesses} onOpenCard={(i, c) => setTrack({ pi: i, card: c })} />
       ) : (<>
