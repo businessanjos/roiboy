@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { BookOpenCheck, MonitorUp, TrendingUp, HeartHandshake, ClipboardList, AlertTriangle, Sparkles, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { BookOpenCheck, MonitorUp, TrendingUp, HeartHandshake, ClipboardList, AlertTriangle, Search, Sparkles, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +15,16 @@ type Block = {
 };
 
 const BLOCKS: Block[] = [
+  {
+    title: "Análise", subtitle: "15 minutos antes do onboarding", icon: Search,
+    highlight: "Análise prévia: revise tudo da cliente 15 minutos antes de entrar na reunião.",
+    groups: [{ items: [
+      { id: "an-roy", text: "Roy com informações do comercial" },
+      { id: "an-insta", text: "Perfil do Instagram" },
+      { id: "an-cadastro", text: "Cadastro empresarial" },
+      { id: "an-briefing", text: "Briefing comercial" },
+    ] }],
+  },
   {
     title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
     highlight: "Explicar a função e os benefícios ao implementar o sistema de vendas que já gerou mais de 1,3 bilhão em vendas de procedimentos.",
