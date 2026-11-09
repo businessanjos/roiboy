@@ -361,6 +361,7 @@ export default function CSProcesses() {
     { target: "alert", title: "Atenção aos avisos", text: "Avisos em vermelho são o que não pode ser esquecido.", onEnter: () => { const k = firstWith("alert"); if (k) setSel(k); } },
     { target: "next", title: "Conclua e avance", text: "Terminou a etapa? Clique aqui para concluir e ir para a próxima." },
     ...(!isMobile ? [
+      { target: "toggle", title: "Abra o fluxograma", text: "Clique em Fluxograma para trocar a lista pelo mapa visual do processo.", onEnter: () => { setTab("process"); setView("list"); } },
       { target: "flow", title: "Onboarding pelo fluxograma", text: "Aqui o Onboarding aparece por fases, na ordem em que acontece. Arraste para navegar e use os controles para aproximar ou abrir em tela cheia.", onEnter: () => { setTab("process"); setActive(0); setSel("0-0"); setView("flow"); } },
       { target: "flow-step", title: "Abra a etapa e siga o processo", text: "Clique no cartão de uma etapa para abrir as mensagens, tarefas e links no painel lateral. Assim você conduz o Onboarding completo pelo fluxograma." },
     ] satisfies TourStep[] : []),
@@ -418,9 +419,9 @@ export default function CSProcesses() {
           <Button size="sm" variant={tab === "process" ? "secondary" : "ghost"} onClick={() => setTab("process")}>Processos</Button>
           <Button size="sm" variant={tab === "today" ? "secondary" : "ghost"} onClick={() => setTab("today")}>Em andamento</Button>
         </div>
-        {tab === "process" && <div data-tour="toggle" className="inline-flex rounded-lg border p-0.5">
+        {tab === "process" && <div className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view === "list" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("list")}><List className="h-4 w-4" />Lista</Button>
-          <Button size="sm" variant={view === "flow" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("flow")}><Workflow className="h-4 w-4" />Fluxograma</Button>
+          <Button data-tour="toggle" size="sm" variant={view === "flow" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("flow")}><Workflow className="h-4 w-4" />Fluxograma</Button>
         </div>}
         </div>
       </div>
