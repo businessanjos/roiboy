@@ -69,6 +69,14 @@ const BLOCKS: Block[] = [
     ] }],
   },
   {
+    title: "Método & marca", icon: Sparkles,
+    groups: [{ items: [
+      { id: "mm-importancia", text: "Explicar a importância" },
+      { id: "mm-montar", text: "Ensinar a montar o método" },
+      { id: "mm-exemplos", text: "Dar exemplos práticos e reais dentro do nicho dela" },
+    ] }],
+  },
+  {
     title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
     highlight: "Explicar a função e os benefícios ao implementar o sistema de vendas que já gerou mais de 1,3 bilhão em vendas de procedimentos.",
     groups: [{ items: [
