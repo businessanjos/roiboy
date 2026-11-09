@@ -57,6 +57,7 @@ const ChartTip = ({ active, payload, label }: any) => {
 
 export function YouTubeDashboard() {
   const { currentUser: user } = useCurrentUser();
+  const [pickedBucket, setPickedBucket] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodValue>({ preset: '3m' });
 
   const range = useMemo(() => resolvePeriod(period), [period]);
@@ -105,14 +106,14 @@ export function YouTubeDashboard() {
 
   const timeline = useMemo(() => {
     const weekly = differenceInCalendarDays(range.endDate, range.startDate) <= 120;
-    const map = new Map<string, { label: string; views: number; likes: number; videos: number; sort: number }>();
+    const map = new Map<string, { id: string; label: string; views: number; likes: number; videos: number; sort: number; items: VideoRow[] }>();
     videos.forEach(v => {
       if (!v.posted_at) return;
       const d = new Date(v.posted_at);
       const key = weekly ? startOfWeek(d, { weekStartsOn: 1 }) : startOfMonth(d);
       const id = key.toISOString();
-      const cur = map.get(id) || { label: format(key, weekly ? 'dd/MM' : 'MMM/yy', { locale: ptBR }), views: 0, likes: 0, videos: 0, sort: key.getTime() };
-      cur.views += v.views || 0; cur.likes += v.likes || 0; cur.videos += 1;
+      const cur = map.get(id) || { id, label: format(key, weekly ? 'dd/MM' : 'MMM/yy', { locale: ptBR }), views: 0, likes: 0, videos: 0, sort: key.getTime(), items: [] as VideoRow[] };
+      cur.views += v.views || 0; cur.likes += v.likes || 0; cur.videos += 1; cur.items.push(v);
       map.set(id, cur);
     });
     return { weekly, rows: [...map.values()].sort((a, b) => a.sort - b.sort) };
@@ -212,10 +213,36 @@ export function YouTubeDashboard() {
                 <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} stroke="hsl(var(--muted-foreground))" />
                 <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={11} width={28} stroke="hsl(var(--muted-foreground))" />
                 <Tooltip content={<ChartTip />} cursor={{ fill: 'hsl(var(--muted) / 0.5)' }} />
-                <Bar dataKey="videos" name="Vídeos" radius={[6, 6, 0, 0]} fill="hsl(var(--primary))" />
+                <Bar dataKey="videos" name="Vídeos" radius={[6, 6, 0, 0]} className="cursor-pointer"
+                  onClick={(d: any) => setPickedBucket(p => p === d?.id ? null : d?.id)}>
+                  {timeline.rows.map(r => <Cell key={r.id} fill={!pickedBucket || pickedBucket === r.id ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.3)'} />)}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
+          {(() => {
+            const b = timeline.rows.find(r => r.id === pickedBucket);
+            if (!b) return <p className="px-6 pb-4 text-xs text-muted-foreground">Clique em uma barra para ver os vídeos.</p>;
+            return (
+              <div className="space-y-1.5 border-t px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{timeline.weekly ? 'Semana de' : ''} {b.label} · {b.videos} {b.videos === 1 ? 'vídeo' : 'vídeos'}</p>
+                  <button type="button" onClick={() => setPickedBucket(null)} className="text-xs text-primary hover:underline">Fechar</button>
+                </div>
+                {[...b.items].sort((x, y) => (y.views || 0) - (x.views || 0)).map(v => (
+                  <a key={v.id} href={v.video_url || '#'} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-2.5 rounded-md p-1.5 transition-colors hover:bg-muted/60">
+                    <div className="h-9 w-16 shrink-0 overflow-hidden rounded bg-muted">{v.thumbnail_url && <img src={v.thumbnail_url} alt="" className="h-full w-full object-cover" draggable={false} />}</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium" title={v.title || ''}>{v.title || 'Sem título'}</p>
+                      <p className="text-[11px] text-muted-foreground">{v.posted_at ? format(new Date(v.posted_at), 'dd/MM HH:mm') : '—'}{v.video_type === 'short' ? ' · Short' : ''}</p>
+                    </div>
+                    <span className="flex shrink-0 items-center gap-1 text-xs font-semibold tabular-nums"><Eye className="h-3 w-3 text-muted-foreground" />{compact(v.views)}</span>
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                  </a>
+                ))}
+              </div>
+            );
+          })()}
         </Card>
 
         <Card className="lg:col-span-3">
