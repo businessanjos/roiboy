@@ -113,14 +113,14 @@ function WaitItem({ a, idx, ctx }: { a: Extract<Action, { kind: "wait" }>; idx: 
           )}
         </div>
       )}
-      <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-        Cobrar na tela Hoje após
-        {ctx.canConfigWait ? (
+      {ctx.canConfigWait && (
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground" title="Ajuste visível só para gestores">
+          Avisar após
           <Input type="number" min={1} max={30} defaultValue={days} className="h-6 w-14 px-1.5 text-xs"
             onBlur={(e) => { const n = Math.max(1, Math.min(30, Number(e.target.value) || 2)); if (n !== days) ctx.onSetAlertDays(idx, n); }} />
-        ) : <b>{days}</b>}
-        {days === 1 ? "dia" : "dias"}
-      </div>
+          {days === 1 ? "dia" : "dias"}
+        </div>
+      )}
     </div>
   );
 }
