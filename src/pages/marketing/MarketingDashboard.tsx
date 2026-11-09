@@ -46,6 +46,7 @@ import {
 } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 import {
   format,
   startOfDay,
@@ -145,6 +146,7 @@ const formatNum = (v: number | null | undefined) => (v ?? 0).toLocaleString("pt-
 
 export default function MarketingDashboard() {
   const navigate = useNavigate();
+  const reducedMotion = useReducedMotion();
 
   const [preset, setPreset] = useState<DatePreset>("month");
   const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
@@ -419,30 +421,74 @@ export default function MarketingDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Card className="lg:col-span-2">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Evolução dos últimos 6 meses</CardTitle>
-              <CardDescription>Leads totais, MQL e vendas MQL por mês</CardDescription>
+          <Card className="min-w-0 overflow-hidden rounded-lg border-border shadow-none lg:col-span-2">
+            <CardHeader className="gap-4 border-b border-border/60 pb-5 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-1.5">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Evolução dos últimos 6 meses
+                </CardTitle>
+                <CardDescription className="text-xs leading-5">Leads totais, MQL e vendas MQL por mês</CardDescription>
+              </div>
+              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                {data.monthlyHistory[0]?.month} — {data.monthlyHistory[data.monthlyHistory.length - 1]?.month}
+              </span>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={data.monthlyHistory}>
-                  <CartesianGrid className="stroke-muted" vertical={false} stroke="hsl(var(--hairline))" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} width={40} />
+            <CardContent className="px-3 pb-0 pt-6 sm:px-5">
+              <div role="img" aria-label="Gráfico de linhas de leads, MQL e vendas MQL nos últimos seis meses" className="h-[300px] w-full sm:h-[320px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.monthlyHistory} margin={{ top: 12, right: 16, left: 0, bottom: 12 }}>
+                  <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 6" strokeOpacity={0.65} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={14} interval={0} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis axisLine={false} tickLine={false} tickMargin={10} tickCount={5} allowDecimals={false} tickFormatter={formatNum} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={42} />
                   <Tooltip
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: "1px solid hsl(var(--border))",
-                      background: "hsl(var(--card))",
+                    cursor={{ stroke: "hsl(var(--primary))", strokeWidth: 1, strokeDasharray: "4 4", strokeOpacity: 0.5 }}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      return (
+                        <div className="min-w-44 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-lg">
+                          <p className="mb-3 border-b border-border pb-2 text-xs font-semibold">{label}</p>
+                          <div className="space-y-2.5">
+                            {payload.map((item) => (
+                              <div key={String(item.dataKey)} className="flex items-center justify-between gap-6 text-xs">
+                                <span className="flex items-center gap-2 text-muted-foreground">
+                                  <svg width="16" height="8" aria-hidden="true"><path d="M0 4h16" stroke={item.color} strokeWidth="2" /><circle cx="8" cy="4" r="2.5" fill="hsl(var(--popover))" stroke={item.color} strokeWidth="2" /></svg>
+                                  {item.name}
+                                </span>
+                                <span className="font-semibold tabular-nums">{formatNum(Number(item.value))}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
                     }}
                   />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line type="monotone" dataKey="leads" name="Leads" stroke="hsl(217 91% 60%)" strokeWidth={2} />
-                  <Line type="monotone" dataKey="mql" name="MQL" stroke="hsl(280 65% 60%)" strokeWidth={2} />
-                  <Line type="monotone" dataKey="won" name="Vendas MQL" stroke="hsl(142 71% 45%)" strokeWidth={2} />
+                  {[
+                    { key: "leads", name: "Leads", color: "hsl(var(--info))" },
+                    { key: "mql", name: "MQL", color: "hsl(var(--primary))" },
+                    { key: "won", name: "Vendas MQL", color: "hsl(var(--success))" },
+                  ].map((series, index) => (
+                    <Line key={series.key} type="monotone" dataKey={series.key} name={series.name} stroke={series.color}
+                      strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+                      dot={{ r: 3.5, strokeWidth: 2, fill: "hsl(var(--card))" }}
+                      activeDot={{ r: 6, stroke: "hsl(var(--card))", strokeWidth: 3 }}
+                      isAnimationActive={!reducedMotion} animationDuration={1100} animationBegin={index * 140} animationEasing="ease-out" />
+                  ))}
                 </LineChart>
               </ResponsiveContainer>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 border-t border-border/60 px-2 py-4 text-xs text-muted-foreground">
+                {[
+                  { label: "Leads", color: "hsl(var(--info))" },
+                  { label: "MQL", color: "hsl(var(--primary))" },
+                  { label: "Vendas MQL", color: "hsl(var(--success))" },
+                ].map((series) => (
+                  <span key={series.label} className="flex items-center gap-2">
+                    <svg width="22" height="10" aria-hidden="true"><path d="M0 5h22" stroke={series.color} strokeWidth="2.5" /><circle cx="11" cy="5" r="3" fill="hsl(var(--card))" stroke={series.color} strokeWidth="2" /></svg>
+                    {series.label}
+                  </span>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
