@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
-import { ReactFlow, Background, Controls, ControlButton, useReactFlow, Handle, Position, MarkerType, type Node, type Edge, type NodeProps } from "@xyflow/react";
+import { ReactFlow, Background, BackgroundVariant, Controls, ControlButton, MiniMap, useReactFlow, Handle, Position, MarkerType, type Node, type Edge, type NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { MessageSquare, CheckSquare, Link2, AlertTriangle, Check, ArrowDown, RefreshCw } from "lucide-react";
+import { MessageSquare, CheckSquare, Link2, AlertTriangle, Check, ArrowDown, RefreshCw, Maximize2, Minimize2, Workflow, MousePointer2, Hourglass } from "lucide-react";
 import type { Process, Step } from "@/lib/csProcesses";
 
 export type StepStatus = "done" | "current" | "pending" | undefined;
@@ -16,20 +15,31 @@ export function stepIcon(s: Step) {
 export const taskCount = (s: Step) => s.blocks.filter((b) => b.kind === "task").length;
 export const isCycle = (s: Step) => /ciclo mensal/i.test(s.title);
 
-export function StepCard({ step, status, onClick, tourId, badge }: { step: Step; status: StepStatus; onClick: () => void; tourId?: string; badge?: string }) {
+export function StepCard({ step, status, onClick, tourId, badge, flow = false }: { step: Step; status: StepStatus; onClick: () => void; tourId?: string; badge?: string; flow?: boolean }) {
   const Icon = stepIcon(step);
   const n = taskCount(step);
+  const number = flow ? step.title.match(/^(\d+\.\d+)\s+(.+)$/) : null;
   const tone = status === "done" ? "border-emerald-500/60 bg-emerald-500/10"
     : status === "current" ? "border-primary ring-2 ring-primary/40 animate-pulse [animation-duration:2.5s]"
     : status === "pending" ? "opacity-60" : "";
   return (
-    <button data-tour={tourId} onClick={onClick} className={`w-full rounded-xl border bg-card p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${tone}`}>
-      <div className="flex items-start gap-2">
-        <span className="mt-0.5 rounded-lg bg-muted p-1.5">{status === "done" ? <Check className="h-4 w-4 text-emerald-600" /> : <Icon className="h-4 w-4 text-muted-foreground" />}</span>
-        <div className="min-w-0">
-          <div className="text-sm font-medium leading-snug">{step.title || "Etapa"}</div>
-          {n > 0 && <div className="text-xs text-muted-foreground">{n} tarefa{n > 1 ? "s" : ""}</div>}
-          {badge && <div className="mt-1 inline-block rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium">⏳ {badge}</div>}
+    <button data-tour={tourId} onClick={onClick} className={`group w-full rounded-xl border bg-card text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md ${flow ? "min-h-[72px] p-3.5" : "p-3"} ${tone}`}>
+      <div className={`flex items-start ${flow ? "gap-3" : "gap-2"}`}>
+        <span className={`mt-0.5 shrink-0 rounded-lg p-1.5 ${flow ? "bg-primary/10" : "bg-muted"}`}>
+          {status === "done" ? <Check className="h-4 w-4 text-emerald-600" /> : <Icon className={`h-4 w-4 ${flow ? "text-primary" : "text-muted-foreground"}`} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className={`${flow ? "flex items-start gap-2" : ""}`}>
+            {number && <span className="mt-0.5 shrink-0 rounded-md border bg-muted/70 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground">{number[1]}</span>}
+            <div className={`${flow ? "text-[13px] font-semibold" : "text-sm font-medium"} leading-snug`}>{number?.[2] || step.title || "Etapa"}</div>
+          </div>
+          {flow ? (n > 0 || badge) && <div className="mt-2 flex flex-wrap items-center gap-2">
+            {n > 0 && <div className="text-xs text-muted-foreground">{n} tarefa{n > 1 ? "s" : ""}</div>}
+            {badge && <div className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium"><Hourglass className="h-3 w-3" />{badge}</div>}
+          </div> : <>
+            {n > 0 && <div className="text-xs text-muted-foreground">{n} tarefa{n > 1 ? "s" : ""}</div>}
+            {badge && <div className="mt-1 inline-block rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium">⏳ {badge}</div>}
+          </>}
         </div>
       </div>
     </button>
@@ -78,15 +88,24 @@ export function EventTimeline({ accent }: { accent: string }) {
 
 type PhaseData = { title: string; accent: string; steps: { step: Step; key: string }[]; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined };
 function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
+  const titleParts = data.title.match(/^Fase\s+(\d+)\s+[—–-]\s+(.+)$/i);
   return (
-    <div className="w-64 rounded-2xl border bg-muted/40 p-3 shadow-sm">
+    <div className="w-[300px] overflow-hidden rounded-[20px] border border-primary/15 bg-muted/30 shadow-lg shadow-primary/5">
       <Handle type="target" position={Position.Left} className="!opacity-0" />
-      <div className="mb-2 flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${data.accent}`} /><h3 className="text-sm font-semibold">{data.title}</h3></div>
-      <div className="space-y-2">
+      <div className="relative border-b bg-card/85 px-4 py-4">
+        <div className={`absolute inset-x-0 top-0 h-1 ${data.accent}`} />
+        <div className="flex items-center gap-2.5">
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-primary/10 ${data.accent}`} />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Fase {titleParts?.[1]?.padStart(2, "0") ?? "—"}</span>
+          <span className="ml-auto rounded-full border bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{data.steps.length} {data.steps.length === 1 ? "etapa" : "etapas"}</span>
+        </div>
+        <h3 className="mt-2 text-sm font-semibold leading-snug">{titleParts?.[2] ?? data.title}</h3>
+      </div>
+      <div className="space-y-1.5 p-3">
         {data.steps.map(({ step, key }, i) => (
-          <div key={`${key}-${i}`} className="space-y-2">
-            {i > 0 && <ArrowDown className="mx-auto h-3.5 w-3.5 text-muted-foreground" />}
-            <StepCard step={step} status={data.statusOf(key)} onClick={() => data.open(key)} badge={data.badgeOf?.(key)} tourId={i === 0 && key === "0-0" ? "flow-step" : undefined} />
+          <div key={`${key}-${i}`} className="space-y-1.5">
+            {i > 0 && <span className="mx-auto flex h-5 w-5 items-center justify-center rounded-full bg-background text-muted-foreground"><ArrowDown className="h-3 w-3" /></span>}
+            <StepCard flow step={step} status={data.statusOf(key)} onClick={() => data.open(key)} badge={data.badgeOf?.(key)} tourId={i === 0 && key === "0-0" ? "flow-step" : undefined} />
           </div>
         ))}
       </div>
@@ -100,11 +119,14 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
   const { nodes, edges } = useMemo(() => {
     const gs = groups ?? process.phases.map((ph, pi) => ({ title: ph.title, steps: ph.steps.map((s, si) => ({ step: s, key: `${pi}-${si}` })) }));
     const nodes: Node<PhaseData>[] = gs.map((g, pi) => ({
-      id: `p${pi}`, type: "phase", position: { x: pi * 330, y: 0 }, draggable: false,
+      id: `p${pi}`, type: "phase", position: { x: pi * 400, y: 0 }, draggable: false,
+      initialWidth: 300, initialHeight: 108 + g.steps.length * 96,
       data: { title: g.title, accent, steps: g.steps, statusOf, open, badgeOf },
     }));
     const edges: Edge[] = gs.slice(1).map((_, i) => ({
-      id: `e${i}`, source: `p${i}`, target: `p${i + 1}`, animated: true, markerEnd: { type: MarkerType.ArrowClosed },
+      id: `e${i}`, source: `p${i}`, target: `p${i + 1}`, type: "smoothstep",
+      style: { stroke: "hsl(var(--primary) / 0.35)", strokeWidth: 1.5 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--primary) / 0.45)", width: 18, height: 18 },
     }));
     return { nodes, edges };
   }, [process, groups, accent, statusOf, open, badgeOf]);
@@ -115,17 +137,33 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [full]);
+  const stepTotal = nodes.reduce((total, node) => total + node.data.steps.length, 0);
   return (
-    <div data-tour="flow" className={full ? "fixed inset-x-0 bottom-0 top-14 z-40 bg-background" : "h-[70vh] overflow-hidden rounded-2xl border bg-background"}>
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} minZoom={0.2} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
-        <Background gap={24} />
-        <Controls showInteractive={false} className="!flex-row [&_.react-flow__controls-button]:border-b-0 [&_.react-flow__controls-button]:border-r [&_.react-flow__controls-button:last-child]:border-r-0">
-          <ControlButton onClick={() => setFull((v) => !v)} title={full ? "Sair da tela cheia" : "Tela cheia"} aria-label={full ? "Sair da tela cheia" : "Tela cheia"}>
-            {full ? <Minimize2 /> : <Maximize2 />}
-          </ControlButton>
-        </Controls>
-        <InitialView count={nodes.length} intro={!!groups} full={full} resetKey={`${process.id}:${resetKey}`} />
-      </ReactFlow>
+    <div data-tour="flow" className={full
+      ? "fixed inset-x-0 bottom-0 top-14 z-40 flex flex-col overflow-hidden bg-background"
+      : "flex h-[76vh] min-h-[560px] max-h-[820px] flex-col overflow-hidden rounded-[24px] border bg-card shadow-sm"}>
+      <div className="flex shrink-0 items-center gap-3 border-b bg-card px-4 py-3 md:px-5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Workflow className="h-4 w-4" /></span>
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold">Mapa do processo</h2>
+          <p className="text-xs text-muted-foreground">{nodes.length} fases <span className="mx-1">·</span> {stepTotal} {groups ? "cartões" : "etapas"}</p>
+        </div>
+        <div className="ml-auto hidden items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground lg:flex">
+          <MousePointer2 className="h-3.5 w-3.5" />Clique em uma etapa para ver os detalhes
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 bg-muted/20">
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} minZoom={0.2} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
+          <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="hsl(var(--muted-foreground) / 0.24)" />
+          <Controls showInteractive={false} className="!mb-4 !ml-4 !flex-row !overflow-hidden !rounded-xl !border !bg-card !shadow-md [&_.react-flow__controls-button]:border-b-0 [&_.react-flow__controls-button]:border-r [&_.react-flow__controls-button]:bg-card [&_.react-flow__controls-button:last-child]:border-r-0">
+            <ControlButton onClick={() => setFull((v) => !v)} title={full ? "Sair da tela cheia" : "Tela cheia"} aria-label={full ? "Sair da tela cheia" : "Tela cheia"}>
+              {full ? <Minimize2 /> : <Maximize2 />}
+            </ControlButton>
+          </Controls>
+          <MiniMap pannable zoomable position="bottom-right" style={{ width: 160, height: 96 }} className="!mb-4 !mr-4 !rounded-xl !border !shadow-md" bgColor="hsl(var(--card))" nodeColor="hsl(var(--primary) / 0.35)" nodeStrokeColor="hsl(var(--primary) / 0.5)" maskColor="hsl(var(--background) / 0.65)" />
+          <InitialView count={nodes.length} intro={!!groups} full={full} resetKey={`${process.id}:${resetKey}`} />
+        </ReactFlow>
+      </div>
     </div>
   );
 }
