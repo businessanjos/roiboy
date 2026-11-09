@@ -182,7 +182,10 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
   useEffect(() => {
     if (!full) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setFull(false); setShowAll(false); }
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      setFull(false);
+      setShowAll(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
