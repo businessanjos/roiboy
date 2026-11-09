@@ -400,7 +400,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
           }}
           onScroll={syncHighlightScroll}
           onKeyDown={handleKeyDown}
-          onPaste={onPaste}
+          onPaste={handlePaste}
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
