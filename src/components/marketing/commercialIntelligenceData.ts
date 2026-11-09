@@ -22,3 +22,25 @@ export function commercialGroups(rows: CommercialRow[], dimension: 'channel' | '
   }
   return [...groups.values()].sort((a, b) => b.leads - a.leads);
 }
+
+export function commercialSummary(rows: CommercialRow[]) {
+  const sales = rows.filter(row => row.status === 'won');
+  const revenue = sales.reduce((total, row) => total + row.value, 0);
+  return {
+    leads: rows.length, mql: rows.filter(row => row.mql).length, sales: sales.length,
+    revenue, conversion: rows.length ? sales.length / rows.length * 100 : 0,
+    ticket: sales.length ? revenue / sales.length : 0,
+  };
+}
+
+export function commercialEvolution(rows: CommercialRow[]) {
+  const months = new Map<string, CommercialRow[]>();
+  for (const row of rows) {
+    const date = new Date(row.createdAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const key = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' }).format(date);
+    const list = months.get(key) ?? [];
+    list.push(row); months.set(key, list);
+  }
+  return [...months.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, list]) => ({ month, ...commercialSummary(list) }));
+}
