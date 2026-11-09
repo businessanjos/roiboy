@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { buildContentArchiveContext } from '../_shared/contentArchiveContext.ts';
 import { fetchVoiceAndPersona, buildBrandVoiceBlock, buildPersonaBlock } from "../_shared/marketing-context.ts";
 
 const corsHeaders = {
@@ -197,7 +198,8 @@ Deno.serve(async (req) => {
       supabase.from("marketing_hooks").select("text, category").eq("account_id", accountId).order("performance_score", { ascending: false }).limit(8),
     ]);
 
-    const systemPrompt = `Você é o **Roy Marketing Copilot** — um assistente especialista em marketing digital para o mercado de estética avançada. Atua como copywriter, estrategista e produtor de conteúdo.
+    const archiveContext = await buildContentArchiveContext(req, String(message));
+    const systemPrompt = `Você é o **Roy Marketing Copilot** — um assistente especialista em marketing digital para o mercado de estética avançada. Atua como copywriter, estrategista e produtor de conteúdo.${archiveContext}
 
 REGRAS:
 - Responda SEMPRE em português brasileiro, tom natural e direto.

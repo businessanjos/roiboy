@@ -32,10 +32,11 @@ import { HooksTab } from "@/components/marketing/hooks/HooksTab";
 import { CopyStudioTab } from "@/components/marketing/copy/CopyStudioTab";
 import { MarketingReferencesTab } from "@/components/marketing/references/MarketingReferencesTab";
 import { CopilotTab } from "@/components/marketing/copilot/CopilotTab";
+import { ContentArchive } from "@/components/marketing/ContentArchive";
 
 type Section =
   // Hoje
-  | "today"
+  | "today" | "archive"
   // Estratégia
   | "persona" | "brand" | "strategy" | "pillars"
   // Ideação
@@ -53,7 +54,7 @@ type SectionGroup = { group: string; items: SectionDef[] };
 const GROUPS: SectionGroup[] = [
   {
     group: "Hoje",
-    items: [{ id: "today", label: "O que postar hoje", icon: Sun }],
+    items: [{ id: "today", label: "O que postar hoje", icon: Sun }, { id: "archive", label: "Todos os conteúdos", icon: Library }],
   },
   {
     group: "Estratégia",
@@ -258,6 +259,7 @@ export default function ContentHQ() {
               ) : (
                 <>
                   {section === "today" && <DailyContentPanel />}
+                  {section === "archive" && <ContentArchive />}
                   {section === "persona" && <MarketingPersonaTab />}
                   {section === "brand" && <BrandVoiceTab />}
                   {section === "ideas-creation" && <MarketingIdeasTab />}
