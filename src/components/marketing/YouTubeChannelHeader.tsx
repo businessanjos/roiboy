@@ -1,7 +1,30 @@
-import { Youtube, Users, Video, Eye, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { Youtube, Users, Video, Eye, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { YouTubeChannel } from '@/hooks/useYouTubeData';
+
+function ChannelBio({ bio }: { bio: string }) {
+  const [open, setOpen] = useState(false);
+  const blocks = bio.split(/\s*(?:--\s*){2,}\s*/).map(s => s.trim()).filter(Boolean);
+  const urlRe = /(https?:\/\/\S+|@[\w.]+)/g;
+  const render = (text: string) => text.split(urlRe).map((part, i) => {
+    if (/^https?:\/\//.test(part)) return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="break-all font-medium text-primary hover:underline">{part.replace(/^https?:\/\//, '')}</a>;
+    if (/^@[\w.]+$/.test(part)) return <span key={i} className="mx-0.5 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{part}</span>;
+    return <span key={i}>{part}</span>;
+  });
+  return (
+    <div className="max-w-2xl rounded-lg border bg-muted/30 p-3 text-left">
+      <div className={cn('space-y-2 text-sm leading-relaxed text-muted-foreground', !open && 'line-clamp-2')}>
+        {blocks.map((b, i) => <p key={i}>{render(b)}</p>)}
+      </div>
+      <button type="button" onClick={() => setOpen(o => !o)} className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+        {open ? <>Mostrar menos <ChevronUp className="h-3.5 w-3.5" /></> : <>Ver descrição completa <ChevronDown className="h-3.5 w-3.5" /></>}
+      </button>
+    </div>
+  );
+}
 
 interface YouTubeChannelHeaderProps {
   channel: YouTubeChannel | undefined;
@@ -65,7 +88,7 @@ export function YouTubeChannelHeader({ channel, isLoading }: YouTubeChannelHeade
               <ExternalLink className="h-4 w-4" />Ver canal
             </a>
           </div>
-          {channel.bio && <p className="text-sm text-muted-foreground max-w-md">{channel.bio}</p>}
+          {channel.bio && <ChannelBio bio={channel.bio} />}
           <div className="flex justify-center sm:justify-start gap-8">
             <div className="text-center">
               <div className="flex items-center gap-1.5 text-2xl font-bold"><Users className="h-5 w-5 text-muted-foreground" />{formatNumber(channel.subscribers_count)}</div>
