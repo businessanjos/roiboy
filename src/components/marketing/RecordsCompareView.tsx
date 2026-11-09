@@ -276,7 +276,7 @@ export function RecordsCompareView({ profiles, year, month }: Props) {
                       <span className="inline-flex items-center gap-1 text-muted-foreground">
                         <Target className="h-3 w-3" /> {fmt(goal)}
                       </span>
-                      <Badge variant={pct! >= 100 ? 'default' : pct! < 80 ? 'destructive' : 'secondary'}>{pct}%</Badge>
+                      <Badge variant={(pct ?? 0) >= 100 ? 'default' : (pct ?? 0) < 80 ? 'destructive' : 'secondary'}>{pct}%</Badge>
                     </div>
                   </>
                 ) : (
@@ -289,36 +289,53 @@ export function RecordsCompareView({ profiles, year, month }: Props) {
       </div>
 
       {/* Tabela comparativa completa */}
-      <Card>
+      <Card className="overflow-hidden rounded-lg shadow-none">
+        <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+          <CardTitle className="text-sm">Comparativo por métrica</CardTitle>
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Crown className="h-3.5 w-3.5 text-primary" /> Maior resultado
+          </span>
+        </CardHeader>
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[700px] table-fixed text-sm">
+            <colgroup>
+              <col className="w-[190px]" />
+              {profiles.map((p) => <col key={p.id} />)}
+            </colgroup>
             <thead>
-              <tr className="border-b bg-muted/40">
-                <th className="w-[200px] p-3 text-left font-medium">Métrica</th>
+              <tr className="border-b bg-muted/30">
+                <th scope="col" className="px-4 py-4 text-left text-xs font-medium text-muted-foreground">Métrica</th>
                 {profiles.map((p, i) => (
-                  <th key={p.id} className="whitespace-nowrap p-3 text-left font-medium">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: SERIES_COLORS[i % SERIES_COLORS.length] }} />
-                      {label(p)}
-                    </span>
+                  <th key={p.id} scope="col" className="border-l px-4 py-3 text-left align-top font-medium">
+                    <div className="flex items-start gap-2" title={label(p)}>
+                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: SERIES_COLORS[i % SERIES_COLORS.length] }} />
+                      <div className="min-w-0">
+                        <span className="block break-words text-sm leading-5">{label(p)}</span>
+                        <span className="mt-1 block truncate text-xs font-normal text-muted-foreground">@{p.username}</span>
+                      </div>
+                    </div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {METRICS.map((m) => (
-                <tr key={m.key} className="border-b last:border-0">
-                  <td className="whitespace-nowrap p-3 font-medium text-muted-foreground">{m.label}</td>
+                <tr key={m.key} className="border-b transition-colors last:border-0 hover:bg-muted/20">
+                  <th scope="row" className="px-4 py-3 text-left text-xs font-medium leading-5 text-foreground">{m.label}</th>
                   {profiles.map((p) => {
                     const total = totals[p.id]?.[m.key] ?? 0;
                     const goal = goalTotals[p.id]?.[m.key] ?? 0;
                     const pct = goal > 0 ? Math.round((total / goal) * 100) : null;
                     const isLeader = leaders[m.key] === p.id;
                     return (
-                      <td key={p.id} className={`p-3 ${isLeader ? 'bg-primary/5' : ''}`}>
-                        <div className={`font-semibold tabular-nums ${isLeader ? 'text-primary' : ''}`}>{fmt(total)}</div>
+                      <td key={p.id} className={`border-l px-4 py-3 text-right align-middle ${isLeader ? 'bg-primary/5' : ''}`}>
+                        <div className="flex items-center justify-end gap-2">
+                          {isLeader && <Crown className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Maior resultado" />}
+                          <span className="text-base font-semibold tabular-nums text-foreground">{fmt(total)}</span>
+                        </div>
                         <div
-                          className={`text-xs ${
+                          title={goal > 0 ? `Meta: ${fmt(goal)}` : 'Sem meta definida'}
+                          className={`mt-1 text-[11px] tabular-nums ${
                             pct === null
                               ? 'text-muted-foreground'
                               : pct >= 100
@@ -328,7 +345,7 @@ export function RecordsCompareView({ profiles, year, month }: Props) {
                                   : 'text-warning'
                           }`}
                         >
-                          {pct === null ? 'sem meta' : `${pct}% da meta`}
+                          {pct === null ? 'Sem meta' : `${pct}% da meta · ${fmt(goal)}`}
                         </div>
                       </td>
                     );
@@ -427,7 +444,7 @@ export function RecordsCompareView({ profiles, year, month }: Props) {
                       <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} tickMargin={12} />
                       <YAxis tickFormatter={compact} tickLine={false} axisLine={false} width={64} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
                       <Tooltip cursor={{ fill: 'hsl(var(--primary) / 0.045)' }} content={<CompareTooltip scope={scope} metricLabel={metricLabel} profiles={profiles} />} />
-                      <Legend iconType="circle" iconSize={8} wrapperStyle={{ paddingTop: 18, fontSize: 12 }} formatter={(key: any) => truncate(label(profiles.find((p) => p.id === key)!), 28)} />
+                      <Legend iconType="circle" iconSize={8} wrapperStyle={{ paddingTop: 18, fontSize: 12 }} formatter={(key: any) => { const profile = profiles.find((p) => p.id === key); return profile ? truncate(label(profile), 28) : String(key); }} />
                       {profiles.map((p, i) => (
                         <Bar key={p.id} dataKey={p.id} fill={`url(#${chartId}-profile-${i})`} radius={[5, 5, 0, 0]} maxBarSize={34} animationDuration={650} />
                       ))}
