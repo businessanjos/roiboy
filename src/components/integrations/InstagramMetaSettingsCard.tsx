@@ -14,7 +14,7 @@ interface InstagramSettingsProfile {
   username: string;
   sync_error: string | null;
   meta_access_token: string | null;
-  meta_user_id: string | null;
+  ig_business_account_id: string | null;
 }
 
 export function InstagramMetaSettingsCard() {
@@ -27,7 +27,7 @@ export function InstagramMetaSettingsCard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('instagram_profiles')
-        .select('id, username, sync_error, meta_access_token, meta_user_id')
+        .select('id, username, sync_error, meta_access_token, ig_business_account_id')
         .eq('account_id', currentUser!.account_id)
         .order('username');
       if (error) throw error;
@@ -59,7 +59,7 @@ export function InstagramMetaSettingsCard() {
           </p>
         ) : (
           profiles.map((profile) => {
-            const configured = !!profile.meta_access_token && !!profile.meta_user_id;
+            const configured = !!profile.meta_access_token && !!profile.ig_business_account_id;
             return (
               <div key={profile.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
                 <div className="min-w-0 flex-1">
