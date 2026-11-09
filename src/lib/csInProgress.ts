@@ -2,6 +2,13 @@
  * Só usa campos que já existem (etapa do onboarding da ficha, data do evento). Nada é inventado. */
 import { addDays, daysBetween, isEncontroOnline, isEncontroPresencial, ONLINE, spDate } from "@/lib/csToday";
 
+const HIDDEN_CONSULTANT_FILTER_NAMES = new Set(["felipe tester", "jessica campos"]);
+
+/** Controla apenas as opções do filtro; não altera cadastro, função ou clientes da pessoa. */
+export function showInCsConsultantFilter(name: string): boolean {
+  return !HIDDEN_CONSULTANT_FILTER_NAMES.has(name.trim().toLocaleLowerCase("pt-BR"));
+}
+
 /** Etapa do Onboarding Hub (client_stages.name) → etapa do processo de Onboarding ("fase-etapa").
  * Etapas sem correspondência clara retornam null e aparecem em "Sem fase definida". */
 const STAGE_MAP: [RegExp, string][] = [

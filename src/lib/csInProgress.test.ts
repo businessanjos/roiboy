@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { eventStep, sinceLabel, stepOfStage } from "./csInProgress";
+import { eventStep, showInCsConsultantFilter, sinceLabel, stepOfStage } from "./csInProgress";
+
+describe("showInCsConsultantFilter", () => {
+  it("remove Felipe Tester e Jessica Campos sem afetar as demais consultoras", () => {
+    expect(showInCsConsultantFilter("Felipe Tester")).toBe(false);
+    expect(showInCsConsultantFilter("Jessica Campos")).toBe(false);
+    expect(showInCsConsultantFilter("Andréia Barros")).toBe(true);
+  });
+});
 
 describe("stepOfStage", () => {
   it("mapeia etapas da ficha para etapas do processo", () => {

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useOnboardingClientsData } from "@/hooks/useOnboardingHub";
-import { eventStep, stepOfStage, type BoardCard } from "@/lib/csInProgress";
+import { eventStep, showInCsConsultantFilter, stepOfStage, type BoardCard } from "@/lib/csInProgress";
 import { spDate } from "@/lib/csToday";
 
 /** Cartões do quadro "Em andamento" (somente leitura, campos existentes). */
@@ -28,7 +28,10 @@ export function useCsInProgress() {
       return {
         waiting: new Set((waits.data ?? []).map((w) => w.client_id as string)),
         events: (events.data ?? []).filter((e: any) => e.status !== "cancelled"),
-        users: ((users.data ?? []) as any[]).map((u) => ({ ...u, isCs: (u.user_team_roles ?? []).some((r: any) => /^(Consultor|CX|Supervisor CX)$/i.test(r.team_roles?.name ?? "")) })) as { id: string; name: string; avatar_url: string | null; isCs: boolean }[],
+        users: ((users.data ?? []) as any[]).map((u) => ({
+          ...u,
+          isCs: showInCsConsultantFilter(u.name ?? "") && (u.user_team_roles ?? []).some((r: any) => /^(Consultor|CX|Supervisor CX)$/i.test(r.team_roles?.name ?? "")),
+        })) as { id: string; name: string; avatar_url: string | null; isCs: boolean }[],
       };
     },
   });
