@@ -327,6 +327,27 @@ export function useYouTubeData() {
     onError: (error) => { toast.error('Erro ao excluir canal: ' + error.message); },
   });
 
+  const syncChannels = useMutation({
+    mutationFn: async () => {
+      if (!user?.account_id) throw new Error('Usuário não autenticado');
+      const { data, error } = await supabase.functions.invoke('sync-youtube-channels', {
+        body: { accountId: user.account_id, channelId: currentChannel?.id },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro ao sincronizar');
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['youtube-channels'] });
+      queryClient.invalidateQueries({ queryKey: ['youtube-videos'] });
+      queryClient.invalidateQueries({ queryKey: ['youtube-dashboard'] });
+      const failed = (data.details ?? []).find((d: any) => !d.success);
+      if (failed) toast.warning('Não foi possível atualizar o canal', { description: `@${failed.username}: ${failed.error}` });
+      else toast.success(data.message || 'Canal sincronizado!');
+    },
+    onError: (error) => { toast.error('Erro ao sincronizar: ' + error.message); },
+  });
+
   const refetchData = () => {
     queryClient.invalidateQueries({ queryKey: ['youtube-channels'] });
     queryClient.invalidateQueries({ queryKey: ['youtube-videos'] });
@@ -337,6 +358,6 @@ export function useYouTubeData() {
     isLoading: isLoadingChannels || isLoadingVideos,
     useMockData, selectedChannelId, setSelectedChannelId,
     createChannel, deleteChannel, createVideo, updateVideo, deleteVideo,
-    refetchData, updateChannelPicture,
+    refetchData, updateChannelPicture, syncChannels,
   };
 }

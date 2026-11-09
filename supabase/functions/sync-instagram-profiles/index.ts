@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ensureFreshToken, isExpiredTokenError } from "../_shared/metaToken.ts";
+import { runApifyActor } from "../_shared/apify.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -91,6 +92,54 @@ function mapMediaTypeToPostType(mediaType: string): string {
   return 'static';
 }
 
+// Fallback público via Apify: seguidores, bio e posts recentes (sem alcance/salvamentos, que só a Meta fornece).
+async function syncViaApify(supabase: any, profile: any): Promise<{ ok: boolean; posts: number; error?: string }> {
+  try {
+    const items = await runApifyActor('apify~instagram-profile-scraper', { usernames: [profile.username], resultsLimit: 30 });
+    const ig = items[0];
+    if (!ig || ig.error) return { ok: false, posts: 0, error: ig?.errorDescription || ig?.error || 'Perfil não retornado pelo Apify' };
+
+    const isCustomAvatar = profile.profile_picture_url?.includes('supabase.co/storage');
+    await supabase.from('instagram_profiles').update({
+      display_name: ig.fullName || profile.display_name,
+      profile_picture_url: isCustomAvatar ? profile.profile_picture_url : (ig.profilePicUrlHD || ig.profilePicUrl || profile.profile_picture_url),
+      followers_previous_count: profile.followers_count,
+      followers_count: ig.followersCount ?? profile.followers_count,
+      following_count: ig.followsCount ?? profile.following_count,
+      posts_count: ig.postsCount ?? profile.posts_count,
+      bio: ig.biography || profile.bio,
+      last_synced_at: new Date().toISOString(),
+      sync_error: null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', profile.id);
+
+    let posts = 0;
+    for (const p of (ig.latestPosts || []) as any[]) {
+      const code = p.shortCode;
+      if (!code) continue;
+      const type = String(p.type || '');
+      const row: Record<string, unknown> = {
+        profile_id: profile.id,
+        instagram_id: code,
+        post_type: type === 'Video' ? 'reels' : type === 'Sidecar' ? 'carousel' : 'static',
+        caption: p.caption || null,
+        permalink: p.url || `https://www.instagram.com/p/${code}/`,
+        posted_at: p.timestamp,
+        likes: Math.max(0, p.likesCount ?? 0),
+        comments: p.commentsCount ?? 0,
+        updated_at: new Date().toISOString(),
+      };
+      if (p.videoViewCount || p.videoPlayCount) row.views = p.videoPlayCount || p.videoViewCount;
+      const { error } = await supabase.from('instagram_posts').upsert(row, { onConflict: 'profile_id,instagram_id' });
+      if (!error) posts++;
+      else console.error(`Apify upsert ${code}: ${error.message}`);
+    }
+    return { ok: true, posts };
+  } catch (e: any) {
+    return { ok: false, posts: 0, error: e.message };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -124,15 +173,18 @@ Deno.serve(async (req) => {
 
       // Skip profiles without Meta credentials
       if (!profile.meta_access_token || !profile.ig_business_account_id) {
+        const fb = await syncViaApify(supabase, profile);
+        if (fb.ok) {
+          results.synced++;
+          results.posts_synced += fb.posts;
+          results.details.push({ username: profile.username, success: true, posts: fb.posts, source: 'apify' });
+          continue;
+        }
         results.failed++;
-        results.details.push({
-          username: profile.username,
-          success: false,
-          error: 'Token Meta ou IG Business ID não configurado. Configure em "Configurar Meta API".'
-        });
+        results.details.push({ username: profile.username, success: false, error: `Sem Meta e busca pública falhou: ${fb.error}` });
         await supabase.from('instagram_profiles').update({
           last_synced_at: new Date().toISOString(),
-          sync_error: 'Credenciais Meta ausentes',
+          sync_error: `Credenciais Meta ausentes; busca pública falhou (${fb.error})`,
         }).eq('id', profile.id);
         continue;
       }
@@ -154,6 +206,13 @@ Deno.serve(async (req) => {
       }
 
       if (profRes.error) {
+        const fb = await syncViaApify(supabase, profile);
+        if (fb.ok) {
+          results.synced++;
+          results.posts_synced += fb.posts;
+          results.details.push({ username: profile.username, success: true, posts: fb.posts, source: 'apify', meta_error: profRes.error });
+          continue;
+        }
         results.failed++;
         results.details.push({ username: profile.username, success: false, error: profRes.error });
         await supabase.from('instagram_profiles').update({
