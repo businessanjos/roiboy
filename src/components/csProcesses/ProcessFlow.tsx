@@ -226,14 +226,17 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
 }
 
 /** Abre legível nas primeiras fases; no Onboarding mostra antes o fluxo inteiro e volta ao início. */
-function InitialView({ count, intro, full, resetKey }: { count: number; intro: boolean; full: boolean; resetKey: string }) {
+function InitialView({ count, intro, full, combined, resetKey }: { count: number; intro: boolean; full: boolean; combined: boolean; resetKey: string }) {
   const rf = useReactFlow();
   const first = useRef(true);
   useEffect(() => {
     if (!count) return;
     const start = { nodes: [{ id: "p0" }, { id: "p1" }, { id: "p2" }], padding: 0.1, maxZoom: 1 };
     const timers: number[] = [];
-    if (first.current && intro) {
+    if (combined) {
+      first.current = false;
+      timers.push(window.setTimeout(() => rf.fitView({ padding: 0.08, duration: 500 }), 50));
+    } else if (first.current && intro) {
       first.current = false;
       timers.push(window.setTimeout(() => rf.fitView({ padding: 0.08, duration: 0 }), 50));
       timers.push(window.setTimeout(() => rf.fitView({ ...start, duration: 1200 }), 1500));
@@ -242,6 +245,6 @@ function InitialView({ count, intro, full, resetKey }: { count: number; intro: b
       timers.push(window.setTimeout(() => rf.fitView({ ...start, duration: 300 }), 50));
     }
     return () => timers.forEach(clearTimeout);
-  }, [count, intro, full, resetKey, rf]);
+  }, [count, intro, full, combined, resetKey, rf]);
   return null;
 }
