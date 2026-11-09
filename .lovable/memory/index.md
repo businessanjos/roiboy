@@ -147,6 +147,7 @@
 - [Sidebar Visual Layout](mem://style/sidebar-visual-layout-v2-pt) — Simplified layout
 - [Product Badge Color Rule](mem://style/product-badge-color-rule-pt) — Toda exibição de produto usa Badge colorida
 - [Gráficos padrão Ryka](mem://style/ryka-charts-pt) — Tema global Recharts + primitives SVG em src/components/charts/ryka, séries sempre em --chart-1..5
+- [Pílulas de métrica desmarcam](mem://preferences/pill-metric-deselect-pt) — Clicar de novo na pílula ativa desmarca e mostra aviso discreto no lugar do gráfico
 - [Custom Fields Isolation](mem://features/custom-fields/core-system-v4-sector-isolation-and-types) — Strict flags
 - [Task Sector Isolation](mem://features/tasks/sector-isolation-and-query-limits-pt) — Server-side filtering
 - [Public Form Architecture](mem://features/public-form/core-architecture-v2-pt) — Sophisticated dark wizard

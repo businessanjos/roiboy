@@ -85,14 +85,18 @@ interface Props {
   goals: GoalRow[];
   year: number;
   month: number;
-  metric?: MetricKey;
-  onMetricChange?: (m: MetricKey) => void;
+  metric?: MetricKey | null;
+  onMetricChange?: (m: MetricKey | null) => void;
 }
 
 export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricProp, onMetricChange }: Props) {
-  const [metricLocal, setMetricLocal] = useState<MetricKey>('views');
-  const metric = metricProp ?? metricLocal;
-  const setMetric = (m: MetricKey) => { setMetricLocal(m); onMetricChange?.(m); };
+  const [metricLocal, setMetricLocal] = useState<MetricKey | null>('views');
+  const metric = metricProp === undefined ? metricLocal : metricProp;
+  const setMetric = (m: MetricKey) => {
+    const next = m === metric ? null : m;
+    setMetricLocal(next);
+    onMetricChange?.(next);
+  };
   const [period, setPeriod] = useState<Period>('month');
   const reducedMotion = useReducedMotion();
   const chartId = useId().replace(/:/g, '');
@@ -104,12 +108,12 @@ export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricP
   const currentWeek = isCurrentMonth ? weekOfMonth(now) : 5;
 
   const sumWeek = (m: number, w: number) =>
-    weekly.filter((r) => r.month === m && r.week === w).reduce((s, r) => s + (Number(r[metric]) || 0), 0);
+    weekly.filter((r) => r.month === m && r.week === w).reduce((s, r) => s + (metric ? Number(r[metric]) || 0 : 0), 0);
   const sumMonth = (m: number) =>
-    weekly.filter((r) => r.month === m).reduce((s, r) => s + (Number(r[metric]) || 0), 0);
+    weekly.filter((r) => r.month === m).reduce((s, r) => s + (metric ? Number(r[metric]) || 0 : 0), 0);
   const goalMonth = (m: number) => {
     const g = goals.find((x) => x.month === m);
-    return g ? Number(g[metric]) || 0 : 0;
+    return g && metric ? Number(g[metric]) || 0 : 0;
   };
 
   const { data, goalLabel, current, previous, goalTotal } = useMemo(() => {
@@ -191,15 +195,15 @@ export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricP
           </div>
         </div>
 
-        <div role="tablist" aria-label="Métrica do gráfico" className="flex flex-wrap gap-1.5">
+        <div role="group" aria-label="Métrica do gráfico" className="flex flex-wrap gap-1.5">
           {METRICS.map((m) => {
             const on = m.key === metric;
             return (
               <button
                 key={m.key}
                 type="button"
-                role="tab"
-                aria-selected={on}
+                aria-pressed={on}
+                title={on ? 'Clique novamente para desmarcar' : m.label}
                 onClick={() => setMetric(m.key)}
                 className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${on ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground'}`}
               >
@@ -211,8 +215,8 @@ export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricP
 
         <div className="grid gap-4 border-y py-4 sm:grid-cols-3 sm:gap-6">
           <div className="min-w-0 sm:border-r sm:pr-6">
-            <p className="text-xs text-muted-foreground">{metricLabel} no período</p>
-            <p className="mt-1.5 text-3xl font-semibold tabular-nums">{fmt(current)}</p>
+            <p className="text-xs text-muted-foreground">{metric ? `${metricLabel} no período` : 'Nenhuma métrica selecionada'}</p>
+            <p className="mt-1.5 text-3xl font-semibold tabular-nums">{metric ? fmt(current) : '—'}</p>
           </div>
           <div className="min-w-0 sm:border-r sm:pr-6">
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Target className="h-3.5 w-3.5" />Meta do período</p>
@@ -246,10 +250,11 @@ export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricP
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>{MONTHS_SHORT[month - 1]} {year}</span>
           <div className="flex flex-wrap items-center gap-4">
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-primary" />{metricLabel}</span>
+            {metric && <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-primary" />{metricLabel}</span>}
             {hasGoal && <span className="inline-flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed border-accent" />{goalLabel}</span>}
           </div>
         </div>
+        {metric ? (
         <div className="h-[280px] w-full sm:h-[300px]" role="img" aria-label={`${metricLabel} por ${period === 'quarter' || period === 'year' ? 'mês' : 'semana'}: ${data.map((row) => `${row.name}: ${fmt(row.valor)}`).join(', ')}`}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart accessibilityLayer data={data} barCategoryGap="28%" margin={{ top: 26, right: 12, left: 0, bottom: 0 }}>
@@ -299,6 +304,13 @@ export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricP
             </ComposedChart>
           </ResponsiveContainer>
         </div>
+        ) : (
+          <div className="flex h-[280px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-6 text-center sm:h-[300px]">
+            <BarChart3 className="h-6 w-6 text-muted-foreground/40" />
+            <p className="text-sm font-medium">Nenhuma métrica selecionada</p>
+            <p className="text-xs text-muted-foreground">Escolha uma métrica acima para ver o comparativo.</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
