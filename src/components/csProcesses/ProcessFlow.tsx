@@ -138,6 +138,11 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
     return () => window.removeEventListener("keydown", onKey);
   }, [full]);
   const stepTotal = nodes.reduce((total, node) => total + node.data.steps.length, 0);
+  const flowExtent = useMemo<[[number, number], [number, number]]>(() => {
+    const maxX = Math.max(0, ...nodes.map((node) => node.position.x + Number(node.initialWidth ?? 300)));
+    const maxY = Math.max(0, ...nodes.map((node) => node.position.y + Number(node.initialHeight ?? 400)));
+    return [[-220, -240], [maxX + 220, maxY + 240]];
+  }, [nodes]);
   return (
     <div data-tour="flow" className={full
       ? "fixed inset-x-0 bottom-0 top-14 z-40 flex flex-col overflow-hidden bg-background"
