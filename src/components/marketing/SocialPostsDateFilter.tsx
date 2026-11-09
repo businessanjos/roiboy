@@ -89,6 +89,10 @@ export function SocialPostsDateFilter({ dateFrom, dateTo, onFromChange, onToChan
           captionLayout="dropdown"
           fromYear={2020}
           toYear={new Date().getFullYear() + 1}
+          classNames={{
+            caption_label: 'sr-only',
+            caption_dropdowns: 'flex items-center justify-center gap-2',
+          }}
           className="pointer-events-auto"
         />
         <p className="border-t px-4 py-2.5 text-center text-xs text-muted-foreground">

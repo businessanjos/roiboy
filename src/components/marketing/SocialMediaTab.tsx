@@ -773,7 +773,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                                       </p>
                                     </span>
                                   </TooltipTrigger>
-                                  <TooltipContent side="top" align="start" className="max-h-80 max-w-md overflow-y-auto whitespace-pre-wrap break-words text-xs leading-relaxed">
+                                  <TooltipContent side="top" align="start" className="max-h-80 max-w-md overflow-y-auto whitespace-pre-wrap break-words border border-border bg-popover text-xs leading-relaxed text-popover-foreground shadow-lg">
                                     {post.caption || 'Sem legenda'}
                                   </TooltipContent>
                                 </Tooltip>
