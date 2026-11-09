@@ -35,7 +35,7 @@ describe("links da cliente", () => {
   const c = { id: "11111111-2222-3333-4444-555555555555", full_name: "Ana Souza", instagram: "@ana.estetica" };
   it("monta cadastro, ficha e Instagram com os dados da cliente", () => {
     expect(resolveProcessLink("https://iamroy.app/f/f53653f9-85b3-4f42-8b86-57cecb553330?clientId=1d0fe50c-5b69-4f7e-bf32-7229bdcd2ab5", c)).toMatchObject({ url: `https://iamroy.app/f/f53653f9-85b3-4f42-8b86-57cecb553330?clientId=${c.id}` });
-    expect(resolveProcessLink("https://iamroy.app/clients/1d0fe50c-5b69-4f7e-bf32-7229bdcd2ab5?tab=fichas", c)).toMatchObject({ url: `https://iamroy.app/clients/${c.id}?tab=fichas`, label: "Abrir ficha da Ana no Roy" });
+    expect(resolveProcessLink("https://iamroy.app/clients/1d0fe50c-5b69-4f7e-bf32-7229bdcd2ab5?tab=fichas", c)).toMatchObject({ url: `https://iamroy.app/clients/${c.id}?tab=fichas`, label: "Abrir ficha da Ana" });
     expect(resolveProcessLink("https://www.instagram.com/", c)).toMatchObject({ url: "https://www.instagram.com/ana.estetica" });
   });
   it("sem link da Ryka o botão avisa o que falta", () => {

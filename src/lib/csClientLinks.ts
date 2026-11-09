@@ -41,7 +41,7 @@ export function resolveProcessLink(url: string, client: ProcessClient | null): R
   if (!type) return { kind: "static", url };
   const labels = {
     cadastro: `Abrir cadastro empresarial da ${who}`,
-    ficha: `Abrir ficha da ${who} no Roy`,
+    ficha: `Abrir ficha da ${who}`,
     instagram: `Abrir Instagram da ${who}`,
     ryka: `Abrir Clínica Ryka da ${who}`,
   };
