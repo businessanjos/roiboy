@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -50,12 +51,15 @@ export function useZappGroupLidMap(opts: {
     },
   });
 
+  const { knownNames } = opts;
+  return useMemo(() => {
   const lidToPhone = query.data || {};
   const result: Record<string, string> = {};
   for (const [lid, phone] of Object.entries(lidToPhone)) {
-    const name = opts.knownNames[phone] || opts.knownNames[phone.slice(-11)] || opts.knownNames[phone.slice(-10)]
-      || opts.knownNames[phone.slice(-9)] || opts.knownNames[phone.slice(-8)];
+    const name = knownNames[phone] || knownNames[phone.slice(-11)] || knownNames[phone.slice(-10)]
+      || knownNames[phone.slice(-9)] || knownNames[phone.slice(-8)];
     result[lid] = name || formatMentionPhone(phone);
   }
   return result;
+  }, [query.data, knownNames]);
 }
