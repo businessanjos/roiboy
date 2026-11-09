@@ -116,11 +116,13 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
   const { nodes, edges } = useMemo(() => {
     const gs = groups ?? process.phases.map((ph, pi) => ({ title: ph.title, steps: ph.steps.map((s, si) => ({ step: s, key: `${pi}-${si}` })) }));
     const nodes: Node<PhaseData>[] = gs.map((g, pi) => ({
-      id: `p${pi}`, type: "phase", position: { x: pi * 330, y: 0 }, draggable: false,
+      id: `p${pi}`, type: "phase", position: { x: pi * 400, y: 0 }, draggable: false,
       data: { title: g.title, accent, steps: g.steps, statusOf, open, badgeOf },
     }));
     const edges: Edge[] = gs.slice(1).map((_, i) => ({
-      id: `e${i}`, source: `p${i}`, target: `p${i + 1}`, animated: true, markerEnd: { type: MarkerType.ArrowClosed },
+      id: `e${i}`, source: `p${i}`, target: `p${i + 1}`, type: "smoothstep",
+      style: { stroke: "hsl(var(--primary) / 0.35)", strokeWidth: 1.5 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--primary) / 0.45)", width: 18, height: 18 },
     }));
     return { nodes, edges };
   }, [process, groups, accent, statusOf, open, badgeOf]);
