@@ -12,6 +12,7 @@ interface GroupParticipant {
   isLid: boolean;
   name: string;
   isAdmin: boolean;
+  clientName?: string;
 }
 
 export interface MentionData {
@@ -148,6 +149,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
               phone: phone,
               name: displayName || known[phone.slice(-8)] || clientName || phone,
               isAdmin: isAdmin,
+              clientName,
             };
           });
 
@@ -206,7 +208,15 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
       if (!value) { autoMentioned.current.clear(); return; }
       if (!groupJid || !value.includes("@") || participants.length === 0) return;
       const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-      const named = participants.filter((p) => p.name && !/^\+?\d[\d\s()-]*$/.test(p.name));
+      const isNum = (s: string) => /^\+?\d[\d\s()-]*$/.test(s);
+      // Nomes possíveis por participante: nome do WhatsApp + nome da ficha (achado pelo número)
+      const namesOf = (p: GroupParticipant) => [p.name, p.clientName].filter((x): x is string => !!x && !isNum(x));
+      const pick = (typed: string, n: number) => {
+        const t = norm(typed);
+        const full = participants.filter((p) => namesOf(p).some((x) => norm(x) === t));
+        if (full.length || n > 1) return full;
+        return participants.filter((p) => namesOf(p).some((x) => norm(x.split(/\s+/)[0]) === t));
+      };
       const re = /(^|\s)@([\p{L}][\p{L}'-]*(?:\s[\p{L}][\p{L}'-]*)*)/gu;
       let m: RegExpExecArray | null;
       while ((m = re.exec(value)) !== null) {
@@ -214,8 +224,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
         for (let n = words.length; n >= 1; n--) {
           const typed = words.slice(0, n).join(" ");
           if (autoMentioned.current.has(norm(typed))) break;
-          const full = named.filter((p) => norm(p.name) === norm(typed));
-          const hits = full.length ? full : n === 1 ? named.filter((p) => norm(p.name.split(/\s+/)[0]) === norm(typed)) : [];
+          const hits = pick(typed, n);
           if (hits.length === 1) {
             const p = hits[0];
             autoMentioned.current.add(norm(typed));
