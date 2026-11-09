@@ -120,6 +120,7 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
     const gs = groups ?? process.phases.map((ph, pi) => ({ title: ph.title, steps: ph.steps.map((s, si) => ({ step: s, key: `${pi}-${si}` })) }));
     const nodes: Node<PhaseData>[] = gs.map((g, pi) => ({
       id: `p${pi}`, type: "phase", position: { x: pi * 400, y: 0 }, draggable: false,
+      initialWidth: 300, initialHeight: 108 + g.steps.length * 96,
       data: { title: g.title, accent, steps: g.steps, statusOf, open, badgeOf },
     }));
     const edges: Edge[] = gs.slice(1).map((_, i) => ({
