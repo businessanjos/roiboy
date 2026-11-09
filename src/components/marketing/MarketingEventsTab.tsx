@@ -78,6 +78,7 @@ import {
 } from "@/config/eventTypes";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { eventMatchesPeriod, eventMonthKey } from "./marketingEventPeriod";
 
 interface Attendance {
   id: string;
@@ -156,6 +157,8 @@ export default function MarketingEventsTab() {
   const [filterModality, setFilterModality] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [modalityTab, setModalityTab] = useState<"all" | "presencial" | "online">("all");
+  const [currentMonth] = useState(() => eventMonthKey());
+  const [period, setPeriod] = useState(() => eventMonthKey());
 
   // Form state
   const [title, setTitle] = useState("");
@@ -472,9 +475,24 @@ export default function MarketingEventsTab() {
     toast.success("Link copiado!");
   };
 
+  const monthOptions = useMemo(() => {
+    const months = new Set<string>([currentMonth]);
+    const year = currentMonth.slice(0, 4);
+    for (let month = 1; month <= 12; month++) months.add(`${year}-${String(month).padStart(2, '0')}`);
+    events.forEach(event => {
+      if (event.scheduled_at) {
+        const date = new Date(event.scheduled_at);
+        if (!Number.isNaN(date.getTime())) months.add(eventMonthKey(date));
+      }
+    });
+    return [...months].sort();
+  }, [events, currentMonth]);
+  const periodEvents = useMemo(() => events.filter(event => eventMatchesPeriod(event, period, currentMonth)), [events, period, currentMonth]);
+  const periodLabel = period === 'all' ? 'Todo o período' : period === 'year' ? `Ano ${currentMonth.slice(0, 4)}` : period === 'undated' ? 'Sem data' : format(new Date(`${period}-01T12:00:00`), 'MMMM yyyy', { locale: ptBR });
+
   // Filter events
   const filteredEvents = useMemo(() => {
-    return events.filter((event) => {
+    return periodEvents.filter((event) => {
       const matchesSearch = 
         event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         event.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -486,18 +504,20 @@ export default function MarketingEventsTab() {
       
       return matchesSearch && matchesType && matchesModality && matchesCategory && matchesModalityTab;
     });
-  }, [events, searchTerm, filterEventType, filterModality, filterCategory, modalityTab]);
+  }, [periodEvents, searchTerm, filterEventType, filterModality, filterCategory, modalityTab]);
 
-  const pg = usePagedList(filteredEvents, { resetKey: [searchTerm, filterEventType, filterModality, filterCategory, modalityTab], isLoading: loading });
+  const pg = usePagedList(filteredEvents, { resetKey: [period, searchTerm, filterEventType, filterModality, filterCategory, modalityTab], isLoading: loading });
 
-  const presencialCount = events.filter(e => e.modality === "presencial").length;
-  const onlineCount = events.filter(e => e.modality === "online").length;
-  const marketingCount = events.filter(e => e.category === "marketing").length;
-  const operationCount = events.filter(e => e.category === "operation").length;
+  const presencialCount = periodEvents.filter(e => e.modality === "presencial").length;
+  const onlineCount = periodEvents.filter(e => e.modality === "online").length;
+  const marketingCount = periodEvents.filter(e => e.category === "marketing").length;
+  const operationCount = periodEvents.filter(e => e.category === "operation").length;
 
-  const hasActiveFilters = filterEventType !== "all" || filterModality !== "all" || filterCategory !== "all";
+  const hasActiveFilters = !!searchTerm || modalityTab !== "all" || filterEventType !== "all" || filterModality !== "all" || filterCategory !== "all";
 
   const clearFilters = () => {
+    setSearchTerm("");
+    setModalityTab("all");
     setFilterEventType("all");
     setFilterModality("all");
     setFilterCategory("all");
@@ -518,13 +538,13 @@ export default function MarketingEventsTab() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 justify-between">
         <div className="flex-1">
           <Input
             placeholder="Buscar eventos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
+            className="w-full sm:max-w-sm"
           />
         </div>
         <Button onClick={() => setDialogOpen(true)}>
@@ -533,11 +553,29 @@ export default function MarketingEventsTab() {
         </Button>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3 border-y py-3">
+        <Select value={period} onValueChange={setPeriod}>
+          <SelectTrigger className="w-full sm:w-64" aria-label="Período dos eventos">
+            <Calendar className="mr-2 h-4 w-4 shrink-0 text-primary" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={currentMonth}>Este mês</SelectItem>
+            <SelectItem value="all">Todo o período</SelectItem>
+            <SelectItem value="year">Este ano</SelectItem>
+            <SelectItem value="undated">Sem data</SelectItem>
+            {monthOptions.filter(month => month !== currentMonth).map(month => (
+              <SelectItem key={month} value={month}>
+                {format(new Date(`${month}-01T12:00:00`), 'MMMM yyyy', { locale: ptBR })}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       {/* Modality tabs */}
       <Tabs value={modalityTab} onValueChange={(v) => setModalityTab(v as any)}>
         <TabsList>
           <TabsTrigger value="all">
-            Todos ({events.length})
+            Todos ({periodEvents.length})
           </TabsTrigger>
           <TabsTrigger value="presencial">
             <MapPin className="h-4 w-4 mr-1" />
@@ -549,11 +587,12 @@ export default function MarketingEventsTab() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
+      </div>
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-44">
             <SelectValue placeholder="Área" />
           </SelectTrigger>
           <SelectContent>
@@ -563,7 +602,7 @@ export default function MarketingEventsTab() {
           </SelectContent>
         </Select>
         <Select value={filterEventType} onValueChange={setFilterEventType}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-40">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
@@ -580,6 +619,11 @@ export default function MarketingEventsTab() {
         )}
       </div>
 
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <h3 className="font-semibold capitalize">{periodLabel}</h3>
+        <span className="text-xs text-muted-foreground tabular-nums">{filteredEvents.length} de {periodEvents.length} eventos</span>
+      </div>
+
       {/* Events table */}
       <Card>
         <CardContent className="p-0">
@@ -588,11 +632,11 @@ export default function MarketingEventsTab() {
               <TableRow>
                 <TableHead className="w-20">Data</TableHead>
                 <TableHead>Evento</TableHead>
-                <TableHead>Área</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Modalidade</TableHead>
-                <TableHead>Comercial</TableHead>
-                <TableHead>Produtos</TableHead>
+                <TableHead className="hidden xl:table-cell">Área</TableHead>
+                <TableHead className="hidden md:table-cell">Tipo</TableHead>
+                <TableHead className="hidden lg:table-cell">Modalidade</TableHead>
+                <TableHead className="hidden 2xl:table-cell">Comercial</TableHead>
+                <TableHead className="hidden xl:table-cell">Produtos</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -602,6 +646,8 @@ export default function MarketingEventsTab() {
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>Nenhum evento encontrado</p>
+                    <p className="mt-1 text-xs">{periodLabel}</p>
+                    {period !== 'all' && <Button variant="outline" size="sm" className="mt-3" onClick={() => setPeriod('all')}>Todo o período</Button>}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -648,6 +694,10 @@ export default function MarketingEventsTab() {
                           />
                           <div>
                             <p className="font-medium">{event.title}</p>
+                            <p className="text-xs text-muted-foreground lg:hidden">
+                              {event.modality === 'presencial' ? 'Presencial' : event.modality === 'hibrido' ? 'Híbrido' : 'Online'}
+                              <span className="md:hidden"> · {typeInfo.label}</span>
+                            </p>
                             {event.description && (
                               <p className="text-xs text-muted-foreground line-clamp-1 max-w-[200px]">
                                 {event.description}
@@ -661,7 +711,7 @@ export default function MarketingEventsTab() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden xl:table-cell">
                         <Badge 
                           variant={event.category === "marketing" ? "default" : "secondary"}
                           className={event.category === "marketing" 
@@ -672,7 +722,7 @@ export default function MarketingEventsTab() {
                           {event.category === "marketing" ? "MARKETING" : "OPERAÇÃO"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <Badge 
                           variant="outline"
                           style={{ 
@@ -684,7 +734,7 @@ export default function MarketingEventsTab() {
                           {typeInfo.label}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <Badge variant={event.modality === "presencial" ? "default" : event.modality === "hibrido" ? "default" : "secondary"}
                           className={event.modality === "hibrido" ? "bg-purple-500 hover:bg-purple-600" : ""}
                         >
@@ -700,7 +750,7 @@ export default function MarketingEventsTab() {
                           <p className="text-xs text-muted-foreground mt-1">{event.address}</p>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden 2xl:table-cell">
                         {(() => {
                           const stages = Array.isArray(event.target_deal_stages) ? event.target_deal_stages : [];
                           if (stages.length === 0) {
@@ -726,7 +776,7 @@ export default function MarketingEventsTab() {
                           );
                         })()}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden xl:table-cell">
                         {event.event_products && event.event_products.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {event.event_products.map((ep) => (
@@ -740,7 +790,7 @@ export default function MarketingEventsTab() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="grid grid-cols-2 sm:flex items-center justify-end gap-1">
                           {event.modality === "presencial" && event.checkin_code && (
                             <TooltipProvider>
                               <Tooltip>
