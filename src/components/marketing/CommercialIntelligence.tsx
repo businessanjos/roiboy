@@ -33,7 +33,7 @@ export default function CommercialIntelligence() {
     { label: 'MQL', value: filtered.filter(r => r.mql).length, Icon: Target },
     { label: 'Vendas', value: filtered.filter(r => r.status === 'won').length, Icon: CheckCircle2 },
   ];
-  return <div className="min-w-0 space-y-6">
+  return <div className="container mx-auto min-w-0 space-y-6 py-6">
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div><h2 className="flex items-center gap-2 text-xl font-semibold"><BarChart3 className="h-5 w-5 text-primary" />Aquisição e vendas</h2><p className="mt-1 text-sm text-muted-foreground">Negócios criados no período · dados do Comercial</p></div>
       <DashboardPeriodFilter value={period} onChange={v => { setPeriod(v); setPage(0); }} />
@@ -59,6 +59,6 @@ export default function CommercialIntelligence() {
         <div className="mt-3 flex items-center justify-end gap-3"><Button variant="outline" size="sm" disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>Anterior</Button><span className="text-xs tabular-nums text-muted-foreground">{safePage + 1} / {Math.max(1, Math.ceil(filtered.length / 20))}</span><Button variant="outline" size="sm" disabled={(safePage + 1) * 20 >= filtered.length} onClick={() => setPage(safePage + 1)}>Próxima</Button></div>
       </section>
     </>}
-    <Dialog open={!!selected} onOpenChange={open => !open && setSelected(null)}><DialogContent className="flex max-h-[86vh] max-w-2xl flex-col overflow-hidden"><DialogHeader><DialogTitle>Histórico de {selected?.name}</DialogTitle></DialogHeader><div className="min-h-0 flex-1 overflow-y-auto">{selected?.leadId && <LeadTimeline leadId={selected.leadId} />}</div><div className="flex flex-wrap justify-end gap-2 border-t pt-3">{selected?.leadId && <Button variant="outline" asChild><a href={`/leads?lead=${selected.leadId}`}>Abrir ficha do lead <ExternalLink className="ml-2 h-4 w-4" /></a></Button>}{selected && <Button variant="outline" asChild><a href={`/sales-pipeline?deal=${selected.id}`}>Abrir negócio <ExternalLink className="ml-2 h-4 w-4" /></a></Button>}</div></DialogContent></Dialog>
+    <Dialog open={!!selected} onOpenChange={open => !open && setSelected(null)}><DialogContent className="flex max-h-[86vh] max-w-2xl flex-col overflow-hidden"><DialogHeader><DialogTitle>Histórico de {selected?.name}</DialogTitle></DialogHeader><div className="min-h-0 flex-1 overflow-y-auto">{selected?.leadId && <LeadTimeline leadId={selected.leadId} />}</div><div className="flex flex-wrap justify-end gap-2 border-t pt-3">{selected?.leadId && <Button variant="outline" asChild><a href={`/leads?lead=${selected.leadId}`}>Abrir ficha do lead <ExternalLink className="ml-2 h-4 w-4" /></a></Button>}{selected && <Button variant="outline" asChild><a href={`/pipeline?deal=${selected.id}`}>Abrir negócio <ExternalLink className="ml-2 h-4 w-4" /></a></Button>}</div></DialogContent></Dialog>
   </div>;
 }
