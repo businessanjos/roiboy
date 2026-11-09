@@ -160,7 +160,7 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
               {full ? <Minimize2 /> : <Maximize2 />}
             </ControlButton>
           </Controls>
-          <MiniMap pannable zoomable position="bottom-right" className="!mb-4 !mr-4 !h-24 !w-40 !rounded-xl !border !bg-card/95 !shadow-md" nodeColor="hsl(var(--primary) / 0.35)" nodeStrokeColor="hsl(var(--primary) / 0.5)" maskColor="hsl(var(--background) / 0.72)" />
+          <MiniMap pannable zoomable position="bottom-right" style={{ width: 160, height: 96 }} className="!mb-4 !mr-4 !rounded-xl !border !shadow-md" bgColor="hsl(var(--card))" nodeColor="hsl(var(--primary) / 0.35)" nodeStrokeColor="hsl(var(--primary) / 0.5)" maskColor="hsl(var(--background) / 0.65)" />
           <InitialView count={nodes.length} intro={!!groups} full={full} resetKey={`${process.id}:${resetKey}`} />
         </ReactFlow>
       </div>
