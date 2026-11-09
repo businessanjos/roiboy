@@ -24,7 +24,7 @@ Abaixo está todo o conteúdo dos processos.
 - **Formato:** áudio
 - **Mensagem:**
   > Oi, {Nome}, tudo bem?
-  > Seja muito bem-vinda agora membra/sócia do **Eternum Mentoring / Club**.
+  > Seja muito bem-vinda agora membra/sócia do **Eternum Mentoring**.
   > Eu sou {Nome da consultora}, Consultora aqui do Eternum, e vou te acompanhar de perto nessa nova jornada — do início ao fim.
   > Quero te dizer que fico muito feliz em te receber aqui. A partir de agora, você não caminha mais sozinha: a gente vai organizar, estruturar e evoluir sua estratégia com clareza e direcionamento.
 - ⚠️ Aguardar a cliente receber a acolhida. Se demorar, dar continuidade orientando:
@@ -37,7 +37,7 @@ Abaixo está todo o conteúdo dos processos.
 - **Informe da inclusão do grupo:**
   > Hoje estamos fazendo sua inclusão no grupo dos membros, assim já poderá participar das mentorias que nós temos semanalmente todas às segundas e quintas, 7h da manhã (horário de Brasília). Seu maior valor e pilar de aprendizado!!! Aproveite!!!
   >
-  > Pra já começarmos com tudo, **eu já vou criar e liberar agora o seu acesso à nossa plataforma de estratégias**, pra você já ir navegando, conhecendo a metodologia e sentindo tudo o que faz parte do Eternum Mentoring/Club. Fica à vontade, qualquer dúvida já pode me chamar por aqui.
+  > Pra já começarmos com tudo, **eu já vou criar e liberar agora o seu acesso à nossa plataforma de estratégias**, pra você já ir navegando, conhecendo a metodologia e sentindo tudo o que faz parte do Eternum Mentoring. Fica à vontade, qualquer dúvida já pode me chamar por aqui.
   > Seja bem-vinda, essa jornada vai ser incrível 🚀
 
 ### Etapa 1.2 — Acessos da plataforma (Metodologia)
@@ -69,7 +69,7 @@ Abaixo está todo o conteúdo dos processos.
 - [ ] Incluir no grupo, enviar a foto e colocar a frase abaixo marcando a cliente junto à foto:
   > Seja muito bem-vinda ao Eternum Mentoring, @{cliente} ✨
 - **Mensagem para a cliente:**
-  > Eu já te adicionei no nosso **Grupo Eternum Mentoring/Club**.
+  > Eu já te adicionei no nosso **Grupo Eternum Mentoring**.
   > Neste grupo, você pode conversar e trocar experiências com os demais membros que também atuam na área da estética e **acessar as mentorias** nas *segundas e quintas-feiras às 07h00 no horário de Brasília. Exceto feriados.*
 
 ## Fase 2 — Coleta de dados
