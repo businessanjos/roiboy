@@ -85,15 +85,24 @@ export function EventTimeline({ accent }: { accent: string }) {
 
 type PhaseData = { title: string; accent: string; steps: { step: Step; key: string }[]; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined };
 function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
+  const titleParts = data.title.match(/^Fase\s+(\d+)\s+[—–-]\s+(.+)$/i);
   return (
-    <div className="w-64 rounded-2xl border bg-muted/40 p-3 shadow-sm">
+    <div className="w-[300px] overflow-hidden rounded-[20px] border border-primary/15 bg-muted/30 shadow-lg shadow-primary/5">
       <Handle type="target" position={Position.Left} className="!opacity-0" />
-      <div className="mb-2 flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${data.accent}`} /><h3 className="text-sm font-semibold">{data.title}</h3></div>
-      <div className="space-y-2">
+      <div className="relative border-b bg-card/85 px-4 py-4">
+        <div className={`absolute inset-x-0 top-0 h-1 ${data.accent}`} />
+        <div className="flex items-center gap-2.5">
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-primary/10 ${data.accent}`} />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Fase {titleParts?.[1]?.padStart(2, "0") ?? "—"}</span>
+          <span className="ml-auto rounded-full border bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{data.steps.length} {data.steps.length === 1 ? "etapa" : "etapas"}</span>
+        </div>
+        <h3 className="mt-2 text-sm font-semibold leading-snug">{titleParts?.[2] ?? data.title}</h3>
+      </div>
+      <div className="space-y-1.5 p-3">
         {data.steps.map(({ step, key }, i) => (
-          <div key={`${key}-${i}`} className="space-y-2">
-            {i > 0 && <ArrowDown className="mx-auto h-3.5 w-3.5 text-muted-foreground" />}
-            <StepCard step={step} status={data.statusOf(key)} onClick={() => data.open(key)} badge={data.badgeOf?.(key)} tourId={i === 0 && key === "0-0" ? "flow-step" : undefined} />
+          <div key={`${key}-${i}`} className="space-y-1.5">
+            {i > 0 && <span className="mx-auto flex h-5 w-5 items-center justify-center rounded-full bg-background text-muted-foreground"><ArrowDown className="h-3 w-3" /></span>}
+            <StepCard flow step={step} status={data.statusOf(key)} onClick={() => data.open(key)} badge={data.badgeOf?.(key)} tourId={i === 0 && key === "0-0" ? "flow-step" : undefined} />
           </div>
         ))}
       </div>
