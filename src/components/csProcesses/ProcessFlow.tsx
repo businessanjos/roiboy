@@ -83,7 +83,7 @@ function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
       <div className="mb-2 flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${data.accent}`} /><h3 className="text-sm font-semibold">{data.title}</h3></div>
       <div className="space-y-2">
         {data.steps.map(({ step, key }, i) => (
-          <div key={key} className="space-y-2">
+          <div key={`${key}-${i}`} className="space-y-2">
             {i > 0 && <ArrowDown className="mx-auto h-3.5 w-3.5 text-muted-foreground" />}
             <StepCard step={step} status={data.statusOf(key)} onClick={() => data.open(key)} badge={data.badgeOf?.(key)} />
           </div>
@@ -95,17 +95,18 @@ function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
 }
 const nodeTypes = { phase: PhaseNode };
 
-export function ProcessFlow({ process, accent, statusOf, open, badgeOf }: { process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined }) {
+export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups }: { groups?: { title: string; steps: { step: Step; key: string }[] }[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined }) {
   const { nodes, edges } = useMemo(() => {
-    const nodes: Node<PhaseData>[] = process.phases.map((ph, pi) => ({
+    const gs = groups ?? process.phases.map((ph, pi) => ({ title: ph.title, steps: ph.steps.map((s, si) => ({ step: s, key: `${pi}-${si}` })) }));
+    const nodes: Node<PhaseData>[] = gs.map((g, pi) => ({
       id: `p${pi}`, type: "phase", position: { x: pi * 330, y: 0 }, draggable: false,
-      data: { title: ph.title, accent, steps: ph.steps.map((s, si) => ({ step: s, key: `${pi}-${si}` })), statusOf, open, badgeOf },
+      data: { title: g.title, accent, steps: g.steps, statusOf, open, badgeOf },
     }));
-    const edges: Edge[] = process.phases.slice(1).map((_, i) => ({
+    const edges: Edge[] = gs.slice(1).map((_, i) => ({
       id: `e${i}`, source: `p${i}`, target: `p${i + 1}`, animated: true, markerEnd: { type: MarkerType.ArrowClosed },
     }));
     return { nodes, edges };
-  }, [process, accent, statusOf, open, badgeOf]);
+  }, [process, groups, accent, statusOf, open, badgeOf]);
   return (
     <div className="h-[70vh] overflow-hidden rounded-2xl border bg-background">
       <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView minZoom={0.3} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>

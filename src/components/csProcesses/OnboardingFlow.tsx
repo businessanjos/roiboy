@@ -225,3 +225,15 @@ export function OnboardingFlow({ process, statusOf, open, badgeOf }: { process: 
     </div>
   );
 }
+
+/** Agrupa as etapas do Onboarding nas 6 fases, para o fluxograma em colunas. */
+export function onboardingGroups(process: Process) {
+  const find = (re: RegExp) => { for (const [pi, ph] of process.phases.entries()) for (const [si, s] of ph.steps.entries()) if (re.test(s.title)) return { key: `${pi}-${si}`, step: s }; return null; };
+  const groups = ONBOARDING_LANES.map((l, li) => ({
+    title: `Fase ${li + 1} — ${l.title}`,
+    steps: l.cards.flatMap((c) => { const h = find(c.match); return h ? [{ key: h.key, step: { title: `${c.num} ${c.title}`, blocks: slice(h.step, c.part) } }] : []; }),
+  }));
+  const cyc = find(CYCLE);
+  groups.push({ title: "Fase 6 — Ciclo mensal", steps: cyc ? [{ key: cyc.key, step: { ...cyc.step, title: "6.1 Ciclo mensal" } }] : [] });
+  return groups;
+}
