@@ -72,7 +72,7 @@ export function YouTubeDashboard() {
       const { data: videos, error: vErr } = await supabase.from('youtube_videos')
         .select('id, channel_id, title, video_url, thumbnail_url, posted_at, video_type, views, likes, comments')
         .in('channel_id', channels.map(c => c.id))
-        .gte('posted_at', range.start.toISOString()).lte('posted_at', range.end.toISOString())
+        .gte('posted_at', range.startDate.toISOString()).lte('posted_at', range.endDate.toISOString())
         .order('posted_at', { ascending: true });
       if (vErr) throw vErr;
       return { channels, videos: (videos || []) as VideoRow[] };
@@ -104,7 +104,7 @@ export function YouTubeDashboard() {
   }, [channels, videos]);
 
   const timeline = useMemo(() => {
-    const weekly = differenceInCalendarDays(range.end, range.start) <= 120;
+    const weekly = differenceInCalendarDays(range.endDate, range.startDate) <= 120;
     const map = new Map<string, { label: string; views: number; likes: number; videos: number; sort: number }>();
     videos.forEach(v => {
       if (!v.posted_at) return;
