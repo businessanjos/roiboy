@@ -1,3 +1,4 @@
+import { dropEmptyNameToken } from '@/lib/contactNameVars';
 import { applyEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
