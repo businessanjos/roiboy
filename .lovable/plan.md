@@ -16,9 +16,13 @@
 
 Continua igual: conteúdo dos processos, passo a passo, fluxograma, links por cliente, selo de espera e edição pelo lápis.
 
+## Processos são o mapa, não o lugar de executar
+- As consultoras continuam trabalhando nas abas que já usam hoje. Em cada etapa, o passo a passo ganha **atalhos** que abrem a área do CS correspondente ao que está escrito (ex.: Onboarding Hub da cliente, ficha da cliente, RoyZapp da conversa, evento no calendário).
+- **Nenhuma informação é inventada.** Tudo vem de campos que já existem: etapa e data de início do onboarding da ficha, consultora responsável, foto/nome da cliente, data e modalidade do evento, esperas registradas.
+
 ## Como a etapa atual é decidida
-- **Onboarding:** primeira etapa não concluída no progresso da cliente; "há X dias" conta desde a última etapa concluída (ou início do onboarding). Clientes que terminaram todas as etapas ficam em "Acompanhamento mensal".
-- **Encontros:** a etapa vem da data do evento, usando as mesmas réguas de datas dos lembretes (online −15/−10/−3/−1/0/+1; presencial −60/+1/+7). Eventos encerrados há mais de 7 dias saem do quadro.
+- **Onboarding:** usa a etapa de onboarding já gravada na cliente (a mesma do Onboarding Hub), mapeada para a fase/etapa correspondente do processo. "Há X dias" usa a data da última mudança de etapa já registrada. Antes de construir, confiro no banco quais etapas existem e monto a tabela de correspondência com você; o que não tiver correspondência clara fica marcado como "Sem fase definida", nunca chutado.
+- **Encontros:** a etapa vem da data real do evento, usando as réguas de datas já existentes (online −15/−10/−3/−1/0/+1; presencial −60/+1/+7). Eventos encerrados há mais de 7 dias saem do quadro.
 
 ## Detalhes técnicos
 - Novo `src/lib/csInProgress.ts` (puro): monta cartões por processo/fase a partir de progresso, esperas e eventos; reaproveita `spDate`, `isEncontroOnline/Presencial` e offsets de `csToday.ts` (lógica de datas mantida). Testes em `csInProgress.test.ts`.
