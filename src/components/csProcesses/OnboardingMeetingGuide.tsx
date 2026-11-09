@@ -45,6 +45,13 @@ const BLOCKS: Block[] = [
     ] }],
   },
   {
+    title: "Alinhamento “Tá pago”", subtitle: "Entender a dor principal", icon: Sparkles,
+    highlight: "O que eu precisaria te ensinar e passar aqui que se eu esclarecesse você falaria que \"tá pago\"?",
+    groups: [{ items: [
+      { id: "tp-dor", text: "Foca em resolver essa dor e faz ela soltar um \"tá pago\"" },
+    ] }],
+  },
+  {
     title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
     highlight: "Explicar a função e os benefícios ao implementar o sistema de vendas que já gerou mais de 1,3 bilhão em vendas de procedimentos.",
     groups: [{ items: [
