@@ -2,6 +2,16 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { RecordsGoalsCharts } from '../RecordsGoalsCharts';
 
+// jsdom não implementa ResizeObserver, usado pelo container responsivo do gráfico.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
+}
+
 const WEEKLY = [
   { year: 2026, month: 11, week: 1, views: 100, reach: 50, interactions: 10, followers: 5, profile_visits: 3, link_clicks: 1 },
   { year: 2026, month: 11, week: 2, views: 200, reach: 80, interactions: 20, followers: 8, profile_visits: 6, link_clicks: 2 },
