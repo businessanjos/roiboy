@@ -1322,13 +1322,32 @@ export default function SalesPipeline() {
     [filteredOpenDeals],
   );
 
-  const filteredWonDeals = useMemo(() =>
+  // Ganhas/Perdidas: busca primeiro (base das opções de Origem), depois Formulário e Origem.
+  const wonBeforeTagFilter = useMemo(() =>
     applyFilterToDeals(wonDeals, null, debouncedSearchTerm, openDealProductMap, undefined, undefined, searchOptions),
     [wonDeals, debouncedSearchTerm, openDealProductMap, searchOptions]
   );
-  const filteredLostDeals = useMemo(() =>
+  const lostBeforeTagFilter = useMemo(() =>
     applyFilterToDeals(lostDeals, null, debouncedSearchTerm, openDealProductMap, undefined, undefined, searchOptions),
     [lostDeals, debouncedSearchTerm, openDealProductMap, searchOptions]
+  );
+  const applyTagAndReapply = useCallback((list: Deal[]) => {
+    let out = list;
+    if (onlyReapplied) out = out.filter(d => (d.typeform_reapplication_count ?? 0) > 0);
+    if (!titleTagFilter.length) return out;
+    const selected = new Set(titleTagFilter);
+    return out.filter(d => {
+      const info = getTitleTagInfo(d.title);
+      return info ? selected.has(info.key) : false;
+    });
+  }, [onlyReapplied, titleTagFilter]);
+  const filteredWonDeals = useMemo(() => applyTagAndReapply(wonBeforeTagFilter), [wonBeforeTagFilter, applyTagAndReapply]);
+  const filteredLostDeals = useMemo(() => applyTagAndReapply(lostBeforeTagFilter), [lostBeforeTagFilter, applyTagAndReapply]);
+  const tabBaseDeals = activeTab === 'won' ? wonBeforeTagFilter : activeTab === 'lost' ? lostBeforeTagFilter : dealsBeforeTagFilter;
+  const tabTitleTagOptions = useMemo(() => buildTitleTagOptions(tabBaseDeals), [tabBaseDeals]);
+  const tabReappliedCount = useMemo(
+    () => tabBaseDeals.filter(d => (d.typeform_reapplication_count ?? 0) > 0).length,
+    [tabBaseDeals],
   );
 
   // Available months for won deals filter (always include current month)
