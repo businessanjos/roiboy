@@ -27,7 +27,7 @@ export function InstagramMetaSettingsCard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('instagram_profiles')
-        .select('id, username, sync_error, meta_access_token, ig_business_id')
+        .select('id, username, sync_error, meta_access_token, meta_user_id')
         .eq('account_id', currentUser!.account_id)
         .order('username');
       if (error) throw error;
