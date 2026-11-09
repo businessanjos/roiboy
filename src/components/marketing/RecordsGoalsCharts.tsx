@@ -108,12 +108,12 @@ export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricP
   const currentWeek = isCurrentMonth ? weekOfMonth(now) : 5;
 
   const sumWeek = (m: number, w: number) =>
-    weekly.filter((r) => r.month === m && r.week === w).reduce((s, r) => s + (Number(r[metric]) || 0), 0);
+    weekly.filter((r) => r.month === m && r.week === w).reduce((s, r) => s + (metric ? Number(r[metric]) || 0 : 0), 0);
   const sumMonth = (m: number) =>
-    weekly.filter((r) => r.month === m).reduce((s, r) => s + (Number(r[metric]) || 0), 0);
+    weekly.filter((r) => r.month === m).reduce((s, r) => s + (metric ? Number(r[metric]) || 0 : 0), 0);
   const goalMonth = (m: number) => {
     const g = goals.find((x) => x.month === m);
-    return g ? Number(g[metric]) || 0 : 0;
+    return g && metric ? Number(g[metric]) || 0 : 0;
   };
 
   const { data, goalLabel, current, previous, goalTotal } = useMemo(() => {
