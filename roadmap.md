@@ -1,5 +1,5 @@
 # Roadmap — Processos do CS
-- [ ] Inteligência: conectar leads, MQL e vendas por canal/origem e permitir abrir o histórico comercial; confirmar significado de @.
+- [x] Inteligência: conectar leads, MQL e vendas por canal/origem, exibir Instagram do lead e consultar seu histórico comercial.
 - [x] Conteúdos: reunir posts cadastrados de todas as redes e da Produção, com filtros e detalhes.
 - [x] IA de Marketing: ampliar contexto para o histórico completo cadastrado, preservando acesso por conta.
 - [x] Fase 1: área "Processos" (consulta, busca, copiar mensagens, links, alertas)
