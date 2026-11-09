@@ -98,11 +98,12 @@ export function ProcessTrack({ card, process, processIndex, today, onClose, onGo
         <div className="flex flex-wrap gap-2">
           {curIdx >= 0 && <Button onClick={() => onGo(steps[curIdx].key)} className="gap-1">Ir para a etapa atual <ArrowRight className="h-4 w-4" /></Button>}
           {card.kind === "client" ? (<>
-            <Button asChild variant="outline" className="gap-1"><Link to="/operations/onboarding"><ExternalLink className="h-4 w-4" />Abrir no Onboarding</Link></Button>
-            <Button asChild variant="outline" className="gap-1"><Link to={`/clients/${card.id}`}><ExternalLink className="h-4 w-4" />Abrir ficha</Link></Button>
+            <Button asChild variant="outline" className="gap-1"><Link to="/operations/onboarding" target="_blank" rel="noreferrer" title="Abrir em uma nova aba"><ExternalLink className="h-4 w-4" />Abrir no Onboarding</Link></Button>
+            <Button asChild variant="outline" className="gap-1"><Link to={`/clients/${card.id}`} target="_blank" rel="noreferrer" title="Abrir em uma nova aba"><ExternalLink className="h-4 w-4" />Abrir ficha</Link></Button>
           </>) : (
-            <Button asChild variant="outline" className="gap-1"><Link to={`/events/${card.id}`}><ExternalLink className="h-4 w-4" />Abrir evento</Link></Button>
+            <Button asChild variant="outline" className="gap-1"><Link to={`/events/${card.id}`} target="_blank" rel="noreferrer" title="Abrir em uma nova aba"><ExternalLink className="h-4 w-4" />Abrir evento</Link></Button>
           )}
+          <p className="w-full text-xs text-muted-foreground">Abre em uma nova aba, sem fechar esta tela de Processos.</p>
         </div>
       </SheetContent>
     </Sheet>
