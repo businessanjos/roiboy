@@ -441,6 +441,10 @@ export function usePlaybook(options: PlaybookOptions = {}) {
     
     // Replace provided variables
     Object.entries(variables).forEach(([key, value]) => {
+      if (!value && (key === 'primeiro_nome' || key === 'nome_cliente' || key === 'nome')) {
+        result = dropEmptyNameToken(result, `{{${key}}}`);
+        return;
+      }
       const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
       result = result.replace(regex, value || '');
     });
