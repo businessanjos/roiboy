@@ -359,7 +359,7 @@ export default function CSProcesses() {
       {active > 0 && <EventTimeline accent={dots[active % 3]} />}
 
       {view === "flow" && !isMobile ? (
-        <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} resetKey={flowReset} />
+        <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} entries={!target ? flowEntries : undefined} resetKey={flowReset} />
       ) : (
         <>
           <ProcessOverview process={proc} statusOf={navStatus} onPick={pickPhase} />
