@@ -202,8 +202,10 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
       setMentionStartIndex(-1);
     }, [value, groupJid]);
 
-    // Texto colado com "@Nome" (ex.: copiado dos Processos) vira menção real automaticamente
+    // Texto colado com "@Nome" (ex.: copiado dos Processos) vira menção real automaticamente.
+    // Quando não dá para reconhecer ninguém, sobra só o "@" para a pessoa escolher quem marcar.
     const autoMentioned = useRef<Set<string>>(new Set());
+    const pastedText = useRef<string | null>(null);
     useEffect(() => {
       if (!value) { autoMentioned.current.clear(); return; }
       if (!groupJid || !value.includes("@") || participants.length === 0) return;
@@ -218,22 +220,54 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
         return participants.filter((p) => namesOf(p).some((x) => norm(x.split(/\s+/)[0]) === t));
       };
       const re = /(^|\s)@([\p{L}][\p{L}'-]*(?:\s[\p{L}][\p{L}'-]*)*)/gu;
+      const strips: { at: number; end: number }[] = [];
       let m: RegExpExecArray | null;
       while ((m = re.exec(value)) !== null) {
         const words = m[2].split(/\s/);
+        const fullTyped = words.join(" ");
+        let resolved = false;
         for (let n = words.length; n >= 1; n--) {
           const typed = words.slice(0, n).join(" ");
-          if (autoMentioned.current.has(norm(typed))) break;
+          if (autoMentioned.current.has(norm(typed))) { resolved = true; break; }
           const hits = pick(typed, n);
           if (hits.length === 1) {
             const p = hits[0];
             autoMentioned.current.add(norm(typed));
+            autoMentioned.current.add(norm(fullTyped));
             onMentionInsert?.({ phone: p.phone, jid: p.jid || `${p.phone}@s.whatsapp.net`, name: typed, is_lid: p.isLid });
+            resolved = true;
             break;
           }
         }
+        // Ninguém reconhecido pelo nome nem pelo número: se o texto veio de uma colagem, sobra só o "@".
+        if (!resolved && pastedText.current?.includes(`@${fullTyped}`)) {
+          strips.push({ at: m.index + m[1].length, end: m.index + m[0].length });
+        }
       }
-    }, [value, groupJid, participants, onMentionInsert]);
+      pastedText.current = null;
+      if (strips.length === 0) return;
+      let next = value;
+      for (const s of strips.sort((a, b) => b.at - a.at)) next = next.slice(0, s.at + 1) + next.slice(s.end);
+      const first = Math.min(...strips.map((s) => s.at));
+      onChange(next);
+      // O cursor volta para logo depois do "@" e a lista de participantes abre para a pessoa escolher.
+      setTimeout(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.focus();
+        el.setSelectionRange(first + 1, first + 1);
+        setMentionStartIndex(first);
+        setMentionQuery("");
+        setShowSuggestions(true);
+      }, 0);
+    }, [value, groupJid, participants, onMentionInsert, onChange]);
+
+    const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      onPaste?.(e);
+      if (e.defaultPrevented) return;
+      const text = e.clipboardData?.getData("text/plain") || "";
+      if (text.includes("@")) pastedText.current = text;
+    };
 
     // Handle selecting a mention
     const selectMention = useCallback((participant: GroupParticipant) => {
@@ -366,7 +400,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
           }}
           onScroll={syncHighlightScroll}
           onKeyDown={handleKeyDown}
-          onPaste={onPaste}
+          onPaste={handlePaste}
           placeholder={placeholder}
           disabled={disabled}
           rows={1}

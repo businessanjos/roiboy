@@ -1645,7 +1645,8 @@ export function useZappMessaging({
 
   // Handle mention insert
   const handleMentionInsert = (mention: { phone: string; jid: string; name?: string; is_lid?: boolean }) => {
-    setPendingMentions(prev => [...prev, mention]);
+    // A mesma pessoa não entra duas vezes na lista de menções do envio.
+    setPendingMentions(prev => (prev.some(m => m.jid === mention.jid) ? prev : [...prev, mention]));
   };
 
   return {
