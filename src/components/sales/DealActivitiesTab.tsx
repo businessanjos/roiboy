@@ -301,11 +301,8 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
     [tasks, sortMode],
   );
   const completedTasks = useMemo(
-    () =>
-      tasks
-        .filter(t => t.custom_status?.is_completed_status || t.completed_at)
-        .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime()),
-    [tasks],
+    () => sortTasks(tasks.filter(t => t.custom_status?.is_completed_status || t.completed_at), sortMode),
+    [tasks, sortMode],
   );
 
   const toggleSelected = (id: string) => {
