@@ -13,6 +13,8 @@ import { sinceLabel, type BoardCard } from "@/lib/csInProgress";
 import { stepTitle } from "@/lib/csProcessActions";
 import type { Process } from "@/lib/csProcesses";
 import { cn } from "@/lib/utils";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { SeeAllAccessDialog, SEE_ALL } from "./SeeAllAccessDialog";
 
 const borders = ["border-l-purple-500", "border-l-teal-500", "border-l-blue-500"];
 const fills = ["bg-purple-500", "bg-teal-500", "bg-blue-500"];
@@ -24,6 +26,8 @@ const NONE = "none";
 export function InProgressBoard({ processes, onOpenCard }: { processes: Process[]; onOpenCard: (processIndex: number, card: BoardCard) => void }) {
   const { currentUser } = useCurrentUser();
   const isMgr = isManagementUser(currentUser as any);
+  const { perms } = useUserPermissions();
+  const canSeeAll = isMgr || perms.some((p) => p.module === SEE_ALL.module && p.sub_item === SEE_ALL.sub_item && p.access_level !== "none");
   const isMobile = useIsMobile();
   const { boards, users, loading, today } = useCsInProgress();
   const [pi, setPi] = useState(0);
@@ -68,11 +72,12 @@ export function InProgressBoard({ processes, onOpenCard }: { processes: Process[
             <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="mine">Minhas clientes</SelectItem>
-              {isMgr && <SelectItem value="all">Todas</SelectItem>}
-              {isMgr && users.filter((u) => u.id !== currentUser?.id).map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+              {canSeeAll && <SelectItem value="all">Todas</SelectItem>}
+              {canSeeAll && users.filter((u) => u.id !== currentUser?.id).map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
             </SelectContent>
           </Select>
         )}
+        {pi === 0 && isMgr && currentUser?.account_id && <SeeAllAccessDialog accountId={currentUser.account_id} users={users} />}
         {pi === 0 && (
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <Switch checked={onlyWaiting} onCheckedChange={setOnlyWaiting} /> Só aguardando cliente
