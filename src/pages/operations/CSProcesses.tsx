@@ -361,6 +361,7 @@ export default function CSProcesses() {
     { target: "alert", title: "Atenção aos avisos", text: "Avisos em vermelho são o que não pode ser esquecido.", onEnter: () => { const k = firstWith("alert"); if (k) setSel(k); } },
     { target: "next", title: "Conclua e avance", text: "Terminou a etapa? Clique aqui para concluir e ir para a próxima." },
     ...(!isMobile ? [
+      { target: "toggle", title: "Abra o fluxograma", text: "Clique em Fluxograma para trocar a lista pelo mapa visual do processo.", onEnter: () => { setTab("process"); setView("list"); } },
       { target: "flow", title: "Onboarding pelo fluxograma", text: "Aqui o Onboarding aparece por fases, na ordem em que acontece. Arraste para navegar e use os controles para aproximar ou abrir em tela cheia.", onEnter: () => { setTab("process"); setActive(0); setSel("0-0"); setView("flow"); } },
       { target: "flow-step", title: "Abra a etapa e siga o processo", text: "Clique no cartão de uma etapa para abrir as mensagens, tarefas e links no painel lateral. Assim você conduz o Onboarding completo pelo fluxograma." },
     ] satisfies TourStep[] : []),
