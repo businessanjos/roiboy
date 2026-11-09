@@ -236,10 +236,29 @@ Deno.serve(async (req) => {
       await new Promise(r => setTimeout(r, 300));
     }
 
+    // Miniaturas públicas são copiadas para o Storage mesmo quando a Meta está desconectada.
+    let thumbnails: any = null;
+    try {
+      const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const cacheRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/cache-instagram-post-thumbnails`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${serviceRole}`,
+        },
+        body: JSON.stringify({ accountId, profileId: profileId || undefined, limit: 40 }),
+      });
+      thumbnails = await cacheRes.json();
+    } catch (cacheError: any) {
+      console.error('Thumbnail cache error:', cacheError);
+      thumbnails = { success: false, error: cacheError?.message || String(cacheError) };
+    }
+
     return new Response(JSON.stringify({
       success: true,
       message: `Sincronização: ${results.synced} perfis, ${results.posts_synced} posts atualizados${results.failed ? `, ${results.failed} falhas` : ''}`,
       ...results,
+      thumbnails,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error: any) {
