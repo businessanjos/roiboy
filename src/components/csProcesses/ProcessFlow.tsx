@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlow, Background, BackgroundVariant, Controls, ControlButton, MiniMap, useReactFlow, Handle, Position, MarkerType, type Node, type Edge, type NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { MessageSquare, CheckSquare, Link2, AlertTriangle, Check, ArrowDown, RefreshCw, Maximize2, Minimize2, Workflow, MousePointer2, Hourglass } from "lucide-react";
+import { MessageSquare, CheckSquare, Link2, AlertTriangle, Check, ArrowDown, RefreshCw, Maximize2, Minimize2, Workflow, MousePointer2, Hourglass, Columns3, Focus } from "lucide-react";
 import type { Process, Step } from "@/lib/csProcesses";
+import { Button } from "@/components/ui/button";
 
 export type StepStatus = "done" | "current" | "pending" | undefined;
 
