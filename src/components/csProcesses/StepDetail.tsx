@@ -2,7 +2,6 @@ import { useState } from "react";
 import { MessageCircle, Hourglass, AlertTriangle, ExternalLink, Copy, User, CalendarClock, ListChecks, CheckCircle2, Plus, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { fillVars, plainText, stepTitle, type Action, type StepInfo } from "@/lib/csProcessActions";
 import { resolveProcessLink, replaceClientLinks, FIELD_LABEL, type ProcessClient, type ClientField } from "@/lib/csClientLinks";
@@ -114,12 +113,9 @@ function WaitItem({ a, idx, ctx }: { a: Extract<Action, { kind: "wait" }>; idx: 
         </div>
       )}
       {ctx.canConfigWait && (
-        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground" title="Ajuste visível só para gestores">
-          Avisar após
-          <Input type="number" min={1} max={30} defaultValue={days} className="h-6 w-14 px-1.5 text-xs"
-            onBlur={(e) => { const n = Math.max(1, Math.min(30, Number(e.target.value) || 2)); if (n !== days) ctx.onSetAlertDays(idx, n); }} />
-          {days === 1 ? "dia" : "dias"}
-        </div>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Aviso após {days} {days === 1 ? "dia" : "dias"} sem resposta
+        </p>
       )}
     </div>
   );
