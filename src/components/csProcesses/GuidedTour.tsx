@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft, ArrowRight, Sparkles, X } from "lucide-react";
 
-export interface TourStep { target?: string; text: string; primary?: string; secondary?: string; onEnter?: () => void }
+export interface TourStep { target?: string; title?: string; text: string; primary?: string; secondary?: string; onEnter?: () => void }
 
-const W = 320, GAP = 14, PAD = 8;
+const W = 380, GAP = 14, PAD = 8;
 
 export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: boolean; onClose: () => void }) {
   const [i, setI] = useState(0);

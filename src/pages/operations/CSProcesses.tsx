@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { parseProcesses, defaultProcessesText, serializeProcesses, type Block, type Step } from "@/lib/csProcesses";
 import { isManagementUser } from "@/lib/access/managementRoles";
+import { isMasculineName } from "@/lib/consultantGender";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 const accents = ["border-l-purple-500", "border-l-teal-500", "border-l-blue-500"];
