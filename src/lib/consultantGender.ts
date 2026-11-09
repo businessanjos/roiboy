@@ -10,8 +10,10 @@ export function isMasculineName(name?: string | null): boolean {
   return !/a$/.test(first);
 }
 
-/** Swaps "Consultora(s)" for the masculine form when the consultant's name is masculine. */
+/** Swaps "Consultora" for the masculine form without renaming variables such as {Nome da consultora}. */
 export function genderConsultant(text: string, name?: string | null): string {
   if (!name || !isMasculineName(name)) return text;
-  return text.replace(/\b([Cc])onsultora\b/g, "$1onsultor");
+  return text.split(/(\{[^}]+\})/g).map((part) => (
+    part.startsWith("{") ? part : part.replace(/\b([Cc])onsultora\b/g, "$1onsultor")
+  )).join("");
 }
