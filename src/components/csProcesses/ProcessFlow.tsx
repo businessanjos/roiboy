@@ -15,20 +15,28 @@ export function stepIcon(s: Step) {
 export const taskCount = (s: Step) => s.blocks.filter((b) => b.kind === "task").length;
 export const isCycle = (s: Step) => /ciclo mensal/i.test(s.title);
 
-export function StepCard({ step, status, onClick, tourId, badge }: { step: Step; status: StepStatus; onClick: () => void; tourId?: string; badge?: string }) {
+export function StepCard({ step, status, onClick, tourId, badge, flow = false }: { step: Step; status: StepStatus; onClick: () => void; tourId?: string; badge?: string; flow?: boolean }) {
   const Icon = stepIcon(step);
   const n = taskCount(step);
+  const number = flow ? step.title.match(/^(\d+\.\d+)\s+(.+)$/) : null;
   const tone = status === "done" ? "border-emerald-500/60 bg-emerald-500/10"
     : status === "current" ? "border-primary ring-2 ring-primary/40 animate-pulse [animation-duration:2.5s]"
     : status === "pending" ? "opacity-60" : "";
   return (
-    <button data-tour={tourId} onClick={onClick} className={`w-full rounded-xl border bg-card p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${tone}`}>
-      <div className="flex items-start gap-2">
-        <span className="mt-0.5 rounded-lg bg-muted p-1.5">{status === "done" ? <Check className="h-4 w-4 text-emerald-600" /> : <Icon className="h-4 w-4 text-muted-foreground" />}</span>
-        <div className="min-w-0">
-          <div className="text-sm font-medium leading-snug">{step.title || "Etapa"}</div>
-          {n > 0 && <div className="text-xs text-muted-foreground">{n} tarefa{n > 1 ? "s" : ""}</div>}
-          {badge && <div className="mt-1 inline-block rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium">⏳ {badge}</div>}
+    <button data-tour={tourId} onClick={onClick} className={`group w-full rounded-xl border bg-card text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md ${flow ? "min-h-[72px] p-3.5" : "p-3"} ${tone}`}>
+      <div className={`flex items-start ${flow ? "gap-3" : "gap-2"}`}>
+        <span className={`mt-0.5 shrink-0 rounded-lg p-1.5 ${flow ? "bg-primary/10" : "bg-muted"}`}>
+          {status === "done" ? <Check className="h-4 w-4 text-emerald-600" /> : <Icon className={`h-4 w-4 ${flow ? "text-primary" : "text-muted-foreground"}`} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className={`${flow ? "flex items-start gap-2" : ""}`}>
+            {number && <span className="mt-0.5 shrink-0 rounded-md border bg-muted/70 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground">{number[1]}</span>}
+            <div className={`${flow ? "text-[13px] font-semibold" : "text-sm font-medium"} leading-snug`}>{number?.[2] || step.title || "Etapa"}</div>
+          </div>
+          {(n > 0 || badge) && <div className={`flex flex-wrap items-center gap-2 ${flow ? "mt-2" : ""}`}>
+            {n > 0 && <div className="text-xs text-muted-foreground">{n} tarefa{n > 1 ? "s" : ""}</div>}
+            {badge && <div className={`inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 font-medium ${flow ? "text-[11px]" : "mt-1 text-xs"}`}><Hourglass className="h-3 w-3" />{badge}</div>}
+          </div>}
         </div>
       </div>
     </button>
