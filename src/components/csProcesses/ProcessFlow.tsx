@@ -33,10 +33,13 @@ export function StepCard({ step, status, onClick, tourId, badge, flow = false }:
             {number && <span className="mt-0.5 shrink-0 rounded-md border bg-muted/70 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground">{number[1]}</span>}
             <div className={`${flow ? "text-[13px] font-semibold" : "text-sm font-medium"} leading-snug`}>{number?.[2] || step.title || "Etapa"}</div>
           </div>
-          {(n > 0 || badge) && <div className={`flex flex-wrap items-center gap-2 ${flow ? "mt-2" : ""}`}>
+          {flow ? (n > 0 || badge) && <div className="mt-2 flex flex-wrap items-center gap-2">
             {n > 0 && <div className="text-xs text-muted-foreground">{n} tarefa{n > 1 ? "s" : ""}</div>}
-            {badge && <div className={`inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 font-medium ${flow ? "text-[11px]" : "mt-1 text-xs"}`}><Hourglass className="h-3 w-3" />{badge}</div>}
-          </div>}
+            {badge && <div className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium"><Hourglass className="h-3 w-3" />{badge}</div>}
+          </div> : <>
+            {n > 0 && <div className="text-xs text-muted-foreground">{n} tarefa{n > 1 ? "s" : ""}</div>}
+            {badge && <div className="mt-1 inline-block rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium">⏳ {badge}</div>}
+          </>}
         </div>
       </div>
     </button>
