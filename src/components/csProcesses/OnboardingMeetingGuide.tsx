@@ -169,7 +169,7 @@ export function OnboardingMeetingGuide({ open, onOpenChange, clientName }: { ope
           <nav className="mt-5 flex gap-2">
             {BLOCKS.map((x, k) => (
               <button key={x.title} type="button" onClick={() => setI(k)}
-                className={`flex flex-1 items-center gap-2 rounded-xl border px-4 py-2.5 text-left text-sm font-medium transition-all ${k === i ? "border-primary bg-primary/10 text-foreground" : "text-muted-foreground hover:border-primary/40"}`}>
+                className={`flex flex-1 items-center gap-2 rounded-xl border px-4 outline-none focus-visible:ring-2 focus-visible:ring-primary/40 py-2.5 text-left text-sm font-medium transition-all ${k === i ? "border-primary bg-primary/10 text-foreground" : "text-muted-foreground hover:border-primary/40"}`}>
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${blockDone(x) ? "bg-primary text-primary-foreground" : k === i ? "bg-primary/20 text-primary" : "bg-muted"}`}>
                   {blockDone(x) ? <Check className="h-3.5 w-3.5" /> : k + 1}
                 </span>
@@ -203,7 +203,7 @@ export function OnboardingMeetingGuide({ open, onOpenChange, clientName }: { ope
                       return (
                         <li key={it.id}>
                           <button type="button" onClick={() => toggle(it.id)}
-                            className={`flex w-full items-center gap-4 rounded-2xl border px-6 py-5 text-left text-xl transition-all hover:border-primary/50 ${on ? "border-primary/40 bg-primary/5 text-muted-foreground" : "bg-card shadow-sm"}`}>
+                            className={`flex w-full items-center gap-4 rounded-2xl border px-6 outline-none focus-visible:ring-2 focus-visible:ring-primary/40 py-5 text-left text-xl transition-all hover:border-primary/50 ${on ? "border-primary/40 bg-primary/5 text-muted-foreground" : "bg-card shadow-sm"}`}>
                             <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 transition-colors ${on ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"}`}>
                               {on && <Check className="h-4 w-4" />}
                             </span>
