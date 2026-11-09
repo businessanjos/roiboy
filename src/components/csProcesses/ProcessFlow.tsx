@@ -133,17 +133,33 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [full]);
+  const stepTotal = nodes.reduce((total, node) => total + node.data.steps.length, 0);
   return (
-    <div data-tour="flow" className={full ? "fixed inset-x-0 bottom-0 top-14 z-40 bg-background" : "h-[70vh] overflow-hidden rounded-2xl border bg-background"}>
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} minZoom={0.2} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
-        <Background gap={24} />
-        <Controls showInteractive={false} className="!flex-row [&_.react-flow__controls-button]:border-b-0 [&_.react-flow__controls-button]:border-r [&_.react-flow__controls-button:last-child]:border-r-0">
-          <ControlButton onClick={() => setFull((v) => !v)} title={full ? "Sair da tela cheia" : "Tela cheia"} aria-label={full ? "Sair da tela cheia" : "Tela cheia"}>
-            {full ? <Minimize2 /> : <Maximize2 />}
-          </ControlButton>
-        </Controls>
-        <InitialView count={nodes.length} intro={!!groups} full={full} resetKey={`${process.id}:${resetKey}`} />
-      </ReactFlow>
+    <div data-tour="flow" className={full
+      ? "fixed inset-x-0 bottom-0 top-14 z-40 flex flex-col overflow-hidden bg-background"
+      : "flex h-[76vh] min-h-[560px] max-h-[820px] flex-col overflow-hidden rounded-[24px] border bg-card shadow-sm"}>
+      <div className="flex shrink-0 items-center gap-3 border-b bg-card px-4 py-3 md:px-5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Workflow className="h-4 w-4" /></span>
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold">Mapa do processo</h2>
+          <p className="text-xs text-muted-foreground">{nodes.length} fases <span className="mx-1">·</span> {stepTotal} etapas</p>
+        </div>
+        <div className="ml-auto hidden items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground lg:flex">
+          <MousePointer2 className="h-3.5 w-3.5" />Clique em uma etapa para ver os detalhes
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 bg-muted/20">
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} minZoom={0.2} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
+          <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="hsl(var(--muted-foreground) / 0.24)" />
+          <Controls showInteractive={false} className="!mb-4 !ml-4 !flex-row !overflow-hidden !rounded-xl !border !bg-card !shadow-md [&_.react-flow__controls-button]:border-b-0 [&_.react-flow__controls-button]:border-r [&_.react-flow__controls-button]:bg-card [&_.react-flow__controls-button:last-child]:border-r-0">
+            <ControlButton onClick={() => setFull((v) => !v)} title={full ? "Sair da tela cheia" : "Tela cheia"} aria-label={full ? "Sair da tela cheia" : "Tela cheia"}>
+              {full ? <Minimize2 /> : <Maximize2 />}
+            </ControlButton>
+          </Controls>
+          <MiniMap pannable zoomable position="bottom-right" className="!mb-4 !mr-4 !h-24 !w-40 !rounded-xl !border !bg-card/95 !shadow-md" nodeColor="hsl(var(--primary) / 0.35)" nodeStrokeColor="hsl(var(--primary) / 0.5)" maskColor="hsl(var(--background) / 0.72)" />
+          <InitialView count={nodes.length} intro={!!groups} full={full} resetKey={`${process.id}:${resetKey}`} />
+        </ReactFlow>
+      </div>
     </div>
   );
 }
