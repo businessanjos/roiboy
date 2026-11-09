@@ -26,6 +26,14 @@ const BLOCKS: Block[] = [
     ] }],
   },
   {
+    title: "Cliente entrou na reunião", subtitle: "Antes de começar", icon: Sparkles,
+    groups: [{ items: [
+      { id: "cr-audio", text: "Teste de áudio" },
+      { id: "cr-video", text: "Teste de vídeo" },
+      { id: "cr-gravar", text: "Colocar para gravar no computador" },
+    ] }],
+  },
+  {
     title: "Clínica Ryka", subtitle: "Sistema de vendas", icon: MonitorUp,
     highlight: "Explicar a função e os benefícios ao implementar o sistema de vendas que já gerou mais de 1,3 bilhão em vendas de procedimentos.",
     groups: [{ items: [
