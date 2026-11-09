@@ -379,6 +379,11 @@ export default function CSProcesses() {
           <p className="text-sm text-muted-foreground">{clientId ? "Processo individual, com mensagens, links e progresso da cliente." : target ? `Encontro selecionado: ${targetName ?? "…"}` : "Passo a passo, mensagens prontas e links de cada processo."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+        {tab === "process" && !target && (
+          <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" title="Visualização geral · selecione uma cliente para preencher nomes, links e progresso" onClick={() => clearClientSelection(true)}>
+            <UsersRound className="h-4 w-4" />Selecionar cliente
+          </Button>
+        )}
         <div className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={tab === "process" ? "secondary" : "ghost"} onClick={() => setTab("process")}>Processos</Button>
           <Button size="sm" variant={tab === "today" ? "secondary" : "ghost"} onClick={() => setTab("today")}>Em andamento</Button>
@@ -417,16 +422,6 @@ export default function CSProcesses() {
         </section>
       )}
 
-      {tab === "process" && !target && (
-        <section aria-label="Nenhuma cliente selecionada" className="flex flex-col gap-3 rounded-2xl border border-dashed bg-muted/25 p-4 sm:flex-row sm:items-center">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground"><UserRound className="h-5 w-5" /></span>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold">Visualização geral · nenhuma cliente selecionada</h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">Selecione uma cliente para preencher nomes e links e registrar o progresso dela.</p>
-          </div>
-          <Button size="sm" variant="outline" className="gap-1.5 self-start sm:self-auto" onClick={() => clearClientSelection(true)}><UsersRound className="h-4 w-4" />Selecionar cliente</Button>
-        </section>
-      )}
 
       {tab === "today" ? (
         <InProgressBoard processes={csProcesses} onOpenCard={(i, c) => setTrack({ pi: i, card: c })} />
