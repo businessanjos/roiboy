@@ -4,6 +4,7 @@ import { genderConsultant, genderClient } from "@/lib/consultantGender";
 import { Button } from "@/components/ui/button";
 import { AudioTeleprompter } from "@/components/csProcesses/AudioTeleprompter";
 import { Checkbox } from "@/components/ui/checkbox";
+import { OnboardingGuideButton, ONBOARDING_GUIDE_URL } from "@/components/csProcesses/OnboardingMeetingGuide";
 import { toast } from "sonner";
 import { fillVars, plainText, stepTitle, type Action, type StepInfo } from "@/lib/csProcessActions";
 import { resolveProcessLink, replaceClientLinks, FIELD_LABEL, type ProcessClient, type ClientField } from "@/lib/csClientLinks";
@@ -152,7 +153,16 @@ function StepActionItem({ a, idx, vars, taskDone, onTask, canTick, tour, ctx }: 
       </span>
       <div className="min-w-0 flex-1 pt-1 text-base">
         {a.kind === "message" && <MessageCard a={a} vars={vars} tour={tour} ctx={ctx} onCopied={() => ctx.onDoneAction(idx)} />}
-        {a.kind === "task" && (
+        {a.kind === "task" && ONBOARDING_GUIDE_URL.test(a.text) && (
+          <div className="flex flex-col items-start gap-3">
+            <label data-tour={tour} className="flex cursor-pointer items-start gap-3">
+              <Checkbox disabled={!canTick} checked={!!taskDone} onCheckedChange={(v) => onTask?.(!!v)} className="mt-1" />
+              <span className={taskDone ? "text-muted-foreground line-through" : ""}>Abrir o roteiro da reunião para direcionar perguntas e orientações, seguindo as etapas.</span>
+            </label>
+            <div className="pl-7"><OnboardingGuideButton clientName={ctx.client?.full_name} /></div>
+          </div>
+        )}
+        {a.kind === "task" && !ONBOARDING_GUIDE_URL.test(a.text) && (
           <label data-tour={tour} className="flex cursor-pointer items-start gap-3">
             <Checkbox disabled={!canTick} checked={!!taskDone} onCheckedChange={(v) => onTask?.(!!v)} className="mt-1" />
             <span className={taskDone ? "text-muted-foreground line-through" : ""}><InlineMarkdown text={a.text} vars={vars} ctx={ctx} /></span>
@@ -171,7 +181,7 @@ function StepActionItem({ a, idx, vars, taskDone, onTask, canTick, tour, ctx }: 
 
 /** Links das tarefas "Abrir ..." de uma etapa (preparação da reunião). */
 export function meetingLinks(info: StepInfo) {
-  return info.actions.filter((a) => a.kind === "task" && /^abrir/i.test(a.text)).map((a: any) => (a.text.match(/https?:\/\/[^\s)]+/) || [])[0]).filter(Boolean) as string[];
+  return info.actions.filter((a) => a.kind === "task" && /^abrir/i.test(a.text)).map((a: any) => (a.text.match(/https?:\/\/[^\s)]+/) || [])[0]).filter((u) => u && !ONBOARDING_GUIDE_URL.test(u)) as string[];
 }
 
 export function StepDetail({ step, number, phaseLabel, info, vars, canTick, doneKeys, stepKey, onTask, ctx }: {
