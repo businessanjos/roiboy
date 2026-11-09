@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eventStep, showInCsConsultantFilter, sinceLabel, stepOfStage } from "./csInProgress";
+import { eventStep, impliedDoneKeys, showInCsConsultantFilter, sinceLabel, stageToAdvance, stepOfStage } from "./csInProgress";
 
 describe("showInCsConsultantFilter", () => {
   it("remove Felipe Tester e Jessica Campos sem afetar as demais consultoras", () => {
