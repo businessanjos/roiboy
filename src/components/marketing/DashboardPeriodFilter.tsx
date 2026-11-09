@@ -57,6 +57,7 @@ export function periodLabel(v: PeriodValue) {
 
 export function DashboardPeriodFilter({ value, onChange, className }: { value: PeriodValue; onChange: (v: PeriodValue) => void; className?: string }) {
   const [open, setOpen] = useState(false);
+  const [showCustom, setShowCustom] = useState(false);
   const isMobile = useIsMobile();
   const [draft, setDraft] = useState<DateRange | undefined>(value.preset === 'custom' ? { from: value.from, to: value.to } : undefined);
 
@@ -67,7 +68,11 @@ export function DashboardPeriodFilter({ value, onChange, className }: { value: P
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(next) => {
+      setOpen(next);
+      setShowCustom(false);
+      if (next) setDraft(value.preset === 'custom' ? { from: value.from, to: value.to } : undefined);
+    }}>
       <PopoverTrigger asChild>
         <Button variant="outline" className={cn('h-9 min-w-[200px] justify-between gap-2 bg-card font-normal', className)} aria-label="Escolher período">
           <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{periodLabel(value)}</span></span>
@@ -76,16 +81,21 @@ export function DashboardPeriodFilter({ value, onChange, className }: { value: P
       </PopoverTrigger>
       <PopoverContent align="end" className="w-auto max-w-[calc(100vw-1.5rem)] p-0">
         <div className="flex flex-col sm:flex-row">
-          <div className="flex gap-1 overflow-x-auto border-b p-2 sm:w-44 sm:flex-col sm:overflow-visible sm:border-b-0 sm:border-r">
+          <div className={cn('flex w-52 shrink-0 flex-col gap-1 p-2', showCustom && 'w-auto border-b sm:w-44 sm:border-b-0 sm:border-r')}>
             {PRESETS.map(p => (
-              <button key={p.key} type="button" onClick={() => pick(p.key)}
-                className={cn('flex shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-muted',
-                  value.preset === p.key && 'bg-primary/10 font-medium text-primary')}>
+              <Button key={p.key} type="button" variant="ghost" onClick={() => pick(p.key)}
+                className={cn('h-8 shrink-0 justify-between gap-2 whitespace-nowrap rounded-md px-2.5 text-left text-sm font-normal',
+                  !showCustom && value.preset === p.key && 'bg-primary/10 font-medium text-primary')}>
                 {p.label}{value.preset === p.key && <Check className="h-3.5 w-3.5" />}
-              </button>
+              </Button>
             ))}
+            <Button type="button" variant="ghost" onClick={() => setShowCustom(true)}
+              className={cn('mt-1 h-9 justify-between gap-2 border-t px-2.5 text-sm font-normal',
+                (showCustom || value.preset === 'custom') && 'bg-primary/10 font-medium text-primary')}>
+              Personalizado <CalendarDays className="h-3.5 w-3.5" />
+            </Button>
           </div>
-          <div>
+          {showCustom && <div>
             <div className="flex items-center justify-between border-b px-3 py-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Personalizado</p>
               <p className="text-xs text-muted-foreground">
@@ -102,7 +112,7 @@ export function DashboardPeriodFilter({ value, onChange, className }: { value: P
               disabled={{ after: new Date() }}
               className="pointer-events-auto p-3"
             />
-          </div>
+          </div>}
         </div>
       </PopoverContent>
     </Popover>
