@@ -272,7 +272,7 @@ export function ZappLinkClientDialog({
         // Link to lead
         const { error: convError } = await supabase
           .from("zapp_conversations")
-          .update({ lead_id: selectedClient.id, client_id: null })
+          .update({ ...(!contactName || contactName === "Desconhecido" ? { contact_name: selectedClient.full_name } : {}), lead_id: selectedClient.id, client_id: null })
           .eq("id", conversationId);
 
         if (convError) throw convError;
@@ -293,7 +293,7 @@ export function ZappLinkClientDialog({
         // Link to client (existing logic)
         const { error: convError } = await supabase
           .from("zapp_conversations")
-          .update({ client_id: selectedClient.id, lead_id: null })
+          .update({ ...(!contactName || contactName === "Desconhecido" ? { contact_name: selectedClient.full_name } : {}), client_id: selectedClient.id, lead_id: null })
           .eq("id", conversationId);
 
         if (convError) throw convError;
