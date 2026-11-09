@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlow, Background, BackgroundVariant, Controls, ControlButton, MiniMap, useReactFlow, Handle, Position, MarkerType, type Node, type Edge, type NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { MessageSquare, CheckSquare, Link2, AlertTriangle, Check, ArrowDown, RefreshCw, Maximize2, Minimize2, Workflow, MousePointer2, Hourglass } from "lucide-react";
+import { MessageSquare, CheckSquare, Link2, AlertTriangle, Check, ArrowDown, RefreshCw, Maximize2, Minimize2, Workflow, MousePointer2, Hourglass, Columns3, Focus } from "lucide-react";
 import type { Process, Step } from "@/lib/csProcesses";
+import { Button } from "@/components/ui/button";
 
 export type StepStatus = "done" | "current" | "pending" | undefined;
 
@@ -86,7 +87,10 @@ export function EventTimeline({ accent }: { accent: string }) {
   );
 }
 
+type PhaseGroup = { title: string; steps: { step: Step; key: string }[] };
+export type ProcessFlowEntry = { process: Process; accent: string; groups?: PhaseGroup[]; open: (key: string) => void };
 type PhaseData = { title: string; accent: string; steps: { step: Step; key: string }[]; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined };
+type ProcessLabelData = { title: string; accent: string; details: string };
 function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
   const titleParts = data.title.match(/^Fase\s+(\d+)\s+[—–-]\s+(.+)$/i);
   return (
@@ -113,31 +117,79 @@ function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
     </div>
   );
 }
-const nodeTypes = { phase: PhaseNode };
+function ProcessLabelNode({ data }: NodeProps<Node<ProcessLabelData>>) {
+  return (
+    <div className="pointer-events-none w-[300px] select-none rounded-xl border bg-card/95 px-4 py-3 shadow-sm">
+      <div className="flex items-center gap-2.5">
+        <span className={`h-2.5 w-2.5 rounded-full ${data.accent}`} />
+        <h3 className="text-sm font-semibold">{data.title}</h3>
+      </div>
+      <p className="mt-1 pl-5 text-xs text-muted-foreground">{data.details}</p>
+    </div>
+  );
+}
+const nodeTypes = { phase: PhaseNode, processLabel: ProcessLabelNode };
 
-export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, resetKey = 0 }: { groups?: { title: string; steps: { step: Step; key: string }[] }[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined; resetKey?: number }) {
-  const { nodes, edges } = useMemo(() => {
-    const gs = groups ?? process.phases.map((ph, pi) => ({ title: ph.title, steps: ph.steps.map((s, si) => ({ step: s, key: `${pi}-${si}` })) }));
-    const nodes: Node<PhaseData>[] = gs.map((g, pi) => ({
-      id: `p${pi}`, type: "phase", position: { x: pi * 400, y: 0 }, draggable: false,
-      initialWidth: 300, initialHeight: 108 + g.steps.length * 96,
-      data: { title: g.title, accent, steps: g.steps, statusOf, open, badgeOf },
-    }));
-    const edges: Edge[] = gs.slice(1).map((_, i) => ({
-      id: `e${i}`, source: `p${i}`, target: `p${i + 1}`, type: "smoothstep",
-      style: { stroke: "hsl(var(--primary) / 0.35)", strokeWidth: 1.5 },
-      markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--primary) / 0.45)", width: 18, height: 18 },
-    }));
-    return { nodes, edges };
-  }, [process, groups, accent, statusOf, open, badgeOf]);
+export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, entries, resetKey = 0 }: { groups?: PhaseGroup[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined; entries?: ProcessFlowEntry[]; resetKey?: number }) {
   const [full, setFull] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const showingAll = showAll && (entries?.length ?? 0) > 1;
+  const { nodes, edges, phaseCount, stepTotal } = useMemo(() => {
+    const makeFlow = (entry: ProcessFlowEntry & { groups?: PhaseGroup[] }, prefix: string, yOffset: number) => {
+      const gs = entry.groups ?? entry.process.phases.map((ph, pi) => ({ title: ph.title, steps: ph.steps.map((s, si) => ({ step: s, key: `${pi}-${si}` })) }));
+      const phaseNodes: Node[] = gs.map((g, pi) => ({
+        id: `${prefix}p${pi}`, type: "phase", position: { x: pi * 400, y: yOffset }, draggable: false,
+        initialWidth: 300, initialHeight: 108 + g.steps.length * 96,
+        data: { title: g.title, accent: entry.accent, steps: g.steps, statusOf, open: entry.open, badgeOf },
+      }));
+      const phaseEdges: Edge[] = gs.slice(1).map((_, i) => ({
+        id: `${prefix}e${i}`, source: `${prefix}p${i}`, target: `${prefix}p${i + 1}`, type: "smoothstep",
+        style: { stroke: "hsl(var(--primary) / 0.35)", strokeWidth: 1.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--primary) / 0.45)", width: 18, height: 18 },
+      }));
+      return {
+        nodes: phaseNodes,
+        edges: phaseEdges,
+        height: Math.max(0, ...gs.map((g) => 108 + g.steps.length * 96)),
+        phaseCount: gs.length,
+        stepTotal: gs.reduce((total, g) => total + g.steps.length, 0),
+      };
+    };
+
+    if (!showingAll) return makeFlow({ process, accent, groups, open }, "", 0);
+
+    const allNodes: Node[] = [];
+    const allEdges: Edge[] = [];
+    let y = 0, phases = 0, steps = 0;
+    entries!.forEach((entry, fi) => {
+      const flow = makeFlow(entry, `f${fi}-`, y + 82);
+      allNodes.push({
+        id: `f${fi}-label`, type: "processLabel", position: { x: 0, y }, draggable: false, selectable: false,
+        initialWidth: 300, initialHeight: 64,
+        data: { title: entry.process.title, accent: entry.accent, details: `${flow.phaseCount} fases · ${flow.stepTotal} ${entry.groups ? "cartões" : "etapas"}` },
+      });
+      allNodes.push(...flow.nodes);
+      allEdges.push(...flow.edges);
+      phases += flow.phaseCount;
+      steps += flow.stepTotal;
+      y += 82 + flow.height + 150;
+    });
+    return { nodes: allNodes, edges: allEdges, phaseCount: phases, stepTotal: steps };
+  }, [process, groups, accent, statusOf, open, badgeOf, entries, showingAll]);
+  useEffect(() => {
+    if ((entries?.length ?? 0) < 2 && showAll) setShowAll(false);
+  }, [entries, showAll]);
   useEffect(() => {
     if (!full) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setFull(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      setFull(false);
+      setShowAll(false);
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [full]);
-  const stepTotal = nodes.reduce((total, node) => total + node.data.steps.length, 0);
   const flowExtent = useMemo<[[number, number], [number, number]]>(() => {
     const maxX = Math.max(0, ...nodes.map((node) => node.position.x + Number(node.initialWidth ?? 300)));
     const maxY = Math.max(0, ...nodes.map((node) => node.position.y + Number(node.initialHeight ?? 400)));
@@ -150,9 +202,12 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
       <div className={`flex shrink-0 items-center gap-3 border-b bg-card px-4 py-3 md:px-5 ${full ? "relative justify-center py-4 text-center" : ""}`}>
         <span className={full ? "absolute left-5 hidden h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary sm:flex" : "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"}><Workflow className="h-4 w-4" /></span>
         <div className="min-w-0">
-          <h2 className={full ? "text-base font-semibold md:text-lg" : "text-sm font-semibold"}>{full ? process.title : "Mapa do processo"}</h2>
-          <p className="text-xs text-muted-foreground">{full && <>Fluxograma completo <span className="mx-1">·</span></>}{nodes.length} fases <span className="mx-1">·</span> {stepTotal} {groups ? "cartões" : "etapas"}</p>
+          <h2 className={full ? "text-base font-semibold md:text-lg" : "text-sm font-semibold"}>{showingAll ? "VISÃO GERAL DOS 3 FLUXOS" : full ? process.title : "Mapa do processo"}</h2>
+          <p className="text-xs text-muted-foreground">{showingAll ? <>{entries!.length} processos <span className="mx-1">·</span></> : full && <>Fluxograma completo <span className="mx-1">·</span></>}{phaseCount} fases <span className="mx-1">·</span> {stepTotal} {showingAll || groups ? "cartões" : "etapas"}</p>
         </div>
+        {full && (entries?.length ?? 0) > 1 && <Button size="sm" variant={showingAll ? "secondary" : "outline"} onClick={() => setShowAll((value) => !value)} className="absolute right-4 gap-2" title={showingAll ? "Voltar ao fluxo atual" : "Reunir os três processos nesta tela"}>
+          {showingAll ? <Focus className="h-4 w-4" /> : <Columns3 className="h-4 w-4" />}{showingAll ? "Voltar ao fluxo atual" : "Ver os 3 fluxos"}
+        </Button>}
         {!full && <div className="ml-auto hidden items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground lg:flex">
           <MousePointer2 className="h-3.5 w-3.5" />Clique em uma etapa para ver os detalhes
         </div>}
@@ -161,12 +216,12 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
         <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} translateExtent={flowExtent} nodesDraggable={false} minZoom={0.2} maxZoom={1.6} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
           <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="hsl(var(--muted-foreground) / 0.24)" />
           <Controls showInteractive={false} className="!mb-4 !ml-4 !flex-row !overflow-hidden !rounded-xl !border !bg-card !shadow-md [&_.react-flow__controls-button]:border-b-0 [&_.react-flow__controls-button]:border-r [&_.react-flow__controls-button]:bg-card [&_.react-flow__controls-button:last-child]:border-r-0">
-            <ControlButton onClick={() => setFull((v) => !v)} title={full ? "Sair da tela cheia" : "Tela cheia"} aria-label={full ? "Sair da tela cheia" : "Tela cheia"}>
+            <ControlButton onClick={() => { if (full) setShowAll(false); setFull((value) => !value); }} title={full ? "Sair da tela cheia" : "Tela cheia"} aria-label={full ? "Sair da tela cheia" : "Tela cheia"}>
               {full ? <Minimize2 /> : <Maximize2 />}
             </ControlButton>
           </Controls>
-          <MiniMap pannable zoomable position="bottom-right" style={{ width: 160, height: 96 }} className="!mb-4 !mr-4 !rounded-xl !border !shadow-md" bgColor="hsl(var(--card))" nodeColor="hsl(var(--primary) / 0.35)" nodeStrokeColor="hsl(var(--primary) / 0.5)" maskColor="hsl(var(--background) / 0.65)" />
-          <InitialView count={nodes.length} intro={!!groups} full={full} resetKey={`${process.id}:${resetKey}`} />
+          <MiniMap pannable zoomable position="bottom-right" style={{ width: 160, height: 96 }} className="!mb-4 !mr-4 !rounded-xl !border !shadow-md" bgColor="hsl(var(--card))" nodeColor={(node) => node.type === "processLabel" ? "hsl(var(--primary) / 0.6)" : "hsl(var(--primary) / 0.35)"} nodeStrokeColor="hsl(var(--primary) / 0.5)" maskColor="hsl(var(--background) / 0.65)" />
+          <InitialView count={phaseCount} intro={!!groups && !showingAll} full={full} combined={showingAll} resetKey={`${process.id}:${resetKey}:${showingAll}`} />
         </ReactFlow>
       </div>
     </div>
@@ -174,14 +229,17 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
 }
 
 /** Abre legível nas primeiras fases; no Onboarding mostra antes o fluxo inteiro e volta ao início. */
-function InitialView({ count, intro, full, resetKey }: { count: number; intro: boolean; full: boolean; resetKey: string }) {
+function InitialView({ count, intro, full, combined, resetKey }: { count: number; intro: boolean; full: boolean; combined: boolean; resetKey: string }) {
   const rf = useReactFlow();
   const first = useRef(true);
   useEffect(() => {
     if (!count) return;
     const start = { nodes: [{ id: "p0" }, { id: "p1" }, { id: "p2" }], padding: 0.1, maxZoom: 1 };
     const timers: number[] = [];
-    if (first.current && intro) {
+    if (combined) {
+      first.current = false;
+      timers.push(window.setTimeout(() => rf.fitView({ padding: 0.08, duration: 500 }), 50));
+    } else if (first.current && intro) {
       first.current = false;
       timers.push(window.setTimeout(() => rf.fitView({ padding: 0.08, duration: 0 }), 50));
       timers.push(window.setTimeout(() => rf.fitView({ ...start, duration: 1200 }), 1500));
@@ -190,6 +248,6 @@ function InitialView({ count, intro, full, resetKey }: { count: number; intro: b
       timers.push(window.setTimeout(() => rf.fitView({ ...start, duration: 300 }), 50));
     }
     return () => timers.forEach(clearTimeout);
-  }, [count, intro, full, resetKey, rf]);
+  }, [count, intro, full, combined, resetKey, rf]);
   return null;
 }

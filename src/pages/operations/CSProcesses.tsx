@@ -146,6 +146,13 @@ export default function CSProcesses() {
   };
 
   const proc = csProcesses[Math.min(active, csProcesses.length - 1)];
+  const openFlowEntry = useCallback((processIndex: number, key: string) => { setActive(processIndex); setOpenKey(key); }, []);
+  const flowEntries = useMemo(() => csProcesses.map((process, processIndex) => ({
+    process,
+    accent: dots[processIndex % dots.length],
+    groups: processIndex === 0 ? onboardingGroups(process) : undefined,
+    open: (key: string) => openFlowEntry(processIndex, key),
+  })), [csProcesses, openFlowEntry]);
   const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
   const { data: targetName } = useQuery({
@@ -352,7 +359,7 @@ export default function CSProcesses() {
       {active > 0 && <EventTimeline accent={dots[active % 3]} />}
 
       {view === "flow" && !isMobile ? (
-        <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} resetKey={flowReset} />
+        <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} entries={!target ? flowEntries : undefined} resetKey={flowReset} />
       ) : (
         <>
           <ProcessOverview process={proc} statusOf={navStatus} onPick={pickPhase} />
