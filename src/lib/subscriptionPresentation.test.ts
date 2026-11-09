@@ -9,6 +9,10 @@ describe("internal trial notice", () => {
     expect(hideInternalTrialNotice("rh2@eternumoficial.com")).toBe(true);
     expect(hideInternalTrialNotice("RH2@EternumOficial.com")).toBe(true);
   });
+  it("does not present Jessica Campos (Marketing) internal access as a trial", () => {
+    expect(hideInternalTrialNotice("jessicacampos@anjosbususiness.com.br")).toBe(true);
+    expect(hideInternalTrialNotice("JessicaCampos@AnjosBususiness.com.br")).toBe(true);
+  });
   it("preserves existing corporate exceptions", () => {
     expect(hideInternalTrialNotice("lucasdossantos@anjosbusiness.com")).toBe(true);
     expect(hideInternalTrialNotice("equipe@anjosbusiness.com.br")).toBe(true);
