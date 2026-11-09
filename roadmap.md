@@ -1,6 +1,6 @@
 # Roadmap — Processos do CS
-- [ ] Conteúdos: reunir posts cadastrados de todas as redes e da Produção, com filtros e detalhes.
-- [ ] IA de Marketing: ampliar contexto para o histórico completo cadastrado, preservando acesso por conta.
+- [x] Conteúdos: reunir posts cadastrados de todas as redes e da Produção, com filtros e detalhes.
+- [x] IA de Marketing: ampliar contexto para o histórico completo cadastrado, preservando acesso por conta.
 - [x] Fase 1: área "Processos" (consulta, busca, copiar mensagens, links, alertas)
 - [x] Fase 2: checklist por cliente
 - [x] Fluxograma, tour, status (edição por gestores ainda pendente)
