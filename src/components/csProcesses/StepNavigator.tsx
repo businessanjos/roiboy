@@ -1,9 +1,10 @@
 import { Pencil } from "lucide-react";
 import { ArrowRight, Check } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { stepTitle } from "@/lib/csProcessActions";
-import type { Process } from "@/lib/csProcesses";
+import { plainText, stepTitle, toStepInfo, type Action } from "@/lib/csProcessActions";
+import type { Process, Step } from "@/lib/csProcesses";
 
 export type NavStatus = "done" | "current" | "pending";
 const phaseName = (t: string) => t.replace(/^Fase\s+\d+\s*[—-]\s*/i, "");
