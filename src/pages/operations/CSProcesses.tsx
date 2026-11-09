@@ -102,7 +102,7 @@ export default function CSProcesses() {
   const qc = useQueryClient();
   const procParam = params.get("proc"), stepParam = params.get("step");
   const [active, setActive] = useState(procParam ? Number(procParam) : eventId ? 1 : 0);
-  const [tab, setTab] = useState<"today" | "process">(clientId || eventId || stepParam ? "process" : "today");
+  const [tab, setTab] = useState<"today" | "process">("process");
   useEffect(() => { if (procParam) setActive(Number(procParam)); if (stepParam) { setSel(stepParam); setTab("process"); } }, [procParam, stepParam, clientId]);
   const [q, setQ] = useState("");
   const [view, setView] = useState<"list" | "flow">(() => (localStorage.getItem("csProcessesView") === "flow" ? "flow" : "list"));
@@ -306,8 +306,8 @@ export default function CSProcesses() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-lg border p-0.5">
-          <Button size="sm" variant={tab === "today" ? "secondary" : "ghost"} onClick={() => setTab("today")}>Em andamento</Button>
           <Button size="sm" variant={tab === "process" ? "secondary" : "ghost"} onClick={() => setTab("process")}>Processos</Button>
+          <Button size="sm" variant={tab === "today" ? "secondary" : "ghost"} onClick={() => setTab("today")}>Em andamento</Button>
         </div>
         {tab === "process" && client && <Button size="sm" variant="outline" onClick={() => { setEditField(undefined); setEditClientOpen(true); }}>Dados da {client.full_name.split(" ")[0]}</Button>}
         {tab === "process" && <div data-tour="toggle" className="inline-flex rounded-lg border p-0.5">
