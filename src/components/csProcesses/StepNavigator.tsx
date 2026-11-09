@@ -15,6 +15,38 @@ function StatusMark({ s }: { s: NavStatus }) {
   return <span className="h-5 w-5 shrink-0 rounded-full border-2 border-muted-foreground/30" />;
 }
 
+const KIND_LABEL: Record<Action["kind"], string> = { message: "Mensagem", task: "Tarefa", wait: "Aguardar", alert: "Atenção", link: "Link", note: "Nota" };
+const PREVIEW_MAX = 5;
+
+/** Prévia da etapa mostrada ao passar o mouse, para não precisar abrir uma por uma. */
+function StepPreview({ step, number, phaseLabel, status }: { step: Step; number: string; phaseLabel: string; status: NavStatus }) {
+  const info = toStepInfo(step);
+  const shown = info.actions.slice(0, PREVIEW_MAX);
+  const extra = info.actions.length - shown.length;
+  return (
+    <div className="w-[360px] max-w-[78vw]">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">{phaseLabel}</p>
+      <p className="mt-1 text-sm font-semibold leading-snug">{number} {stepTitle(step.title) || phaseLabel.split(" · ")[1] || "Etapa"}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {info.who}{info.when ? ` · ${info.when}` : ""} · {info.actions.length} {info.actions.length === 1 ? "ação" : "ações"}
+        {status === "done" ? " · concluída" : status === "current" ? " · etapa atual" : ""}
+      </p>
+      {shown.length > 0 && (
+        <ul className="mt-3 space-y-2 border-t pt-3">
+          {shown.map((a, i) => (
+            <li key={i} className="flex items-start gap-2 text-xs leading-snug">
+              <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{KIND_LABEL[a.kind]}</span>
+              <span className="line-clamp-2 text-muted-foreground">{plainText(a.kind === "link" ? a.label : a.text)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {extra > 0 && <p className="mt-2 text-[11px] text-muted-foreground">+{extra} {extra === 1 ? "ação" : "ações"} nesta etapa</p>}
+      <p className="mt-3 border-t pt-2 text-[11px] font-medium text-primary">Clique para abrir a etapa</p>
+    </div>
+  );
+}
+
 export function ProcessOverview({ process, statusOf, onPick }: { process: Process; statusOf: (k: string) => NavStatus; onPick: (pi: number) => void }) {
   return (
     <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
