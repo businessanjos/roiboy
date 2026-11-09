@@ -14,7 +14,11 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from 'sonner';
 import { RecordsGoalsCharts, METRICS, type MetricKey } from './RecordsGoalsCharts';
 import { RecordsCompareView } from './RecordsCompareView';
-
+import {
+  formatManualMetricNumber,
+  parseManualMetricNumber,
+  unformatManualMetricNumber,
+} from './manualMetricFormat';
 
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -29,11 +33,7 @@ const emptyRow = (): RowValues =>
   METRICS.reduce((acc, m) => ({ ...acc, [m.key]: '' }), {} as RowValues);
 
 
-const parseNum = (v: string) => {
-  const n = Number(String(v).replace(/\./g, '').replace(/,/g, '.').trim());
-  return Number.isFinite(n) ? Math.round(n) : 0;
-};
-
+const parseNum = parseManualMetricNumber;
 const fmt = (n: number) => n.toLocaleString('pt-BR');
 
 export function ManualMetricsTab() {
