@@ -1,0 +1,1 @@
+Content archive reads all pages of existing source tables through the current user's RLS-scoped client; no replicated table or background scraper is used, so existing permissions and source data remain authoritative.
