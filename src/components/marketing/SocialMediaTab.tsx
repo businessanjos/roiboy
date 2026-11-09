@@ -77,6 +77,8 @@ import { IntegrationAccessAlert } from '@/components/integrations/IntegrationAcc
 import { usePagedList } from '@/hooks/usePagedList';
 import { PagerFor } from '@/components/ui/list-pagination';
 import { SocialPostsDateFilter } from './SocialPostsDateFilter';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { isManagementUser } from '@/lib/access/managementRoles';
 
 interface SocialMediaTabProps {
   initialPostId?: string | null;
@@ -84,6 +86,8 @@ interface SocialMediaTabProps {
 }
 
 export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabProps) {
+  const { currentUser } = useCurrentUser();
+  const canDeleteProfile = isManagementUser(currentUser);
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [addPostDialogOpen, setAddPostDialogOpen] = useState(false);
   const [editPostDialogOpen, setEditPostDialogOpen] = useState(false);
@@ -304,7 +308,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
 
       {/* Header with Profile Selector */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
+        <div className="group/profile flex w-full min-w-0 items-center gap-3 sm:w-auto">
           <Select
             value={selectedProfileId || currentProfile?.id || ''}
             onValueChange={setSelectedProfileId}
@@ -326,18 +330,6 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                       </AvatarFallback>
                     </Avatar>
                     @{profile.username}
-                    <button
-                      type="button"
-                      onPointerDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setProfileToDelete({ id: profile.id, username: profile.username });
-                      }}
-                      className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                      aria-label={`Excluir perfil @${profile.username}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
                   </div>
                 </SelectItem>
               ))}
@@ -355,19 +347,23 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
             </a>
           )}
 
-          {currentProfile && (
+          {currentProfile && canDeleteProfile && (
+            <Tooltip>
+              <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              size="icon"
+              className="h-7 w-7 shrink-0 rounded-md p-0 text-muted-foreground opacity-0 pointer-events-none transition-opacity group-hover/profile:opacity-100 group-hover/profile:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover:bg-transparent hover:text-destructive [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto"
               onClick={() =>
                 setProfileToDelete({ id: currentProfile.id, username: currentProfile.username })
               }
               aria-label="Excluir perfil atual"
-              title="Excluir perfil atual"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
+              </TooltipTrigger>
+              <TooltipContent>Excluir perfil atual</TooltipContent>
+            </Tooltip>
           )}
 
           {useMockData && (
@@ -401,13 +397,13 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
       </div>
 
       <DeleteSocialProfileDialog
-        open={!!profileToDelete}
+        open={canDeleteProfile && !!profileToDelete}
         onOpenChange={(open) => !open && setProfileToDelete(null)}
         username={profileToDelete?.username}
         entityLabel="perfil"
         isDeleting={deleteProfile.isPending}
         onConfirm={() => {
-          if (profileToDelete) {
+          if (canDeleteProfile && profileToDelete) {
             deleteProfile.mutate(profileToDelete.id, {
               onSuccess: () => setProfileToDelete(null),
             });
