@@ -17,3 +17,17 @@ export function genderConsultant(text: string, name?: string | null): string {
     part.startsWith("{") ? part : part.replace(/\b([Cc])onsultora\b/g, "$1onsultor")
   )).join("");
 }
+
+const CLIENT_SWAP: [RegExp, string][] = [
+  [/\b([Mm])embra(s?)\b/g, "$1embro$2"],
+  [/\b([Ss])ócia(s?)\b/g, "$1ócio$2"],
+  [/\b([Bb])em-vinda(s?)\b/g, "$1em-vindo$2"],
+];
+
+/** Mensagens são escritas no feminino; para cliente homem troca membra/sócia/bem-vinda pelo masculino. */
+export function genderClient(text: string, clientName?: string | null): string {
+  if (!clientName || !isMasculineName(clientName)) return text;
+  return text.split(/(\{[^}]+\})/g).map((part) => (
+    part.startsWith("{") ? part : CLIENT_SWAP.reduce((t, [re, to]) => t.replace(re, to), part)
+  )).join("");
+}

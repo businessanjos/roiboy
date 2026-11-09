@@ -21,3 +21,17 @@ describe("nome e tratamento do usuário logado nos processos", () => {
     expect(fillVars(shown, vars)).toBe("Eu sou Andreia, Consultora aqui do Eternum.");
   });
 });
+
+import { genderClient } from "./consultantGender";
+describe("tratamento da cliente", () => {
+  const src = "Seja muito bem-vinda agora membra do **Eternum Mentoring**.";
+  it("cliente homem vira membro e bem-vindo", () => {
+    expect(genderClient(src, "Thiago Caldeira")).toBe("Seja muito bem-vindo agora membro do **Eternum Mentoring**.");
+  });
+  it("cliente mulher continua membra", () => {
+    expect(genderClient(src, "Leoni Santos")).toBe(src);
+  });
+  it("sócio do Club para homem", () => {
+    expect(genderClient("cliente sócia do Eternum Club", "Thiago")).toBe("cliente sócio do Eternum Club");
+  });
+});
