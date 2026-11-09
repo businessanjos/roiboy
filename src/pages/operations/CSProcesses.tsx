@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, List, Workflow, ArrowDown } from "lucide-react";
+import { HelpCircle, List, Workflow, ArrowDown, UserRound, UsersRound, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -105,7 +105,7 @@ export default function CSProcesses() {
   const procParam = params.get("proc"), stepParam = params.get("step");
   const [active, setActive] = useState(procParam ? Number(procParam) : eventId ? 1 : 0);
   const [tab, setTab] = useState<"today" | "process">("process");
-  useEffect(() => { if (procParam) setActive(Number(procParam)); if (stepParam) { setSel(stepParam); setTab("process"); } }, [procParam, stepParam, clientId]);
+  useEffect(() => { if (procParam) setActive(Number(procParam)); if (stepParam) { setSel(stepParam); if (clientId || eventId) setTab("process"); } }, [procParam, stepParam, clientId, eventId]);
   const [q, setQ] = useState("");
   const [view, setView] = useState<"list" | "flow">(() => (localStorage.getItem("csProcessesView") === "flow" ? "flow" : "list"));
   const [flowReset, setFlowReset] = useState(0);
@@ -260,6 +260,17 @@ export default function CSProcesses() {
     next.set(card.kind === "client" ? "client" : "event", card.id);
     setTrack(null); setParams(next); setActive(pi); setSel(stepKey); setTab("process");
   };
+  const clearClientSelection = (chooseAnother = false) => {
+    const next = new URLSearchParams(params);
+    next.delete("client");
+    next.delete("event");
+    setParams(next, { replace: true });
+    setOpenKey(null);
+    setTrack(null);
+    setEditClientOpen(false);
+    setTab(chooseAnother ? "today" : "process");
+    if (chooseAnother) setView("list");
+  };
   const tourFullName = (currentUser as any)?.name as string | undefined;
   const tourFirstName = tourFullName?.trim().split(/\s+/)[0] ?? "";
   const tourMasculine = isMasculineName(tourFullName);
@@ -328,20 +339,53 @@ export default function CSProcesses() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Processos Eternum</h1>
-          <p className="text-sm text-muted-foreground">{target ? `Acompanhando: ${targetName ?? "…"}` : "Passo a passo, mensagens prontas e links de cada processo."}</p>
+          <p className="text-sm text-muted-foreground">{clientId ? "Processo individual, com mensagens, links e progresso da cliente." : target ? `Encontro selecionado: ${targetName ?? "…"}` : "Passo a passo, mensagens prontas e links de cada processo."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={tab === "process" ? "secondary" : "ghost"} onClick={() => setTab("process")}>Processos</Button>
           <Button size="sm" variant={tab === "today" ? "secondary" : "ghost"} onClick={() => setTab("today")}>Em andamento</Button>
         </div>
-        {tab === "process" && client && <Button size="sm" variant="outline" onClick={() => { setEditField(undefined); setEditClientOpen(true); }}>Dados da {client.full_name.split(" ")[0]}</Button>}
         {tab === "process" && <div data-tour="toggle" className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view === "list" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("list")}><List className="h-4 w-4" />Lista</Button>
           <Button size="sm" variant={view === "flow" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("flow")}><Workflow className="h-4 w-4" />Fluxograma</Button>
         </div>}
         </div>
       </div>
+
+      {tab === "process" && clientId && (
+        <section aria-label="Cliente selecionada" className="rounded-2xl border border-primary/35 bg-primary/[0.07] p-4 shadow-sm">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm"><UserRound className="h-5 w-5" /></span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">Cliente selecionada</span>
+                  <span className="rounded-full border border-primary/25 bg-card/70 px-2 py-0.5 text-[11px] font-medium">Atendimento individual</span>
+                </div>
+                <h2 className="mt-1 truncate text-lg font-semibold">{targetName ?? "Carregando cliente…"}</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">Mensagens, links e progresso desta tela pertencem a esta cliente.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+              <Button size="sm" variant="outline" className="bg-card/70" disabled={!client} onClick={() => { setEditField(undefined); setEditClientOpen(true); }}>Dados da cliente</Button>
+              <Button size="sm" variant="outline" className="gap-1.5 bg-card/70" onClick={() => clearClientSelection(true)}><UsersRound className="h-4 w-4" />Trocar cliente</Button>
+              <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => clearClientSelection()}><X className="h-4 w-4" />Remover seleção</Button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {tab === "process" && !target && (
+        <section aria-label="Nenhuma cliente selecionada" className="flex flex-col gap-3 rounded-2xl border border-dashed bg-muted/25 p-4 sm:flex-row sm:items-center">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground"><UserRound className="h-5 w-5" /></span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold">Visualização geral · nenhuma cliente selecionada</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">Selecione uma cliente para preencher nomes e links e registrar o progresso dela.</p>
+          </div>
+          <Button size="sm" variant="outline" className="gap-1.5 self-start sm:self-auto" onClick={() => clearClientSelection(true)}><UsersRound className="h-4 w-4" />Selecionar cliente</Button>
+        </section>
+      )}
 
       {tab === "today" ? (
         <InProgressBoard processes={csProcesses} onOpenCard={(i, c) => setTrack({ pi: i, card: c })} />
@@ -359,7 +403,7 @@ export default function CSProcesses() {
       {active > 0 && <EventTimeline accent={dots[active % 3]} />}
 
       {view === "flow" && !isMobile ? (
-        <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} entries={!target ? flowEntries : undefined} resetKey={flowReset} />
+        <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} entries={!target ? flowEntries : undefined} resetKey={flowReset} clientName={clientId ? targetName : undefined} />
       ) : (
         <>
           <ProcessOverview process={proc} statusOf={navStatus} onPick={pickPhase} />
@@ -397,6 +441,10 @@ export default function CSProcesses() {
           {opened && openKey && (
             <div className="space-y-3">
               <SheetHeader><SheetTitle>{opened.title || "Etapa"}</SheetTitle></SheetHeader>
+              <div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm ${clientId ? "border-primary/35 bg-primary/[0.07]" : "bg-muted/40 text-muted-foreground"}`}>
+                <span>{clientId ? <>Cliente selecionada: <strong className="text-foreground">{targetName ?? "…"}</strong></> : target ? <>Encontro: <strong className="text-foreground">{targetName ?? "…"}</strong></> : "Visualização geral · nenhuma cliente selecionada"}</span>
+                {clientId && <button type="button" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline" onClick={() => clearClientSelection()}><X className="h-3.5 w-3.5" />Remover seleção</button>}
+              </div>
               {isCycle(opened) && <CycleView step={opened} />}
               {(() => { const [pi, si] = openKey.split("-").map(Number); return (
                 <StepDetail step={opened} number={`${pi + 1}.${si + 1}`} phaseLabel={`Fase ${pi + 1} · ${proc.phases[pi].title.replace(/^Fase\s+\d+\s*[—-]\s*/i, "")}`} info={toStepInfo(opened)} vars={vars}

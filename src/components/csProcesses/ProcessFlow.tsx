@@ -130,7 +130,7 @@ function ProcessLabelNode({ data }: NodeProps<Node<ProcessLabelData>>) {
 }
 const nodeTypes = { phase: PhaseNode, processLabel: ProcessLabelNode };
 
-export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, entries, resetKey = 0 }: { groups?: PhaseGroup[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined; entries?: ProcessFlowEntry[]; resetKey?: number }) {
+export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, entries, resetKey = 0, clientName }: { groups?: PhaseGroup[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined; entries?: ProcessFlowEntry[]; resetKey?: number; clientName?: string }) {
   const [full, setFull] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const showingAll = showAll && (entries?.length ?? 0) > 1;
@@ -202,8 +202,8 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
       <div className={`flex shrink-0 items-center gap-3 border-b bg-card px-4 py-3 md:px-5 ${full ? "relative justify-center py-4 text-center" : ""}`}>
         <span className={full ? "absolute left-5 hidden h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary sm:flex" : "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"}><Workflow className="h-4 w-4" /></span>
         <div className="min-w-0">
-          <h2 className={full ? "text-base font-semibold md:text-lg" : "text-sm font-semibold"}>{showingAll ? "VISÃO GERAL DOS 3 FLUXOS" : full ? process.title : "Mapa do processo"}</h2>
-          <p className="text-xs text-muted-foreground">{showingAll ? <>{entries!.length} processos <span className="mx-1">·</span></> : full && <>Fluxograma completo <span className="mx-1">·</span></>}{phaseCount} fases <span className="mx-1">·</span> {stepTotal} {showingAll || groups ? "cartões" : "etapas"}</p>
+          <h2 className={full ? "text-base font-semibold md:text-lg" : "text-sm font-semibold"}>{showingAll ? "VISÃO GERAL DOS 3 FLUXOS" : <>{full ? process.title : clientName ? process.title : "Mapa do processo"}{clientName && <span className="text-primary"> · {clientName}</span>}</>}</h2>
+          <p className="text-xs text-muted-foreground">{clientName && !showingAll ? <>Cliente selecionada <span className="mx-1">·</span></> : showingAll ? <>{entries!.length} processos <span className="mx-1">·</span></> : full ? <>Fluxograma completo <span className="mx-1">·</span></> : null}{phaseCount} fases <span className="mx-1">·</span> {stepTotal} {showingAll || groups ? "cartões" : "etapas"}</p>
         </div>
         {full && (entries?.length ?? 0) > 1 && <Button size="sm" variant={showingAll ? "secondary" : "outline"} onClick={() => setShowAll((value) => !value)} className="absolute right-4 gap-2" title={showingAll ? "Voltar ao fluxo atual" : "Reunir os três processos nesta tela"}>
           {showingAll ? <Focus className="h-4 w-4" /> : <Columns3 className="h-4 w-4" />}{showingAll ? "Voltar ao fluxo atual" : "Ver os 3 fluxos"}

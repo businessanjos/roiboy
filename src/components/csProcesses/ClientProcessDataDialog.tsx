@@ -53,8 +53,8 @@ export function ClientProcessDataDialog({ client, focus, open, onOpenChange }: {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Dados da {client.full_name.split(" ")[0]} para os processos</DialogTitle>
-          <DialogDescription>Esses dados ficam na ficha da cliente e montam os links e as mensagens.</DialogDescription>
+          <DialogTitle>Dados da cliente para os processos</DialogTitle>
+          <DialogDescription>Atualize as informações de {client.full_name} usadas nos links e nas mensagens.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1"><Label>ID no Roy</Label><Input value={client.id} readOnly className="font-mono text-xs" /></div>
