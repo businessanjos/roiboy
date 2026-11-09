@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
-  CalendarIcon,
   Play,
   Instagram,
   Plus,
@@ -54,8 +53,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -79,6 +76,7 @@ import { cn } from '@/lib/utils';
 import { IntegrationAccessAlert } from '@/components/integrations/IntegrationAccessAlert';
 import { usePagedList } from '@/hooks/usePagedList';
 import { PagerFor } from '@/components/ui/list-pagination';
+import { SocialPostsDateFilter } from './SocialPostsDateFilter';
 
 interface SocialMediaTabProps {
   initialPostId?: string | null;
@@ -438,8 +436,8 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
       {/* Posts Section with Tabs */}
       <Card>
         <Tabs defaultValue="list" className="w-full">
-          <CardHeader className="pb-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <CardHeader className="space-y-4 p-4 sm:p-5">
+            <div className="flex flex-col gap-4">
               <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
                 <CardTitle className="text-lg font-semibold flex items-center gap-2">
                   Análise de Conteúdos
@@ -467,73 +465,13 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                 </TabsList>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Date From Filter */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-[130px] h-9 justify-start text-left font-normal",
-                        !dateFrom && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateFrom ? format(dateFrom, "dd/MM/yy") : "De"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dateFrom}
-                      onSelect={setDateFrom}
-                      initialFocus
-                      className="pointer-events-auto"
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                {/* Date To Filter */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-[130px] h-9 justify-start text-left font-normal",
-                        !dateTo && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateTo ? format(dateTo, "dd/MM/yy") : "Até"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dateTo}
-                      onSelect={setDateTo}
-                      initialFocus
-                      className="pointer-events-auto"
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                {/* Clear Date Filters */}
-                {(dateFrom || dateTo) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 px-2"
-                    onClick={() => {
-                      setDateFrom(undefined);
-                      setDateTo(undefined);
-                    }}
-                  >
-                    Limpar datas
-                  </Button>
-                )}
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 p-2">
+                <SocialPostsDateFilter
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  onFromChange={setDateFrom}
+                  onToChange={setDateTo}
+                />
 
                 {/* Format Filter */}
                 <Select value={formatFilter} onValueChange={setFormatFilter}>
@@ -579,7 +517,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 h-9"
+                  className="ml-auto h-9 gap-1.5"
                   onClick={() => setAddPostDialogOpen(true)}
                   disabled={!currentProfile}
                 >
@@ -800,8 +738,8 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             </TableCell>
                             <TableCell>
                               {post.theme ? (
-                                <Badge variant="outline" className="text-xs">
-                                  {getThemeLabel(post.theme)}
+                                <Badge variant="outline" className="h-7 max-w-[170px] gap-1 whitespace-nowrap px-2.5 text-xs font-normal">
+                                  <span className="truncate">{getThemeLabel(post.theme)}</span>
                                 </Badge>
                               ) : (
                                 <span className="text-muted-foreground text-xs">-</span>
@@ -827,9 +765,18 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             </TableCell>
                             <TableCell>
                               <div className="flex items-start gap-2">
-                                <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
-                                  {post.caption || 'Sem legenda'}
-                                </p>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span tabIndex={0} className="min-w-0 flex-1 cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/40" aria-label="Ler legenda completa">
+                                      <p className="line-clamp-2 text-sm text-muted-foreground">
+                                        {post.caption || 'Sem legenda'}
+                                      </p>
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" align="start" className="max-h-80 max-w-md overflow-y-auto whitespace-pre-wrap break-words text-xs leading-relaxed">
+                                    {post.caption || 'Sem legenda'}
+                                  </TooltipContent>
+                                </Tooltip>
                                 {post.permalink && (
                                   <a
                                     href={post.permalink}
