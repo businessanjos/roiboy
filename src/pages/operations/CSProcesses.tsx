@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { parseProcesses, defaultProcessesText, serializeProcesses, type Block, type Step } from "@/lib/csProcesses";
 import { isManagementUser } from "@/lib/access/managementRoles";
+import { isMasculineName } from "@/lib/consultantGender";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 const accents = ["border-l-purple-500", "border-l-teal-500", "border-l-blue-500"];
@@ -252,17 +253,22 @@ export default function CSProcesses() {
     next.set(card.kind === "client" ? "client" : "event", card.id);
     setTrack(null); setParams(next); setActive(pi); setSel(stepKey); setTab("process");
   };
+  const tourFullName = (currentUser as any)?.name as string | undefined;
+  const tourFirstName = tourFullName?.trim().split(/\s+/)[0] ?? "";
+  const tourMasculine = isMasculineName(tourFullName);
+  const tourWelcome = tourFirstName ? `${tourMasculine ? "Bem-vindo" : "Bem-vinda"}, ${tourFirstName}! 👋` : "Boas-vindas! 👋";
+  const tourRole = tourMasculine ? "um consultor" : "uma consultora";
   const MAIN_TOUR: TourStep[] = [
-    { text: "Bem-vinda aos Processos Eternum! 👋\nAqui está tudo que você precisa para conduzir cada cliente e cada encontro do jeito Eternum. Vamos fazer um tour rapidinho?", primary: "Bora!", secondary: "Agora não" },
-    { target: "board", text: "Aqui você vê cada cliente e cada encontro na fase em que está. Clique num cartão para ver a trilha completa e ir direto para a etapa atual.", onEnter: () => setTab("today") },
-    { target: "menu", onEnter: () => setTab("process"), text: "Aqui ficam os 3 processos: Onboarding, Encontro Online e Encontro Presencial. Clique em um para abrir." },
-    { target: "nav", text: "Aqui estão as fases e as etapas na ordem. Clique em uma etapa para abrir só ela ao lado.", onEnter: () => { setActive(0); setSel("0-0"); } },
-    { target: "status", text: "O sinal mostra a situação: ✓ feito, ● atual e ○ pendente." },
-    { target: "copy", text: "Mensagens ficam em cartões brancos. Clique em Copiar e mande no WhatsApp. Com uma cliente aberta, o nome dela já entra no lugar de {Nome}.", onEnter: () => { const k = firstWith("message"); if (k) setSel(k); } },
-    { target: "checklist", text: "Tarefas internas têm caixinha. Marque conforme for fazendo; o progresso fica salvo por cliente.", onEnter: () => { const k = firstWith("task"); if (k) setSel(k); } },
-    { target: "alert", text: "Avisos em vermelho são o que não pode ser esquecido.", onEnter: () => { const k = firstWith("alert"); if (k) setSel(k); } },
-    { target: "next", text: "Terminou a etapa? Clique aqui para concluir e ir para a próxima." },
-    { text: "Pronto! Agora é com você 🚀\nSe precisar rever o tour, é só clicar no ? aqui no canto.", primary: "Começar" },
+    { title: tourWelcome, text: `Aqui estão os Processos de ${tourRole} para conduzir cada cliente e cada encontro no jeito Eternum. Vamos fazer um tour rapidinho?`, primary: "Bora!", secondary: "Agora não" },
+    { target: "board", title: "Acompanhe em andamento", text: "Aqui você vê cada cliente e cada encontro na fase em que está. Clique num cartão para ver a trilha completa e ir direto para a etapa atual.", onEnter: () => setTab("today") },
+    { target: "menu", title: "Escolha um processo", onEnter: () => setTab("process"), text: "Aqui ficam os 3 processos: Onboarding, Encontro Online e Encontro Presencial. Clique em um para abrir." },
+    { target: "nav", title: "Navegue pelas etapas", text: "Aqui estão as fases e as etapas na ordem. Clique em uma etapa para abrir só ela ao lado.", onEnter: () => { setActive(0); setSel("0-0"); } },
+    { target: "status", title: "Entenda os sinais", text: "O sinal mostra a situação: ✓ feito, ● atual e ○ pendente." },
+    { target: "copy", title: "Mensagens prontas", text: "Mensagens ficam em cartões brancos. Clique em Copiar e mande no WhatsApp. Com uma cliente aberta, o nome dela já entra no lugar de {Nome}.", onEnter: () => { const k = firstWith("message"); if (k) setSel(k); } },
+    { target: "checklist", title: "Marque as tarefas", text: "Tarefas internas têm caixinha. Marque conforme for fazendo; o progresso fica salvo por cliente.", onEnter: () => { const k = firstWith("task"); if (k) setSel(k); } },
+    { target: "alert", title: "Atenção aos avisos", text: "Avisos em vermelho são o que não pode ser esquecido.", onEnter: () => { const k = firstWith("alert"); if (k) setSel(k); } },
+    { target: "next", title: "Conclua e avance", text: "Terminou a etapa? Clique aqui para concluir e ir para a próxima." },
+    { title: tourFirstName ? `Pronto, ${tourFirstName}! 🚀` : "Pronto! 🚀", text: "Agora é com você.\nSe precisar rever o tour, é só clicar no ? aqui no canto.", primary: "Começar" },
   ];
   const mainTour = useTourSeen("cs_processes_main", true);
   const miniTour = useTourSeen("cs_processes_client", !!clientId && !mainTour.open);

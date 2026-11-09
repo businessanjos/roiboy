@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft, ArrowRight, Sparkles, X } from "lucide-react";
 
-export interface TourStep { target?: string; text: string; primary?: string; secondary?: string; onEnter?: () => void }
+export interface TourStep { target?: string; title?: string; text: string; primary?: string; secondary?: string; onEnter?: () => void }
 
-const W = 320, GAP = 14, PAD = 8;
+const W = 380, GAP = 14, PAD = 8;
 
 export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: boolean; onClose: () => void }) {
   const [i, setI] = useState(0);
@@ -66,19 +67,32 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
           style={{ top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2, boxShadow: "0 0 0 3px hsl(var(--primary)), 0 0 22px 4px hsl(var(--primary) / 0.45), 0 0 0 9999px hsl(var(--tour-overlay) / 0.82)" }} />
       ) : <div className="absolute inset-0 backdrop-blur-sm" style={{ background: "hsl(var(--tour-overlay) / 0.82)" }} />}
       <div ref={bubble}
-        className={`absolute animate-in fade-in zoom-in-95 rounded-2xl border bg-popover p-5 shadow-xl transition-[top,left] duration-300 ${pos ? "" : "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"}`}
+        className={`absolute animate-in fade-in zoom-in-95 rounded-3xl border bg-popover shadow-2xl transition-[top,left] duration-300 ${pos ? "" : "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"}`}
         style={{ width: w, ...(pos ? { top: pos.top, left: pos.left } : {}) }}>
         {arrow && <span className="absolute h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t bg-popover" style={{ ...arrow, transform: `translate(${pos!.side === "bottom" || pos!.side === "top" ? "-50%" : "0"}, ${pos!.side === "left" || pos!.side === "right" ? "-50%" : "0"}) rotate(${({ bottom: 45, top: 225, right: -45, left: 135 } as const)[pos!.side]}deg)` }} />}
-        <p className="whitespace-pre-line text-sm leading-relaxed">{step.text}</p>
-        <div className="mt-4 flex items-center justify-between gap-2">
-          <span className="flex gap-1" aria-label={`Passo ${i + 1} de ${steps.length}`}>
-            {steps.map((_, k) => <span key={k} className={`h-1.5 w-1.5 rounded-full ${k <= i ? "bg-primary" : "bg-muted-foreground/30"}`} />)}
-          </span>
-          <div className="flex shrink-0 gap-1.5">
-            {step.secondary ? <Button size="sm" variant="ghost" onClick={onClose}>{step.secondary}</Button>
-              : !last && <Button size="sm" variant="ghost" onClick={onClose}>Pular</Button>}
-            {i > 0 && !step.primary && <Button size="sm" variant="outline" onClick={() => setI(i - 1)}>Voltar</Button>}
-            <Button size="sm" autoFocus onClick={next}>{step.primary ?? (last ? "Concluir" : "Próximo")}</Button>
+        <div className="h-1 rounded-t-3xl bg-gradient-to-r from-primary via-primary/60 to-transparent" />
+        <div className="px-6 pb-5 pt-4">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary"><Sparkles className="h-4 w-4" /></span>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Tour guiado</div>
+              <div className="text-xs text-muted-foreground">Passo {i + 1} de {steps.length}</div>
+            </div>
+            <Button size="icon" variant="ghost" className="ml-auto h-8 w-8 rounded-full text-muted-foreground" aria-label="Fechar tour" onClick={onClose}><X className="h-4 w-4" /></Button>
+          </div>
+          {step.title && <h2 className="mb-2 text-xl font-semibold leading-tight tracking-tight">{step.title}</h2>}
+          <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">{step.text}</p>
+        </div>
+        <div className="space-y-4 border-t bg-muted/30 px-6 py-4">
+          <div className="flex items-center gap-3" aria-label={`Passo ${i + 1} de ${steps.length}`}>
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${((i + 1) / steps.length) * 100}%` }} /></div>
+            <span className="text-xs font-medium tabular-nums text-muted-foreground">{Math.round(((i + 1) / steps.length) * 100)}%</span>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {step.secondary ? <Button size="sm" variant="ghost" className="mr-auto" onClick={onClose}>{step.secondary}</Button>
+              : !last && <Button size="sm" variant="ghost" className="mr-auto" onClick={onClose}>Pular</Button>}
+            {i > 0 && !step.primary && <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setI(i - 1)}><ArrowLeft className="h-3.5 w-3.5" />Voltar</Button>}
+            <Button size="sm" className="gap-1.5" autoFocus onClick={next}>{step.primary ?? (last ? "Concluir" : "Próximo")}<ArrowRight className="h-3.5 w-3.5" /></Button>
           </div>
         </div>
       </div>
