@@ -18,7 +18,7 @@ import { processVars, type ProcessClient, type ClientField } from "@/lib/csClien
 import { ClientProcessDataDialog } from "@/components/csProcesses/ClientProcessDataDialog";
 import { InProgressBoard } from "@/components/csProcesses/InProgressBoard";
 import { ProcessTrack } from "@/components/csProcesses/ProcessTrack";
-import type { BoardCard } from "@/lib/csInProgress";
+import { impliedDoneKeys, stageToAdvance, type BoardCard, type HubStage } from "@/lib/csInProgress";
 import { spDate } from "@/lib/csToday";
 import { onboardingGroups } from "@/components/csProcesses/OnboardingFlow";
 import { ProcessFlow, StepCard, CycleView, EventTimeline, isCycle, type StepStatus } from "@/components/csProcesses/ProcessFlow";
@@ -227,9 +227,9 @@ export default function CSProcesses() {
   const selNumber = `${spi + 1}.${ssi + 1}`;
   const selPhaseLabel = `Fase ${spi + 1} · ${(proc?.phases[spi]?.title ?? "").replace(/^Fase\s+\d+\s*[—-]\s*/i, "")}`;
   const navStatus = useCallback((k: string): NavStatus => isDone(k) ? "done" : (target ? k === currentKey : k === selKey) ? "current" : "pending", [isDone, target, currentKey, selKey]);
-  const pickPhase = (pi: number) => { const ks = allKeys.filter((k) => k.startsWith(`${pi}-`)); setSel(ks.find((k) => !doneKeys.has(k)) ?? ks[0]); };
+  const pickPhase = (pi: number) => { const ks = allKeys.filter((k) => k.startsWith(`${pi}-`)); setSel(ks.find((k) => !isDone(k)) ?? ks[0]); };
   const completeAndNext = async () => {
-    if (target && !doneKeys.has(selKey)) await toggle(selKey, true);
+    if (target && !isDone(selKey)) await toggle(selKey, true);
     if (selIdx < allKeys.length - 1) setSel(allKeys[selIdx + 1]);
   };
   const { data: client = null } = useQuery({
@@ -357,8 +357,8 @@ export default function CSProcesses() {
   });
 
   const stepFooter = (key: string) => target && (
-    <Button size="sm" variant={doneKeys.has(key) ? "secondary" : "default"} onClick={() => toggle(key, !doneKeys.has(key))}>
-      {doneKeys.has(key) ? "Desmarcar etapa" : "Marcar etapa como feita"}
+    <Button size="sm" variant={isDone(key) ? "secondary" : "default"} disabled={hubDone.has(key) && !doneKeys.has(key)} onClick={() => toggle(key, !doneKeys.has(key))}>
+      {hubDone.has(key) && !doneKeys.has(key) ? "Feita conforme o Onboarding" : isDone(key) ? "Desmarcar etapa" : "Marcar etapa como feita"}
     </Button>
   );
 
@@ -454,7 +454,7 @@ export default function CSProcesses() {
                 <div className="sticky bottom-0 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 border-t bg-muted/80 py-3 backdrop-blur">
                   <Button variant="ghost" disabled={selIdx <= 0} onClick={() => setSel(allKeys[selIdx - 1])}>← Etapa anterior</Button>
                   <Button data-tour="next" disabled={!target && selIdx >= allKeys.length - 1} onClick={completeAndNext}>
-                    {target ? (doneKeys.has(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima →") : "Próxima etapa →"}
+                    {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima →") : "Próxima etapa →"}
                   </Button>
                 </div>
               </div>
