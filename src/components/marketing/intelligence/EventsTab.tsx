@@ -428,19 +428,19 @@ function audiencePriority(ev: EventItem): number {
 
 function EventCard({ ev, onDelete }: { ev: EventItem; onDelete?: () => void }) {
   return (
-    <Card className="hover:border-primary/40 transition-colors">
+    <Card className="h-full min-w-0 hover:border-primary/40 transition-colors">
       <CardContent className="pt-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <h4 className="font-semibold text-sm leading-tight">{ev.name}</h4>
+              <h4 className="font-semibold text-sm leading-tight break-words">{ev.name}</h4>
               {ev.source === "ai" && (
                 <Badge variant="outline" className="bg-purple-500/10 text-purple-700 border-purple-500/30 text-[9px] px-1.5 py-0">
                   <Sparkles className="h-2.5 w-2.5 mr-0.5" /> IA
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+            <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
               <MapPin className="h-3 w-3" /> {ev.city}
               {ev.region && <span className="text-muted-foreground/70">· {ev.region}</span>}
             </p>
@@ -766,13 +766,17 @@ export default function EventsTab() {
               </Badge>
               <span className="text-xs text-muted-foreground">{list.length} evento(s)</span>
             </div>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-wrap gap-3">
               {list.map((ev, i) => (
-                <EventCard
+                <div
                   key={`${ev.name}-${i}`}
-                  ev={ev}
-                  onDelete={isUserAdded(ev) ? () => removeUserEvent(ev) : undefined}
-                />
+                  className="min-w-0 flex-1 basis-full md:basis-[calc(50%-0.75rem)] lg:basis-[calc(33.333%-0.75rem)]"
+                >
+                  <EventCard
+                    ev={ev}
+                    onDelete={isUserAdded(ev) ? () => removeUserEvent(ev) : undefined}
+                  />
+                </div>
               ))}
             </div>
           </div>
