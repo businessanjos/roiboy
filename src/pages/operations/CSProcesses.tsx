@@ -1,3 +1,4 @@
+import { detectOnboardingSteps } from "@/lib/csProcessWhatsAppSync";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
