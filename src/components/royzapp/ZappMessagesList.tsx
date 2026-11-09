@@ -18,6 +18,7 @@ import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
 import { CallTimelineEvent, type ConversationCall } from "@/components/telephony/CallTimelineEvent";
 import { useZappMessageReactions } from "@/hooks/useZappMessageReactions";
+import { useZappGroupLidMap } from "@/hooks/useZappGroupLidMap";
 
 const callTs = (c: ConversationCall) =>
   new Date(c.started_at || c.created_at || 0).getTime();
@@ -220,6 +221,19 @@ function ZappMessagesListInner({
     return buildFallbackMentionMap(deduplicatedMessages);
   }, [isGroup, deduplicatedMessages]);
 
+  // Menções por LID (@2634...): troca pelo número real (ou nome) do participante.
+  const hasLidMentions = useMemo(
+    () => isGroup && deduplicatedMessages.some((m) => m.content && /@\d{14,}/.test(m.content)),
+    [isGroup, deduplicatedMessages],
+  );
+  const lidMentionMap = useZappGroupLidMap({
+    enabled: hasLidMentions,
+    groupJid,
+    sectorId,
+    integrationId,
+    knownNames: combinedMentionMap,
+  });
+
   // Build a lookup map by external_message_id for quoted content resolution
   const messagesByExternalId = useMemo(() => {
     const map = new Map<string, Message>();
@@ -260,7 +274,7 @@ function ZappMessagesListInner({
 
       // Merge mention names for group messages
       if (isGroup && enriched.content && mentionRegex.test(enriched.content)) {
-        const merged = { ...combinedMentionMap, ...(enriched.mention_map || {}) };
+        const merged = { ...combinedMentionMap, ...lidMentionMap, ...(enriched.mention_map || {}) };
         const cleaned: Record<string, string> = {};
         for (const [k, v] of Object.entries(merged)) {
           if (v) cleaned[k] = v;
@@ -270,7 +284,7 @@ function ZappMessagesListInner({
 
       return enriched;
     });
-  }, [deduplicatedMessages, isGroup, combinedMentionMap, messagesByExternalId]);
+  }, [deduplicatedMessages, isGroup, combinedMentionMap, lidMentionMap, messagesByExternalId]);
 
   const indexById = useMemo(() => {
     const map = new Map<string, number>();
