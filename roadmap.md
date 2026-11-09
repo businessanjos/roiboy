@@ -3,3 +3,5 @@
 - [x] Fase 2: checklist por cliente
 - [x] Fluxograma, tour, status (edição por gestores ainda pendente)
 - [x] Negócio perdido: finalizar conversa do RoyZapp e desvincular vendedor (pedido Jonathan)
+- [ ] Sincronização da Bruna: aguarda reconexão da Meta em “Configurar Meta API” (sessão invalidada pelo provedor)
+- [x] Imagens dos posts: 746 miniaturas salvas no ROY; 19 indisponíveis no Instagram recebem fallback visual

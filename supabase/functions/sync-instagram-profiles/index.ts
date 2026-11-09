@@ -85,13 +85,10 @@ async function fetchMediaInsights(mediaId: string, mediaType: string, token: str
   }
 }
 
-function mapMediaTypeToPostType(mediaType: string, mediaUrl?: string): string {
-  if (mediaType === 'VIDEO') {
-    // Reels are usually VIDEO with permalink containing /reel/
-    return 'reel';
-  }
+function mapMediaTypeToPostType(mediaType: string): string {
+  if (mediaType === 'VIDEO' || mediaType === 'REELS') return 'reels';
   if (mediaType === 'CAROUSEL_ALBUM') return 'carousel';
-  return 'image';
+  return 'static';
 }
 
 Deno.serve(async (req) => {
@@ -201,7 +198,7 @@ Deno.serve(async (req) => {
       let postsSynced = 0;
       for (const media of mediaRes.data || []) {
         const insights = await fetchMediaInsights(media.id, media.media_type, token);
-        const post_type = mapMediaTypeToPostType(media.media_type, media.media_url);
+        const post_type = mapMediaTypeToPostType(media.media_type);
 
         const postRow = {
           profile_id: profile.id,
@@ -239,10 +236,29 @@ Deno.serve(async (req) => {
       await new Promise(r => setTimeout(r, 300));
     }
 
+    // Miniaturas públicas são copiadas para o Storage mesmo quando a Meta está desconectada.
+    let thumbnails: any = null;
+    try {
+      const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const cacheRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/cache-instagram-post-thumbnails`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${serviceRole}`,
+        },
+        body: JSON.stringify({ accountId, profileId: profileId || undefined, limit: 40 }),
+      });
+      thumbnails = await cacheRes.json();
+    } catch (cacheError: any) {
+      console.error('Thumbnail cache error:', cacheError);
+      thumbnails = { success: false, error: cacheError?.message || String(cacheError) };
+    }
+
     return new Response(JSON.stringify({
       success: true,
       message: `Sincronização: ${results.synced} perfis, ${results.posts_synced} posts atualizados${results.failed ? `, ${results.failed} falhas` : ''}`,
       ...results,
+      thumbnails,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error: any) {

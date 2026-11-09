@@ -18,6 +18,7 @@ export interface InstagramProfile {
   bio: string | null;
   is_active: boolean;
   last_synced_at: string | null;
+  sync_error: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -498,7 +499,7 @@ export function useSocialMediaData() {
       });
 
       const { data, error } = await supabase.functions.invoke('sync-instagram-profiles', {
-        body: { accountId: user.account_id },
+        body: { accountId: user.account_id, profileId: currentProfile?.id },
       });
       
       if (error) throw error;
@@ -513,7 +514,19 @@ export function useSocialMediaData() {
         queryClient.refetchQueries({ queryKey: ['instagram-posts'] }),
         queryClient.refetchQueries({ queryKey: ['instagram-dashboard'] }),
       ]);
-      toast.success(data.message || 'Perfis sincronizados!');
+      const failed = (data.details ?? []).filter((detail: any) => !detail.success);
+      const cachedThumbnails = data.thumbnails?.cached ?? 0;
+      if (failed.length > 0) {
+        const first = failed[0];
+        const sessionExpired = String(first.error).includes('session is invalid') || String(first.error).includes('expirado');
+        toast.warning('Não foi possível atualizar todos os dados', {
+          description: sessionExpired
+            ? `A conexão da Meta de @${first.username} expirou. Reconecte em “Configurar Meta API”.${cachedThumbnails ? ` ${cachedThumbnails} miniaturas foram recuperadas.` : ''}`
+            : `@${first.username}: ${first.error}${cachedThumbnails ? ` · ${cachedThumbnails} miniaturas recuperadas.` : ''}`,
+        });
+      } else {
+        toast.success(`${data.message || 'Perfil sincronizado!'}${cachedThumbnails ? ` · ${cachedThumbnails} miniaturas salvas` : ''}`);
+      }
     },
     onError: (error) => {
       toast.error('Erro ao sincronizar: ' + error.message);

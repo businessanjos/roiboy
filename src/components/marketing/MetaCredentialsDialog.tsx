@@ -21,6 +21,7 @@ interface MetaCredentialsDialogProps {
   onOpenChange: (open: boolean) => void;
   profileId: string | null;
   profileUsername?: string;
+  onSaved?: () => void;
 }
 
 export function MetaCredentialsDialog({
@@ -28,6 +29,7 @@ export function MetaCredentialsDialog({
   onOpenChange,
   profileId,
   profileUsername,
+  onSaved,
 }: MetaCredentialsDialogProps) {
   const qc = useQueryClient();
   const [igBusinessId, setIgBusinessId] = useState('');
@@ -80,6 +82,7 @@ export function MetaCredentialsDialog({
 
       toast.success('Credenciais salvas com sucesso');
       qc.invalidateQueries({ queryKey: ['instagram-profiles'] });
+      onSaved?.();
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e.message || 'Erro ao salvar credenciais');
