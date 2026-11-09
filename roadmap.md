@@ -1,5 +1,5 @@
 # Roadmap — Processos do CS
-- [ ] Painel analítico de inteligência: indicadores, evolução mensal, comparativos por canal/@ e histórico dos leads.
+- [x] Painel analítico de inteligência: indicadores, evolução mensal, comparativos por canal/@ e histórico dos leads.
 - [x] Inteligência: conectar leads, MQL e vendas por canal/origem, exibir Instagram do lead e consultar seu histórico comercial.
 - [x] Conteúdos: reunir posts cadastrados de todas as redes e da Produção, com filtros e detalhes.
 - [x] IA de Marketing: ampliar contexto para o histórico completo cadastrado, preservando acesso por conta.
