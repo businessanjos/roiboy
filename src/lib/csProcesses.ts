@@ -27,7 +27,7 @@ export function parseProcesses(md: string): Process[] {
     if (/^>/.test(t)) { (quote ??= []).push(t.replace(/^>\s?/, "")); continue; }
     flush();
     let m;
-    if ((m = t.match(/^# PROCESSO \d+ — (.+)/))) { proc = { id: String(out.length + 1), title: /^onboarding do cliente/i.test(m[1]) ? "Onboarding do Cliente" : m[1], phases: [] }; out.push(proc); phase = null; step = null; continue; }
+    if ((m = t.match(/^# PROCESSO \d+ — (.+)/))) { proc = { id: String(out.length + 1), title: /^onboarding do cliente/i.test(m[1]) ? "ONBOARDING DO CLIENTE" : m[1], phases: [] }; out.push(proc); phase = null; step = null; continue; }
     if (!proc) continue;
     if ((m = t.match(/^## (.+)/))) { phase = { title: m[1], steps: [] }; proc.phases.push(phase); step = null; continue; }
     if ((m = t.match(/^### (.+)/))) { if (!phase) continue; step = { title: m[1], blocks: [] }; phase.steps.push(step); continue; }
