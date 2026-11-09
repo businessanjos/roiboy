@@ -99,7 +99,13 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
   const [insightsPeriod, setInsightsPeriod] = useState<string>('28');
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [visibleMetric, setVisibleMetric] = useState('reach');
-  const metricColumns: Record<string, number> = { reach: 7, likes: 8, comments: 9, shares: 10, saves: 11, link_clicks: 12, views: 13, engagement_rate: 14, virality_rate: 15 };
+  const metricColumns: Record<string, string> = {
+    reach: '[&_tr>*:nth-child(7)]:table-cell', likes: '[&_tr>*:nth-child(8)]:table-cell',
+    comments: '[&_tr>*:nth-child(9)]:table-cell', shares: '[&_tr>*:nth-child(10)]:table-cell',
+    saves: '[&_tr>*:nth-child(11)]:table-cell', link_clicks: '[&_tr>*:nth-child(12)]:table-cell',
+    views: '[&_tr>*:nth-child(13)]:table-cell', engagement_rate: '[&_tr>*:nth-child(14)]:table-cell',
+    virality_rate: '[&_tr>*:nth-child(15)]:table-cell',
+  };
   
   const {
     profiles,
@@ -538,8 +544,8 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
           
           <TabsContent value="list" className="mt-0">
             <CardContent className="p-0">
-              <div className="w-full min-w-0 [&_th]:px-2 [&_td]:px-2 [&_tr>*:nth-child(1)]:w-8 [&_tr>*:nth-child(2)]:w-16 [&_tr>*:nth-child(3)]:hidden sm:[&_tr>*:nth-child(3)]:table-cell sm:[&_tr>*:nth-child(3)]:w-24 [&_tr>*:nth-child(4)]:hidden xl:[&_tr>*:nth-child(4)]:table-cell [&_tr>*:nth-child(5)]:hidden xl:[&_tr>*:nth-child(5)]:table-cell [&_tr>*:nth-child(6)]:min-w-0 [&_tr>*:nth-child(16)]:w-10">
-                <Table className="table-fixed" style={{ '--visible-metric-column': metricColumns[visibleMetric] } as React.CSSProperties}>
+              <div className={cn("w-full min-w-0 [&_th]:px-2 [&_td]:px-2 [&_tr>*:nth-child(1)]:w-8 [&_tr>*:nth-child(2)]:w-16 [&_tr>*:nth-child(3)]:hidden sm:[&_tr>*:nth-child(3)]:table-cell sm:[&_tr>*:nth-child(3)]:w-24 [&_tr>*:nth-child(4)]:hidden xl:[&_tr>*:nth-child(4)]:table-cell [&_tr>*:nth-child(5)]:hidden xl:[&_tr>*:nth-child(5)]:table-cell [&_tr>*:nth-child(6)]:min-w-0 [&_tr>*:nth-child(n+7):nth-child(-n+15)]:hidden [&_tr>*:nth-child(n+7):nth-child(-n+15)]:w-24 [&_tr>*:nth-child(16)]:w-10", metricColumns[visibleMetric])}>
+                <Table className="table-fixed">
                   <TableHeader>
                     <TableRow className="bg-muted/30">
                       <TableHead className="w-[40px]">
