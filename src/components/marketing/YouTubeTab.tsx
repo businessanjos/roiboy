@@ -3,7 +3,7 @@ import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   CalendarIcon, Youtube, Plus, Users, Percent, Sparkles, Eye, Heart, MessageCircle, Share2,
-  ExternalLink, Pencil, Trash2, MoreHorizontal, Clock, ChevronDown, ThumbsDown,
+  ExternalLink, Pencil, Trash2, MoreHorizontal, Clock, ChevronDown, ThumbsDown, RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,7 +50,7 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
   const {
     channels, currentChannel, videos, kpis, isLoading, useMockData,
     selectedChannelId, setSelectedChannelId,
-    createChannel, deleteChannel, createVideo, updateVideo, deleteVideo,
+    createChannel, deleteChannel, createVideo, updateVideo, deleteVideo, syncChannels,
   } = useYouTubeData();
 
   useEffect(() => {
@@ -161,9 +161,17 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
           )}
           {useMockData && <Badge variant="outline" className="text-xs bg-warning-soft text-warning-strong border-warning">Dados de exemplo</Badge>}
         </div>
-        <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90" onClick={() => setConnectDialogOpen(true)}>
-          <Plus className="h-4 w-4" />Conectar Novo Canal
-        </Button>
+        <div className="flex items-center gap-2">
+          {currentChannel && !useMockData && (
+            <Button size="sm" variant="outline" className="gap-1.5" disabled={syncChannels.isPending} onClick={() => syncChannels.mutate()}>
+              <RefreshCw className={cn("h-4 w-4", syncChannels.isPending && "animate-spin")} />
+              {syncChannels.isPending ? 'Sincronizando...' : 'Sincronizar'}
+            </Button>
+          )}
+          <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90" onClick={() => setConnectDialogOpen(true)}>
+            <Plus className="h-4 w-4" />Conectar Novo Canal
+          </Button>
+        </div>
       </div>
 
       <DeleteSocialProfileDialog
