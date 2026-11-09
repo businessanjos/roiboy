@@ -441,6 +441,10 @@ export default function CSProcesses() {
           {opened && openKey && (
             <div className="space-y-3">
               <SheetHeader><SheetTitle>{opened.title || "Etapa"}</SheetTitle></SheetHeader>
+              <div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm ${clientId ? "border-primary/35 bg-primary/[0.07]" : "bg-muted/40 text-muted-foreground"}`}>
+                <span>{clientId ? <>Cliente selecionada: <strong className="text-foreground">{targetName ?? "…"}</strong></> : target ? <>Encontro: <strong className="text-foreground">{targetName ?? "…"}</strong></> : "Visualização geral · nenhuma cliente selecionada"}</span>
+                {clientId && <button type="button" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline" onClick={() => clearClientSelection()}><X className="h-3.5 w-3.5" />Remover seleção</button>}
+              </div>
               {isCycle(opened) && <CycleView step={opened} />}
               {(() => { const [pi, si] = openKey.split("-").map(Number); return (
                 <StepDetail step={opened} number={`${pi + 1}.${si + 1}`} phaseLabel={`Fase ${pi + 1} · ${proc.phases[pi].title.replace(/^Fase\s+\d+\s*[—-]\s*/i, "")}`} info={toStepInfo(opened)} vars={vars}
