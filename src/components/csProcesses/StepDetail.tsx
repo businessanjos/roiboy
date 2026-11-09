@@ -34,12 +34,11 @@ export function waitingFor(startedAt: string) {
 
 export function VariableChip({ name, value }: { name: string; value?: string }) {
   return (
-    <button type="button"
-      title={value ? `Preenchido: ${value}` : "Clique para copiar a variável"}
-      onClick={() => { navigator.clipboard.writeText(value ?? `{${name}}`); toast.success(value ? "Valor copiado ✓" : "Variável copiada ✓"); }}
-      className={`mx-0.5 inline-flex items-center rounded-md px-1.5 py-0 text-[0.9em] font-medium transition-colors ${value ? "bg-primary/15 text-foreground hover:bg-primary/25" : "border border-dashed border-primary/50 text-primary hover:bg-primary/10"}`}>
+    <span
+      title={value ? `Nome da cliente selecionada: ${value}` : "Preenchido automaticamente com o nome do contato ao enviar"}
+      className={`mx-0.5 inline-flex cursor-default items-center rounded-md px-1.5 py-0 text-[0.9em] font-medium ${value ? "bg-primary/15 text-foreground" : "border border-dashed border-primary/50 text-primary"}`}>
       {value ?? name}
-    </button>
+    </span>
   );
 }
 
