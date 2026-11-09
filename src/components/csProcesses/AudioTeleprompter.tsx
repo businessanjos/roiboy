@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, RotateCcw, Send, Loader2, AudioLines } from "lucide-react";
+import { Mic, Square, RotateCcw, Send, Loader2, AudioLines, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -8,6 +8,16 @@ import { sendProcessAudio } from "@/lib/csAudioSend";
 import type { ProcessClient } from "@/lib/csClientLinks";
 
 const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+/** Frases que motivam a consultora antes de gravar. Ela decide a ordem; a tela só troca sozinha. */
+const HINTS = [
+  "Leia com calma, sorrindo — dá pra ouvir antes de enviar.",
+  "Fale como se estivesse ao lado dela, sem pressa.",
+  "Sua voz já passa confiança. Só seja você.",
+  "Respire fundo e comece devagar: o resto vem.",
+  "Uma cliente atenta lembra de quem fala com carinho.",
+  "Não precisa ser perfeito — precisa ser seu.",
+];
 
 /** Teleprompter: a consultora lê o roteiro, grava e envia como nota de voz. */
 export function AudioTeleprompter({ open, onOpenChange, script, client, onSent }: {
@@ -18,12 +28,14 @@ export function AudioTeleprompter({ open, onOpenChange, script, client, onSent }
   const [secs, setSecs] = useState(0);
   const [level, setLevel] = useState(0);
   const [take, setTake] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
+  const [hint, setHint] = useState(0);
   const rec = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const t0 = useRef(0);
   const cleanup = useRef<() => void>(() => {});
 
   useEffect(() => { if (state !== "rec") return; const id = setInterval(() => setSecs(Math.round((Date.now() - t0.current) / 1000)), 250); return () => clearInterval(id); }, [state]);
+  useEffect(() => { if (state !== "idle") return; const id = setInterval(() => setHint((h) => h + 1), 4200); return () => clearInterval(id); }, [state]);
   useEffect(() => { if (!open) { cleanup.current(); rec.current?.state === "recording" && rec.current.stop(); setState("idle"); setSecs(0); setTake(null); } }, [open]);
 
   const start = async () => {
@@ -75,7 +87,10 @@ export function AudioTeleprompter({ open, onOpenChange, script, client, onSent }
           {state === "idle" && (
             <div className="flex flex-col items-center gap-2">
               <Button size="lg" className="h-14 gap-2 rounded-full px-8 text-base" onClick={start}><Mic className="h-5 w-5" />Começar a gravar</Button>
-              <span className="text-xs text-muted-foreground">Dica: leia com calma, sorrindo — dá pra ouvir antes de enviar.</span>
+              <div className="flex min-h-[1.25rem] items-center gap-1.5 overflow-hidden">
+                <Sparkles key={`i${hint}`} className="h-3.5 w-3.5 shrink-0 animate-hint-in text-primary" />
+                <span key={hint} className="animate-hint-in text-xs text-muted-foreground">{HINTS[hint % HINTS.length]}</span>
+              </div>
             </div>
           )}
           {state === "rec" && (
