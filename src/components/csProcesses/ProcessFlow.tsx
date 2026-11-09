@@ -146,7 +146,7 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Workflow className="h-4 w-4" /></span>
         <div className="min-w-0">
           <h2 className="text-sm font-semibold">Mapa do processo</h2>
-          <p className="text-xs text-muted-foreground">{nodes.length} fases <span className="mx-1">·</span> {stepTotal} etapas</p>
+          <p className="text-xs text-muted-foreground">{nodes.length} fases <span className="mx-1">·</span> {stepTotal} {groups ? "cartões" : "etapas"}</p>
         </div>
         <div className="ml-auto hidden items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground lg:flex">
           <MousePointer2 className="h-3.5 w-3.5" />Clique em uma etapa para ver os detalhes
