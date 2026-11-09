@@ -28,6 +28,7 @@ export function AudioTeleprompter({ open, onOpenChange, script, client, onSent }
   const [secs, setSecs] = useState(0);
   const [level, setLevel] = useState(0);
   const [take, setTake] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
+  const [hint, setHint] = useState(0);
   const rec = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const t0 = useRef(0);
