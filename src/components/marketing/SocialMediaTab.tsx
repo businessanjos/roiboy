@@ -540,7 +540,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
           
           <TabsContent value="list" className="mt-0">
             <CardContent className="p-0">
-              <div className={cn("w-full min-w-0 [&_th]:px-2 [&_td]:px-2 [&_tr>*:nth-child(1)]:w-8 [&_tr>*:nth-child(2)]:w-16 [&_tr>*:nth-child(3)]:hidden sm:[&_tr>*:nth-child(3)]:table-cell sm:[&_tr>*:nth-child(3)]:w-24 [&_tr>*:nth-child(4)]:hidden xl:[&_tr>*:nth-child(4)]:table-cell [&_tr>*:nth-child(5)]:hidden xl:[&_tr>*:nth-child(5)]:table-cell [&_tr>*:nth-child(6)]:min-w-0 [&_tr>*:nth-child(n+7):nth-child(-n+15)]:hidden [&_tr>*:nth-child(n+7):nth-child(-n+15)]:w-24 [&_tr>*:nth-child(16)]:w-10", metricColumns[visibleMetric])}>
+              <div className={cn("w-full min-w-0 [&_th]:h-12 [&_th]:px-3 [&_th]:align-middle [&_th]:whitespace-nowrap [&_th]:text-xs [&_th]:font-medium [&_td]:px-3 [&_td]:py-3 [&_td]:align-middle [&_tr>*:nth-child(1)]:w-10 [&_tr>*:nth-child(1)]:text-center [&_tr>*:nth-child(2)]:w-20 [&_tr>*:nth-child(3)]:hidden sm:[&_tr>*:nth-child(3)]:table-cell sm:[&_tr>*:nth-child(3)]:w-28 [&_tr>*:nth-child(4)]:hidden xl:[&_tr>*:nth-child(4)]:table-cell xl:[&_tr>*:nth-child(4)]:w-36 [&_tr>*:nth-child(5)]:hidden xl:[&_tr>*:nth-child(5)]:table-cell xl:[&_tr>*:nth-child(5)]:w-40 [&_tr>*:nth-child(6)]:min-w-0 [&_tr>*:nth-child(n+7):nth-child(-n+15)]:hidden [&_tr>*:nth-child(n+7):nth-child(-n+15)]:w-24 [&_tr>*:nth-child(n+7):nth-child(-n+15)]:tabular-nums [&_tr>*:nth-child(16)]:w-10", metricColumns[visibleMetric])}>
                 <Table className="table-fixed">
                   <TableHeader>
                     <TableRow className="bg-muted/30">
@@ -556,20 +556,24 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                       <TableHead className="w-[100px]">Formato</TableHead>
                       <TableHead className="w-[120px]">Categoria</TableHead>
                       <TableHead className="w-[120px]">Objetivo (IA)</TableHead>
-                      <TableHead className="min-w-[200px]">Conteúdo</TableHead>
+                      <TableHead className="min-w-0">Conteúdo</TableHead>
                       <TableHead className="text-right w-[80px]">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              aria-label="Ordenar por alcance"
                               onClick={() => handleSortToggle('reach')}
                               className={cn(
-                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
+                                "relative ml-auto h-8 w-8 rounded-md p-0 text-muted-foreground hover:bg-accent hover:text-primary transition-colors",
                                 sortBy === 'reach' && "text-primary"
                               )}
                             >
                               <Eye className="h-3.5 w-3.5" />
-                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'reach' ? "opacity-100" : "opacity-0")} />
-                            </button>
+                              <ChevronDown className={cn("absolute -right-2 h-2.5 w-2.5", sortBy === 'reach' ? "opacity-100" : "opacity-0")} />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Alcance (clique para ordenar)</TooltipContent>
                         </Tooltip>
@@ -577,16 +581,20 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              aria-label="Ordenar por curtidas"
                               onClick={() => handleSortToggle('likes')}
                               className={cn(
-                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
+                                "relative ml-auto h-8 w-8 rounded-md p-0 text-muted-foreground hover:bg-accent hover:text-primary transition-colors",
                                 sortBy === 'likes' && "text-primary"
                               )}
                             >
                               <Heart className="h-3.5 w-3.5" />
-                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'likes' ? "opacity-100" : "opacity-0")} />
-                            </button>
+                              <ChevronDown className={cn("absolute -right-2 h-2.5 w-2.5", sortBy === 'likes' ? "opacity-100" : "opacity-0")} />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Curtidas (clique para ordenar)</TooltipContent>
                         </Tooltip>
@@ -594,16 +602,20 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              aria-label="Ordenar por comentários"
                               onClick={() => handleSortToggle('comments')}
                               className={cn(
-                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
+                                "relative ml-auto h-8 w-8 rounded-md p-0 text-muted-foreground hover:bg-accent hover:text-primary transition-colors",
                                 sortBy === 'comments' && "text-primary"
                               )}
                             >
                               <MessageCircle className="h-3.5 w-3.5" />
-                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'comments' ? "opacity-100" : "opacity-0")} />
-                            </button>
+                              <ChevronDown className={cn("absolute -right-2 h-2.5 w-2.5", sortBy === 'comments' ? "opacity-100" : "opacity-0")} />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Comentários (clique para ordenar)</TooltipContent>
                         </Tooltip>
@@ -611,16 +623,20 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              aria-label="Ordenar por compartilhamentos"
                               onClick={() => handleSortToggle('shares')}
                               className={cn(
-                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
+                                "relative ml-auto h-8 w-8 rounded-md p-0 text-muted-foreground hover:bg-accent hover:text-primary transition-colors",
                                 sortBy === 'shares' && "text-primary"
                               )}
                             >
                               <Share2 className="h-3.5 w-3.5" />
-                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'shares' ? "opacity-100" : "opacity-0")} />
-                            </button>
+                              <ChevronDown className={cn("absolute -right-2 h-2.5 w-2.5", sortBy === 'shares' ? "opacity-100" : "opacity-0")} />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Compartilhamentos (clique para ordenar)</TooltipContent>
                         </Tooltip>
@@ -628,16 +644,20 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              aria-label="Ordenar por salvamentos"
                               onClick={() => handleSortToggle('saves')}
                               className={cn(
-                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
+                                "relative ml-auto h-8 w-8 rounded-md p-0 text-muted-foreground hover:bg-accent hover:text-primary transition-colors",
                                 sortBy === 'saves' && "text-primary"
                               )}
                             >
                               <Bookmark className="h-3.5 w-3.5" />
-                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'saves' ? "opacity-100" : "opacity-0")} />
-                            </button>
+                              <ChevronDown className={cn("absolute -right-2 h-2.5 w-2.5", sortBy === 'saves' ? "opacity-100" : "opacity-0")} />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Salvamentos (clique para ordenar)</TooltipContent>
                         </Tooltip>
@@ -645,16 +665,20 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              aria-label="Ordenar por cliques no link"
                               onClick={() => handleSortToggle('link_clicks')}
                               className={cn(
-                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
+                                "relative ml-auto h-8 w-8 rounded-md p-0 text-muted-foreground hover:bg-accent hover:text-primary transition-colors",
                                 sortBy === 'link_clicks' && "text-primary"
                               )}
                             >
                               <Link2 className="h-3.5 w-3.5" />
-                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'link_clicks' ? "opacity-100" : "opacity-0")} />
-                            </button>
+                              <ChevronDown className={cn("absolute -right-2 h-2.5 w-2.5", sortBy === 'link_clicks' ? "opacity-100" : "opacity-0")} />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Cliques no Link (clique para ordenar)</TooltipContent>
                         </Tooltip>
@@ -662,16 +686,20 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              aria-label="Ordenar por visualizações"
                               onClick={() => handleSortToggle('views')}
                               className={cn(
-                                "inline-flex h-6 min-w-[28px] items-center justify-end gap-1 ml-auto hover:text-primary transition-colors",
+                                "relative ml-auto h-8 w-8 rounded-md p-0 text-muted-foreground hover:bg-accent hover:text-primary transition-colors",
                                 sortBy === 'views' && "text-primary"
                               )}
                             >
                               <Play className="h-3.5 w-3.5" />
-                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'views' ? "opacity-100" : "opacity-0")} />
-                            </button>
+                              <ChevronDown className={cn("absolute -right-2 h-2.5 w-2.5", sortBy === 'views' ? "opacity-100" : "opacity-0")} />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Views (clique para ordenar)</TooltipContent>
                         </Tooltip>
@@ -679,16 +707,20 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                       <TableHead className="text-right w-[90px]">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              aria-label="Ordenar por engajamento"
                               onClick={() => handleSortToggle('engagement_rate')}
                               className={cn(
-                                "inline-flex h-6 min-w-[70px] items-center justify-end gap-1 ml-auto font-semibold hover:text-primary transition-colors",
-                                sortBy === 'engagement_rate' ? "text-primary" : "text-primary"
+                                "relative ml-auto h-8 w-8 rounded-md p-0 text-muted-foreground hover:bg-accent hover:text-primary transition-colors",
+                                sortBy === 'engagement_rate' && "text-primary"
                               )}
                             >
-                              Engaj. %
-                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'engagement_rate' ? "opacity-100" : "opacity-0")} />
-                            </button>
+                              <Percent className="h-3.5 w-3.5" />
+                              <ChevronDown className={cn("absolute -right-2 h-2.5 w-2.5", sortBy === 'engagement_rate' ? "opacity-100" : "opacity-0")} />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Engajamento (clique para ordenar)</TooltipContent>
                         </Tooltip>
@@ -696,16 +728,20 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                       <TableHead className="text-right w-[90px]">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              aria-label="Ordenar por viralidade"
                               onClick={() => handleSortToggle('virality_rate')}
                               className={cn(
-                                "inline-flex h-6 min-w-[70px] items-center justify-end gap-1 ml-auto font-semibold hover:text-primary transition-colors",
-                                sortBy === 'virality_rate' ? "text-primary" : "text-primary"
+                                "relative ml-auto h-8 w-8 rounded-md p-0 text-muted-foreground hover:bg-accent hover:text-primary transition-colors",
+                                sortBy === 'virality_rate' && "text-primary"
                               )}
                             >
-                              Viral %
-                              <ChevronDown className={cn("h-3 w-3 shrink-0", sortBy === 'virality_rate' ? "opacity-100" : "opacity-0")} />
-                            </button>
+                              <Flame className="h-3.5 w-3.5" />
+                              <ChevronDown className={cn("absolute -right-2 h-2.5 w-2.5", sortBy === 'virality_rate' ? "opacity-100" : "opacity-0")} />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Viralidade (clique para ordenar)</TooltipContent>
                         </Tooltip>
@@ -748,7 +784,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             </TableCell>
                             <TableCell>
                               {post.theme ? (
-                                <Badge variant="outline" className="h-7 max-w-[170px] gap-1 whitespace-nowrap px-2.5 text-xs font-normal">
+                                <Badge variant="outline" className="h-7 max-w-full gap-1 whitespace-nowrap px-2.5 text-xs font-normal">
                                   <span className="truncate">{getThemeLabel(post.theme)}</span>
                                 </Badge>
                               ) : (
