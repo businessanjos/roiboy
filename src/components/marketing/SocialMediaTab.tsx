@@ -453,7 +453,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                     {filteredPosts.length} posts
                   </Badge>
                 </CardTitle>
-                <TabsList className="h-8">
+                <TabsList className="h-auto max-w-full flex-wrap justify-start gap-y-1">
                   <TabsTrigger value="list" className="gap-1.5 text-xs px-3">
                     <List className="h-3.5 w-3.5" />
                     Lista
