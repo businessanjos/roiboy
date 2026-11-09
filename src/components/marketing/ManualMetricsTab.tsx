@@ -121,7 +121,7 @@ export function ManualMetricsTab() {
     WEEKS.forEach((w) => {
       const found = (rows ?? []).find((r: any) => r.week === w);
       next[w] = METRICS.reduce((acc, m) => {
-        acc[m.key] = found ? String(found[m.key] ?? '') : '';
+        acc[m.key] = found ? formatManualMetricNumber(found[m.key]) : '';
         return acc;
       }, {} as RowValues);
     });
@@ -132,7 +132,7 @@ export function ManualMetricsTab() {
     const g = (goalRows ?? []).find((r: any) => r.month === Number(month));
     setGoalValues(
       METRICS.reduce((acc, m) => {
-        acc[m.key] = g && Number(g[m.key]) ? String(g[m.key]) : '';
+        acc[m.key] = g && Number(g[m.key]) ? formatManualMetricNumber(g[m.key]) : '';
         return acc;
       }, {} as RowValues),
     );
@@ -364,7 +364,9 @@ export function ManualMetricsTab() {
                           className="h-9 w-[130px]"
                           placeholder="0"
                           value={values[w]?.[m.key] ?? ''}
+                          onFocus={(e) => setCell(w, m.key, unformatManualMetricNumber(e.target.value))}
                           onChange={(e) => setCell(w, m.key, e.target.value)}
+                          onBlur={(e) => setCell(w, m.key, formatManualMetricNumber(e.target.value))}
                         />
                       </td>
                     ))}
@@ -389,7 +391,9 @@ export function ManualMetricsTab() {
                         className="h-9 w-[130px]"
                         placeholder="0"
                         value={goalValues[m.key] ?? ''}
+                        onFocus={(e) => setGoalValues((prev) => ({ ...prev, [m.key]: unformatManualMetricNumber(e.target.value) }))}
                         onChange={(e) => setGoalValues((prev) => ({ ...prev, [m.key]: e.target.value }))}
+                        onBlur={(e) => setGoalValues((prev) => ({ ...prev, [m.key]: formatManualMetricNumber(e.target.value) }))}
                       />
                     </td>
                   ))}
