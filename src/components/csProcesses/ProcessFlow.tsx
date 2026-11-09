@@ -143,8 +143,8 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
         data: { title: g.title, accent: entry.accent, steps: g.steps, statusOf, open: entry.open, badgeOf },
       }));
       const phaseEdges: Edge[] = gs.slice(1).map((_, i) => ({
-        id: `${prefix}e${i}`, source: `${prefix}p${i}`, target: `${prefix}p${i + 1}`, type: "smoothstep",
-        style: { stroke: "hsl(var(--primary) / 0.35)", strokeWidth: 1.5 },
+        id: `${prefix}e${i}`, source: `${prefix}p${i}`, target: `${prefix}p${i + 1}`, type: "smoothstep", animated: true,
+        style: { stroke: "hsl(var(--primary) / 0.45)", strokeWidth: 1.8 },
         markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--primary) / 0.45)", width: 18, height: 18 },
       }));
       return {
