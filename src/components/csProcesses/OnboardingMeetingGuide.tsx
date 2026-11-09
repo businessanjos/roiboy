@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { BookOpenCheck, MonitorUp, TrendingUp, HeartHandshake, Sparkles, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { BookOpenCheck, MonitorUp, TrendingUp, HeartHandshake, ClipboardList, AlertTriangle, Sparkles, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -10,6 +10,7 @@ type Item = { id: string; text: string };
 type Block = {
   title: string; subtitle?: string; icon: typeof MonitorUp;
   highlight?: string;
+  warning?: string;
   groups: { label?: string; items: Item[] }[];
 };
 
@@ -28,6 +29,11 @@ const BLOCKS: Block[] = [
       { label: "Se já tem lista de clientes", items: [{ id: "v-mortos", text: "Reativação dos mortos-vivos" }] },
       { label: "Se não tem clientes", items: [{ id: "v-novos", text: "Parceria, urna, influencer ou tráfego pago" }] },
     ],
+  },
+  {
+    title: "Plano de ação", subtitle: "Próximos passos", icon: ClipboardList,
+    groups: [{ items: [{ id: "p-48h", text: "Enviar plano de ação em até 48 horas" }] }],
+    warning: "De acordo com as prioridades listadas anteriormente.",
   },
   {
     title: "Agradecimento", subtitle: "Encerramento com segurança", icon: HeartHandshake,
@@ -134,6 +140,11 @@ export function OnboardingMeetingGuide({ open, onOpenChange, clientName }: { ope
                 </div>
               ))}
             </div>
+            {b.warning && (
+              <p className="mt-6 flex items-start gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 px-6 py-4 text-lg font-medium text-destructive">
+                <AlertTriangle className="mt-1 h-5 w-5 shrink-0" />{b.warning}
+              </p>
+            )}
           </div>
         </section>
 
