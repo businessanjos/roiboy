@@ -91,8 +91,9 @@ export function stageToAdvance(allKeys: string[], done: Set<string>, stages: Hub
   for (const s of stages) {
     const i = stageStepIndex(allKeys, s);
     if (i < 0 || i > reach || i <= curIdx || i <= bestIdx) continue;
-    if (current && curIdx < 0 && (s.display_order ?? -1) <= curOrder) continue; // etapa atual fora do mapa: só avança na ordem do Hub
     best = s; bestIdx = i;
   }
+  // Etapa atual fora do mapa: só avança se a nova etapa vier depois na ordem do Hub.
+  if (best && current && curIdx < 0 && (best.display_order ?? -1) <= curOrder) return null;
   return best && best.id !== current?.id ? best.id : null;
 }
