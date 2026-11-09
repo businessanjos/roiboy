@@ -96,7 +96,7 @@ function PhaseNode({ data }: NodeProps<Node<PhaseData>>) {
 }
 const nodeTypes = { phase: PhaseNode };
 
-export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups }: { groups?: { title: string; steps: { step: Step; key: string }[] }[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined }) {
+export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, resetKey = 0 }: { groups?: { title: string; steps: { step: Step; key: string }[] }[]; process: Process; accent: string; statusOf: (k: string) => StepStatus; open: (k: string) => void; badgeOf?: (k: string) => string | undefined; resetKey?: number }) {
   const { nodes, edges } = useMemo(() => {
     const gs = groups ?? process.phases.map((ph, pi) => ({ title: ph.title, steps: ph.steps.map((s, si) => ({ step: s, key: `${pi}-${si}` })) }));
     const nodes: Node<PhaseData>[] = gs.map((g, pi) => ({
@@ -124,14 +124,14 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups }
             {full ? <Minimize2 /> : <Maximize2 />}
           </ControlButton>
         </Controls>
-        <InitialView count={nodes.length} intro={!!groups} full={full} />
+        <InitialView count={nodes.length} intro={!!groups} full={full} resetKey={`${process.id}:${resetKey}`} />
       </ReactFlow>
     </div>
   );
 }
 
 /** Abre legível nas primeiras fases; no Onboarding mostra antes o fluxo inteiro e volta ao início. */
-function InitialView({ count, intro, full }: { count: number; intro: boolean; full: boolean }) {
+function InitialView({ count, intro, full, resetKey }: { count: number; intro: boolean; full: boolean; resetKey: string }) {
   const rf = useReactFlow();
   const first = useRef(true);
   useEffect(() => {
@@ -147,6 +147,6 @@ function InitialView({ count, intro, full }: { count: number; intro: boolean; fu
       timers.push(window.setTimeout(() => rf.fitView({ ...start, duration: 300 }), 50));
     }
     return () => timers.forEach(clearTimeout);
-  }, [count, intro, full, rf]);
+  }, [count, intro, full, resetKey, rf]);
   return null;
 }

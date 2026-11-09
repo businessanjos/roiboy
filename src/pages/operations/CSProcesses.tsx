@@ -107,6 +107,7 @@ export default function CSProcesses() {
   useEffect(() => { if (procParam) setActive(Number(procParam)); if (stepParam) { setSel(stepParam); setTab("process"); } }, [procParam, stepParam, clientId]);
   const [q, setQ] = useState("");
   const [view, setView] = useState<"list" | "flow">(() => (localStorage.getItem("csProcessesView") === "flow" ? "flow" : "list"));
+  const [flowReset, setFlowReset] = useState(0);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [sel, setSel] = useState<string | null>(stepParam);
   useEffect(() => { localStorage.setItem("csProcessesView", view); }, [view]);
@@ -323,7 +324,7 @@ export default function CSProcesses() {
       ) : (<>
       <div data-tour="menu" className="grid gap-3 sm:grid-cols-3">
         {csProcesses.map((p, i) => (
-          <button key={p.id} onClick={() => setActive(i)} className={`rounded-xl border border-l-4 p-3 text-left shadow-sm transition ${accents[i % 3]} ${i === active ? "bg-accent" : "hover:bg-accent/50"}`}>
+          <button key={p.id} onClick={() => { setActive(i); setFlowReset((v) => v + 1); }} className={`rounded-xl border border-l-4 p-3 text-left shadow-sm transition ${accents[i % 3]} ${i === active ? "bg-accent" : "hover:bg-accent/50"}`}>
             <div className="font-medium">{p.title}</div>
             <div className="text-xs text-muted-foreground">{p.phases.length} fases · {p.phases.reduce((a, f) => a + f.steps.length, 0)} etapas</div>
           </button>
@@ -334,7 +335,7 @@ export default function CSProcesses() {
       {active > 0 && <EventTimeline accent={dots[active % 3]} />}
 
       {view === "flow" && !isMobile ? (
-        <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} />
+        <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} resetKey={flowReset} />
       ) : (
         <>
           <ProcessOverview process={proc} statusOf={navStatus} onPick={pickPhase} />
