@@ -5,7 +5,7 @@ export type Action =
   | { kind: "task"; text: string }
   | { kind: "wait"; text: string; what?: string }
   | { kind: "alert"; text: string }
-  | { kind: "link"; label: string; url: string }
+  | { kind: "link"; label: string; url: string; hidden?: boolean }
   | { kind: "note"; text: string };
 
 export interface StepInfo { actions: Action[]; who: string; when?: string }
