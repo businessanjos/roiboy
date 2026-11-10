@@ -219,7 +219,7 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
   }, [nodes]);
   return (
     <div data-tour="flow" className={full
-      ? "fixed inset-x-0 bottom-0 top-14 z-40 flex flex-col overflow-hidden bg-background"
+      ? "fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background"
       : "flex h-[76vh] min-h-[560px] max-h-[820px] flex-col overflow-hidden rounded-[24px] border bg-card shadow-sm"}>
       <div className={`flex shrink-0 items-center gap-3 border-b bg-card px-4 py-3 md:px-5 ${full ? "relative justify-center py-4 text-center" : ""}`}>
         <span className={full ? "absolute left-5 hidden h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary sm:flex" : "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"}><Workflow className="h-4 w-4" /></span>
