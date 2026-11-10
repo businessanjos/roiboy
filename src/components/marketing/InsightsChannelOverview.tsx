@@ -37,7 +37,7 @@ export function InsightsChannelOverview() {
   }, [rows, igRows, view]);
 
   const s = commercialSummary(filtered);
-  const evolution = useMemo(() => commercialEvolution(filtered), [filtered]);
+  const evolution = useMemo(() => commercialEvolution(filtered).map(row => ({ ...row, label: new Date(`${row.month}-02T12:00:00`).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }) })), [filtered]);
   const pageRows = filtered.slice(page * 15, page * 15 + 15);
   const pages = Math.max(1, Math.ceil(filtered.length / 15));
   const pick = (v: View) => { setView(v); setPage(0); };
