@@ -257,8 +257,8 @@ export function StepDetail({ step, number, phaseLabel, info, vars, canTick, done
         {info.when && <span className="inline-flex items-center gap-1"><CalendarClock className="h-4 w-4" />{info.when}</span>}
         <span className="inline-flex items-center gap-1"><ListChecks className="h-4 w-4" />{visibleActions(info.actions).length} {visibleActions(info.actions).length === 1 ? "ação" : "ações"}</span>
       </div>
-      {ctx.client && /^3\.(3|5)\b/.test(number.trim()) && (
-        <RykaUsagePanel usage={(ctx.client as any).rykaUsage} mode={number.trim().startsWith("3.3") ? "plan" : "monthly"} />
+      {ctx.client && /Plano de A[çc][ãa]o|Ciclo mensal/i.test(step.title) && (
+        <RykaUsagePanel usage={(ctx.client as any).rykaUsage} mode={/Plano de A/i.test(step.title) ? "plan" : "monthly"} />
       )}
       {links.length >= 3 && (
         <Button className="mt-4 gap-2" onClick={openAll}><Layers className="h-4 w-4" />Abrir tudo para a reunião</Button>
