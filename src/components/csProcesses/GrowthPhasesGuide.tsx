@@ -125,7 +125,7 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn("flex flex-col gap-0 overflow-hidden p-0 transition-all", full ? "h-screen w-screen max-w-none rounded-none sm:rounded-none" : "h-[94vh] max-w-7xl")}>
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b bg-gradient-to-r from-primary/10 via-background to-background px-6 py-5 pr-14">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b bg-gradient-to-r from-primary/10 via-background to-background px-6 py-5 pr-14">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md"><Map className="h-6 w-6" /></div>
             <div>
@@ -133,10 +133,10 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
               <DialogDescription className="text-sm">Checklist de implementação · Nível Black{first ? ` · ${first}` : ""}</DialogDescription>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-xl border bg-muted/50 p-1">
+          <div className="flex min-w-0 max-w-full items-center gap-2">
+          <div className="inline-flex min-w-0 max-w-full overflow-x-auto rounded-xl border bg-muted/50 p-1">
             {([["map", "Mapa geral", Network], ["phases", "Fases", ListChecks], ["4fa", "Método 4FA", LayoutGrid]] as const).map(([k, l, I]) => (
-              <button key={k} onClick={() => setTab(k)} className={cn("flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40", tab === k ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground")}>
+              <button key={k} onClick={() => setTab(k)} className={cn("flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40", tab === k ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground")}>
                 <I className="h-4 w-4" />{l}
               </button>
             ))}
@@ -254,22 +254,29 @@ const FUNNEL_TONE: Record<string, { tile: string; ring: string; dot: string; tex
   "Lista Quente": { tile: "bg-warning/15 ring-warning/40", ring: "border-warning/40", dot: "bg-warning", text: "text-warning", bg: "from-warning/10" },
 };
 
+const FUNNEL_VAR: Record<string, string> = { "Tráfego Pago": "--funnel-1", "Tráfego Alheio": "--funnel-2", "Indicação": "--funnel-3", "Lista Quente": "--funnel-4" };
+const fc = (title: string, a = 1) => `hsl(var(${FUNNEL_VAR[title]}) / ${a})`;
+
 function FunnelCard({ f, fi }: { f: (typeof FUNNELS)[number]; fi: number }) {
-  const m = FUNNEL_META[f.title]; const t = FUNNEL_TONE[f.title]; const I = m.icon;
+  const m = FUNNEL_META[f.title]; const I = m.icon;
   return (
-    <div className={cn("flex h-full flex-col overflow-hidden rounded-2xl border-2 bg-gradient-to-br to-card p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md", t.ring, t.bg)}>
+    <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 pt-7 shadow-sm">
+      <span className="absolute inset-x-0 top-0 h-1" style={{ background: fc(f.title) }} />
       <div className="mb-5 flex items-start gap-4">
-        <div className={cn("flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-2", t.tile)}><I className={cn("h-7 w-7", t.text)} strokeWidth={2.2} /></div>
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full" style={{ background: fc(f.title, 0.14) }}>
+          <I className="h-6 w-6" strokeWidth={2} style={{ color: fc(f.title) }} />
+        </div>
         <div className="min-w-0">
-          <p className={cn("text-xs font-bold uppercase tracking-[0.2em]", t.text)}>Funil {fi + 1}</p>
-          <h3 className="text-2xl font-semibold tracking-tight">{f.title}</h3>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{m.desc}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: fc(f.title) }}>Funil {fi + 1}</p>
+          <h3 className="text-[22px] font-semibold leading-tight tracking-tight text-foreground">{f.title}</h3>
+          <p className="mt-1 text-sm font-medium leading-relaxed text-muted-foreground">{m.desc}</p>
         </div>
       </div>
-      <ul className="grid flex-1 content-start gap-2 sm:grid-cols-2">
+      <ul className="grid grid-cols-1 content-start gap-2 sm:grid-cols-2">
         {f.items.map((it) => (
-          <li key={it} className="flex items-center gap-2.5 rounded-lg border bg-card/80 px-3 py-2.5 text-[15px] leading-snug">
-            <span className={cn("h-2 w-2 shrink-0 rounded-full", t.dot)} />{it}
+          <li key={it} className={cn("flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-[15px] text-foreground/80", it.length > 22 && "sm:col-span-2")} style={{ background: fc(f.title, 0.09) }}>
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: fc(f.title) }} />
+            <span className="truncate">{it}</span>
           </li>
         ))}
       </ul>
@@ -278,21 +285,31 @@ function FunnelCard({ f, fi }: { f: (typeof FUNNELS)[number]; fi: number }) {
 }
 
 function FourFA() {
+  const G = 44; // metade do espaço entre os cartões (88px)
   return (
     <div className="min-h-0 flex-1 animate-fade-in overflow-y-auto">
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-10 text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1 text-xs font-bold uppercase tracking-[0.25em] text-primary">Método 4FA</span>
-          <h2 className="mt-4 text-4xl font-semibold tracking-tight">Os 4 Funis <span className="text-primary">dos Anjos</span></h2>
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="mb-8 text-center">
+          <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-xs font-bold uppercase tracking-[0.25em] text-primary">Método 4FA</span>
+          <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">Os 4 Funis <span className="text-primary">dos Anjos</span></h2>
           <p className="mx-auto mt-3 max-w-2xl text-base text-muted-foreground">Quatro caminhos para trazer clientes. Pergunte quais ela já usa e decidam juntas o que vale ativar.</p>
         </div>
+        <div className="mb-4 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 md:hidden">
+          <span className="text-base font-black tracking-tight text-primary-foreground">4FA</span>
+          <span className="text-xs font-medium text-primary-foreground/90">· 4 Funis dos Anjos</span>
+        </div>
         <div className="relative">
-          <div className="grid gap-6 md:grid-cols-2 md:gap-10">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-[88px]">
             {FUNNELS.map((f, fi) => <FunnelCard key={f.title} f={f} fi={fi} />)}
           </div>
           <div className="pointer-events-none absolute inset-0 hidden items-center justify-center md:flex">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full border-[6px] border-background bg-primary shadow-xl ring-4 ring-primary/25">
-              <span className="text-2xl font-black tracking-tight text-primary-foreground">4FA</span>
+            <svg width={G * 2} height={G * 2} className="absolute" viewBox={`0 0 ${G * 2} ${G * 2}`} aria-hidden>
+              {FUNNELS.map((f, i) => (
+                <line key={f.title} x1={G} y1={G} x2={i % 2 ? G * 2 : 0} y2={i < 2 ? 0 : G * 2} stroke={fc(f.title)} strokeWidth={1.5} />
+              ))}
+            </svg>
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg ring-4 ring-background">
+              <span className="text-base font-black tracking-tight text-primary-foreground">4FA</span>
             </div>
           </div>
         </div>
