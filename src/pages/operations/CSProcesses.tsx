@@ -521,7 +521,21 @@ export default function CSProcesses() {
       {active > 0 && <EventTimeline accent={dots[active % 3]} />}
 
       {view === "flow" && !isMobile ? (
-        <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} entries={!target ? flowEntries : undefined} resetKey={flowReset} clientName={clientId ? targetName : undefined} />
+        <div className="space-y-4">
+          {allDone && (
+            <ProcessFinishedCard
+              clientName={targetName}
+              processTitle={proc.title}
+              stepCount={allKeys.length}
+              finishedAt={finishedAt}
+              pulse={justFinished}
+              onReview={() => { setView("list"); setSel(allKeys[0]); }}
+              onBoard={() => setTab("today")}
+              onSwitch={() => clearClientSelection(true)}
+            />
+          )}
+          <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} entries={!target ? flowEntries : undefined} resetKey={flowReset} clientName={clientId ? targetName : undefined} />
+        </div>
       ) : (
         <>
           <ProcessOverview process={proc} statusOf={navStatus} onPick={pickPhase} />
@@ -541,12 +555,25 @@ export default function CSProcesses() {
                   </>
                 )}
                 <StepArrowKeys stepKey={selKey} enabled={view !== "flow"} onPrev={() => selIdx > 0 && setSel(allKeys[selIdx - 1])} onNext={() => selIdx < allKeys.length - 1 && setSel(allKeys[selIdx + 1])} />
+                {allDone ? (
+                  <ProcessFinishedCard
+                    clientName={targetName}
+                    processTitle={proc.title}
+                    stepCount={allKeys.length}
+                    finishedAt={finishedAt}
+                    pulse={justFinished}
+                    onReview={() => setSel(allKeys[0])}
+                    onBoard={() => setTab("today")}
+                    onSwitch={() => clearClientSelection(true)}
+                  />
+                ) : (
                 <div className="sticky bottom-3 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 z-10 rounded-2xl border bg-card px-3 py-2.5 shadow-md">
                   <Button variant="ghost" disabled={selIdx <= 0} className="gap-1 text-muted-foreground" onClick={() => setSel(allKeys[selIdx - 1])}><ChevronLeft className="h-4 w-4" />Etapa anterior</Button>
                   <Button data-tour="next" disabled={!target && selIdx >= allKeys.length - 1} onClick={completeAndNext}>
                     {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima") : selIdx >= allKeys.length - 1 ? "Fim do processo" : "Próxima etapa"}{(target || selIdx < allKeys.length - 1) && <ChevronRight className="ml-1 h-4 w-4" />}
                   </Button>
                 </div>
+                )}
               </div>
             </div>
           )}
