@@ -4,7 +4,6 @@ import { MarketingTabsHub, type MarketingHubTab } from "@/components/marketing/_
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const MarketingInsights = lazy(() => import("@/pages/MarketingInsights"));
-const CommercialIntelligence = lazy(() => import("@/components/marketing/CommercialIntelligence"));
 const MarketingIntelligence = lazy(() => import("@/pages/marketing/MarketingIntelligence"));
 
 /** Market Intelligence segue restrito ao mesmo usuário que tinha acesso ao menu antigo. */
