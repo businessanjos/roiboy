@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Sprout, Wallet, Megaphone, Gem, Magnet, MessageSquareHeart, Handshake, Lightbulb, AlertTriangle, LayoutGrid, ListChecks, Check, Map } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Sprout, Wallet, Megaphone, Gem, Magnet, MessageSquareHeart, Handshake, Lightbulb, AlertTriangle, LayoutGrid, ListChecks, Check, Map, Maximize2, Minimize2, Network, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -63,7 +63,8 @@ export function GrowthPhasesButton({ clientName }: { clientName?: string }) {
 }
 
 export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: boolean; onOpenChange: (v: boolean) => void; clientName?: string }) {
-  const [tab, setTab] = useState<"phases" | "4fa">("phases");
+  const [tab, setTab] = useState<"map" | "phases" | "4fa">("phases");
+  const [full, setFull] = useState(false);
   const [active, setActive] = useState(PHASES[0].id);
   const [done, setDone] = useState<Set<string>>(new Set());
   const idx = PHASES.findIndex((p) => p.id === active);
@@ -78,24 +79,42 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
   const pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
   const PI = phase.icon;
   let n = 0;
+  const go = (id: string) => { setActive(id); setTab("phases"); };
+
+  useEffect(() => {
+    if (!open || tab !== "phases") return;
+    const h = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(t.tagName))) return;
+      if (e.key === "ArrowRight") { e.preventDefault(); setActive((a) => { const i = PHASES.findIndex((p) => p.id === a); return PHASES[Math.min(i + 1, PHASES.length - 1)].id; }); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); setActive((a) => { const i = PHASES.findIndex((p) => p.id === a); return PHASES[Math.max(i - 1, 0)].id; }); }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [open, tab]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[94vh] max-w-7xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent className={cn("flex flex-col gap-0 overflow-hidden p-0 transition-all", full ? "h-screen w-screen max-w-none rounded-none sm:rounded-none" : "h-[94vh] max-w-7xl")}>
         <div className="flex flex-wrap items-center justify-between gap-4 border-b bg-gradient-to-r from-primary/10 via-background to-background px-6 py-5 pr-14">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md"><Map className="h-6 w-6" /></div>
             <div>
-              <DialogTitle className="text-2xl font-semibold tracking-tight">Fases de Crescimento no Eternum</DialogTitle>
+              <DialogTitle className="text-2xl font-semibold tracking-tight">Fases de Crescimento <span className="text-primary">Eternum</span></DialogTitle>
               <DialogDescription className="text-sm">Checklist de implementação · Nível Black{first ? ` · ${first}` : ""}</DialogDescription>
             </div>
           </div>
+          <div className="flex items-center gap-2">
           <div className="inline-flex rounded-xl border bg-muted/50 p-1">
-            {([["phases", "Fases", ListChecks], ["4fa", "Método 4FA", LayoutGrid]] as const).map(([k, l, I]) => (
+            {([["map", "Mapa geral", Network], ["phases", "Fases", ListChecks], ["4fa", "Método 4FA", LayoutGrid]] as const).map(([k, l, I]) => (
               <button key={k} onClick={() => setTab(k)} className={cn("flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all", tab === k ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground")}>
                 <I className="h-4 w-4" />{l}
               </button>
             ))}
+          </div>
+          <Button variant="outline" size="icon" onClick={() => setFull((f) => !f)} aria-label={full ? "Sair da tela cheia" : "Tela cheia"} title={full ? "Sair da tela cheia" : "Tela cheia"}>
+            {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
           </div>
         </div>
 
@@ -174,51 +193,130 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
 
                 <div className="flex justify-between border-t pt-5">
                   <Button variant="outline" disabled={idx === 0} onClick={() => setActive(PHASES[idx - 1].id)}>← {idx > 0 ? PHASES[idx - 1].tag : "Anterior"}</Button>
+                  <span className="hidden self-center text-xs text-muted-foreground sm:block">Use as setas ← → do teclado</span>
                   <Button disabled={idx === PHASES.length - 1} onClick={() => setActive(PHASES[idx + 1].id)}>{idx < PHASES.length - 1 ? PHASES[idx + 1].tag : "Próxima"} →</Button>
                 </div>
               </div>
             </div>
           </div>
-        ) : (
-          <div className="min-h-0 flex-1 animate-fade-in overflow-y-auto">
-            <div className="mx-auto max-w-6xl px-6 py-8">
-              <div className="mb-8 text-center">
-                <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary">Método 4FA</p>
-                <h2 className="mt-1 text-3xl font-semibold tracking-tight">Os 4 Funis dos Anjos</h2>
-                <p className="mx-auto mt-2 max-w-2xl text-base text-muted-foreground">Quatro caminhos para trazer clientes. Pergunte quais ela já usa e marque juntas o que vale ativar.</p>
-              </div>
-              <div className="relative grid gap-5 md:grid-cols-2">
-                <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-background bg-primary text-xl font-bold text-primary-foreground shadow-lg md:flex">4FA</div>
-                {FUNNELS.map((f, fi) => {
-                  const m = FUNNEL_META[f.title]; const I = m.icon;
-                  return (
-                    <div key={f.title} className={cn("overflow-hidden rounded-2xl border-2 bg-card shadow-sm", f.tone)}>
-                      <div className={cn("h-1.5", m.bar)} />
-                      <div className="p-6">
-                        <div className="mb-4 flex items-start gap-4">
-                          <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl", f.head)}><I className="h-6 w-6" /></div>
-                          <div>
-                            <p className={cn("text-xs font-bold uppercase tracking-wider", m.text)}>Funil {fi + 1}</p>
-                            <h3 className="text-xl font-semibold">{f.title}</h3>
-                            <p className="mt-1 text-sm text-muted-foreground">{m.desc}</p>
-                          </div>
-                        </div>
-                        <ul className="grid gap-2 sm:grid-cols-2">
-                          {f.items.map((it) => (
-                            <li key={it} className={cn("flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-[15px]", f.chip)}>
-                              <span className={cn("h-2 w-2 shrink-0 rounded-full", m.bar)} />{it}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
+        ) : tab === "4fa" ? <FourFA /> : <MacroMap counts={counts} onPick={go} />}
       </DialogContent>
     </Dialog>
+  );
+}
+
+const FUNNEL_TONE: Record<string, { tile: string; ring: string; dot: string; text: string; bg: string }> = {
+  "Tráfego Pago": { tile: "bg-primary/15 ring-primary/40", ring: "border-primary/40", dot: "bg-primary", text: "text-primary", bg: "from-primary/10" },
+  "Tráfego Alheio": { tile: "bg-success/15 ring-success/40", ring: "border-success/40", dot: "bg-success", text: "text-success", bg: "from-success/10" },
+  "Indicação": { tile: "bg-info/15 ring-info/40", ring: "border-info/40", dot: "bg-info", text: "text-info", bg: "from-info/10" },
+  "Lista Quente": { tile: "bg-warning/15 ring-warning/40", ring: "border-warning/40", dot: "bg-warning", text: "text-warning", bg: "from-warning/10" },
+};
+
+function FunnelCard({ f, fi }: { f: (typeof FUNNELS)[number]; fi: number }) {
+  const m = FUNNEL_META[f.title]; const t = FUNNEL_TONE[f.title]; const I = m.icon;
+  return (
+    <div className={cn("flex h-full flex-col overflow-hidden rounded-2xl border-2 bg-gradient-to-br to-card p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md", t.ring, t.bg)}>
+      <div className="mb-5 flex items-start gap-4">
+        <div className={cn("flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-2", t.tile)}><I className={cn("h-7 w-7", t.text)} strokeWidth={2.2} /></div>
+        <div className="min-w-0">
+          <p className={cn("text-xs font-bold uppercase tracking-[0.2em]", t.text)}>Funil {fi + 1}</p>
+          <h3 className="text-2xl font-semibold tracking-tight">{f.title}</h3>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{m.desc}</p>
+        </div>
+      </div>
+      <ul className="grid flex-1 content-start gap-2 sm:grid-cols-2">
+        {f.items.map((it) => (
+          <li key={it} className="flex items-center gap-2.5 rounded-lg border bg-card/80 px-3 py-2.5 text-[15px] leading-snug">
+            <span className={cn("h-2 w-2 shrink-0 rounded-full", t.dot)} />{it}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function FourFA() {
+  return (
+    <div className="min-h-0 flex-1 animate-fade-in overflow-y-auto">
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="mb-10 text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1 text-xs font-bold uppercase tracking-[0.25em] text-primary">Método 4FA</span>
+          <h2 className="mt-4 text-4xl font-semibold tracking-tight">Os 4 Funis <span className="text-primary">dos Anjos</span></h2>
+          <p className="mx-auto mt-3 max-w-2xl text-base text-muted-foreground">Quatro caminhos para trazer clientes. Pergunte quais ela já usa e decidam juntas o que vale ativar.</p>
+        </div>
+        <div className="relative">
+          <div className="grid gap-6 md:grid-cols-2 md:gap-10">
+            {FUNNELS.map((f, fi) => <FunnelCard key={f.title} f={f} fi={fi} />)}
+          </div>
+          <div className="pointer-events-none absolute inset-0 hidden items-center justify-center md:flex">
+            <div className="flex h-24 w-24 items-center justify-center rounded-full border-[6px] border-background bg-primary shadow-xl ring-4 ring-primary/25">
+              <span className="text-2xl font-black tracking-tight text-primary-foreground">4FA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MacroMap({ counts, onPick }: { counts: Record<string, { total: number; done: number }>; onPick: (id: string) => void }) {
+  return (
+    <div className="min-h-0 flex-1 animate-fade-in overflow-y-auto bg-muted/10">
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="mb-10 text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1 text-xs font-bold uppercase tracking-[0.25em] text-primary">Visão macro</span>
+          <h2 className="mt-4 text-4xl font-semibold tracking-tight">Mapa da <span className="text-primary">jornada completa</span></h2>
+          <p className="mx-auto mt-3 max-w-2xl text-base text-muted-foreground">Do onboarding à conversão, com os sintomas de cada fase e os 4 funis. Clique numa fase para abrir os detalhes.</p>
+        </div>
+        <ol className="relative">
+          <span className="absolute bottom-6 left-7 top-6 w-0.5 rounded bg-gradient-to-b from-primary via-primary/50 to-primary/20" />
+          {PHASES.map((p) => {
+            const I = p.icon; const c = counts[p.id]; const complete = c.total > 0 && c.done === c.total;
+            const branches = p.groups.flatMap((g) => [g.alert ? { k: "alert", t: g.alert } : null, g.label ? { k: "label", t: g.label } : null]).filter(Boolean) as { k: string; t: string }[];
+            return (
+              <li key={p.id} className="relative mb-6 pl-20 last:mb-0">
+                <button onClick={() => onPick(p.id)} className={cn("absolute left-0 top-1 z-10 flex h-14 w-14 items-center justify-center rounded-full border-4 border-background shadow-md transition-transform hover:scale-110", complete ? "bg-success" : "bg-primary")} aria-label={p.title}>
+                  {complete ? <Check className="h-6 w-6 text-primary-foreground" /> : <I className="h-6 w-6 text-primary-foreground" />}
+                </button>
+                <div className="rounded-2xl border bg-card p-5 shadow-sm">
+                  <button onClick={() => onPick(p.id)} className="group flex w-full flex-wrap items-center justify-between gap-2 text-left">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">{p.tag}</p>
+                      <h3 className="text-xl font-semibold group-hover:text-primary">{p.title}</h3>
+                    </div>
+                    <span className="flex items-center gap-2 text-sm text-muted-foreground"><span className="tabular-nums">{c.done}/{c.total} itens</span><ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+                  </button>
+                  {branches.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
+                      {branches.map((b) => b.k === "alert" ? (
+                        <span key={b.t} className="inline-flex items-center gap-1.5 rounded-lg border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-medium"><AlertTriangle className="h-4 w-4 text-warning" />{b.t}</span>
+                      ) : (
+                        <span key={b.t} className="inline-flex items-center gap-1.5 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm font-medium"><span className="h-1.5 w-1.5 rounded-full bg-primary" />{b.t}</span>
+                      ))}
+                    </div>
+                  )}
+                  {p.id === "f3" && (
+                    <div className="mt-4 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
+                      <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary"><LayoutGrid className="h-4 w-4" />Ramificação: Método 4FA</p>
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        {FUNNELS.map((f) => {
+                          const t = FUNNEL_TONE[f.title]; const FI = FUNNEL_META[f.title].icon;
+                          return (
+                            <div key={f.title} className={cn("rounded-lg border-2 bg-card p-3", t.ring)}>
+                              <p className="flex items-center gap-2 font-semibold"><span className={cn("flex h-7 w-7 items-center justify-center rounded-md ring-1", t.tile)}><FI className={cn("h-4 w-4", t.text)} /></span>{f.title}</p>
+                              <p className="mt-1.5 text-xs text-muted-foreground">{f.items.slice(0, 3).join(" · ")}{f.items.length > 3 ? ` +${f.items.length - 3}` : ""}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </div>
   );
 }
