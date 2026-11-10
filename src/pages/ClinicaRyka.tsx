@@ -280,20 +280,20 @@ export default function ClinicaRyka() {
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <CardTitle className="text-base">Clientes</CardTitle>
-            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3"><CardTitle className="text-base">Clientes <span className="ml-1 text-sm font-normal text-muted-foreground">{filtered.length}</span></CardTitle></div>
+            <div className="flex w-full min-w-0 flex-col gap-2 lg:flex-row lg:items-center">
               <div className="relative w-full sm:w-auto">
                 <Search className="h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar por nome, e-mail, telefone..."
-                  className="pl-8 w-full sm:w-[280px]"
+                  className="pl-8 w-full lg:w-[300px]"
                 />
               </div>
               <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
-                <TabsList className="flex-wrap h-auto">
+                <TabsList className="h-auto w-full justify-start overflow-x-auto lg:w-auto [&>button]:whitespace-nowrap">
                   <TabsTrigger value="all">Todos ({counts.total})</TabsTrigger>
                   <TabsTrigger value="provisioned">Com acesso ({counts.provisioned})</TabsTrigger>
                   <TabsTrigger value="pending">Falta liberar ({counts.pending})</TabsTrigger>
@@ -315,16 +315,16 @@ export default function ClinicaRyka() {
               Nenhum cliente encontrado para este filtro.
             </div>
           ) : (
-            <Table>
+            <div className="overflow-x-auto"><Table className="table-fixed min-w-[960px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Acesso</TableHead>
-                  <TableHead>Ryka</TableHead>
+                  <TableHead className="w-[28%]">Cliente</TableHead>
+                  <TableHead className="w-[150px]">Produto</TableHead>
+                  <TableHead className="w-[120px]">Acesso</TableHead>
+                  <TableHead className="w-[100px]">Ryka</TableHead>
                   <TableHead>E-mail acesso</TableHead>
-                  <TableHead>Última liberação</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="w-[130px] whitespace-nowrap">Liberado</TableHead>
+                  <TableHead className="w-[150px] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -344,11 +344,11 @@ export default function ClinicaRyka() {
                     <TableRow key={client.id}>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
-                          <Avatar className="h-8 w-8">
+                          <Avatar className="h-8 w-8 shrink-0">
                             <AvatarImage src={photo} />
                             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                           </Avatar>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <Link
                               to={`/clients/${client.id}`}
                               className="text-sm font-medium hover:underline truncate block"
@@ -367,6 +367,8 @@ export default function ClinicaRyka() {
                         {rykaProduct && (
                           <Badge
                             variant="outline"
+                            className="whitespace-nowrap max-w-full truncate"
+                            title={rykaProduct.name.replace(/^[A-Z+ ]{2,8}\s*[lI|]\s+/, "")}
                             style={{
                               backgroundColor: `${rykaProduct.color || "#6b7280"}20`,
                               color: rykaProduct.color || "#6b7280",
@@ -383,15 +385,15 @@ export default function ClinicaRyka() {
                       <TableCell>
                         <RykaStatusBadge status={rykaStatus} />
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-sm text-muted-foreground truncate" title={prov?.email || undefined}>
                         {prov?.email || (typeof client.emails?.[0] === "string" ? client.emails?.[0] : (client.emails?.[0] as any)?.email) || "—"}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {prov?.created_at
                           ? formatDistanceToNow(new Date(prov.created_at), {
                               addSuffix: true,
                               locale: ptBR,
-                            })
+                            }).replace("cerca de ", "").replace("aproximadamente ", "")
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right">
@@ -436,7 +438,7 @@ export default function ClinicaRyka() {
                   );
                 })}
               </TableBody>
-            </Table>
+            </Table></div>
           )}
           {!loading && filtered.length > 0 && <PagerFor state={pg} itemLabel="clientes" />}
         </CardContent>
@@ -475,11 +477,11 @@ function StatusBadge({
   if (state === "provisioned") {
     return (
       <div className="flex items-center gap-1.5">
-        <Badge className="bg-success/15 text-success-strong border-success/30 hover:bg-success/15">
+        <Badge className="whitespace-nowrap bg-success/15 text-success-strong border-success/30 hover:bg-success/15">
           <CheckCircle2 className="h-3 w-3 mr-1" /> Com acesso
         </Badge>
         {whatsapp && whatsapp !== "sent" && (
-          <Badge variant="outline" className="text-warning-strong border-warning/40">
+          <Badge variant="outline" className="whitespace-nowrap text-warning-strong border-warning/40">
             WhatsApp: {whatsapp}
           </Badge>
         )}
@@ -488,13 +490,13 @@ function StatusBadge({
   }
   if (state === "failed") {
     return (
-      <Badge className="bg-danger/15 text-danger-strong border-danger/30 hover:bg-danger/15">
+      <Badge className="whitespace-nowrap bg-danger/15 text-danger-strong border-danger/30 hover:bg-danger/15">
         <AlertCircle className="h-3 w-3 mr-1" /> Falhou
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="text-warning-strong border-warning/40">
+    <Badge variant="outline" className="whitespace-nowrap text-warning-strong border-warning/40">
       <Clock className="h-3 w-3 mr-1" /> Falta liberar
     </Badge>
   );
@@ -503,14 +505,14 @@ function StatusBadge({
 function RykaStatusBadge({ status }: { status: "active" | "inactive" | null }) {
   if (status === "active") {
     return (
-      <Badge className="bg-success/15 text-success-strong border-success/30 hover:bg-success/15">
+      <Badge className="whitespace-nowrap bg-success/15 text-success-strong border-success/30 hover:bg-success/15">
         <CheckCircle2 className="h-3 w-3 mr-1" /> Ativo
       </Badge>
     );
   }
   if (status === "inactive") {
     return (
-      <Badge variant="outline" className="text-muted-foreground border-border/50">
+      <Badge variant="outline" className="whitespace-nowrap text-muted-foreground border-border/50">
         <AlertCircle className="h-3 w-3 mr-1" /> Inativo
       </Badge>
     );
