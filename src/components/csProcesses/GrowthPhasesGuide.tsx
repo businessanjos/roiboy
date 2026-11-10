@@ -88,6 +88,13 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
   const stopScroll = () => { if (timer.current) { cancelAnimationFrame(timer.current); timer.current = null; } };
   const startScroll = (d: 1 | -1) => { stopScroll(); const tick = () => { stripRef.current?.scrollBy({ left: d * 6 }); timer.current = requestAnimationFrame(tick); }; timer.current = requestAnimationFrame(tick); };
   useEffect(() => stopScroll, []);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const downTimer = useRef<number | null>(null);
+  const [more, setMore] = useState(false);
+  const updateMore = () => { const el = bodyRef.current; if (!el) return; setMore(el.scrollTop + el.clientHeight < el.scrollHeight - 8); };
+  const stopDown = () => { if (downTimer.current) { cancelAnimationFrame(downTimer.current); downTimer.current = null; } };
+  const startDown = () => { stopDown(); const tick = () => { const el = bodyRef.current; if (!el) return; el.scrollBy({ top: 5 }); if (el.scrollTop + el.clientHeight >= el.scrollHeight - 2) { stopDown(); updateMore(); return; } downTimer.current = requestAnimationFrame(tick); }; downTimer.current = requestAnimationFrame(tick); };
+  useEffect(() => { stopDown(); const id = requestAnimationFrame(updateMore); return () => { cancelAnimationFrame(id); stopDown(); }; }, [active, tab, open, full]);
   useEffect(() => {
     if (!open || tab !== "phases") return;
     const id = requestAnimationFrame(() => {
@@ -175,7 +182,8 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
             </div>
             </div>
 
-            <div key={phase.id} className="min-h-0 flex-1 animate-fade-in overflow-y-auto">
+            <div className="relative flex min-h-0 flex-1 flex-col">
+            <div key={phase.id} ref={bodyRef} onScroll={updateMore} className="min-h-0 flex-1 animate-fade-in overflow-y-auto">
               <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
                 <header className="flex flex-wrap items-center gap-5">
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15 text-primary"><PI className="h-8 w-8" /></div>
@@ -228,6 +236,9 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
                   <Button disabled={idx === PHASES.length - 1} onClick={() => setActive(PHASES[idx + 1].id)}>{idx < PHASES.length - 1 ? PHASES[idx + 1].tag : "Próxima"} →</Button>
                 </div>
               </div>
+            </div>
+            <div aria-hidden onMouseEnter={startDown} onMouseLeave={stopDown}
+              className={cn("absolute inset-x-0 bottom-0 z-10 h-20 bg-gradient-to-t from-background via-background/70 to-transparent transition-opacity duration-300", more ? "opacity-100" : "pointer-events-none opacity-0")} />
             </div>
           </div>
         ) : tab === "4fa" ? <FourFA /> : <MacroMap counts={counts} onPick={go} />}
