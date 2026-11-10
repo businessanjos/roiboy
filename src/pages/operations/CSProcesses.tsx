@@ -2,7 +2,7 @@ import { detectOnboardingSteps } from "@/lib/csProcessWhatsAppSync";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, List, Workflow, ArrowDown, UserRound, UsersRound, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { HelpCircle, List, Workflow, ArrowDown, UserRound, UsersRound, X, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -24,6 +24,9 @@ import { impliedDoneKeys, stageToAdvance, type BoardCard, type HubStage } from "
 import { spDate } from "@/lib/csToday";
 import { onboardingGroups } from "@/components/csProcesses/OnboardingFlow";
 import { ProcessFlow, StepCard, CycleView, EventTimeline, isCycle, type StepStatus } from "@/components/csProcesses/ProcessFlow";
+import { ProcessFinishedCard } from "@/components/csProcesses/ProcessFinishedCard";
+import { isProcessFinished, finishesProcess } from "@/lib/csProcessDone";
+import { cn } from "@/lib/utils";
 import { Copy, AlertTriangle, CheckSquare, Search, ExternalLink, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
