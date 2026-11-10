@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { fetchAllRows } from '@/lib/fetchAllRows';
+import { filterMarketingPeople } from '@/lib/marketing/marketingPeopleVisibility';
 
 interface MarketingLink {
   id: string;
