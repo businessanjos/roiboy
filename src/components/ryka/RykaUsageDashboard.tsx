@@ -16,7 +16,7 @@ export interface DashRow {
 
 const BUCKET_COLOR: Record<UsageBucket, string> = {
   ativa_7d: "hsl(var(--success))",
-  ativa_30d: "hsl(var(--primary))",
+  ativa_30d: "hsl(var(--success) / 0.5)",
   parada_30d: "hsl(var(--warning))",
   nunca: "hsl(var(--danger))",
   sem_acesso: "hsl(var(--muted-foreground))",

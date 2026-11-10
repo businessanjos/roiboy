@@ -441,6 +441,7 @@ export default function ClinicaRyka() {
           {!loading && filtered.length > 0 && <PagerFor state={pg} itemLabel="clientes" />}
         </CardContent>
       </Card>
+      </>)}
     </div>
   );
 }
