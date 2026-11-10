@@ -393,8 +393,7 @@ export default function ClinicaRyka() {
                           ? formatDistanceToNow(new Date(prov.created_at), {
                               addSuffix: true,
                               locale: ptBR,
-                            }).replace("cerca de ", "").replace("aproximadamente ", "") || ({
-                            })
+                            }).replace("cerca de ", "").replace("aproximadamente ", "")
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right">
@@ -478,11 +477,11 @@ function StatusBadge({
   if (state === "provisioned") {
     return (
       <div className="flex items-center gap-1.5">
-        <Badge className="bg-success/15 text-success-strong border-success/30 hover:bg-success/15">
+        <Badge className="whitespace-nowrap bg-success/15 text-success-strong border-success/30 hover:bg-success/15">
           <CheckCircle2 className="h-3 w-3 mr-1" /> Com acesso
         </Badge>
         {whatsapp && whatsapp !== "sent" && (
-          <Badge variant="outline" className="text-warning-strong border-warning/40">
+          <Badge variant="outline" className="whitespace-nowrap text-warning-strong border-warning/40">
             WhatsApp: {whatsapp}
           </Badge>
         )}
@@ -491,13 +490,13 @@ function StatusBadge({
   }
   if (state === "failed") {
     return (
-      <Badge className="bg-danger/15 text-danger-strong border-danger/30 hover:bg-danger/15">
+      <Badge className="whitespace-nowrap bg-danger/15 text-danger-strong border-danger/30 hover:bg-danger/15">
         <AlertCircle className="h-3 w-3 mr-1" /> Falhou
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="text-warning-strong border-warning/40">
+    <Badge variant="outline" className="whitespace-nowrap text-warning-strong border-warning/40">
       <Clock className="h-3 w-3 mr-1" /> Falta liberar
     </Badge>
   );
@@ -506,14 +505,14 @@ function StatusBadge({
 function RykaStatusBadge({ status }: { status: "active" | "inactive" | null }) {
   if (status === "active") {
     return (
-      <Badge className="bg-success/15 text-success-strong border-success/30 hover:bg-success/15">
+      <Badge className="whitespace-nowrap bg-success/15 text-success-strong border-success/30 hover:bg-success/15">
         <CheckCircle2 className="h-3 w-3 mr-1" /> Ativo
       </Badge>
     );
   }
   if (status === "inactive") {
     return (
-      <Badge variant="outline" className="text-muted-foreground border-border/50">
+      <Badge variant="outline" className="whitespace-nowrap text-muted-foreground border-border/50">
         <AlertCircle className="h-3 w-3 mr-1" /> Inativo
       </Badge>
     );
