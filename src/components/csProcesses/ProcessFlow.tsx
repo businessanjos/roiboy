@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlow, Background, BackgroundVariant, Controls, ControlButton, MiniMap, useReactFlow, Handle, Position, MarkerType, type Node, type Edge, type NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { MessageSquare, CheckSquare, Link2, AlertTriangle, Check, ArrowDown, RefreshCw, Maximize2, Minimize2, Workflow, MousePointer2, Hourglass, Columns3, Focus } from "lucide-react";
+import { MessageSquare, CheckSquare, Link2, AlertTriangle, Check, ArrowDown, RefreshCw, Maximize2, Minimize2, Workflow, MousePointer2, Hourglass, Columns3, Focus, X } from "lucide-react";
 import type { Process, Step } from "@/lib/csProcesses";
 import { Button } from "@/components/ui/button";
 
@@ -227,9 +227,12 @@ export function ProcessFlow({ process, accent, statusOf, open, badgeOf, groups, 
           <h2 className={full ? "text-base font-semibold md:text-lg" : "text-sm font-semibold"}>{showingAll ? "VISÃO GERAL DOS 3 FLUXOS" : <>{full ? process.title : clientName ? process.title : "Mapa do processo"}{clientName && <span className="text-primary"> · {clientName}</span>}</>}</h2>
           <p className="text-xs text-muted-foreground">{clientName && !showingAll ? <>Cliente selecionada <span className="mx-1">·</span></> : showingAll ? <>{entries!.length} processos <span className="mx-1">·</span></> : full ? <>Fluxograma completo <span className="mx-1">·</span></> : null}{phaseCount} fases <span className="mx-1">·</span> {stepTotal} {showingAll || groups ? "cartões" : "etapas"}</p>
         </div>
-        {full && (entries?.length ?? 0) > 1 && <Button size="sm" variant={showingAll ? "secondary" : "outline"} onClick={() => setShowAll((value) => !value)} className="absolute right-4 gap-2" title={showingAll ? "Voltar ao fluxo atual" : "Reunir os três processos nesta tela"}>
+        {full && <div className="absolute right-4 flex items-center gap-2">
+          <Button size="icon" variant="ghost" aria-label="Sair da tela cheia" title="Sair da tela cheia" onClick={() => { setShowAll(false); setFull(false); }} className="h-9 w-9 rounded-full opacity-25 transition-opacity hover:bg-muted hover:opacity-100 focus-visible:opacity-100"><X className="h-4 w-4" /></Button>
+          {(entries?.length ?? 0) > 1 && <Button size="sm" variant={showingAll ? "secondary" : "outline"} onClick={() => setShowAll((value) => !value)} className="gap-2" title={showingAll ? "Voltar ao fluxo atual" : "Reunir os três processos nesta tela"}>
           {showingAll ? <Focus className="h-4 w-4" /> : <Columns3 className="h-4 w-4" />}{showingAll ? "Voltar ao fluxo atual" : "Ver os 3 fluxos"}
         </Button>}
+        </div>}
         {!full && <div className="ml-auto hidden items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground lg:flex">
           <MousePointer2 className="h-3.5 w-3.5" />Clique em uma etapa para ver os detalhes
         </div>}
