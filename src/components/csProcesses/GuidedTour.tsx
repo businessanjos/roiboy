@@ -12,6 +12,7 @@ export function GuidedTour({ steps, open, onClose, onSkip }: { steps: TourStep[]
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [bh, setBh] = useState(180);
   const bubble = useRef<HTMLDivElement>(null);
+  const primary = useRef<HTMLButtonElement>(null);
   const step = steps[i];
   const skip = onSkip ?? onClose;
   const stepsRef = useRef(steps); stepsRef.current = steps;
@@ -34,11 +35,33 @@ export function GuidedTour({ steps, open, onClose, onSkip }: { steps: TourStep[]
     return () => { clearTimeout(find); window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true); };
   }, [open, i]);
   useLayoutEffect(() => { if (bubble.current) setBh(bubble.current.offsetHeight); });
+  // Setas ← → do teclado passam de passo; o foco fica sempre dentro do tour.
   useEffect(() => {
     if (!open) return;
-    const k = (e: KeyboardEvent) => { if (e.key === "Escape") skip(); };
-    window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
-  }, [open, skip]);
+    const hold = () => {
+      const a = document.activeElement;
+      if (!a || a === document.body || a === document.documentElement || a.tagName === "IFRAME") primary.current?.focus();
+    };
+    const t = setTimeout(hold, 60);
+    const k = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (t && (t.isContentEditable || /INPUT|TEXTAREA|SELECT/i.test(t.tagName))) return;
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); skip(); return; }
+      if (e.key === "ArrowRight") {
+        e.preventDefault(); e.stopPropagation();
+        if (i >= stepsRef.current.length - 1) onClose(); else setI(i + 1);
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault(); e.stopPropagation();
+        if (i > 0) setI(i - 1);
+      }
+    };
+    document.addEventListener("focusin", hold);
+    window.addEventListener("keydown", k, true);
+    return () => { clearTimeout(t); document.removeEventListener("focusin", hold); window.removeEventListener("keydown", k, true); };
+  }, [open, i, skip, onClose]);
 
   if (!open || !step) return null;
   const last = i === steps.length - 1;
