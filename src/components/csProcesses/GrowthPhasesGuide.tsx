@@ -418,7 +418,6 @@ function MacroMap({ counts, onPick, on4fa }: { counts: Record<string, { total: n
                           );
                         })}
                       </div>
-                      <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary opacity-70 transition group-hover/4fa:opacity-100">Abrir Método 4FA<ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/4fa:translate-x-1" /></span>
                     </button>
                   )}
                 </div>
