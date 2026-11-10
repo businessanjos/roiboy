@@ -408,27 +408,30 @@ export default function CSProcesses() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5 p-4 md:p-6">
       <StepEditDialog open={!!editKey} onOpenChange={(o) => !o && setEditKey(null)} step={editStep} original={editOriginal} saving={saving} onSave={saveStep} />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Processos Eternum</h1>
-          <p className="text-sm text-muted-foreground">{clientId ? "Processo individual, com mensagens, links e progresso da cliente." : target ? `Encontro selecionado: ${targetName ?? "…"}` : "Passo a passo, mensagens prontas e links de cada processo."}</p>
+      <header className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Customer Success</span>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Processos CS Eternum</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{clientId ? "Processo individual, com mensagens, links e progresso da cliente." : target ? `Encontro selecionado: ${targetName ?? "…"}` : "Passo a passo, mensagens prontas e links de cada processo."}</p>
+          </div>
+          {tab === "process" && !target && (
+            <Button size="sm" variant="outline" className="gap-1.5" title="Selecione uma cliente para preencher nomes, links e progresso" onClick={() => clearClientSelection(true)}>
+              <UsersRound className="h-4 w-4" />Selecionar cliente
+            </Button>
+          )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-        {tab === "process" && !target && (
-          <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" title="Visualização geral · selecione uma cliente para preencher nomes, links e progresso" onClick={() => clearClientSelection(true)}>
-            <UsersRound className="h-4 w-4" />Selecionar cliente
-          </Button>
-        )}
-        <div className="inline-flex rounded-lg border p-0.5">
-          <Button size="sm" variant={tab === "process" ? "secondary" : "ghost"} onClick={() => setTab("process")}>Processos</Button>
-          <Button size="sm" variant={tab === "today" ? "secondary" : "ghost"} onClick={() => setTab("today")}>Em andamento</Button>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+          <div className="inline-flex rounded-lg border p-0.5">
+            <Button size="sm" variant={tab === "process" ? "secondary" : "ghost"} onClick={() => setTab("process")}>Processos</Button>
+            <Button size="sm" variant={tab === "today" ? "secondary" : "ghost"} onClick={() => setTab("today")}>Em andamento</Button>
+          </div>
+          {tab === "process" && <div className="inline-flex rounded-lg border p-0.5">
+            <Button size="sm" variant={view === "list" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("list")}><List className="h-4 w-4" />Lista</Button>
+            <Button data-tour="toggle" size="sm" variant={view === "flow" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("flow")}><Workflow className="h-4 w-4" />Fluxograma</Button>
+          </div>}
         </div>
-        {tab === "process" && <div className="inline-flex rounded-lg border p-0.5">
-          <Button size="sm" variant={view === "list" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("list")}><List className="h-4 w-4" />Lista</Button>
-          <Button data-tour="toggle" size="sm" variant={view === "flow" ? "secondary" : "ghost"} className="gap-1" onClick={() => setView("flow")}><Workflow className="h-4 w-4" />Fluxograma</Button>
-        </div>}
-        </div>
-      </div>
+      </header>
 
       {tab === "process" && clientId && (
         <section aria-label="Cliente selecionada" className="rounded-2xl border border-primary/35 bg-primary/[0.07] p-4 shadow-sm">
