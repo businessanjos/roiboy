@@ -3,7 +3,8 @@ import { Check, ChevronRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { plainText, stepTitle, toStepInfo, type Action } from "@/lib/csProcessActions";
+import { plainText, stepTitle, toStepInfo, visibleActions, type Action } from "@/lib/csProcessActions";
+import { applyArtVisibility } from "@/lib/csProcessArtProducts";
 import type { Process, Step } from "@/lib/csProcesses";
 
 export type NavStatus = "done" | "current" | "pending";
@@ -19,16 +20,17 @@ const KIND_LABEL: Record<Action["kind"], string> = { message: "Mensagem", task: 
 const PREVIEW_MAX = 5;
 
 /** Prévia da etapa mostrada ao passar o mouse, para não precisar abrir uma por uma. */
-function StepPreview({ step, number, phaseLabel, status }: { step: Step; number: string; phaseLabel: string; status: NavStatus }) {
-  const info = toStepInfo(step);
-  const shown = info.actions.slice(0, PREVIEW_MAX);
-  const extra = info.actions.length - shown.length;
+function StepPreview({ step, number, phaseLabel, status, productNames }: { step: Step; number: string; phaseLabel: string; status: NavStatus; productNames?: string[] }) {
+  const info = applyArtVisibility(toStepInfo(step), productNames ?? []);
+  const list = visibleActions(info.actions);
+  const shown = list.slice(0, PREVIEW_MAX);
+  const extra = list.length - shown.length;
   return (
     <div className="w-[360px] max-w-[78vw]">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">{phaseLabel}</p>
       <p className="mt-1 text-sm font-semibold leading-snug">{number} {stepTitle(step.title) || phaseLabel.split(" · ")[1] || "Etapa"}</p>
       <p className="mt-1 text-xs text-muted-foreground">
-        {info.who}{info.when ? ` · ${info.when}` : ""} · {info.actions.length} {info.actions.length === 1 ? "ação" : "ações"}
+        {info.who}{info.when ? ` · ${info.when}` : ""} · {list.length} {list.length === 1 ? "ação" : "ações"}
         {status === "done" ? " · concluída" : status === "current" ? " · etapa atual" : ""}
       </p>
       {shown.length > 0 && (
@@ -69,8 +71,8 @@ export function ProcessOverview({ process, statusOf, onPick }: { process: Proces
   );
 }
 
-export function StepNavigator({ process, selected, onSelect, statusOf, visible, mobile, badgeOf, onEdit }: {
-  process: Process; selected: string; onSelect: (k: string) => void; statusOf: (k: string) => NavStatus; visible: (k: string) => boolean; mobile?: boolean; badgeOf?: (k: string) => string | undefined; onEdit?: (k: string) => void;
+export function StepNavigator({ process, selected, onSelect, statusOf, visible, mobile, badgeOf, onEdit, productNames }: {
+  process: Process; selected: string; onSelect: (k: string) => void; statusOf: (k: string) => NavStatus; visible: (k: string) => boolean; mobile?: boolean; badgeOf?: (k: string) => string | undefined; onEdit?: (k: string) => void; productNames?: string[];
 }) {
   const all = process.phases.flatMap((ph, pi) => ph.steps.map((_, si) => `${pi}-${si}`));
   const done = all.filter((k) => statusOf(k) === "done").length;
@@ -125,7 +127,7 @@ export function StepNavigator({ process, selected, onSelect, statusOf, visible, 
                       <HoverCard openDelay={220} closeDelay={120}>
                         <HoverCardTrigger asChild>{row}</HoverCardTrigger>
                         <HoverCardContent side="right" align="start" collisionPadding={12} className="w-auto">
-                          <StepPreview step={s} number={`${pi + 1}.${si + 1}`} phaseLabel={`Fase ${pi + 1} · ${phaseName(ph.title)}`} status={st} />
+                          <StepPreview step={s} number={`${pi + 1}.${si + 1}`} phaseLabel={`Fase ${pi + 1} · ${phaseName(ph.title)}`} status={st} productNames={productNames} />
                         </HoverCardContent>
                       </HoverCard>
                     )}
