@@ -43,6 +43,7 @@ export function GuidedTour({ steps, open, onClose, onSkip }: { steps: TourStep[]
       if (bubble.current && !bubble.current.contains(a)) primary.current?.focus();
     };
     const t = setTimeout(hold, 60);
+    const iv = window.setInterval(hold, 300);
     const k = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -60,7 +61,7 @@ export function GuidedTour({ steps, open, onClose, onSkip }: { steps: TourStep[]
     };
     document.addEventListener("focusin", hold);
     window.addEventListener("keydown", k, true);
-    return () => { clearTimeout(t); document.removeEventListener("focusin", hold); window.removeEventListener("keydown", k, true); };
+    return () => { clearTimeout(t); window.clearInterval(iv); document.removeEventListener("focusin", hold); window.removeEventListener("keydown", k, true); };
   }, [open, i, skip, onClose]);
 
   if (!open || !step) return null;
