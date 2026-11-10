@@ -20,7 +20,7 @@ export function InsightsChannelOverview() {
   const [period, setPeriod] = useState<PeriodValue>({ preset: '6m' });
   const range = useMemo(() => resolvePeriod(period), [period]);
   const { data: rows = [], isLoading } = useCommercialIntelligence(range.startDate, range.endDate);
-  const [view, setView] = useState<View>({ kind: 'instagram', value: null });
+  const [view, setView] = useState<View>({ kind: 'channel', value: 'Orgânico' });
   const [page, setPage] = useState(0);
 
   const channels = useMemo(() => [...new Set(rows.map(r => r.channel))].sort(), [rows]);
