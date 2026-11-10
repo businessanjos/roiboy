@@ -10,27 +10,35 @@ export function useCommercialIntelligence(startDate: Date, endDate: Date) {
   const accountId = currentUser?.account_id;
   return useQuery({
     queryKey: ['commercial-intelligence', accountId, currentUser?.id, startDate.toISOString(), endDate.toISOString()],
-    enabled: !!accountId, staleTime: 60000,
+    enabled: !!accountId, staleTime: 5 * 60000, gcTime: 30 * 60000, placeholderData: (prev) => prev,
     queryFn: async (): Promise<CommercialRow[]> => {
       if (!accountId) return [];
       const { data: fields, error: fieldError } = await supabase.from('custom_fields').select('id,name,options').eq('account_id', accountId).in('name', ['MQL', 'Canal de Venda', 'Canal', 'Origem da Venda']);
       if (fieldError) throw fieldError;
-      const deals = [];
-      for (let offset = 0; ; offset += 500) {
-        const { data, error } = await supabase.from('deals').select('id,lead_id,contact_name,title,status,value,created_at,source,lead:leads(full_name,instagram,mql,canal)').eq('account_id', accountId).is('deleted_at', null).gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()).order('id').range(offset, offset + 499);
-        if (error) throw error;
-        deals.push(...(data ?? []));
-        if ((data?.length ?? 0) < 500) break;
+      const select = 'id,lead_id,contact_name,title,status,value,created_at,source,lead:leads(full_name,instagram,mql,canal)';
+      const base = () => supabase.from('deals').select(select, { count: 'exact' }).eq('account_id', accountId).is('deleted_at', null).gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()).order('id');
+      const PAGE = 1000;
+      const first = await base().range(0, PAGE - 1);
+      if (first.error) throw first.error;
+      const deals = [...(first.data ?? [])];
+      const total = first.count ?? deals.length;
+      if (total > PAGE) {
+        const pages = await Promise.all(Array.from({ length: Math.ceil(total / PAGE) - 1 }, (_, i) => base().range((i + 1) * PAGE, (i + 2) * PAGE - 1)));
+        for (const page of pages) { if (page.error) throw page.error; deals.push(...(page.data ?? [])); }
       }
       const values = new Map<string, Map<string, string[]>>();
-      for (let i = 0; i < deals.length; i += 100) {
-        const ids = deals.slice(i, i + 100).map(d => d.id);
-        const fieldIds = (fields ?? []).map(f => f.id);
-        if (!fieldIds.length) break;
-        const { data, error } = await supabase.from('deal_field_values').select('deal_id,field_id,value_text,value_json').in('deal_id', ids).in('field_id', fieldIds);
+      const fieldById = new Map((fields ?? []).map(f => [f.id, f]));
+      const fieldIds = [...fieldById.keys()];
+      const chunks: string[][] = [];
+      if (fieldIds.length) for (let i = 0; i < deals.length; i += 150) chunks.push(deals.slice(i, i + 150).map(d => d.id));
+      const results = [];
+      for (let i = 0; i < chunks.length; i += 6) {
+        results.push(...await Promise.all(chunks.slice(i, i + 6).map(ids => supabase.from('deal_field_values').select('deal_id,field_id,value_text,value_json').in('deal_id', ids).in('field_id', fieldIds))));
+      }
+      for (const { data, error } of results) {
         if (error) throw error;
         for (const value of data ?? []) {
-          const field = fields?.find(f => f.id === value.field_id);
+          const field = fieldById.get(value.field_id);
           if (!field) continue;
           const options = Array.isArray(field.options) ? field.options : [];
           const raw = Array.isArray(value.value_json) ? value.value_json.map(String) : value.value_text ? [value.value_text] : [];
