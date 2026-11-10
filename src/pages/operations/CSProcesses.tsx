@@ -494,7 +494,7 @@ export default function CSProcesses() {
                   </>
                 )}
                 <StepArrowKeys enabled={view !== "flow"} onPrev={() => selIdx > 0 && setSel(allKeys[selIdx - 1])} onNext={() => selIdx < allKeys.length - 1 && setSel(allKeys[selIdx + 1])} />
-                <div className="sticky bottom-0 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 border-t bg-muted/80 py-3 backdrop-blur">
+                <div className="sticky bottom-3 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 rounded-2xl border bg-card/90 px-3 py-2.5 shadow-sm backdrop-blur">
                   <Button variant="ghost" disabled={selIdx <= 0} onClick={() => setSel(allKeys[selIdx - 1])}>← Etapa anterior</Button>
                   <Button data-tour="next" disabled={!target && selIdx >= allKeys.length - 1} onClick={completeAndNext}>
                     {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima →") : "Próxima etapa →"}
