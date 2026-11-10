@@ -493,6 +493,7 @@ export default function CSProcesses() {
                       canTick={!!target} doneKeys={doneKeys} stepKey={selKey} onTask={toggle} />
                   </>
                 )}
+                <StepArrowKeys enabled={view !== "flow"} onPrev={() => selIdx > 0 && setSel(allKeys[selIdx - 1])} onNext={() => selIdx < allKeys.length - 1 && setSel(allKeys[selIdx + 1])} />
                 <div className="sticky bottom-0 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 border-t bg-muted/80 py-3 backdrop-blur">
                   <Button variant="ghost" disabled={selIdx <= 0} onClick={() => setSel(allKeys[selIdx - 1])}>← Etapa anterior</Button>
                   <Button data-tour="next" disabled={!target && selIdx >= allKeys.length - 1} onClick={completeAndNext}>
@@ -535,4 +536,20 @@ export default function CSProcesses() {
       <GuidedTour steps={MINI} open={miniTour.open && !mainTour.open} onClose={miniTour.close} />
     </div>
   );
+}
+
+/** Setas ← → do teclado trocam de etapa (sem marcar como concluída). */
+function StepArrowKeys({ enabled, onPrev, onNext }: { enabled: boolean; onPrev: () => void; onNext: () => void }) {
+  useEffect(() => {
+    if (!enabled) return;
+    const h = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.altKey || e.ctrlKey || e.metaKey || (t && (t.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(t.tagName))) || document.querySelector('[role="dialog"]')) return;
+      if (e.key === "ArrowRight") { e.preventDefault(); onNext(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); onPrev(); }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [enabled, onPrev, onNext]);
+  return null;
 }
