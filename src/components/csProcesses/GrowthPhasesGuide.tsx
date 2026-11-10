@@ -83,11 +83,17 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
 
   useEffect(() => {
     if (!open || tab !== "phases") return;
+    const step = (dir: 1 | -1) => {
+      setActive((a) => { const i = PHASES.findIndex((p) => p.id === a); return PHASES[Math.min(Math.max(i + dir, 0), PHASES.length - 1)].id; });
+      // Soltar o foco evita o contorno preto do navegador embaixo das fases.
+      const el = document.activeElement as HTMLElement | null;
+      if (el && el !== document.body) el.blur();
+    };
     const h = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(t.tagName))) return;
-      if (e.key === "ArrowRight") { e.preventDefault(); setActive((a) => { const i = PHASES.findIndex((p) => p.id === a); return PHASES[Math.min(i + 1, PHASES.length - 1)].id; }); }
-      if (e.key === "ArrowLeft") { e.preventDefault(); setActive((a) => { const i = PHASES.findIndex((p) => p.id === a); return PHASES[Math.max(i - 1, 0)].id; }); }
+      if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
