@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from 'sonner';
+import { MonthPicker } from './MonthPicker';
 import { RecordsGoalsCharts, METRICS, type MetricKey } from './RecordsGoalsCharts';
 import { RecordsCompareView } from './RecordsCompareView';
 import {
@@ -19,11 +20,6 @@ import {
   parseManualMetricNumber,
   unformatManualMetricNumber,
 } from './manualMetricFormat';
-
-const MONTHS = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-];
 
 const WEEKS = [1, 2, 3, 4, 5];
 
@@ -291,14 +287,12 @@ export function ManualMetricsTab() {
           </Popover>
         )}
 
-        <Select value={month} onValueChange={setMonth}>
-          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {MONTHS.map((m, i) => (
-              <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MonthPicker
+          year={Number(year)}
+          month={Number(month)}
+          onMonthChange={(m) => setMonth(String(m))}
+          onYearChange={(y) => setYear(String(y))}
+        />
 
         <Select value={year} onValueChange={setYear}>
           <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
