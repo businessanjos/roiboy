@@ -8,7 +8,7 @@ import { getDealStatusBadge } from '@/lib/sales/dealStatusBadge';
 import { cn } from '@/lib/utils';
 import { DashboardPeriodFilter, resolvePeriod, type PeriodValue } from './DashboardPeriodFilter';
 import { AcquisitionTrendChart } from './AcquisitionTrendChart';
-import { commercialEvolution, commercialGroups, commercialSummary, type CommercialRow } from './commercialIntelligenceData';
+import { commercialEvolution, commercialGroups, commercialSummary } from './commercialIntelligenceData';
 
 const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 const pct = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
