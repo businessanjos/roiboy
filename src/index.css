@@ -20,6 +20,7 @@
     --popover: 47 30% 92%; /* #efede6 */
     --popover-foreground: 20 10% 11%; /* #201c19 */
 
+    --funnel-1: 39 55% 50%; --funnel-2: 152 69% 33%; --funnel-3: 234 62% 52%; --funnel-4: 8 58% 50%;
     --primary: 39 55% 63%; /* #d2ae6d */
     --primary-foreground: 20 10% 11%; /* #201c19 */
 
@@ -138,6 +139,7 @@
     --popover: 20 10% 16%;
     --popover-foreground: 45 25% 95%;
 
+    --funnel-1: 39 60% 55%; --funnel-2: 152 55% 45%; --funnel-3: 234 70% 68%; --funnel-4: 8 60% 60%;
     --primary: 39 60% 55%; /* dourado mais vibrante */
     --primary-foreground: 20 12% 8%;
 
