@@ -400,8 +400,31 @@
     animation: hint-in 0.7s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
+  /* Processo concluído: pulso de destaque que se apaga sozinho. */
+  @keyframes cs-done-pulse {
+    0% { box-shadow: 0 0 0 0 hsl(var(--success) / 0.5), 0 12px 32px -14px rgb(0 0 0 / 0.3); }
+    70% { box-shadow: 0 0 0 18px hsl(var(--success) / 0), 0 12px 32px -14px rgb(0 0 0 / 0.3); }
+    100% { box-shadow: 0 0 0 0 hsl(var(--success) / 0), 0 12px 32px -14px rgb(0 0 0 / 0.3); }
+  }
+
+  .cs-done-pulse {
+    animation: cs-done-pulse 1.6s cubic-bezier(0.22, 1, 0.36, 1) 4;
+  }
+
+  @keyframes cs-done-pop {
+    0% { transform: scale(0.55); opacity: 0; }
+    60% { transform: scale(1.14); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .cs-done-pop {
+    animation: cs-done-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .animate-hint-in {
+    .animate-hint-in,
+    .cs-done-pulse,
+    .cs-done-pop {
       animation: none;
     }
   }

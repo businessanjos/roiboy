@@ -2,7 +2,7 @@ import { detectOnboardingSteps } from "@/lib/csProcessWhatsAppSync";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, List, Workflow, ArrowDown, UserRound, UsersRound, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { HelpCircle, List, Workflow, ArrowDown, UserRound, UsersRound, X, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -24,6 +24,9 @@ import { impliedDoneKeys, stageToAdvance, type BoardCard, type HubStage } from "
 import { spDate } from "@/lib/csToday";
 import { onboardingGroups } from "@/components/csProcesses/OnboardingFlow";
 import { ProcessFlow, StepCard, CycleView, EventTimeline, isCycle, type StepStatus } from "@/components/csProcesses/ProcessFlow";
+import { ProcessFinishedCard } from "@/components/csProcesses/ProcessFinishedCard";
+import { isProcessFinished, finishesProcess } from "@/lib/csProcessDone";
+import { cn } from "@/lib/utils";
 import { Copy, AlertTriangle, CheckSquare, Search, ExternalLink, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -178,7 +181,7 @@ export default function CSProcesses() {
     },
   });
   const progressKey = ["cs-process-progress", target?.type, target?.id, proc?.id];
-  const { data: doneKeys = new Set<string>() } = useQuery({
+  const { data: doneKeys = new Set<string>(), isSuccess: progressLoaded } = useQuery({
     queryKey: progressKey,
     enabled: !!target && !!proc,
     queryFn: async () => {
@@ -188,7 +191,7 @@ export default function CSProcesses() {
   });
   // Sincronia com o Onboarding Hub: etapa da ficha define o ponto de partida e avança sozinha.
   const syncOnboarding = target?.type === "client" && active === 0;
-  const { data: hub } = useQuery({
+  const { data: hub, isSuccess: hubLoaded } = useQuery({
     queryKey: ["cs-process-hub-stage", target?.id, currentUser?.account_id],
     enabled: !!syncOnboarding && !!currentUser?.account_id,
     queryFn: async () => {
@@ -209,13 +212,16 @@ export default function CSProcesses() {
       if (nextStage) {
         const { error } = await supabase.from("clients").update({ stage_id: nextStage }).eq("id", target.id);
         if (!error) {
-          toast.success(`Onboarding atualizado: ${hub.stages.find((x) => x.id === nextStage)?.name}`);
+          toast.success(`Onboarding atualizado: ${hub.stages.find((x) => x.id === nextStage)?.name}`, { position: "top-center" });
           qc.invalidateQueries({ queryKey: ["cs-process-hub-stage"] });
           qc.invalidateQueries({ predicate: (q) => String(q.queryKey[0] ?? "").toLowerCase().includes("onboarding") });
         }
       }
     }
-    if (on) await supabase.from("cs_process_progress").upsert({ account_id: currentUser.account_id, process_id: proc.id, target_type: target.type, target_id: target.id, step_key: key }, { onConflict: "account_id,process_id,target_type,target_id,step_key" });
+    if (on) {
+      const { error } = await supabase.from("cs_process_progress").upsert({ account_id: currentUser.account_id, process_id: proc.id, target_type: target.type, target_id: target.id, step_key: key }, { onConflict: "account_id,process_id,target_type,target_id,step_key" });
+      if (!error && finishesProcess(allKeys, doneKeys, hubDone, key)) celebrateFinish();
+    }
     else await supabase.from("cs_process_progress").delete().eq("target_type", target.type).eq("target_id", target.id).eq("process_id", proc.id).eq("step_key", key);
     qc.invalidateQueries({ queryKey: progressKey });
   };
@@ -255,6 +261,43 @@ export default function CSProcesses() {
   const currentKey = target ? allKeys.find((k) => !isDone(k)) : undefined;
   const statusOf = useCallback((k: string): StepStatus => !target ? undefined : isDone(k) ? "done" : k === currentKey ? "current" : "pending", [target, isDone, currentKey]);
   const pct = allKeys.length ? Math.round((allKeys.filter((k) => isDone(k)).length / allKeys.length) * 100) : 0;
+  /** Processo de verdade terminado: todas as etapas marcadas como feitas. */
+  const allDone = isProcessFinished(allKeys, isDone);
+  const loaded = progressLoaded && (!syncOnboarding || hubLoaded);
+  const doneEdge = useRef<{ tag: string; done: boolean } | null>(null);
+  const finishTimer = useRef<number | null>(null);
+  const celebrating = useRef(false);
+  const [justFinished, setJustFinished] = useState(false);
+  /** Pulsa e avisa uma única vez, no momento em que o processo fecha. */
+  const celebrateFinish = useCallback(() => {
+    if (celebrating.current) return;
+    celebrating.current = true;
+    setJustFinished(true);
+    toast.success("Processo concluído ✓", { description: `${targetName ?? "Cliente"}: todas as ${allKeys.length} etapas foram marcadas como feitas.`, position: "top-center" });
+    if (finishTimer.current) window.clearTimeout(finishTimer.current);
+    finishTimer.current = window.setTimeout(() => {
+      setJustFinished(false);
+      celebrating.current = false;
+    }, 9000);
+  }, [targetName, allKeys.length]);
+  useEffect(() => {
+    if (!loaded) return;
+    const tag = `${target?.type ?? "-"}:${target?.id ?? "-"}:${proc?.id ?? "-"}`;
+    const prev = doneEdge.current;
+    doneEdge.current = { tag, done: allDone };
+    if (!prev || prev.tag !== tag) { setJustFinished(false); return; }
+    if (prev.done || !allDone) return;
+    celebrateFinish();
+  }, [loaded, allDone, target?.type, target?.id, proc?.id, celebrateFinish]);
+  useEffect(() => () => { if (finishTimer.current) window.clearTimeout(finishTimer.current); }, []);
+  const { data: finishedAt } = useQuery({
+    queryKey: ["cs-process-finished-at", target?.type, target?.id, proc?.id],
+    enabled: !!target && !!proc && allDone,
+    queryFn: async () => {
+      const { data } = await supabase.from("cs_process_progress").select("done_at").eq("target_type", target!.type).eq("target_id", target!.id).eq("process_id", proc.id).order("done_at", { ascending: false }).limit(1).maybeSingle();
+      return (data?.done_at as string | undefined) ?? null;
+    },
+  });
 
   const phases = useMemo(() => (proc?.phases ?? []).map((ph, pi) => ({ ...ph, pi, steps: ph.steps.map((s, si) => ({ s, key: `${pi}-${si}` })).filter(({ s }) => !q.trim() || norm(s.title + JSON.stringify(s.blocks)).includes(norm(q))) })).filter((ph) => ph.steps.length), [proc, q]);
 
@@ -415,9 +458,17 @@ export default function CSProcesses() {
   });
 
   const stepFooter = (key: string) => target && (
-    <Button size="sm" variant={isDone(key) ? "secondary" : "default"} disabled={hubDone.has(key) && !doneKeys.has(key)} onClick={() => toggle(key, !doneKeys.has(key))}>
-      {hubDone.has(key) && !doneKeys.has(key) ? "Feita conforme o Onboarding" : isDone(key) ? "Desmarcar etapa" : "Marcar etapa como feita"}
-    </Button>
+    <div className="space-y-2">
+      {allDone && (
+        <div className={cn("flex items-center gap-2 rounded-xl border border-success/45 bg-success/[0.08] px-3 py-2 text-sm font-medium", justFinished && "cs-done-pulse")}>
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+          Processo concluído — todas as etapas foram marcadas como feitas.
+        </div>
+      )}
+      <Button size="sm" variant={isDone(key) ? "secondary" : "default"} disabled={hubDone.has(key) && !doneKeys.has(key)} onClick={() => toggle(key, !doneKeys.has(key))}>
+        {hubDone.has(key) && !doneKeys.has(key) ? "Feita conforme o Onboarding" : isDone(key) ? "Desmarcar etapa" : "Marcar etapa como feita"}
+      </Button>
+    </div>
   );
 
   return (
@@ -488,11 +539,25 @@ export default function CSProcesses() {
         ))}
       </div>
 
-      {target && <div className="space-y-1"><div className="flex justify-between text-xs text-muted-foreground"><span>Progresso</span><span>{pct}%</span></div><Progress value={pct} /></div>}
+      {target && <div className="space-y-1"><div className="flex justify-between text-xs text-muted-foreground"><span>Progresso</span><span className={allDone ? "font-semibold text-success" : ""}>{allDone ? "Concluído" : `${pct}%`}</span></div><Progress value={pct} /></div>}
       {active > 0 && <EventTimeline accent={dots[active % 3]} />}
 
       {view === "flow" && !isMobile ? (
-        <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} entries={!target ? flowEntries : undefined} resetKey={flowReset} clientName={clientId ? targetName : undefined} />
+        <div className="space-y-4">
+          {allDone && (
+            <ProcessFinishedCard
+              clientName={targetName}
+              processTitle={proc.title}
+              stepCount={allKeys.length}
+              finishedAt={finishedAt}
+              pulse={justFinished}
+              onReview={() => { setView("list"); setSel(allKeys[0]); }}
+              onBoard={() => setTab("today")}
+              onSwitch={() => clearClientSelection(true)}
+            />
+          )}
+          <ProcessFlow groups={active === 0 ? onboardingGroups(proc) : undefined} process={proc} accent={dots[active % 3]} statusOf={statusOf} open={setOpenKey} badgeOf={badgeOf} entries={!target ? flowEntries : undefined} resetKey={flowReset} clientName={clientId ? targetName : undefined} />
+        </div>
       ) : (
         <>
           <ProcessOverview process={proc} statusOf={navStatus} onPick={pickPhase} />
@@ -512,12 +577,32 @@ export default function CSProcesses() {
                   </>
                 )}
                 <StepArrowKeys stepKey={selKey} enabled={view !== "flow"} onPrev={() => selIdx > 0 && setSel(allKeys[selIdx - 1])} onNext={() => selIdx < allKeys.length - 1 && setSel(allKeys[selIdx + 1])} />
+                {allDone ? (
+                  <ProcessFinishedCard
+                    clientName={targetName}
+                    processTitle={proc.title}
+                    stepCount={allKeys.length}
+                    finishedAt={finishedAt}
+                    pulse={justFinished}
+                    onReview={() => setSel(allKeys[0])}
+                    onBoard={() => setTab("today")}
+                    onSwitch={() => clearClientSelection(true)}
+                  />
+                ) : (
                 <div className="sticky bottom-3 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 z-10 rounded-2xl border bg-card px-3 py-2.5 shadow-md">
                   <Button variant="ghost" disabled={selIdx <= 0} className="gap-1 text-muted-foreground" onClick={() => setSel(allKeys[selIdx - 1])}><ChevronLeft className="h-4 w-4" />Etapa anterior</Button>
-                  <Button data-tour="next" disabled={!target && selIdx >= allKeys.length - 1} onClick={completeAndNext}>
-                    {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima") : selIdx >= allKeys.length - 1 ? "Fim do processo" : "Próxima etapa"}{(target || selIdx < allKeys.length - 1) && <ChevronRight className="ml-1 h-4 w-4" />}
+                  {!target && selIdx >= allKeys.length - 1 ? (
+                    <span data-tour="next" className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary">
+                      <CheckCircle2 className="h-4 w-4" />Fim do processo
+                      <span className="hidden text-xs font-normal text-muted-foreground sm:inline">· última etapa</span>
+                    </span>
+                  ) : (
+                  <Button data-tour="next" onClick={target && isDone(selKey) && selIdx >= allKeys.length - 1 && currentKey ? () => setSel(currentKey) : completeAndNext}>
+                    {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída · ver pendentes" : "Concluir e ir para a próxima") : "Próxima etapa"}{(target || selIdx < allKeys.length - 1) && <ChevronRight className="ml-1 h-4 w-4" />}
                   </Button>
+                  )}
                 </div>
+                )}
               </div>
             </div>
           )}
