@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Activity, AlertTriangle, CalendarCheck, ExternalLink, Flame, Info, Search, Target, Trophy, Users, UserX, Zap } from "lucide-react";
+import { Activity, AlertTriangle, CalendarCheck, ChevronRight, ExternalLink, Flame, Info, Search, Target, Trophy, Users, UserX, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -126,6 +126,29 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
       : items.filter((x) => (x.bucket === "ativa_7d" || x.bucket === "ativa_30d") && !x.plan);
     return base.sort((a, b) => (b.days ?? 9999) - (a.days ?? 9999));
   }, [items, riskTab]);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const riskGroups = useMemo(() => {
+    type G = { key: string; label: string; dot: string; items: Item[]; defaultOpen: boolean; limit?: number };
+    const by = (k: string, label: string, dot: string, f: (x: Item) => boolean, defaultOpen = true): G =>
+      ({ key: `${riskTab}-${k}`, label, dot, items: risk.filter(f), defaultOpen });
+    let gs: G[];
+    if (riskTab === "parada") {
+      const act = (x: Item) => !x.rykaInactive;
+      gs = [
+        by("31", "Sem entrar há 31 a 60 dias", "bg-warning", (x) => act(x) && (x.days ?? 0) <= 60),
+        by("61", "Sem entrar há 61 a 90 dias", "bg-warning/60", (x) => act(x) && (x.days ?? 0) > 60 && (x.days ?? 0) <= 90, false),
+        by("90", "Sem entrar há mais de 90 dias", "bg-danger/60", (x) => act(x) && (x.days ?? 0) > 90, false),
+        by("inativa", "Inativas na Ryka", "bg-muted-foreground/40", (x) => x.rykaInactive, false),
+      ];
+    } else {
+      const m = new Map<string, Item[]>();
+      for (const x of risk) { const k = x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora"; m.set(k, [...(m.get(k) ?? []), x]); }
+      gs = [...m.entries()].sort((a, b) => b[1].length - a[1].length).map(([k, xs], i) =>
+        ({ key: `${riskTab}-${k}`, label: k, dot: riskTab === "nunca" ? "bg-danger/60" : "bg-primary/60", items: xs, defaultOpen: i === 0 }));
+    }
+    return gs.filter((g) => g.items.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [risk, riskTab, teamName]);
   const riskCounts = {
     nunca: count("nunca"), parada: items.filter((x) => x.bucket === "parada_30d" || x.rykaInactive).length,
     plano: items.filter((x) => (x.bucket === "ativa_7d" || x.bucket === "ativa_30d") && !x.plan).length,
@@ -239,23 +262,36 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
           </CardHeader>
           <CardContent className="p-0 flex-1 max-h-[560px] overflow-y-auto">
             {risk.length === 0 && <p className="text-sm text-muted-foreground py-10 text-center">Nenhuma clínica nesta situação.</p>}
-            <ul className="divide-y divide-border">
-              {risk.slice(0, 40).map((x) => (
-                <li key={x.r.client.id}>
-                  <Link to={`/clients/${x.r.client.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50">
-                    <Initials name={x.r.client.full_name} photo={x.r.client.logo_url || x.r.client.avatar_url} />
-                    <span className="flex-1 min-w-0">
-                      <span className="block truncate text-sm font-medium">{x.r.client.full_name}</span>
-                      <span className="block truncate text-xs text-muted-foreground">{x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora"} · {x.product}</span>
-                    </span>
-                    <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
-                      x.rykaInactive || x.bucket === "nunca" ? "bg-danger/10 text-danger" : riskTab === "plano" ? "bg-muted text-muted-foreground" : "bg-warning/15 text-warning")}>
-                      {x.rykaInactive ? "Inativa na Ryka" : x.bucket === "nunca" ? "Nunca entrou" : riskTab === "plano" ? "Sem plano" : `${x.days}d sem entrar`}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            {riskGroups.map((g) => {
+              const open = openGroups[g.key] ?? g.defaultOpen;
+              return (
+                <section key={g.key} className="border-b border-border last:border-0">
+                  <button onClick={() => setOpenGroups((o) => ({ ...o, [g.key]: !open }))}
+                    className="sticky top-0 z-10 flex w-full items-center gap-2 bg-card px-4 py-2 text-left text-xs font-medium text-muted-foreground hover:text-foreground">
+                    <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-90")} />
+                    <span className={cn("h-2 w-2 rounded-full", g.dot)} />
+                    <span className="flex-1">{g.label}</span>
+                    <span className="tabular-nums">{g.items.length}</span>
+                  </button>
+                  {open && (
+                    <ul className="pb-1">
+                      {g.items.slice(0, g.limit ?? 30).map((x) => (
+                        <li key={x.r.client.id}>
+                          <Link to={`/clients/${x.r.client.id}`} className="flex items-center gap-2.5 px-4 py-1.5 hover:bg-muted/50">
+                            <Initials name={x.r.client.full_name} photo={x.r.client.logo_url || x.r.client.avatar_url} size="h-6 w-6" />
+                            <span className="flex-1 min-w-0 truncate text-sm">{x.r.client.full_name}</span>
+                            <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                              {(x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora").split(" ")[0]}{x.days != null && !x.rykaInactive ? ` · ${x.days}d` : ""}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                      {g.items.length > (g.limit ?? 30) && <li className="px-4 py-1 text-[11px] text-muted-foreground">+{g.items.length - (g.limit ?? 30)} clínicas</li>}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
           </CardContent>
         </Card>
       </div>
