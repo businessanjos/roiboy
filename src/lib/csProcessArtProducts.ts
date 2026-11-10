@@ -1,4 +1,4 @@
-import type { Action } from "@/lib/csProcessActions";
+import type { Action, StepInfo } from "@/lib/csProcessActions";
 
 /** Etiquetas de arte que existem nos processos (EM = Eternum Mentoring, EC = Eternum Club). */
 export type ArtTag = "EM" | "EC";
@@ -27,14 +27,16 @@ export function clientArtTags(productNames: string[]): Set<ArtTag> {
 /**
  * Esconde a arte de um produto que a cliente não tem.
  * Sem cliente, sem produto conhecido, ou com os dois produtos, nada muda: as duas artes aparecem.
+ * A ação escondida continua na lista, para não mudar a numeração dos passos nem as esperas.
  */
-export function applyArtVisibility(actions: Action[], productNames: string[]): Action[] {
+export function applyArtVisibility(info: StepInfo, productNames: string[]): StepInfo {
   const owned = clientArtTags(productNames);
-  if (!owned.size) return actions;
-  return actions.map((a) => {
+  if (!owned.size) return info;
+  const actions = info.actions.map((a) => {
     if (a.kind !== "link") return a;
     const tag = artTagOf(a.label);
     if (!tag || owned.has(tag)) return a;
     return { ...a, hidden: true };
   });
+  return { ...info, actions };
 }

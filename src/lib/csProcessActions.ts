@@ -1,12 +1,13 @@
 import type { Step } from "@/lib/csProcesses";
 
-export type Action =
+export type Action = (
   | { kind: "message"; text: string; label?: string; channel: string }
   | { kind: "task"; text: string }
   | { kind: "wait"; text: string; what?: string }
   | { kind: "alert"; text: string }
-  | { kind: "link"; label: string; url: string; hidden?: boolean }
-  | { kind: "note"; text: string };
+  | { kind: "link"; label: string; url: string }
+  | { kind: "note"; text: string }
+) & { hidden?: boolean };
 
 export interface StepInfo { actions: Action[]; who: string; when?: string }
 

@@ -5,7 +5,7 @@ import { applyArtVisibility, artTagOf, clientArtTags } from "@/lib/csProcessArtP
 
 /** Etapa 1.3 — Grupos de WhatsApp (mentoria): tem as duas artes do Canva, EM e EC. */
 const step13 = csProcesses[0].phases[0].steps[2];
-const artsOf = (names: string[]) => visibleActions(applyArtVisibility(toStepInfo(step13).actions, names))
+const artsOf = (names: string[]) => visibleActions(applyArtVisibility(toStepInfo(step13), names).actions)
   .filter((a) => a.kind === "link")
   .map((a: any) => a.label);
 
@@ -40,10 +40,12 @@ describe("arte do Canva conforme o produto da cliente", () => {
   });
 
   it("esconder não muda a numeração dos passos", () => {
-    const before = toStepInfo(step13).actions;
+    const before = toStepInfo(step13);
     const after = applyArtVisibility(before, ["EM l Eternum Mentoring"]);
-    expect(after.length).toBe(before.length);
-    expect(after.findIndex((a) => a.kind === "link")).toBe(before.findIndex((a) => a.kind === "link"));
+    expect(after.actions.length).toBe(before.actions.length);
+    expect(after.actions.findIndex((a) => a.kind === "link")).toBe(before.actions.findIndex((a) => a.kind === "link"));
+    expect(after.who).toBe(before.who);
+    expect(after.when).toBe(before.when);
   });
 });
 
