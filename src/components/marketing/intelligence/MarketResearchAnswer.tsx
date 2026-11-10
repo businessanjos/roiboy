@@ -46,6 +46,32 @@ const iconColor = {
   data: "text-info",
 };
 
+const KNOWN_HEADINGS = [
+  "Resposta direta", "Resumo executivo", "Resumo", "Números-chave", "Numeros-chave",
+  "Contexto & interpretação", "Contexto e interpretação", "Contexto", "Oportunidades / Riscos",
+  "Oportunidades e riscos", "Oportunidades", "Riscos", "Metodologia", "Conclusão", "Recomendações",
+];
+
+/** Separa um título "## X" que veio colado com o texto do parágrafo seguinte. */
+function splitHeading(line: string): string[] {
+  const m = line.match(/^(#{2,4})\s+(.+)$/);
+  if (!m) return [line];
+  const [, hashes, content] = m;
+  const plain = content.trim();
+  for (const k of KNOWN_HEADINGS) {
+    if (plain.toLowerCase().startsWith(k.toLowerCase()) && plain.length > k.length + 1) {
+      const rest = plain.slice(k.length).replace(/^[\s:—–-]+/, "");
+      if (rest.length > 20) return [`${hashes} ${k}`, rest];
+    }
+  }
+  if (plain.length <= 90) return [line];
+  // Título longo: corta no primeiro ":" ou após ~10 palavras
+  const colon = plain.indexOf(":");
+  if (colon > 3 && colon < 90) return [`${hashes} ${plain.slice(0, colon)}`, plain.slice(colon + 1).trim()];
+  const words = plain.split(/\s+/);
+  return [`${hashes} ${words.slice(0, 10).join(" ")}…`, words.slice(10).join(" ")];
+}
+
 function parseAnswer(raw: string): { tldr: string | null; stats: KeyStat[]; sections: Section[]; rest: string } {
   const text = stripCitations(raw)
     .replace(/\s*-{3,}\s*/g, "\n")
