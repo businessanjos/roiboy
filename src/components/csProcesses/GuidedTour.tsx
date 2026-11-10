@@ -7,12 +7,13 @@ export interface TourStep { target?: string; title?: string; text: string; prima
 
 const W = 380, GAP = 14, PAD = 8;
 
-export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: boolean; onClose: () => void }) {
+export function GuidedTour({ steps, open, onClose, onSkip }: { steps: TourStep[]; open: boolean; onClose: () => void; onSkip?: () => void }) {
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [bh, setBh] = useState(180);
   const bubble = useRef<HTMLDivElement>(null);
   const step = steps[i];
+  const skip = onSkip ?? onClose;
   const stepsRef = useRef(steps); stepsRef.current = steps;
 
   useEffect(() => { if (open) setI(0); }, [open]);
@@ -35,9 +36,9 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
   useLayoutEffect(() => { if (bubble.current) setBh(bubble.current.offsetHeight); });
   useEffect(() => {
     if (!open) return;
-    const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") skip(); };
     window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
-  }, [open, onClose]);
+  }, [open, skip]);
 
   if (!open || !step) return null;
   const last = i === steps.length - 1;
@@ -79,7 +80,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
               <div className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Tour guiado</div>
               <div className="text-xs text-muted-foreground">Passo {i + 1} de {steps.length}</div>
             </div>
-            <Button size="icon" variant="ghost" className="ml-auto h-8 w-8 rounded-full text-muted-foreground" aria-label="Fechar tour" onClick={onClose}><X className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" className="ml-auto h-8 w-8 rounded-full text-muted-foreground" aria-label="Fechar tour" onClick={last ? onClose : skip}><X className="h-4 w-4" /></Button>
           </div>
           {step.title && <h2 className="mb-2 text-xl font-semibold leading-tight tracking-tight">{step.title}</h2>}
           <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">{step.text}</p>
@@ -90,8 +91,8 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
             <span className="text-xs font-medium tabular-nums text-muted-foreground">{Math.round(((i + 1) / steps.length) * 100)}%</span>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {step.secondary ? <Button size="sm" variant="ghost" className="mr-auto" onClick={onClose}>{step.secondary}</Button>
-              : !last && <Button size="sm" variant="ghost" className="mr-auto" onClick={onClose}>Pular</Button>}
+            {step.secondary ? <Button size="sm" variant="ghost" className="mr-auto" onClick={skip}>{step.secondary}</Button>
+              : !last && <Button size="sm" variant="ghost" className="mr-auto" onClick={skip}>Pular</Button>}
             {i > 0 && !step.primary && <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setI(i - 1)}><ArrowLeft className="h-3.5 w-3.5" />Voltar</Button>}
             <Button size="sm" className="gap-1.5" autoFocus onClick={next}>{step.primary ?? (last ? "Concluir" : "Próximo")}<ArrowRight className="h-3.5 w-3.5" /></Button>
           </div>
