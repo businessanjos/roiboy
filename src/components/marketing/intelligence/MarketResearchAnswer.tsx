@@ -1,8 +1,10 @@
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { Button } from "@/components/ui/button";
 import remarkGfm from "remark-gfm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Lightbulb, AlertTriangle, Target, BarChart3 } from "lucide-react";
+import { TrendingUp, Lightbulb, AlertTriangle, Target, BarChart3, ChevronDown, Maximize2, Minimize2 } from "lucide-react";
 
 /**
  * Parser leve: transforma o markdown vindo da Perplexity em blocos visuais.
@@ -45,7 +47,7 @@ const iconColor = {
 };
 
 function parseAnswer(raw: string): { tldr: string | null; stats: KeyStat[]; sections: Section[]; rest: string } {
-  const text = stripCitations(raw);
+  const text = stripCitations(raw).replace(/([^\n])\s*(#{2,4}\s)/g, "$1\n$2");
   const lines = text.split(/\r?\n/);
 
   let tldr: string | null = null;
@@ -124,6 +126,9 @@ export function MarketResearchAnswer({ answer }: { answer: string }) {
   const { tldr, stats, sections, rest } = parseAnswer(answer);
 
   const hasStructured = tldr || stats.length > 0 || sections.length > 0;
+  const [open, setOpen] = useState<Set<number>>(new Set());
+  const allOpen = sections.length > 0 && open.size === sections.length;
+  const toggle = (i: number) => setOpen(prev => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; });
 
   return (
     <div className="space-y-4">
@@ -172,23 +177,39 @@ export function MarketResearchAnswer({ answer }: { answer: string }) {
       )}
 
       {sections.length > 0 && (
-        <div className="grid gap-3 md:grid-cols-2">
-          {sections.map((sec, i) => {
-            const Icon = iconMap[sec.icon];
-            return (
-              <Card key={i} className="hover:shadow-sm transition-shadow">
-                <CardContent className="py-3.5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Icon className={`h-4 w-4 ${iconColor[sec.icon]}`} />
-                    <h4 className="font-semibold text-sm">{sec.title}</h4>
-                  </div>
-                  <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:hidden prose-strong:text-foreground text-sm text-muted-foreground">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{sec.body}</ReactMarkdown>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Análise detalhada · {sections.length} seç{sections.length === 1 ? "ão" : "ões"}</span>
+            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setOpen(allOpen ? new Set() : new Set(sections.map((_, i) => i)))}>
+              {allOpen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              {allOpen ? "Minimizar tudo" : "Maximizar tudo"}
+            </Button>
+          </div>
+          <div className="divide-y rounded-lg border bg-card">
+            {sections.map((sec, i) => {
+              const Icon = iconMap[sec.icon];
+              const isOpen = open.has(i);
+              return (
+                <div key={i} className="min-w-0">
+                  <button type="button" aria-expanded={isOpen} onClick={() => toggle(i)} className="flex w-full items-center gap-2.5 px-4 py-3 text-left transition-colors hover:bg-muted/40">
+                    <Icon className={`h-4 w-4 shrink-0 ${iconColor[sec.icon]}`} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold">{sec.title}</span>
+                      {!isOpen && <span className="mt-0.5 block truncate text-xs text-muted-foreground">{sec.body.replace(/[*_#>`-]/g, "").replace(/\s+/g, " ").slice(0, 160)}</span>}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {isOpen && (
+                    <div className="animate-fade-in px-4 pb-4 pl-11">
+                      <div className="prose prose-sm max-w-3xl dark:prose-invert prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:text-sm prose-headings:mt-3 prose-headings:mb-1 prose-strong:text-foreground text-sm leading-relaxed text-muted-foreground break-words">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{sec.body}</ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
