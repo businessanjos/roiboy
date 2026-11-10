@@ -550,7 +550,7 @@ export default function CSProcesses() {
       </Button>
       <ClientProcessDataDialog client={client} focus={editField} open={editClientOpen} onOpenChange={setEditClientOpen} />
       {track && <ProcessTrack card={track.card} process={csProcesses[track.pi]} processIndex={track.pi} today={spDate()} onClose={() => setTrack(null)} onGo={(k) => goToStep(track.pi, track.card, k)} />}
-      <GuidedTour steps={MAIN_TOUR} open={mainTour.open} onClose={mainTour.close} />
+      <GuidedTour steps={MAIN_TOUR} open={mainTour.open} onClose={mainTour.close} onSkip={() => { mainTour.close(); setTab("process"); setView("list"); setQ(""); setActive(0); setSel("0-0"); toast.info("Tour pausado", { description: "Sempre que quiser rever o passo a passo, clique no botão ? no canto de baixo da tela." }); }} />
       <GuidedTour steps={MINI} open={miniTour.open && !mainTour.open} onClose={miniTour.close} />
     </div>
   );
