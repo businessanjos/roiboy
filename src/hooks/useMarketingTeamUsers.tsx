@@ -17,6 +17,7 @@ export interface MarketingTeamUser {
  * Pessoas com acesso ao setor de Marketing.
  * Fonte da verdade: user_sector_access (sector_id = 'marketing').
  * Usar em TODO seletor de pessoas dentro da área de Marketing.
+ * Lucas Suporte fica fora dos seletores (filterMarketingPeople).
  */
 export function useMarketingTeamUsers() {
   const { currentUser } = useCurrentUser();

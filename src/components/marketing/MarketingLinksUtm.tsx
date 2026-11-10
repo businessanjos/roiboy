@@ -146,7 +146,7 @@ export function MarketingLinksUtm() {
       setLinks((linksRes.data as MarketingLink[]) || []);
       setCampaigns(campRes.data || []);
       setEvents(evRes.data || []);
-      setSellers(userRes.data || []);
+      setSellers(filterMarketingPeople(userRes.data || []));
     } catch (e) {
       console.error(e);
     } finally {
