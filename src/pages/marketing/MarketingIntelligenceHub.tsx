@@ -14,7 +14,6 @@ export default function MarketingIntelligenceHub() {
 
   const tabs = useMemo<MarketingHubTab[]>(() => {
     const base: MarketingHubTab[] = [
-      { value: "commercial", label: "Comercial", icon: BarChart3, Component: CommercialIntelligence },
       { value: "insights", label: "Insights", icon: BarChart3, Component: MarketingInsights },
     ];
     const email = (currentUser?.email ?? "").toLowerCase();
