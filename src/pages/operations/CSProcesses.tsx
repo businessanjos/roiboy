@@ -444,9 +444,17 @@ export default function CSProcesses() {
   });
 
   const stepFooter = (key: string) => target && (
-    <Button size="sm" variant={isDone(key) ? "secondary" : "default"} disabled={hubDone.has(key) && !doneKeys.has(key)} onClick={() => toggle(key, !doneKeys.has(key))}>
-      {hubDone.has(key) && !doneKeys.has(key) ? "Feita conforme o Onboarding" : isDone(key) ? "Desmarcar etapa" : "Marcar etapa como feita"}
-    </Button>
+    <div className="space-y-2">
+      {allDone && (
+        <div className={cn("flex items-center gap-2 rounded-xl border border-success/45 bg-success/[0.08] px-3 py-2 text-sm font-medium", justFinished && "cs-done-pulse")}>
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+          Processo concluído — todas as etapas foram marcadas como feitas.
+        </div>
+      )}
+      <Button size="sm" variant={isDone(key) ? "secondary" : "default"} disabled={hubDone.has(key) && !doneKeys.has(key)} onClick={() => toggle(key, !doneKeys.has(key))}>
+        {hubDone.has(key) && !doneKeys.has(key) ? "Feita conforme o Onboarding" : isDone(key) ? "Desmarcar etapa" : "Marcar etapa como feita"}
+      </Button>
+    </div>
   );
 
   return (
@@ -517,7 +525,7 @@ export default function CSProcesses() {
         ))}
       </div>
 
-      {target && <div className="space-y-1"><div className="flex justify-between text-xs text-muted-foreground"><span>Progresso</span><span>{pct}%</span></div><Progress value={pct} /></div>}
+      {target && <div className="space-y-1"><div className="flex justify-between text-xs text-muted-foreground"><span>Progresso</span><span className={allDone ? "font-semibold text-success" : ""}>{allDone ? "Concluído" : `${pct}%`}</span></div><Progress value={pct} /></div>}
       {active > 0 && <EventTimeline accent={dots[active % 3]} />}
 
       {view === "flow" && !isMobile ? (
