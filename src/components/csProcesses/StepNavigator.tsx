@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { plainText, stepTitle, toStepInfo, visibleActions, type Action } from "@/lib/csProcessActions";
 import { applyArtVisibility } from "@/lib/csProcessArtProducts";
 import type { Process, Step } from "@/lib/csProcesses";
+import { cn } from "@/lib/utils";
 
 export type NavStatus = "done" | "current" | "pending";
 const phaseName = (t: string) => t.replace(/^Fase\s+\d+\s*[—-]\s*/i, "");
