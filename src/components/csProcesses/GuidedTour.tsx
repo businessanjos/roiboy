@@ -90,8 +90,8 @@ export function GuidedTour({ steps, open, onClose, onSkip }: { steps: TourStep[]
         <div className="pointer-events-none absolute rounded-xl transition-all duration-300"
           style={{ top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2, boxShadow: "0 0 0 3px hsl(var(--primary)), 0 0 22px 4px hsl(var(--primary) / 0.45), 0 0 0 9999px hsl(var(--tour-overlay) / 0.82)" }} />
       ) : <div className="absolute inset-0 backdrop-blur-sm" style={{ background: "hsl(var(--tour-overlay) / 0.82)" }} />}
-      <div ref={bubble}
-        className={`absolute animate-in fade-in zoom-in-95 rounded-3xl border bg-popover shadow-2xl transition-[top,left] duration-300 ${pos ? "" : "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"}`}
+      <div ref={bubble} tabIndex={-1}
+        className={`absolute outline-none animate-in fade-in zoom-in-95 rounded-3xl border bg-popover shadow-2xl transition-[top,left] duration-300 ${pos ? "" : "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"}`}
         style={{ width: w, ...(pos ? { top: pos.top, left: pos.left } : {}) }}>
         {arrow && <span className="absolute h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t bg-popover" style={{ ...arrow, transform: `translate(${pos!.side === "bottom" || pos!.side === "top" ? "-50%" : "0"}, ${pos!.side === "left" || pos!.side === "right" ? "-50%" : "0"}) rotate(${({ bottom: 45, top: 225, right: -45, left: 135 } as const)[pos!.side]}deg)` }} />}
         <div className="overflow-hidden rounded-[inherit]">
@@ -114,10 +114,10 @@ export function GuidedTour({ steps, open, onClose, onSkip }: { steps: TourStep[]
             <span className="text-xs font-medium tabular-nums text-muted-foreground">{Math.round(((i + 1) / steps.length) * 100)}%</span>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {step.secondary ? <Button size="sm" variant="ghost" className="mr-auto" onClick={skip}>{step.secondary}</Button>
-              : !last && <Button size="sm" variant="ghost" className="mr-auto" onClick={skip}>Pular</Button>}
-            {i > 0 && !step.primary && <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setI(i - 1)}><ArrowLeft className="h-3.5 w-3.5" />Voltar</Button>}
-            <Button size="sm" className="gap-1.5" autoFocus onClick={next}>{step.primary ?? (last ? "Concluir" : "Próximo")}<ArrowRight className="h-3.5 w-3.5" /></Button>
+            {step.secondary ? <Button size="sm" variant="ghost" className="mr-auto outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55" onClick={skip}>{step.secondary}</Button>
+              : !last && <Button size="sm" variant="ghost" className="mr-auto outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55" onClick={skip}>Pular</Button>}
+            {i > 0 && !step.primary && <Button size="sm" variant="outline" className="gap-1.5 outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55" onClick={() => setI(i - 1)}><ArrowLeft className="h-3.5 w-3.5" />Voltar</Button>}
+            <Button ref={primary} size="sm" className="gap-1.5 outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55" onClick={next}>{step.primary ?? (last ? "Concluir" : "Próximo")}<ArrowRight className="h-3.5 w-3.5" /></Button>
           </div>
         </div>
         </div>
