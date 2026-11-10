@@ -273,7 +273,7 @@ export default function CSProcesses() {
     if (celebrating.current) return;
     celebrating.current = true;
     setJustFinished(true);
-    toast.success("Processo concluído ✓", { description: `${targetName ?? "Cliente"}: todas as ${allKeys.length} etapas foram marcadas como feitas.` });
+    toast.success("Processo concluído ✓", { description: `${targetName ?? "Cliente"}: todas as ${allKeys.length} etapas foram marcadas como feitas.`, position: "top-center" });
     if (finishTimer.current) window.clearTimeout(finishTimer.current);
     finishTimer.current = window.setTimeout(() => {
       setJustFinished(false);
