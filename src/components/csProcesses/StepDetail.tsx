@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { OnboardingGuideButton, ONBOARDING_GUIDE_URL } from "@/components/csProcesses/OnboardingMeetingGuide";
 import { GrowthPhasesButton, GROWTH_PHASES_URL } from "@/components/csProcesses/GrowthPhasesGuide";
 import { toast } from "sonner";
-import { fillVars, plainText, stepTitle, type Action, type StepInfo } from "@/lib/csProcessActions";
+import { fillVars, plainText, stepTitle, visibleActions, type Action, type StepInfo } from "@/lib/csProcessActions";
 import { resolveProcessLink, replaceClientLinks, FIELD_LABEL, type ProcessClient, type ClientField } from "@/lib/csClientLinks";
 import type { Step } from "@/lib/csProcesses";
 
@@ -225,13 +225,14 @@ export function StepDetail({ step, number, phaseLabel, info, vars, canTick, done
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-1"><User className="h-4 w-4" />{info.who}</span>
         {info.when && <span className="inline-flex items-center gap-1"><CalendarClock className="h-4 w-4" />{info.when}</span>}
-        <span className="inline-flex items-center gap-1"><ListChecks className="h-4 w-4" />{info.actions.length} {info.actions.length === 1 ? "ação" : "ações"}</span>
+        <span className="inline-flex items-center gap-1"><ListChecks className="h-4 w-4" />{visibleActions(info.actions).length} {visibleActions(info.actions).length === 1 ? "ação" : "ações"}</span>
       </div>
       {links.length >= 3 && (
         <Button className="mt-4 gap-2" onClick={openAll}><Layers className="h-4 w-4" />Abrir tudo para a reunião</Button>
       )}
       <ol className="mt-6">
         {info.actions.map((a, j) => {
+          if (a.hidden) return null;
           const tk = `${stepKey}-a${j}`;
           return <StepActionItem key={j} a={a} idx={j} vars={vars} canTick={canTick} ctx={ctx} taskDone={doneKeys.has(tk)}
             onTask={(v) => { onTask(tk, v); if (v) ctx.onDoneAction(j); }} tour={tourFor(a.kind)} />;

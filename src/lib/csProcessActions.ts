@@ -1,12 +1,13 @@
 import type { Step } from "@/lib/csProcesses";
 
-export type Action =
+export type Action = (
   | { kind: "message"; text: string; label?: string; channel: string }
   | { kind: "task"; text: string }
   | { kind: "wait"; text: string; what?: string }
   | { kind: "alert"; text: string }
   | { kind: "link"; label: string; url: string }
-  | { kind: "note"; text: string };
+  | { kind: "note"; text: string }
+) & { hidden?: boolean };
 
 export interface StepInfo { actions: Action[]; who: string; when?: string }
 
@@ -61,6 +62,9 @@ export function fillVars(text: string, vars: Record<string, string | undefined>)
 }
 
 export const plainText = (t: string) => t.replace(/\*\*(.+?)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2");
+
+/** Ações que devem aparecer para a cliente selecionada (as escondidas continuam na lista para não bagunçar a numeração). */
+export const visibleActions = (actions: Action[]) => actions.filter((a) => !a.hidden);
 
 const ASKS_REPLY = /(me avise|me responda|me retorne|assim que finalizar|preench|opções de agenda)/i;
 function whatOf(t: string) {
