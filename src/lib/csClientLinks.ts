@@ -7,6 +7,8 @@ export interface ProcessClient {
   platform_login?: string | null;
   phone_e164?: string | null;
   responsible_user_id?: string | null;
+  /** ID da clínica na Ryka (vem da liberação de acesso). */
+  ryka_clinic_id?: string | null;
 }
 
 export type ClientField = "instagram" | "ryka_url" | "platform_login" | "phone_e164" | "responsible_user_id";
@@ -33,12 +35,13 @@ const igHandle = (v?: string | null) => (v ?? "").trim().replace(/^@/, "").repla
 /** Classifica um link do texto do processo. Links que não dependem da cliente voltam como "static". */
 export function resolveProcessLink(url: string, client: ProcessClient | null): ResolvedLink {
   const who = firstName(client?.full_name);
-  let type: "cadastro" | "ficha" | "instagram" | "ryka" | "plano" | null = null;
+  let type: "cadastro" | "ficha" | "instagram" | "ryka" | "plano" | "campanhas" | null = null;
   if (/iamroy\.app\/f\//.test(url) && url.includes(CADASTRO_FORM_ID)) type = "cadastro";
   else if (/iamroy\.app\/clients\/[0-9a-f-]{36}/i.test(url)) type = "ficha";
   else if (/^https?:\/\/(www\.)?instagram\.com\/?$/i.test(url)) type = "instagram";
   else if (/^https?:\/\/ryka\.app\/dashboard\/?$/i.test(url)) type = "ryka";
   else if (/^https?:\/\/ryka\.app\/plano-de-acao\/?$/i.test(url)) type = "plano";
+  else if (/^https?:\/\/ryka\.app\/marketing\/campanhas\/?$/i.test(url)) type = "campanhas";
   if (!type) return { kind: "static", url };
   const labels = {
     cadastro: `Abrir cadastro empresarial da ${who}`,
@@ -46,6 +49,7 @@ export function resolveProcessLink(url: string, client: ProcessClient | null): R
     instagram: `Abrir Instagram da ${who}`,
     ryka: `Abrir Clínica Ryka da ${who}`,
     plano: `Abrir plano de ação da ${who}`,
+    campanhas: `Abrir campanhas da ${who}`,
   };
   if (!client) return { kind: "needsClient", label: labels[type].replace(` da ${who}`, " da cliente") };
   if (type === "cadastro") return { kind: "client", url: `${ROY}/f/${CADASTRO_FORM_ID}?clientId=${client.id}`, label: labels.cadastro };
@@ -54,6 +58,12 @@ export function resolveProcessLink(url: string, client: ProcessClient | null): R
     const h = igHandle(client.instagram);
     return h ? { kind: "client", url: `https://www.instagram.com/${h}`, label: labels.instagram } : { kind: "missing", field: "instagram", label: labels.instagram };
   }
+  const cid = (client.ryka_clinic_id ?? "").trim();
+  if (cid && (type === "ryka" || type === "plano" || type === "campanhas")) {
+    const path = { ryka: "dashboard", plano: "plano-de-acao", campanhas: "marketing/campanhas" }[type];
+    return { kind: "client", url: `https://ryka.app/${path}?clinic_id=${encodeURIComponent(cid)}`, label: labels[type] };
+  }
+  if (type === "campanhas") return { kind: "static", url };
   const r = (client.ryka_url ?? "").trim();
   if (type === "plano") {
     if (!r) return { kind: "missing", field: "ryka_url", label: labels.plano };

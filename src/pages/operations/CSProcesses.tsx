@@ -338,7 +338,7 @@ export default function CSProcesses() {
       const { data } = await supabase.from("clients").select("id, full_name, instagram, ryka_url, platform_login, phone_e164, responsible_user_id").eq("id", clientId!).maybeSingle();
       if (!data) return null;
       const { data: prov } = await supabase.from("client_ryka_provisions").select("email, status, ryka_response").eq("client_id", clientId!).order("created_at", { ascending: false }).limit(1).maybeSingle();
-      return { ...(data as ProcessClient), loginFallback: (prov?.email as string | undefined) ?? null, rykaProv: prov ? { status: prov.status as string, lastLogin: ((prov as any).ryka_response?.last_login_at as string | null) ?? null } : null };
+      return { ...(data as ProcessClient), ryka_clinic_id: (prov as any)?.status === "success" ? ((prov as any).ryka_response?.clinic_id ?? null) : null, loginFallback: (prov?.email as string | undefined) ?? null, rykaProv: prov ? { status: prov.status as string, lastLogin: ((prov as any).ryka_response?.last_login_at as string | null) ?? null } : null };
     },
   });
   const vars = useMemo(() => processVars(client, (client as any)?.loginFallback, (currentUser as any)?.name), [client, currentUser]);
