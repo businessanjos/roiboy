@@ -3836,6 +3836,69 @@ export type Database = {
           },
         ]
       }
+      client_ryka_usage_daily: {
+        Row: {
+          account_id: string
+          action_plan_updated_at: string | null
+          active_users_30d: number | null
+          active_users_7d: number | null
+          appointments_30d: number | null
+          client_id: string
+          clinic_id: string | null
+          consultations_30d: number | null
+          created_at: string
+          has_action_plan: boolean | null
+          id: string
+          last_login_at: string | null
+          leads_30d: number | null
+          leads_7d: number | null
+          modules_used: string[] | null
+          raw: Json | null
+          snapshot_date: string
+          users_total: number | null
+        }
+        Insert: {
+          account_id: string
+          action_plan_updated_at?: string | null
+          active_users_30d?: number | null
+          active_users_7d?: number | null
+          appointments_30d?: number | null
+          client_id: string
+          clinic_id?: string | null
+          consultations_30d?: number | null
+          created_at?: string
+          has_action_plan?: boolean | null
+          id?: string
+          last_login_at?: string | null
+          leads_30d?: number | null
+          leads_7d?: number | null
+          modules_used?: string[] | null
+          raw?: Json | null
+          snapshot_date?: string
+          users_total?: number | null
+        }
+        Update: {
+          account_id?: string
+          action_plan_updated_at?: string | null
+          active_users_30d?: number | null
+          active_users_7d?: number | null
+          appointments_30d?: number | null
+          client_id?: string
+          clinic_id?: string | null
+          consultations_30d?: number | null
+          created_at?: string
+          has_action_plan?: boolean | null
+          id?: string
+          last_login_at?: string | null
+          leads_30d?: number | null
+          leads_7d?: number | null
+          modules_used?: string[] | null
+          raw?: Json | null
+          snapshot_date?: string
+          users_total?: number | null
+        }
+        Relationships: []
+      }
       client_service_history: {
         Row: {
           account_id: string
