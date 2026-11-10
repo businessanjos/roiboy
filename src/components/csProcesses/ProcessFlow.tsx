@@ -50,20 +50,42 @@ export function StepCard({ step, status, onClick, tourId, badge, flow = false }:
 export function CycleView({ step }: { step: Step }) {
   const items = step.blocks.filter((b) => b.kind === "note" && /^\d+\./.test(b.text)).map((b) => ("text" in b ? b.text : "").replace(/^\d+\.\s*/, "").split(/ — |:/)[0]);
   const labels = items.length ? items : ["Durante o mês", "Última semana", "Primeiro dia", "Primeiros dias"];
-  const R = 90;
+  const R = 92; const C = 2 * Math.PI * R;
+  const [act, setAct] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const t = window.setInterval(() => setAct((a) => (a + 1) % labels.length), 2200);
+    return () => window.clearInterval(t);
+  }, [labels.length]);
   return (
-    <div className="relative mx-auto h-64 w-64">
-      <svg viewBox="0 0 260 260" className="absolute inset-0 text-primary/50">
-        <circle cx="130" cy="130" r={R} fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="6 6" />
+    <div className="relative mx-auto h-72 w-72">
+      <style>{`@keyframes cyc-spin{to{transform:rotate(360deg)}}@keyframes cyc-dash{to{stroke-dashoffset:-${C}}}`}</style>
+      <div className="absolute inset-[18%] rounded-full bg-primary/10 blur-2xl motion-safe:animate-pulse" />
+      <svg viewBox="0 0 260 260" className="absolute inset-0">
+        <defs>
+          <linearGradient id="cyc-g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="1" />
+            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <circle cx="130" cy="130" r={R} fill="none" stroke="hsl(var(--primary) / 0.25)" strokeWidth="2" strokeDasharray="4 7" />
+        <g style={{ transformOrigin: "130px 130px", animation: "cyc-spin 6s linear infinite" }} className="motion-reduce:[animation:none!important]">
+          <circle cx="130" cy="130" r={R} fill="none" stroke="url(#cyc-g)" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${C * 0.28} ${C}`} />
+          <circle cx={130 + R} cy="130" r="5" fill="hsl(var(--primary))" />
+        </g>
       </svg>
-      <RefreshCw className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-primary" />
+      <div className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full bg-card shadow-lg ring-2 ring-primary/30">
+        <RefreshCw className="h-6 w-6 text-primary motion-safe:[animation:cyc-spin_6s_linear_infinite]" />
+        <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">mensal</span>
+      </div>
       {labels.map((l, i) => {
-        const a = (i / labels.length) * Math.PI * 2 - Math.PI / 2;
+        const ang = (i / labels.length) * Math.PI * 2 - Math.PI / 2; const on = i === act;
         return (
-          <div key={i} className="absolute w-28 -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card px-2 py-1 text-center text-xs shadow-sm"
-            style={{ left: `${(130 + R * Math.cos(a)) / 2.6}%`, top: `${(130 + R * Math.sin(a)) / 2.6}%` }}>
-            {i + 1}. {l.replace(/\*\*/g, "")}
-          </div>
+          <button type="button" key={i} onMouseEnter={() => setAct(i)} className={`absolute flex w-32 -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-xl border bg-card px-2.5 py-1.5 text-left text-xs shadow-sm transition-all duration-500 ${on ? "scale-110 border-primary text-foreground shadow-lg ring-2 ring-primary/30" : "text-muted-foreground"}`}
+            style={{ left: `${(130 + R * Math.cos(ang)) / 2.6}%`, top: `${(130 + R * Math.sin(ang)) / 2.6}%` }}>
+            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors duration-500 ${on ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary"}`}>{i + 1}</span>
+            <span className="leading-snug">{l.replace(/\*\*/g, "")}</span>
+          </button>
         );
       })}
     </div>
