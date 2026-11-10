@@ -1,5 +1,5 @@
 import { Pencil } from "lucide-react";
-import { ArrowRight, Check } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -61,7 +61,7 @@ export function ProcessOverview({ process, statusOf, onPick }: { process: Proces
               <p className="mb-2 text-xs text-muted-foreground">{done} de {keys.length} etapas</p>
               <Progress value={keys.length ? (done / keys.length) * 100 : 0} className="h-1.5" />
             </button>
-            {pi < process.phases.length - 1 && <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />}
+            {pi < process.phases.length - 1 && <button type="button" onClick={() => onPick(pi + 1)} title={`Ir para a Fase ${pi + 2}`} aria-label={`Ir para a Fase ${pi + 2}`} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground/70 transition-all duration-200 hover:translate-x-1 hover:bg-muted hover:text-primary"><ChevronRight className="h-4 w-4" /></button>}
           </div>
         );
       })}
