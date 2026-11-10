@@ -241,7 +241,7 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
               className={cn("absolute inset-x-0 bottom-0 z-10 h-20 bg-gradient-to-t from-background via-background/70 to-transparent transition-opacity duration-300", more ? "opacity-100" : "pointer-events-none opacity-0")} />
             </div>
           </div>
-        ) : tab === "4fa" ? <FourFA /> : <MacroMap counts={counts} onPick={go} />}
+        ) : tab === "4fa" ? <FourFA /> : <MacroMap counts={counts} onPick={go} on4fa={() => setTab("4fa")} />}
       </DialogContent>
     </Dialog>
   );
@@ -315,7 +315,7 @@ function FourFA() {
   );
 }
 
-function MacroMap({ counts, onPick }: { counts: Record<string, { total: number; done: number }>; onPick: (id: string) => void }) {
+function MacroMap({ counts, onPick, on4fa }: { counts: Record<string, { total: number; done: number }>; onPick: (id: string) => void; on4fa: () => void }) {
   const box = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -400,7 +400,7 @@ function MacroMap({ counts, onPick }: { counts: Record<string, { total: number; 
                     </div>
                   )}
                   {p.id === "f3" && (
-                    <div className="mt-3 flex w-full flex-col items-center">
+                    <button type="button" onClick={on4fa} title="Abrir o Método 4FA" className="group/4fa mt-3 flex w-full flex-col items-center rounded-2xl transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
                       <span className="h-5 w-0.5 bg-primary/60" />
                       <div className="rounded-full bg-primary px-4 py-1 text-xs font-black tracking-wide text-primary-foreground shadow">4FA</div>
                       <span className="h-4 w-0.5 bg-primary/60" />
@@ -418,7 +418,8 @@ function MacroMap({ counts, onPick }: { counts: Record<string, { total: number; 
                           );
                         })}
                       </div>
-                    </div>
+                      <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary opacity-70 transition group-hover/4fa:opacity-100">Abrir Método 4FA<ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/4fa:translate-x-1" /></span>
+                    </button>
                   )}
                 </div>
               );
