@@ -158,7 +158,7 @@ function StepActionItem({ a, idx, vars, taskDone, onTask, canTick, tour, ctx }: 
   const Icon = ICONS[a.kind];
   const dot = a.kind === "alert" ? "bg-destructive/15 text-destructive" : a.kind === "message" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground";
   return (
-    <li data-step-action className="group relative flex scroll-mt-24 gap-4 rounded-xl pb-6 transition-all duration-200 last:pb-0 data-[active=true]:z-[1] data-[active=true]:scale-[1.01] data-[active=true]:bg-card data-[active=true]:font-medium data-[active=true]:text-foreground data-[active=true]:shadow-lg data-[active=true]:ring-2 data-[active=true]:ring-primary data-[active=true]:ring-offset-4 data-[active=true]:ring-offset-card">
+    <li data-step-action className="group relative flex scroll-mt-24 gap-4 rounded-xl pb-6 transition-all duration-200 last:pb-0 data-[active=true]:z-[1] data-[active=true]:my-3 data-[active=true]:p-3 data-[active=true]:bg-card data-[active=true]:font-medium data-[active=true]:text-foreground data-[active=true]:shadow-lg data-[active=true]:ring-2 data-[active=true]:ring-primary [&[data-active=true]>span:first-child]:hidden">
       <span className="absolute left-4 top-9 bottom-0 w-px bg-border group-last:hidden" aria-hidden />
       <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${dot}`} title={`Passo ${idx + 1}`}>
         <Icon className="h-4 w-4" />
