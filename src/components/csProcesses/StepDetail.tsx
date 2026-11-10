@@ -88,6 +88,33 @@ export function InlineMarkdown({ text, vars = {}, ctx }: { text: string; vars?: 
   );
 }
 
+const linkLabel = (u: string) => /drive\.google\.com/i.test(u) ? "Abrir pasta no Google Drive" : /docs\.google\.com/i.test(u) ? "Abrir documento" : "Abrir link";
+
+function AlertCallout({ text, vars, ctx, tour }: { text: string; vars: Vars; ctx: StepContext; tour?: string }) {
+  const m = text.match(/^\s*\**\s*(IMPORTANTE|ATENÇÃO|ATENCAO|AVISO|OBS)\s*\**\s*[:!-]\s*/i);
+  const tag = m ? m[1].toUpperCase().replace("ATENCAO", "ATENÇÃO") : "Atenção";
+  const rest = m ? text.slice(m[0].length) : text;
+  const urls = rest.match(/https?:\/\/[^\s)]+/g) ?? [];
+  const body = rest.replace(/:?\s*https?:\/\/[^\s)]+/g, "").replace(/\s+([.,;])/g, "$1").trim();
+  return (
+    <div data-tour={tour} className="overflow-hidden rounded-xl border border-destructive/25 bg-destructive/5 shadow-sm">
+      <div className="flex gap-3 border-l-4 border-destructive/70 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-destructive">
+            <AlertTriangle className="h-3 w-3" />{tag}
+          </span>
+          {body && <p className="mt-2 text-[15px] leading-relaxed text-foreground"><InlineMarkdown text={body} vars={vars} ctx={ctx} /></p>}
+          {urls.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {urls.map((u) => <ProcessLinkButton key={u} url={u} ctx={ctx} fallbackLabel={linkLabel(u)} />)}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MessageCard({ a, vars, tour, ctx, onCopied }: { a: Extract<Action, { kind: "message" }>; vars: Vars; tour?: string; ctx: StepContext; onCopied: () => void }) {
   const long = a.text.split("\n").length > 3 || a.text.length > 260;
   const [open, setOpen] = useState(!long);
@@ -191,7 +218,7 @@ function StepActionItem({ a, idx, vars, taskDone, onTask, canTick, tour, ctx }: 
         )}
         {a.kind === "wait" && <WaitItem a={a} idx={idx} ctx={ctx} />}
         {a.kind === "alert" && (
-          <div data-tour={tour} className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 font-medium"><InlineMarkdown text={a.text} vars={vars} ctx={ctx} /></div>
+          <AlertCallout text={a.text} vars={vars} ctx={ctx} tour={tour} />
         )}
         {a.kind === "link" && <ProcessLinkButton url={a.url} ctx={ctx} fallbackLabel={a.label} />}
         {a.kind === "note" && <p className="text-muted-foreground"><InlineMarkdown text={a.text} vars={vars} ctx={ctx} /></p>}
