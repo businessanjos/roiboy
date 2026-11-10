@@ -119,6 +119,10 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, sort, q]);
   const shown = showAll ? ranking.slice(0, 50) : ranking.slice(0, 10);
+  // A sequência desce primeiro pela coluna da direita (1,2,3...) e continua na da esquerda.
+  const rightCount = Math.ceil(shown.length / 2);
+  const rightCol = shown.slice(0, rightCount);
+  const leftCol = shown.slice(rightCount);
 
   const risk = useMemo(() => {
     const base = riskTab === "nunca" ? items.filter((x) => x.bucket === "nunca")
@@ -238,9 +242,14 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
           </CardHeader>
           <CardContent className="p-0">
             {shown.length === 0 && <p className="text-sm text-muted-foreground py-10 text-center">Nenhuma clínica com uso registrado.</p>}
-            <ol className="grid lg:grid-cols-2 lg:[&>li:nth-child(odd)]:border-r border-border [&>li]:border-b [&>li]:border-border">
-              {shown.map((x, i) => <RankRow key={x.r.client.id} x={x} pos={i + 1} consultantName={x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora"} />)}
-            </ol>
+            <div className="grid border-border lg:grid-cols-2">
+              <ol start={1} className="order-1 border-border [&>li]:border-b [&>li]:border-border lg:order-none lg:col-start-2 lg:border-l">
+                {rightCol.map((x, i) => <RankRow key={x.r.client.id} x={x} pos={i + 1} consultantName={x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora"} />)}
+              </ol>
+              <ol start={rightCount + 1} className="order-2 border-border [&>li]:border-b [&>li]:border-border lg:order-none lg:col-start-1">
+                {leftCol.map((x, i) => <RankRow key={x.r.client.id} x={x} pos={rightCount + i + 1} consultantName={x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora"} />)}
+              </ol>
+            </div>
             {ranking.length > 10 && (
               <button onClick={() => setShowAll((v) => !v)} className="w-full border-t border-border py-2.5 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-muted/40">
                 {showAll ? "Mostrar só o top 10" : `Ver mais (${Math.min(50, ranking.length)} de ${ranking.length})`}
