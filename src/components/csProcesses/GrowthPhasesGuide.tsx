@@ -113,7 +113,7 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
           <div className="flex items-center gap-2">
           <div className="inline-flex rounded-xl border bg-muted/50 p-1">
             {([["map", "Mapa geral", Network], ["phases", "Fases", ListChecks], ["4fa", "Método 4FA", LayoutGrid]] as const).map(([k, l, I]) => (
-              <button key={k} onClick={() => setTab(k)} className={cn("flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all", tab === k ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground")}>
+              <button key={k} onClick={() => setTab(k)} className={cn("flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40", tab === k ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground")}>
                 <I className="h-4 w-4" />{l}
               </button>
             ))}
@@ -133,7 +133,7 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
                   const pc = counts[p.id]; const on = p.id === active; const complete = pc.total > 0 && pc.done === pc.total; const I = p.icon;
                   return (
                     <li key={p.id} className="flex items-center">
-                      <button onClick={() => setActive(p.id)} className={cn("group flex items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all", on ? "border-primary bg-primary/10 shadow-sm" : "border-transparent hover:bg-muted")}>
+                      <button onClick={() => setActive(p.id)} className={cn("group flex items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40", on ? "border-primary bg-primary/10 shadow-sm" : "border-transparent hover:bg-muted")}>
                         <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors", complete ? "border-success bg-success text-success-foreground" : on ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground")}>
                           {complete ? <Check className="h-5 w-5" /> : <I className="h-5 w-5" />}
                         </span>
@@ -143,7 +143,7 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
                           <span className="block text-xs tabular-nums text-muted-foreground">{pc.done}/{pc.total}</span>
                         </span>
                       </button>
-                      {i < PHASES.length - 1 && <button onClick={() => setActive(PHASES[i + 1].id)} aria-label={`Ir para ${PHASES[i + 1].tag}`} title={`Ir para ${PHASES[i + 1].tag}`} className="mx-1 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/60 transition-all duration-200 hover:translate-x-1 hover:bg-muted hover:text-primary"><ChevronRight className="h-4 w-4" /></button>}
+                      {i < PHASES.length - 1 && <button onClick={() => setActive(PHASES[i + 1].id)} aria-label={`Ir para ${PHASES[i + 1].tag}`} title={`Ir para ${PHASES[i + 1].tag}`} className="mx-1 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/60 transition-all duration-200 hover:translate-x-1 hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"><ChevronRight className="h-4 w-4" /></button>}
                     </li>
                   );
                 })}
@@ -187,7 +187,7 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
                       {g.items.map((it, ii) => {
                         const k = `${phase.id}-${gi}-${ii}`; const on = done.has(k); n++;
                         return (
-                          <button key={k} onClick={() => toggle(k)} className={cn("flex items-center gap-4 rounded-xl border bg-card px-4 py-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm", on && "border-success/40 bg-success/5")}>
+                          <button key={k} onClick={() => toggle(k)} className={cn("flex items-center gap-4 rounded-xl border bg-card px-4 py-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40", on && "border-success/40 bg-success/5")}>
                             <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums", on ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground")}>{on ? <Check className="h-4 w-4" /> : n}</span>
                             <span className={cn("text-[15px] leading-snug", on && "text-muted-foreground line-through")}>{it}</span>
                           </button>
