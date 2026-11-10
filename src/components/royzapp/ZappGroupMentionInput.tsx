@@ -179,6 +179,17 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
       setSelectedIndex(0);
     }, [mentionQuery, participants]);
 
+    // Nomes já reconhecidos como menção (do jeito que estão escritos no texto)
+    const normName = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const autoNamesRef = useRef<Set<string>>(new Set());
+    const [autoNames, setAutoNames] = useState<string[]>([]);
+    const rememberName = (typed: string) => {
+      if (autoNamesRef.current.has(normName(typed))) return;
+      autoNamesRef.current.add(normName(typed));
+      setAutoNames((prev) => [...prev, typed]);
+      setShowSuggestions(false);
+    };
+
     // Detect @ mentions while typing
     useEffect(() => {
       const cursorPosition = inputRef.current?.selectionStart || value.length;
@@ -190,7 +201,8 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
         const charBeforeAt = textBeforeCursor[lastAtIndex - 1];
         const isValidMention = lastAtIndex === 0 || charBeforeAt === " ";
         
-        if (isValidMention && !textAfterAt.includes(" ")) {
+        const resolvedAlready = autoNamesRef.current.has(normName(textAfterAt.replace(/[^\p{L}'\s-]+$/u, "")));
+        if (isValidMention && !textAfterAt.includes(" ") && !resolvedAlready) {
           setMentionStartIndex(lastAtIndex);
           setMentionQuery(textAfterAt);
           setShowSuggestions(true);
@@ -207,7 +219,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
     const autoMentioned = useRef<Set<string>>(new Set());
     const pastedText = useRef<string | null>(null);
     useEffect(() => {
-      if (!value) { autoMentioned.current.clear(); return; }
+      if (!value) { autoMentioned.current.clear(); autoNamesRef.current.clear(); setAutoNames([]); return; }
       if (!groupJid || !value.includes("@") || participants.length === 0) return;
       const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       const isNum = (s: string) => /^\+?\d[\d\s()-]*$/.test(s);
@@ -235,6 +247,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
             autoMentioned.current.add(norm(typed));
             autoMentioned.current.add(norm(fullTyped));
             onMentionInsert?.({ phone: p.phone, jid: p.jid || `${p.phone}@s.whatsapp.net`, name: typed, is_lid: p.isLid });
+            rememberName(typed);
             resolved = true;
             break;
           }
@@ -325,15 +338,14 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
 
     // Highlight @mentions (WhatsApp-style) via a mirrored overlay behind the textarea
     const highlightRef = useRef<HTMLDivElement>(null);
-    const mentionNames = participants
-      .map((p) => p.name)
+    const mentionNames = [...participants.map((p) => p.name), ...autoNames]
       .filter((n) => n && !/^\+?\d[\d\s()-]*$/.test(n))
       .sort((a, b) => b.length - a.length);
 
     const mentionSegments = (() => {
       if (!groupJid || mentionNames.length === 0 || !value.includes("@")) return null;
       const escaped = mentionNames.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-      const re = new RegExp(`@(?:${escaped.join("|")})(?![\\wÀ-ÿ])`, "g");
+      const re = new RegExp(`@(?:${escaped.join("|")})(?![\\p{L}\\d])`, "giu");
       const segs: { text: string; mention: boolean }[] = [];
       let last = 0;
       let m: RegExpExecArray | null;
