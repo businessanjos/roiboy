@@ -374,7 +374,7 @@ export default function CSProcesses() {
     { target: "board", title: "Acompanhe em andamento", text: "Aqui você vê cada cliente e cada encontro na fase em que está. Clique num cartão para ver a trilha completa e ir direto para a etapa atual.", onEnter: () => setTab("today") },
     { target: "menu", title: "Escolha um processo", onEnter: () => setTab("process"), text: "Aqui ficam os 3 processos: Onboarding, Encontro Online e Encontro Presencial. Clique em um para abrir." },
     { target: "nav", title: "Navegue pelas etapas", text: "Aqui estão as fases e as etapas na ordem. Clique em uma etapa para abrir só ela ao lado.", onEnter: () => { setActive(0); setSel("0-0"); } },
-    { target: "status", title: "Entenda os sinais", text: "O sinal mostra a situação: ✓ feito, ● atual e ○ pendente." },
+    { target: "status", title: "Entenda os sinais", text: "Cada etapa tem um sinal ao lado:\n• Círculo dourado com ✓: etapa concluída.\n• Ponto dourado com brilho: etapa atual, é por ela que você continua.\n• Círculo cinza vazio: etapa que ainda vem.\n• ⏳ com dias: tempo de espera até a próxima ação." },
     { target: "copy", title: messageTourTitle, text: messageTourText, onEnter: () => { if (firstMessageKey) setSel(firstMessageKey); } },
     { target: "checklist", title: "Marque as tarefas", text: "Tarefas internas têm caixinha. Marque conforme for fazendo; o progresso fica salvo por cliente.", onEnter: () => { const k = firstWith("task"); if (k) setSel(k); } },
     { target: "alert", title: "Atenção aos avisos", text: "Avisos em vermelho são o que não pode ser esquecido.", onEnter: () => { const k = firstWith("alert"); if (k) setSel(k); } },
@@ -391,7 +391,7 @@ export default function CSProcesses() {
   const startMain = () => { setTab("today"); setView("list"); setQ(""); mainTour.setOpen(true); };
   const MINI: TourStep[] = [
     { target: "nav", text: `Este é o onboarding da ${targetName ?? "cliente"}. Siga as etapas na ordem.` },
-    { target: "status", text: "A etapa atual fica marcada com ●. É por ela que você continua." },
+    { target: "status", text: "A etapa atual fica com o ponto dourado com brilho. É por ela que você continua. As concluídas têm ✓ dourado e ⏳ mostra o tempo de espera." },
     { target: "next", text: "Ao terminar, conclua aqui e a próxima etapa abre sozinha." },
   ];
 
