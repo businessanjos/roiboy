@@ -591,9 +591,16 @@ export default function CSProcesses() {
                 ) : (
                 <div className="sticky bottom-3 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 z-10 rounded-2xl border bg-card px-3 py-2.5 shadow-md">
                   <Button variant="ghost" disabled={selIdx <= 0} className="gap-1 text-muted-foreground" onClick={() => setSel(allKeys[selIdx - 1])}><ChevronLeft className="h-4 w-4" />Etapa anterior</Button>
-                  <Button data-tour="next" disabled={!target && selIdx >= allKeys.length - 1} onClick={completeAndNext}>
-                    {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima") : selIdx >= allKeys.length - 1 ? "Fim do processo" : "Próxima etapa"}{(target || selIdx < allKeys.length - 1) && <ChevronRight className="ml-1 h-4 w-4" />}
+                  {!target && selIdx >= allKeys.length - 1 ? (
+                    <span data-tour="next" className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary">
+                      <CheckCircle2 className="h-4 w-4" />Fim do processo
+                      <span className="hidden text-xs font-normal text-muted-foreground sm:inline">· última etapa</span>
+                    </span>
+                  ) : (
+                  <Button data-tour="next" onClick={target && isDone(selKey) && selIdx >= allKeys.length - 1 && currentKey ? () => setSel(currentKey) : completeAndNext}>
+                    {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída · ver pendentes" : "Concluir e ir para a próxima") : "Próxima etapa"}{(target || selIdx < allKeys.length - 1) && <ChevronRight className="ml-1 h-4 w-4" />}
                   </Button>
+                  )}
                 </div>
                 )}
               </div>
