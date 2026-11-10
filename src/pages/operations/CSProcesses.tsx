@@ -337,8 +337,8 @@ export default function CSProcesses() {
     queryFn: async () => {
       const { data } = await supabase.from("clients").select("id, full_name, instagram, ryka_url, platform_login, phone_e164, responsible_user_id").eq("id", clientId!).maybeSingle();
       if (!data) return null;
-      const { data: prov } = await supabase.from("client_ryka_provisions").select("email").eq("client_id", clientId!).order("created_at", { ascending: false }).limit(1).maybeSingle();
-      return { ...(data as ProcessClient), loginFallback: (prov?.email as string | undefined) ?? null };
+      const { data: prov } = await supabase.from("client_ryka_provisions").select("email, status, ryka_response").eq("client_id", clientId!).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      return { ...(data as ProcessClient), loginFallback: (prov?.email as string | undefined) ?? null, rykaProv: prov ? { status: prov.status as string, lastLogin: ((prov as any).ryka_response?.last_login_at as string | null) ?? null } : null };
     },
   });
   const vars = useMemo(() => processVars(client, (client as any)?.loginFallback, (currentUser as any)?.name), [client, currentUser]);
@@ -519,6 +519,9 @@ export default function CSProcesses() {
             </div>
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
               <Button size="sm" variant="outline" className="bg-card/70" disabled={!client} onClick={() => { setEditField(undefined); setEditClientOpen(true); }}>Dados da cliente</Button>
+              {client && (() => { const rp = (client as any).rykaProv as { status: string; lastLogin: string | null } | null; const ok = rp?.status === "success";
+                const txt = !rp ? "Ryka: acesso não liberado" : !ok ? "Ryka: liberação com problema" : rp.lastLogin ? `Ryka: 1º acesso em ${new Date(rp.lastLogin).toLocaleDateString("pt-BR")}` : "Ryka: acesso liberado, sem login ainda";
+                return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${ok ? "bg-primary/15 text-foreground" : "bg-muted text-muted-foreground"}`}>{txt}</span>; })()}
               <Button size="sm" variant="outline" className="gap-1.5 bg-card/70" onClick={() => clearClientSelection(true)}><UsersRound className="h-4 w-4" />Trocar cliente</Button>
               <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => clearClientSelection()}><X className="h-4 w-4" />Remover seleção</Button>
             </div>
