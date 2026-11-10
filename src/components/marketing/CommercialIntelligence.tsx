@@ -22,6 +22,9 @@ export default function CommercialIntelligence() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<CommercialRow | null>(null);
   const [page, setPage] = useState(0);
+  const matchesSearch = (r: CommercialRow) => `${r.name} ${r.instagram ?? ''}`.toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR'));
+  const matchesOrigin = (r: CommercialRow) => origin === 'all' || (origin === '__none__' ? r.origins.length === 0 : r.origins.includes(origin));
+  const rankingRows = { channel: rows.filter(r => matchesSearch(r) && matchesOrigin(r)), origin: rows.filter(r => matchesSearch(r) && (channel === 'all' || r.channel === channel)) };
   const filtered = rows.filter(r => (channel === 'all' || r.channel === channel) && (origin === 'all' || (origin === '__none__' ? r.origins.length === 0 : r.origins.includes(origin))) && `${r.name} ${r.instagram ?? ''}`.toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR')));
   const channels = [...new Set(rows.map(r => r.channel))].sort();
   const origins = [...new Set(rows.flatMap(r => r.origins))].sort();
@@ -36,9 +39,10 @@ export default function CommercialIntelligence() {
       <Select value={origin} onValueChange={v => { setOrigin(v); setPage(0); }}><SelectTrigger aria-label="Filtrar origem de aquisição" className="w-full sm:w-64"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas as origens / perfis</SelectItem><SelectItem value="__none__">Sem origem</SelectItem>{origins.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
       <div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input aria-label="Buscar lead ou Instagram" placeholder="Nome ou @ do lead" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} className="pl-9" /></div>
     </div>
+    {channels.length > 1 && <div className="flex flex-wrap gap-2" role="group" aria-label="Comparar canais">{['all', ...channels].map(c => { const count = c === 'all' ? rankingRows.channel.length : rankingRows.channel.filter(r => r.channel === c).length; return <Button key={c} size="sm" variant={channel === c ? 'default' : 'outline'} className="h-8 rounded-full" aria-pressed={channel === c} onClick={() => { setChannel(c); setPage(0); }}>{c === 'all' ? 'Todos' : c}<span className="ml-1.5 tabular-nums opacity-70">{count}</span></Button>; })}</div>}
     {(channel !== 'all' || origin !== 'all' || search) && <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span>{channel !== 'all' ? channel : 'Todos os canais'} · {origin === '__none__' ? 'Sem origem' : origin !== 'all' ? origin : 'Todas as origens'}</span><Button variant="ghost" size="sm" onClick={() => { setChannel('all'); setOrigin('all'); setSearch(''); setPage(0); }}>Limpar filtros</Button></div>}
     {error ? <p role="alert" className="text-sm text-destructive">Não foi possível carregar os dados comerciais.</p> : isLoading ? <Skeleton className="h-80 w-full" /> : <>
-      <CommercialAnalytics rows={filtered} onSelectGroup={(dimension, label) => { if (dimension === 'channel') setChannel(label); else setOrigin(label === 'Sem origem' ? '__none__' : label); setPage(0); }} />
+      <CommercialAnalytics rows={filtered} rankingRows={rankingRows} selected={{ channel, origin: origin === '__none__' ? 'Sem origem' : origin }} onSelectGroup={(dimension, label) => { if (dimension === 'channel') setChannel(c => c === label ? 'all' : label); else { const v = label === 'Sem origem' ? '__none__' : label; setOrigin(o => o === v ? 'all' : v); } setPage(0); }} />
       <section><div className="mb-3 flex justify-between gap-3"><h3 className="font-semibold">Leads e histórico comercial</h3><span className="text-xs text-muted-foreground">{filtered.length.toLocaleString('pt-BR')} negócios</span></div>
         <div className="divide-y border-y">{filtered.slice(safePage * 20, safePage * 20 + 20).map(row => {
           const status = getDealStatusBadge(row.status);
