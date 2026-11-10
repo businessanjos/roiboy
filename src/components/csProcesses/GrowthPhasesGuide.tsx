@@ -291,12 +291,16 @@ function FourFA() {
           <span className="text-base font-black tracking-tight text-primary-foreground">4FA</span>
           <span className="text-xs font-medium text-primary-foreground/90">· 4 Funis dos Anjos</span>
         </div>
-        <div className="relative">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-[88px]">
-            {FUNNELS.map((f, fi) => <FunnelCard key={f.title} f={f} fi={fi} />)}
-          </div>
-          <div className="pointer-events-none absolute inset-0 hidden items-center justify-center md:flex">
-            <svg width={G * 2} height={G * 2} className="absolute" viewBox={`0 0 ${G * 2} ${G * 2}`} aria-hidden>
+        <div className="grid grid-cols-1 gap-4 md:hidden">
+          {FUNNELS.map((f, fi) => <FunnelCard key={f.title} f={f} fi={fi} />)}
+        </div>
+        {/* Grade 3x3: o selo fica na célula central, exatamente no meio do vão entre os 4 cartões. */}
+        <div className="hidden md:grid" style={{ gridTemplateColumns: `1fr ${G * 2}px 1fr`, gridTemplateRows: `1fr ${G * 2}px 1fr` }}>
+          {FUNNELS.map((f, fi) => (
+            <div key={f.title} style={{ gridColumn: fi % 2 ? 3 : 1, gridRow: fi < 2 ? 1 : 3 }}><FunnelCard f={f} fi={fi} /></div>
+          ))}
+          <div className="relative flex items-center justify-center" style={{ gridColumn: 2, gridRow: 2 }}>
+            <svg width={G * 2} height={G * 2} className="pointer-events-none absolute inset-0" viewBox={`0 0 ${G * 2} ${G * 2}`} aria-hidden>
               {FUNNELS.map((f, i) => (
                 <line key={f.title} x1={G} y1={G} x2={i % 2 ? G * 2 : 0} y2={i < 2 ? 0 : G * 2} stroke={fc(f.title)} strokeWidth={1.5} />
               ))}
@@ -312,9 +316,41 @@ function FourFA() {
 }
 
 function MacroMap({ counts, onPick }: { counts: Record<string, { total: number; done: number }>; onPick: (id: string) => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const drag = useRef<{ x: number; y: number; l: number; t: number } | null>(null);
+  const [grabbing, setGrabbing] = useState(false);
+  const fit = () => {
+    const b = box.current, c = inner.current; if (!b || !c) return;
+    const z = Math.max(0.5, Math.min(1, (b.clientWidth - 32) / c.scrollWidth));
+    setZoom(z);
+    requestAnimationFrame(() => { b.scrollLeft = (b.scrollWidth - b.clientWidth) / 2; b.scrollTop = 0; });
+  };
+  useLayoutEffect(() => { fit(); }, []);
+  useEffect(() => { const b = box.current, c = inner.current; if (!b || !c) return; requestAnimationFrame(() => { b.scrollLeft = (b.scrollWidth - b.clientWidth) / 2; }); }, [zoom]);
+  const onDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest("button") || !box.current) return;
+    drag.current = { x: e.clientX, y: e.clientY, l: box.current.scrollLeft, t: box.current.scrollTop };
+    setGrabbing(true); box.current.setPointerCapture(e.pointerId);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current, b = box.current; if (!d || !b) return;
+    b.scrollLeft = d.l - (e.clientX - d.x); b.scrollTop = d.t - (e.clientY - d.y);
+  };
+  const onUp = () => { drag.current = null; setGrabbing(false); };
+  const zb = "flex h-9 w-9 items-center justify-center text-muted-foreground transition hover:bg-muted hover:text-foreground";
   return (
-    <div className="min-h-0 flex-1 animate-fade-in overflow-auto bg-muted/20 [background-image:radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:20px_20px]">
-      <div className="px-6 py-8">
+    <div className="relative min-h-0 flex-1 animate-fade-in">
+    <div className="absolute bottom-4 right-4 z-10 flex overflow-hidden rounded-xl border bg-card shadow-md">
+      <button type="button" className={zb} aria-label="Diminuir" title="Diminuir" onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))}><ZoomOut className="h-4 w-4" /></button>
+      <button type="button" className={cn(zb, "w-14 border-x text-xs font-medium tabular-nums")} title="Ajustar à tela" onClick={fit}>{Math.round(zoom * 100)}%</button>
+      <button type="button" className={zb} aria-label="Aumentar" title="Aumentar" onClick={() => setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2)))}><ZoomIn className="h-4 w-4" /></button>
+      <button type="button" className={cn(zb, "border-l")} aria-label="Ajustar à tela" title="Ajustar à tela" onClick={fit}><Maximize className="h-4 w-4" /></button>
+    </div>
+    <div ref={box} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+      className={cn("h-full select-none overflow-auto bg-muted/20 [background-image:radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:20px_20px] [scrollbar-width:thin]", grabbing ? "cursor-grabbing" : "cursor-grab")}>
+      <div ref={inner} className="mx-auto w-max px-6 py-8" style={{ zoom }}>
         <div className="mb-8 text-center">
           <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-xs font-bold uppercase tracking-[0.25em] text-primary">Visão macro</span>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight">Mapa da <span className="text-primary">jornada completa</span></h2>
@@ -390,6 +426,7 @@ function MacroMap({ counts, onPick }: { counts: Record<string, { total: number; 
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
