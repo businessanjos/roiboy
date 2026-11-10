@@ -301,18 +301,18 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
           <CardHeader className="pb-1"><CardTitle className="text-base">Situação de uso</CardTitle></CardHeader>
           <CardContent>
             <div className="relative h-52">
+              <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-semibold tabular-nums">{pct(active30, items.length)}%</span>
+                <span className="text-[11px] text-muted-foreground">ativas em 30 dias</span>
+              </div>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={byBucket.filter((b) => b.n)} dataKey="n" nameKey="label" innerRadius="62%" outerRadius="92%" paddingAngle={2} cornerRadius={5} stroke="none" animationDuration={700}>
                     {byBucket.filter((b) => b.n).map((b) => <Cell key={b.b} fill={BUCKET_COLOR[b.b]} />)}
                   </Pie>
-                  <Tooltip contentStyle={TIP} formatter={(v: any, n: any) => [`${v} clínicas · ${pct(Number(v), items.length)}%`, n]} />
+                  <Tooltip wrapperStyle={{ zIndex: 30 }} offset={24} contentStyle={{ ...TIP, boxShadow: "0 8px 24px -8px hsl(var(--foreground) / 0.25)" }} formatter={(v: any, n: any) => [`${v} clínicas · ${pct(Number(v), items.length)}%`, n]} />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-semibold tabular-nums">{pct(active30, items.length)}%</span>
-                <span className="text-[11px] text-muted-foreground">ativas em 30 dias</span>
-              </div>
             </div>
             <ul className="mt-3 space-y-1.5">
               {byBucket.map((b) => (
