@@ -212,7 +212,7 @@ export default function CSProcesses() {
       if (nextStage) {
         const { error } = await supabase.from("clients").update({ stage_id: nextStage }).eq("id", target.id);
         if (!error) {
-          toast.success(`Onboarding atualizado: ${hub.stages.find((x) => x.id === nextStage)?.name}`);
+          toast.success(`Onboarding atualizado: ${hub.stages.find((x) => x.id === nextStage)?.name}`, { position: "top-center" });
           qc.invalidateQueries({ queryKey: ["cs-process-hub-stage"] });
           qc.invalidateQueries({ predicate: (q) => String(q.queryKey[0] ?? "").toLowerCase().includes("onboarding") });
         }
