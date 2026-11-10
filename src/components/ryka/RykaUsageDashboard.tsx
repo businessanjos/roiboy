@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Activity, AlertTriangle, CalendarCheck, ExternalLink, Flame, Info, Search, Target, Trophy, Users, UserX, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,7 @@ const BUCKET_COLOR: Record<UsageBucket, string> = {
   nunca: "hsl(var(--danger))",
   sem_acesso: "hsl(var(--muted-foreground) / 0.5)",
 };
+const TIP = { background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 };
 const LEVEL_CLASS: Record<EngagementLevel, string> = {
   power: "bg-primary/15 text-primary",
   engajada: "bg-success/15 text-success",
@@ -261,44 +262,87 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Situação de uso</CardTitle></CardHeader>
-          <CardContent className="h-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={byBucket} layout="vertical" margin={{ left: 0, right: 24 }}>
-                <CartesianGrid horizontal={false} strokeDasharray="3 3" className="stroke-border" />
-                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="label" width={150} tick={{ fontSize: 11 }} />
-                <Tooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} formatter={(v: any) => [`${v} clínicas`, ""]} />
-                <Bar dataKey="n" radius={[0, 6, 6, 0]} barSize={18}>{byBucket.map((b) => <Cell key={b.b} fill={BUCKET_COLOR[b.b]} />)}</Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <CardHeader className="pb-1"><CardTitle className="text-base">Situação de uso</CardTitle></CardHeader>
+          <CardContent>
+            <div className="relative h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={byBucket.filter((b) => b.n)} dataKey="n" nameKey="label" innerRadius="62%" outerRadius="92%" paddingAngle={2} cornerRadius={5} stroke="none" animationDuration={700}>
+                    {byBucket.filter((b) => b.n).map((b) => <Cell key={b.b} fill={BUCKET_COLOR[b.b]} />)}
+                  </Pie>
+                  <Tooltip contentStyle={TIP} formatter={(v: any, n: any) => [`${v} clínicas · ${pct(Number(v), items.length)}%`, n]} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-semibold tabular-nums">{pct(active30, items.length)}%</span>
+                <span className="text-[11px] text-muted-foreground">ativas em 30 dias</span>
+              </div>
+            </div>
+            <ul className="mt-3 space-y-1.5">
+              {byBucket.map((b) => (
+                <li key={b.b} className="flex items-center gap-2 text-xs">
+                  <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: BUCKET_COLOR[b.b] }} />
+                  <span className="flex-1 truncate">{b.label}</span>
+                  <span className="tabular-nums font-medium">{b.n}</span>
+                  <span className="w-9 text-right tabular-nums text-muted-foreground">{pct(b.n, items.length)}%</span>
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Adoção dos módulos</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {moduleAdoption.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">Sem dados de módulos ainda.</p>}
-            {moduleAdoption.map((m) => <BarLine key={m.name} label={m.name} right={`${m.n} clínicas · ${m.pct}%`} pct={m.pct} />)}
-            {byProduct.length > 0 && <div className="border-t border-border pt-3 space-y-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ativas por produto</p>
-              {byProduct.map((p) => <BarLine key={p.p} label={p.p} right={`${p.ativas}/${p.total} · índice ${p.avg}`} pct={p.pct} tone="success" />)}
+          <CardHeader className="pb-1"><CardTitle className="text-base">Adoção dos módulos</CardTitle><p className="text-xs text-muted-foreground">% das clínicas com acesso que usam cada módulo</p></CardHeader>
+          <CardContent>
+            {moduleAdoption.length === 0 ? <p className="text-sm text-muted-foreground py-6 text-center">Sem dados de módulos ainda.</p> : (
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={moduleAdoption} margin={{ top: 18, right: 4, left: 4, bottom: 0 }}>
+                    <defs><linearGradient id="modGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" /><stop offset="100%" stopColor="hsl(var(--primary) / 0.45)" /></linearGradient></defs>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis hide domain={[0, 100]} />
+                    <Tooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={TIP} formatter={(v: any, _n: any, it: any) => [`${v}% · ${it.payload.n} clínicas`, "Uso"]} />
+                    <Bar dataKey="pct" fill="url(#modGrad)" radius={[6, 6, 0, 0]} barSize={34} label={{ position: "top", fontSize: 11, formatter: (v: any) => `${v}%`, fill: "hsl(var(--foreground))" }} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {byProduct.length > 0 && <div className="mt-3 border-t border-border pt-3">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Ativas por produto</p>
+              <div className="grid grid-cols-3 gap-2">
+                {byProduct.map((p) => (
+                  <div key={p.p} className="flex flex-col items-center rounded-lg bg-muted/50 p-2">
+                    <MiniRing value={p.pct} />
+                    <span className="mt-1 text-[11px] font-medium text-center leading-tight">{p.p}</span>
+                    <span className="text-[10px] text-muted-foreground tabular-nums">{p.ativas}/{p.total} · índice {p.avg}</span>
+                  </div>
+                ))}
+              </div>
             </div>}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2"><div className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /><CardTitle className="text-base">Por consultora</CardTitle></div></CardHeader>
-          <CardContent className="p-0">
-            <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-4 pb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-              <span>Consultora</span><span className="text-right">Ativas</span><span className="text-right w-12">Índice</span>
+          <CardHeader className="pb-1"><div className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /><CardTitle className="text-base">Por consultora</CardTitle></div><p className="text-xs text-muted-foreground">Clínicas ativas x paradas na carteira de cada uma</p></CardHeader>
+          <CardContent>
+            <div style={{ height: Math.max(140, byConsultant.length * 46) }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={byConsultant.map((c) => ({ ...c, paradas: c.total - c.ativas }))} layout="vertical" margin={{ left: 0, right: 8 }} barSize={16}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={TIP} formatter={(v: any, n: any) => [`${v} clínicas`, n === "ativas" ? "Ativas em 30 dias" : "Paradas ou sem uso"]} />
+                  <Bar dataKey="ativas" stackId="a" fill="hsl(var(--success))" radius={[4, 0, 0, 4]} />
+                  <Bar dataKey="paradas" stackId="a" fill="hsl(var(--muted-foreground) / 0.25)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-            <ul className="divide-y divide-border max-h-64 overflow-y-auto">
+            <ul className="mt-2 divide-y divide-border border-t border-border">
               {byConsultant.map((c) => (
-                <li key={c.name} className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm">
-                  <span className="truncate">{c.name}</span>
-                  <span className="text-right text-muted-foreground tabular-nums">{c.ativas}/{c.total}</span>
-                  <span className="w-12 text-right"><ScorePill score={c.avg} /></span>
+                <li key={c.name} className="flex items-center gap-2 py-1.5 text-xs">
+                  <span className="flex-1 truncate">{c.name}</span>
+                  <span className="tabular-nums text-muted-foreground">{c.ativas}/{c.total} · {c.pct}%</span>
+                  <ScorePill score={c.avg} />
                 </li>
               ))}
             </ul>
@@ -425,5 +469,18 @@ function Kpi({ icon: Icon, label, value, suffix, hint, tone }: { icon: any; labe
       <p className="mt-2 text-2xl font-semibold tabular-nums">{value.toLocaleString("pt-BR")}{suffix && <span className="text-sm font-normal text-muted-foreground">{suffix}</span>}</p>
       {hint && <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{hint}</p>}
     </CardContent></Card>
+  );
+}
+
+function MiniRing({ value }: { value: number }) {
+  const r = 18, c = 2 * Math.PI * r;
+  return (
+    <span className="relative flex h-12 w-12 items-center justify-center">
+      <svg viewBox="0 0 44 44" className="absolute inset-0 -rotate-90">
+        <circle cx="22" cy="22" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
+        <circle cx="22" cy="22" r={r} fill="none" stroke="hsl(var(--success))" strokeWidth="4" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - value / 100)} />
+      </svg>
+      <span className="text-[11px] font-semibold tabular-nums">{value}%</span>
+    </span>
   );
 }
