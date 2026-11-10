@@ -6,6 +6,7 @@ import { AudioTeleprompter } from "@/components/csProcesses/AudioTeleprompter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { OnboardingGuideButton, ONBOARDING_GUIDE_URL } from "@/components/csProcesses/OnboardingMeetingGuide";
 import { GrowthPhasesButton, GROWTH_PHASES_URL } from "@/components/csProcesses/GrowthPhasesGuide";
+import { CountdownArtsButton, COUNTDOWN_DRIVE_URL } from "@/components/csProcesses/CountdownArtsGallery";
 import { toast } from "sonner";
 import { fillVars, plainText, stepTitle, visibleActions, type Action, type StepInfo } from "@/lib/csProcessActions";
 import { resolveProcessLink, replaceClientLinks, FIELD_LABEL, type ProcessClient, type ClientField } from "@/lib/csClientLinks";
@@ -220,7 +221,8 @@ function StepActionItem({ a, idx, vars, taskDone, onTask, canTick, tour, ctx }: 
         {a.kind === "alert" && (
           <AlertCallout text={a.text} vars={vars} ctx={ctx} tour={tour} />
         )}
-        {a.kind === "link" && <ProcessLinkButton url={a.url} ctx={ctx} fallbackLabel={a.label} />}
+        {a.kind === "link" && COUNTDOWN_DRIVE_URL.test(a.url) && <CountdownArtsButton />}
+        {a.kind === "link" && !COUNTDOWN_DRIVE_URL.test(a.url) && <ProcessLinkButton url={a.url} ctx={ctx} fallbackLabel={a.label} />}
         {a.kind === "note" && <p className="text-muted-foreground"><InlineMarkdown text={a.text} vars={vars} ctx={ctx} /></p>}
       </div>
     </li>
