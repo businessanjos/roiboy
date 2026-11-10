@@ -126,6 +126,7 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
       : items.filter((x) => (x.bucket === "ativa_7d" || x.bucket === "ativa_30d") && !x.plan);
     return base.sort((a, b) => (b.days ?? 9999) - (a.days ?? 9999));
   }, [items, riskTab]);
+  const [riskOpen, setRiskOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const riskGroups = useMemo(() => {
     type G = { key: string; label: string; dot: string; items: Item[]; defaultOpen: boolean; limit?: number };
@@ -210,9 +211,9 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
         <Kpi icon={UserX} label="Paradas ou nunca entraram" value={count("parada_30d") + count("nunca")} hint="precisam de contato" tone="danger" />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-5">
+      <div>
         {/* Ranking */}
-        <Card className="xl:col-span-3 overflow-hidden">
+        <Card className="overflow-hidden">
           <CardHeader className="pb-3 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Trophy className="h-4 w-4 text-primary" />
@@ -237,7 +238,7 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
           </CardHeader>
           <CardContent className="p-0">
             {shown.length === 0 && <p className="text-sm text-muted-foreground py-10 text-center">Nenhuma clínica com uso registrado.</p>}
-            <ol className="divide-y divide-border">
+            <ol className="grid lg:grid-cols-2 lg:[&>li:nth-child(odd)]:border-r border-border [&>li]:border-b [&>li]:border-border">
               {shown.map((x, i) => <RankRow key={x.r.client.id} x={x} pos={i + 1} consultantName={x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora"} />)}
             </ol>
             {ranking.length > 10 && (
@@ -248,52 +249,6 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
           </CardContent>
         </Card>
 
-        {/* Risco */}
-        <Card className="xl:col-span-2 overflow-hidden flex flex-col">
-          <CardHeader className="pb-3 space-y-3">
-            <div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-warning" /><CardTitle className="text-base">Precisam de atenção</CardTitle></div>
-            <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
-              {([["parada", "Paradas +30d"], ["nunca", "Nunca entraram"], ["plano", "Sem plano"]] as const).map(([k, l]) => (
-                <button key={k} onClick={() => setRiskTab(k)} className={cn("rounded-md px-2 py-1.5 text-xs font-medium transition-colors", riskTab === k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                  {l} <span className="tabular-nums opacity-70">{riskCounts[k]}</span>
-                </button>
-              ))}
-            </div>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 max-h-[560px] overflow-y-auto">
-            {risk.length === 0 && <p className="text-sm text-muted-foreground py-10 text-center">Nenhuma clínica nesta situação.</p>}
-            {riskGroups.map((g) => {
-              const open = openGroups[g.key] ?? g.defaultOpen;
-              return (
-                <section key={g.key} className="border-b border-border last:border-0">
-                  <button onClick={() => setOpenGroups((o) => ({ ...o, [g.key]: !open }))}
-                    className="sticky top-0 z-10 flex w-full items-center gap-2 bg-card px-4 py-2 text-left text-xs font-medium text-muted-foreground hover:text-foreground">
-                    <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-90")} />
-                    <span className={cn("h-2 w-2 rounded-full", g.dot)} />
-                    <span className="flex-1">{g.label}</span>
-                    <span className="tabular-nums">{g.items.length}</span>
-                  </button>
-                  {open && (
-                    <ul className="pb-1">
-                      {g.items.slice(0, g.limit ?? 30).map((x) => (
-                        <li key={x.r.client.id}>
-                          <Link to={`/clients/${x.r.client.id}`} className="flex items-center gap-2.5 px-4 py-1.5 hover:bg-muted/50">
-                            <Initials name={x.r.client.full_name} photo={x.r.client.logo_url || x.r.client.avatar_url} size="h-6 w-6" />
-                            <span className="flex-1 min-w-0 truncate text-sm">{x.r.client.full_name}</span>
-                            <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
-                              {(x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora").split(" ")[0]}{x.days != null && !x.rykaInactive ? ` · ${x.days}d` : ""}
-                            </span>
-                          </Link>
-                        </li>
-                      ))}
-                      {g.items.length > (g.limit ?? 30) && <li className="px-4 py-1 text-[11px] text-muted-foreground">+{g.items.length - (g.limit ?? 30)} clínicas</li>}
-                    </ul>
-                  )}
-                </section>
-              );
-            })}
-          </CardContent>
-        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -385,6 +340,52 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
           </CardContent>
         </Card>
       </div>
+        {/* Risco */}
+      <Card className="overflow-hidden flex flex-col">
+        <CardHeader className="pb-3 space-y-3">
+          <button onClick={() => setRiskOpen((v) => !v)} className="flex w-full items-center gap-2 text-left"><AlertTriangle className="h-4 w-4 text-muted-foreground" /><CardTitle className="text-base">Precisam de atenção</CardTitle><span className="text-xs text-muted-foreground">{riskCounts.parada} paradas · {riskCounts.nunca} nunca entraram · {riskCounts.plano} sem plano</span><ChevronRight className={cn("ml-auto h-4 w-4 text-muted-foreground transition-transform", riskOpen && "rotate-90")} /></button>
+          {riskOpen && <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 max-w-lg">
+            {([["parada", "Paradas +30d"], ["nunca", "Nunca entraram"], ["plano", "Sem plano"]] as const).map(([k, l]) => (
+              <button key={k} onClick={() => setRiskTab(k)} className={cn("rounded-md px-2 py-1.5 text-xs font-medium transition-colors", riskTab === k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                {l} <span className="tabular-nums opacity-70">{riskCounts[k]}</span>
+              </button>
+            ))}
+          </div>}
+        </CardHeader>
+        {riskOpen && <CardContent className="p-0 flex-1 max-h-[480px] overflow-y-auto">
+          {risk.length === 0 && <p className="text-sm text-muted-foreground py-10 text-center">Nenhuma clínica nesta situação.</p>}
+          {riskGroups.map((g) => {
+            const open = openGroups[g.key] ?? g.defaultOpen;
+            return (
+              <section key={g.key} className="border-b border-border last:border-0">
+                <button onClick={() => setOpenGroups((o) => ({ ...o, [g.key]: !open }))}
+                  className="sticky top-0 z-10 flex w-full items-center gap-2 bg-card px-4 py-2 text-left text-xs font-medium text-muted-foreground hover:text-foreground">
+                  <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-90")} />
+                  <span className={cn("h-2 w-2 rounded-full", g.dot)} />
+                  <span className="flex-1">{g.label}</span>
+                  <span className="tabular-nums">{g.items.length}</span>
+                </button>
+                {open && (
+                  <ul className="pb-1">
+                    {g.items.slice(0, g.limit ?? 30).map((x) => (
+                      <li key={x.r.client.id}>
+                        <Link to={`/clients/${x.r.client.id}`} className="flex items-center gap-2.5 px-4 py-1.5 hover:bg-muted/50">
+                          <Initials name={x.r.client.full_name} photo={x.r.client.logo_url || x.r.client.avatar_url} size="h-6 w-6" />
+                          <span className="flex-1 min-w-0 truncate text-sm">{x.r.client.full_name}</span>
+                          <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                            {(x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora").split(" ")[0]}{x.days != null && !x.rykaInactive ? ` · ${x.days}d` : ""}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                    {g.items.length > (g.limit ?? 30) && <li className="px-4 py-1 text-[11px] text-muted-foreground">+{g.items.length - (g.limit ?? 30)} clínicas</li>}
+                  </ul>
+                )}
+              </section>
+            );
+          })}
+        </CardContent>}
+      </Card>
     </div>
     </TooltipProvider>
   );
