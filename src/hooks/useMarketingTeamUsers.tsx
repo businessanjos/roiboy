@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { filterMarketingPeople } from "@/lib/marketing/marketingPeopleVisibility";
 
 export interface MarketingTeamUser {
   /** users.id */
