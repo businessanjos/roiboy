@@ -12,7 +12,7 @@ export interface StepInfo { actions: Action[]; who: string; when?: string }
 
 const URL_RE = /https?:\/\/[^\s)]+/;
 const cleanTitle = (t: string) => t.replace(/^Etapa\s+[\d.]+\s*[—-]\s*/i, "").trim();
-export const stepTitle = cleanTitle;
+export const stepTitle = (t: string) => cleanTitle(t).replace(/\s*\(Consultor(a)? Eternum\)/gi, "").trim();
 
 function linkLabel(prefix: string, url: string) {
   const tag = prefix.replace(/[:\-\s]+$/, "").trim();

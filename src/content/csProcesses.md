@@ -100,7 +100,7 @@ Abaixo está todo o conteúdo dos processos.
 - [ ] Entrar no Meet com o login do consultor, montar o link e enviar ao cliente, aguardando ele entrar.
 - [ ] **Quando o cliente entrar — colocar para gravar o encontro.**
 
-### Etapa 3.2 — Passo a passo do Onboarding (Consultor Eternum)
+### Etapa 3.2 — Passo a passo do Onboarding
 **Preparação (minutos antes — analisa tudo):**
 - [ ] Abrir o Canva de onboarding para direcionar perguntas e orientações, seguindo as etapas: https://www.canva.com/design/DAHQ3-2Ft-Y/44b_YXxkChFDObY-YN_vWA/edit
 - [ ] Abrir o cadastro informativo preenchido, atualizado para o nível novo da cliente, analisando os itens (exemplo: https://iamroy.app/clients/1d0fe50c-5b69-4f7e-bf32-7229bdcd2ab5?tab=fichas)

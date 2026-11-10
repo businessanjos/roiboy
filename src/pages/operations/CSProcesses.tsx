@@ -2,7 +2,7 @@ import { detectOnboardingSteps } from "@/lib/csProcessWhatsAppSync";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, List, Workflow, ArrowDown, UserRound, UsersRound, X } from "lucide-react";
+import { HelpCircle, List, Workflow, ArrowDown, UserRound, UsersRound, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -496,11 +496,11 @@ export default function CSProcesses() {
                       canTick={!!target} doneKeys={doneKeys} stepKey={selKey} onTask={toggle} />
                   </>
                 )}
-                <StepArrowKeys enabled={view !== "flow"} onPrev={() => selIdx > 0 && setSel(allKeys[selIdx - 1])} onNext={() => selIdx < allKeys.length - 1 && setSel(allKeys[selIdx + 1])} />
-                <div className="sticky bottom-3 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 rounded-2xl border bg-card/90 px-3 py-2.5 shadow-sm backdrop-blur">
-                  <Button variant="ghost" disabled={selIdx <= 0} onClick={() => setSel(allKeys[selIdx - 1])}>← Etapa anterior</Button>
+                <StepArrowKeys stepKey={selKey} enabled={view !== "flow"} onPrev={() => selIdx > 0 && setSel(allKeys[selIdx - 1])} onNext={() => selIdx < allKeys.length - 1 && setSel(allKeys[selIdx + 1])} />
+                <div className="sticky bottom-3 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 z-10 rounded-2xl border bg-card px-3 py-2.5 shadow-md">
+                  <Button variant="ghost" disabled={selIdx <= 0} className="gap-1 text-muted-foreground" onClick={() => setSel(allKeys[selIdx - 1])}><ChevronLeft className="h-4 w-4" />Etapa anterior</Button>
                   <Button data-tour="next" disabled={!target && selIdx >= allKeys.length - 1} onClick={completeAndNext}>
-                    {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima →") : "Próxima etapa →"}
+                    {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima") : "Próxima etapa"}<ChevronRight className="ml-1 h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -541,15 +541,25 @@ export default function CSProcesses() {
   );
 }
 
-/** Setas ← → do teclado trocam de etapa (sem marcar como concluída). */
-function StepArrowKeys({ enabled, onPrev, onNext }: { enabled: boolean; onPrev: () => void; onNext: () => void }) {
+/** Setas ← → do teclado passam mensagem por mensagem; no fim da etapa, seguem para a próxima (sem marcar como concluída). */
+function StepArrowKeys({ stepKey, enabled, onPrev, onNext }: { stepKey: string; enabled: boolean; onPrev: () => void; onNext: () => void }) {
+  const idx = useRef(-1);
+  const fromPrev = useRef(false);
+  useEffect(() => {
+    const items = () => Array.from(document.querySelectorAll<HTMLElement>("li[data-step-action]"));
+    const mark = (i: number) => { items().forEach((el, j) => { el.dataset.active = String(j === i); }); const el = items()[i]; el?.scrollIntoView({ behavior: "smooth", block: "center" }); };
+    const t = window.setTimeout(() => { if (fromPrev.current) { const n = items().length - 1; idx.current = n; mark(n); } else { idx.current = -1; items().forEach((el) => { el.dataset.active = "false"; }); } fromPrev.current = false; }, 50);
+    return () => window.clearTimeout(t);
+  }, [stepKey]);
   useEffect(() => {
     if (!enabled) return;
     const h = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (e.altKey || e.ctrlKey || e.metaKey || (t && (t.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(t.tagName))) || document.querySelector('[role="dialog"]')) return;
-      if (e.key === "ArrowRight") { e.preventDefault(); onNext(); }
-      if (e.key === "ArrowLeft") { e.preventDefault(); onPrev(); }
+      const n = document.querySelectorAll("li[data-step-action]").length;
+      const go = (i: number) => { idx.current = i; document.querySelectorAll<HTMLElement>("li[data-step-action]").forEach((el, j) => { el.dataset.active = String(j === i); if (j === i) el.scrollIntoView({ behavior: "smooth", block: "center" }); }); };
+      if (e.key === "ArrowRight") { e.preventDefault(); if (idx.current < n - 1) go(idx.current + 1); else onNext(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); if (idx.current > 0) go(idx.current - 1); else { fromPrev.current = true; onPrev(); } }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
