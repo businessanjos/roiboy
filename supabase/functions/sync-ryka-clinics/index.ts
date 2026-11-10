@@ -116,6 +116,22 @@ Deno.serve(async (req) => {
 
   if (accountIds.length === 0) return jsonResp({ error: "Nenhuma conta para sincronizar" }, 400);
 
+  // 0) Uso das clínicas (ação opcional na Ryka; ausente = segue sem métricas de uso)
+  const usageByClinic = new Map<string, any>();
+  let usageStatus = "indisponivel";
+  try {
+    const uu = new URL(LIST_URL!); uu.searchParams.set("action", "clinic_usage");
+    const ur = await fetchRykaWithRedirects(uu.toString(), rykaHeaders(API_KEY, RYKA_AUTH_JWT));
+    const ut = await ur.text();
+    if (ur.ok) {
+      const up = JSON.parse(ut);
+      const arr = Array.isArray(up?.usage) ? up.usage : Array.isArray(up?.clinics) ? up.clinics : [];
+      for (const u of arr) if (u?.clinic_id) usageByClinic.set(String(u.clinic_id), u);
+      usageStatus = arr.length ? "ok" : "vazio";
+    } else { console.warn("[sync-ryka-clinics] clinic_usage", ur.status, ut.slice(0, 200)); }
+  } catch (e: any) { console.warn("[sync-ryka-clinics] clinic_usage falhou", e?.message || e); }
+  const usageRows: any[] = [];
+
   // 1) Buscar lista de clínicas no Ryka (uma vez)
   let rykaList: any[] = [];
   try {
@@ -155,7 +171,7 @@ Deno.serve(async (req) => {
     if (clErr) { console.error("[sync-ryka-clinics] clients err", accountId, clErr.message); continue; }
 
     const eligible = (clients || []).filter((c: any) =>
-      (c.client_products || []).some((cp: any) => ELIGIBLE.includes(String(cp?.products?.name || "").toLowerCase()))
+      (c.client_products || []).some((cp: any) => { const n = String(cp?.products?.name || "").toLowerCase(); return ELIGIBLE.some((e) => n.includes(e)); })
     );
     if (eligible.length === 0) continue;
 
@@ -221,6 +237,19 @@ Deno.serve(async (req) => {
         triggered_by: triggeredBy,
       };
 
+      const usage = rykaClinicId ? usageByClinic.get(String(rykaClinicId)) : null;
+      if (usage) {
+        const n = (v: any) => (typeof v === "number" ? v : v == null ? null : Number(v) || 0);
+        usageRows.push({
+          account_id: c.account_id, client_id: c.id, clinic_id: String(rykaClinicId),
+          last_login_at: usage.last_login_at ?? rykaMatch.last_login_at ?? null,
+          active_users_7d: n(usage.active_users_7d), active_users_30d: n(usage.active_users_30d), users_total: n(usage.users_total),
+          leads_7d: n(usage.leads_7d), leads_30d: n(usage.leads_30d), appointments_30d: n(usage.appointments_30d), consultations_30d: n(usage.consultations_30d),
+          has_action_plan: usage.has_action_plan ?? null, action_plan_updated_at: usage.action_plan_updated_at ?? null,
+          modules_used: Array.isArray(usage.modules_used) ? usage.modules_used.map(String) : null, raw: usage,
+        });
+        if (usage.last_login_at) payload.ryka_response.last_login_at = usage.last_login_at;
+      }
       const existing = existingByClient.get(c.id);
       if (existing && existing.status === "success") {
         toUpdate.push({ id: existing.id, payload: { ryka_response: payload.ryka_response, email: payload.email, phone: payload.phone } });
@@ -240,7 +269,14 @@ Deno.serve(async (req) => {
     }
   }
 
+  if (usageRows.length) {
+    const { error: uErr } = await admin.from("client_ryka_usage_daily").upsert(usageRows, { onConflict: "client_id,snapshot_date" });
+    if (uErr) console.error("[sync-ryka-clinics] usage upsert", uErr.message);
+  }
+
   return jsonResp({
+    usage_status: usageStatus,
+    usage_saved: usageRows.length,
     success: true,
     mode: isCron ? "cron" : "user",
     ryka_total: rykaList.length,
