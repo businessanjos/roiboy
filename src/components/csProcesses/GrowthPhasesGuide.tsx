@@ -247,13 +247,6 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
   );
 }
 
-const FUNNEL_TONE: Record<string, { tile: string; ring: string; dot: string; text: string; bg: string }> = {
-  "Tráfego Pago": { tile: "bg-primary/15 ring-primary/40", ring: "border-primary/40", dot: "bg-primary", text: "text-primary", bg: "from-primary/10" },
-  "Tráfego Alheio": { tile: "bg-success/15 ring-success/40", ring: "border-success/40", dot: "bg-success", text: "text-success", bg: "from-success/10" },
-  "Indicação": { tile: "bg-info/15 ring-info/40", ring: "border-info/40", dot: "bg-info", text: "text-info", bg: "from-info/10" },
-  "Lista Quente": { tile: "bg-warning/15 ring-warning/40", ring: "border-warning/40", dot: "bg-warning", text: "text-warning", bg: "from-warning/10" },
-};
-
 const FUNNEL_VAR: Record<string, string> = { "Tráfego Pago": "--funnel-1", "Tráfego Alheio": "--funnel-2", "Indicação": "--funnel-3", "Lista Quente": "--funnel-4" };
 const fc = (title: string, a = 1) => `hsl(var(${FUNNEL_VAR[title]}) / ${a})`;
 
@@ -320,50 +313,71 @@ function FourFA() {
 
 function MacroMap({ counts, onPick }: { counts: Record<string, { total: number; done: number }>; onPick: (id: string) => void }) {
   return (
-    <div className="min-h-0 flex-1 animate-fade-in overflow-y-auto bg-muted/10">
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-10 text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1 text-xs font-bold uppercase tracking-[0.25em] text-primary">Visão macro</span>
-          <h2 className="mt-4 text-4xl font-semibold tracking-tight">Mapa da <span className="text-primary">jornada completa</span></h2>
-          <p className="mx-auto mt-3 max-w-2xl text-base text-muted-foreground">Do onboarding à conversão, com os sintomas de cada fase e os 4 funis. Clique numa fase para abrir os detalhes.</p>
+    <div className="min-h-0 flex-1 animate-fade-in overflow-auto bg-muted/20 [background-image:radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:20px_20px]">
+      <div className="px-6 py-8">
+        <div className="mb-8 text-center">
+          <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-xs font-bold uppercase tracking-[0.25em] text-primary">Visão macro</span>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight">Mapa da <span className="text-primary">jornada completa</span></h2>
+          <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground">Do onboarding à conversão, com os sintomas de cada fase e os 4 funis. Clique numa fase para abrir os detalhes.</p>
         </div>
-        <ol className="relative">
-          <span className="absolute bottom-6 left-7 top-6 w-0.5 rounded bg-gradient-to-b from-primary via-primary/50 to-primary/20" />
-          {PHASES.map((p) => {
-            const I = p.icon; const c = counts[p.id]; const complete = c.total > 0 && c.done === c.total;
-            const branches = p.groups.flatMap((g) => [g.alert ? { k: "alert", t: g.alert } : null, g.label ? { k: "label", t: g.label } : null]).filter(Boolean) as { k: string; t: string }[];
-            return (
-              <li key={p.id} className="relative mb-6 pl-20 last:mb-0">
-                <button onClick={() => onPick(p.id)} className={cn("absolute left-0 top-1 z-10 flex h-14 w-14 items-center justify-center rounded-full border-4 border-background shadow-md transition-transform hover:scale-110", complete ? "bg-success" : "bg-primary")} aria-label={p.title}>
-                  {complete ? <Check className="h-6 w-6 text-primary-foreground" /> : <I className="h-6 w-6 text-primary-foreground" />}
-                </button>
-                <div className="rounded-2xl border bg-card p-5 shadow-sm">
-                  <button onClick={() => onPick(p.id)} className="group flex w-full flex-wrap items-center justify-between gap-2 text-left">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">{p.tag}</p>
-                      <h3 className="text-xl font-semibold group-hover:text-primary">{p.title}</h3>
+        <div className="mx-auto w-max">
+          {/* Raiz */}
+          <div className="flex justify-center">
+            <div className="flex items-center gap-3 rounded-2xl bg-primary px-6 py-3 text-primary-foreground shadow-lg">
+              <Map className="h-5 w-5" /><span className="text-lg font-semibold">Jornada Eternum · Nível Black</span>
+            </div>
+          </div>
+          <div className="mx-auto h-8 w-0.5 bg-primary/60" />
+          {/* Ramos das fases */}
+          <div className="flex items-start">
+            {PHASES.map((p, i) => {
+              const I = p.icon; const c = counts[p.id]; const complete = c.total > 0 && c.done === c.total;
+              const branches = p.groups.flatMap((g) => [g.alert ? { k: "alert", t: g.alert } : null, g.label ? { k: "label", t: g.label } : null]).filter(Boolean) as { k: string; t: string }[];
+              const first = i === 0; const last = i === PHASES.length - 1;
+              return (
+                <div key={p.id} className={cn("relative flex flex-col items-center px-3", p.id === "f3" ? "w-[420px]" : "w-[210px]")}>
+                  <span className={cn("absolute top-0 h-0.5 bg-primary/60", first ? "left-1/2 right-0" : last ? "left-0 right-1/2" : "inset-x-0")} />
+                  <span className="h-6 w-0.5 bg-primary/60" />
+                  <button onClick={() => onPick(p.id)} className="group w-full rounded-2xl border-2 border-primary/50 bg-card p-4 text-left shadow-md transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                    <div className="flex items-center gap-3">
+                      <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-primary-foreground", complete ? "bg-success" : "bg-primary")}>{complete ? <Check className="h-5 w-5" /> : <I className="h-5 w-5" />}</span>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">{p.tag}</p>
+                        <p className="text-sm font-semibold leading-snug">{p.title}</p>
+                      </div>
                     </div>
-                    <span className="flex items-center gap-2 text-sm text-muted-foreground"><span className="tabular-nums">{c.done}/{c.total} itens</span><ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+                    <p className="mt-2 flex items-center justify-end gap-1 text-xs text-muted-foreground"><span className="tabular-nums">{c.done}/{c.total} itens</span><ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></p>
                   </button>
                   {branches.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
-                      {branches.map((b) => b.k === "alert" ? (
-                        <span key={b.t} className="inline-flex items-center gap-1.5 rounded-lg border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-medium"><AlertTriangle className="h-4 w-4 text-warning" />{b.t}</span>
-                      ) : (
-                        <span key={b.t} className="inline-flex items-center gap-1.5 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm font-medium"><span className="h-1.5 w-1.5 rounded-full bg-primary" />{b.t}</span>
+                    <div className="relative mt-0 w-full pl-6">
+                      <span className="absolute bottom-5 left-3 top-0 w-0.5 bg-border" />
+                      {branches.map((b) => (
+                        <div key={b.t} className="relative mt-3">
+                          <span className="absolute -left-3 top-1/2 h-0.5 w-3 bg-border" />
+                          {b.k === "alert" ? (
+                            <div className="flex items-start gap-1.5 rounded-xl bg-warning/10 px-3 py-2 text-xs font-medium leading-snug"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />{b.t}</div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 rounded-xl border bg-card px-3 py-2 text-xs font-medium"><span className="h-1.5 w-1.5 rounded-full bg-primary" />{b.t}</div>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}
                   {p.id === "f3" && (
-                    <div className="mt-4 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
-                      <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary"><LayoutGrid className="h-4 w-4" />Ramificação: Método 4FA</p>
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="mt-3 flex w-full flex-col items-center">
+                      <span className="h-5 w-0.5 bg-primary/60" />
+                      <div className="rounded-full bg-primary px-4 py-1 text-xs font-black tracking-wide text-primary-foreground shadow">4FA</div>
+                      <span className="h-4 w-0.5 bg-primary/60" />
+                      <div className="grid w-full grid-cols-2 gap-2">
                         {FUNNELS.map((f) => {
-                          const t = FUNNEL_TONE[f.title]; const FI = FUNNEL_META[f.title].icon;
+                          const FI = FUNNEL_META[f.title].icon;
                           return (
-                            <div key={f.title} className={cn("rounded-lg border-2 bg-card p-3", t.ring)}>
-                              <p className="flex items-center gap-2 font-semibold"><span className={cn("flex h-7 w-7 items-center justify-center rounded-md ring-1", t.tile)}><FI className={cn("h-4 w-4", t.text)} /></span>{f.title}</p>
-                              <p className="mt-1.5 text-xs text-muted-foreground">{f.items.slice(0, 3).join(" · ")}{f.items.length > 3 ? ` +${f.items.length - 3}` : ""}</p>
+                            <div key={f.title} className="relative overflow-hidden rounded-xl border bg-card p-3 pt-3.5 shadow-sm">
+                              <span className="absolute inset-x-0 top-0 h-1" style={{ background: fc(f.title) }} />
+                              <p className="flex items-center gap-2 text-sm font-semibold"><span className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: fc(f.title, 0.14) }}><FI className="h-4 w-4" style={{ color: fc(f.title) }} /></span>{f.title}</p>
+                              <ul className="mt-2 space-y-1">
+                                {f.items.map((it) => <li key={it} className="flex items-center gap-1.5 text-xs text-foreground/80"><span className="h-1 w-1 shrink-0 rounded-full" style={{ background: fc(f.title) }} /><span className="truncate">{it}</span></li>)}
+                              </ul>
                             </div>
                           );
                         })}
@@ -371,10 +385,10 @@ function MacroMap({ counts, onPick }: { counts: Record<string, { total: number; 
                     </div>
                   )}
                 </div>
-              </li>
-            );
-          })}
-        </ol>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
