@@ -500,7 +500,7 @@ export default function CSProcesses() {
                 <div className="sticky bottom-3 mx-auto mt-8 flex max-w-[760px] items-center justify-between gap-2 z-10 rounded-2xl border bg-card px-3 py-2.5 shadow-md">
                   <Button variant="ghost" disabled={selIdx <= 0} className="gap-1 text-muted-foreground" onClick={() => setSel(allKeys[selIdx - 1])}><ChevronLeft className="h-4 w-4" />Etapa anterior</Button>
                   <Button data-tour="next" disabled={!target && selIdx >= allKeys.length - 1} onClick={completeAndNext}>
-                    {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima") : "Próxima etapa"}<ChevronRight className="ml-1 h-4 w-4" />
+                    {target ? (isDone(selKey) && selIdx >= allKeys.length - 1 ? "Etapa concluída" : "Concluir e ir para a próxima") : selIdx >= allKeys.length - 1 ? "Fim do processo" : "Próxima etapa"}{(target || selIdx < allKeys.length - 1) && <ChevronRight className="ml-1 h-4 w-4" />}
                   </Button>
                 </div>
               </div>
@@ -561,8 +561,16 @@ function StepArrowKeys({ stepKey, enabled, onPrev, onNext }: { stepKey: string; 
       if (e.key === "ArrowRight") { e.preventDefault(); if (idx.current < n - 1) go(idx.current + 1); else onNext(); }
       if (e.key === "ArrowLeft") { e.preventDefault(); if (idx.current > 0) go(idx.current - 1); else { fromPrev.current = true; onPrev(); } }
     };
+    // Clique em qualquer lugar fora da mensagem destacada tira o destaque.
+    const off = (e: PointerEvent) => {
+      const hit = (e.target as HTMLElement | null)?.closest?.("li[data-step-action][data-active=true]");
+      if (hit) return;
+      idx.current = -1;
+      document.querySelectorAll<HTMLElement>("li[data-step-action]").forEach((el) => { el.dataset.active = "false"; });
+    };
     window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
+    window.addEventListener("pointerdown", off);
+    return () => { window.removeEventListener("keydown", h); window.removeEventListener("pointerdown", off); };
   }, [enabled, onPrev, onNext]);
   return null;
 }
