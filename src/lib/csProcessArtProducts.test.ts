@@ -41,7 +41,7 @@ describe("arte do Canva conforme o produto da cliente", () => {
 
   it("esconder não muda a numeração dos passos", () => {
     const before = toStepInfo(step13).actions;
-    const after = applyArtVisibility(before, ["EM l Eternum Mentoring"]).actions ?? applyArtVisibility(before, ["EM l Eternum Mentoring"]);
+    const after = applyArtVisibility(before, ["EM l Eternum Mentoring"]);
     expect(after.length).toBe(before.length);
     expect(after.findIndex((a) => a.kind === "link")).toBe(before.findIndex((a) => a.kind === "link"));
   });
