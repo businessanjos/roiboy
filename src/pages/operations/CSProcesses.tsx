@@ -218,7 +218,10 @@ export default function CSProcesses() {
         }
       }
     }
-    if (on) await supabase.from("cs_process_progress").upsert({ account_id: currentUser.account_id, process_id: proc.id, target_type: target.type, target_id: target.id, step_key: key }, { onConflict: "account_id,process_id,target_type,target_id,step_key" });
+    if (on) {
+      const { error } = await supabase.from("cs_process_progress").upsert({ account_id: currentUser.account_id, process_id: proc.id, target_type: target.type, target_id: target.id, step_key: key }, { onConflict: "account_id,process_id,target_type,target_id,step_key" });
+      if (!error && finishesProcess(allKeys, doneKeys, hubDone, key)) celebrateFinish();
+    }
     else await supabase.from("cs_process_progress").delete().eq("target_type", target.type).eq("target_id", target.id).eq("process_id", proc.id).eq("step_key", key);
     qc.invalidateQueries({ queryKey: progressKey });
   };
@@ -263,18 +266,29 @@ export default function CSProcesses() {
   const loaded = progressLoaded && (!syncOnboarding || hubLoaded);
   const doneEdge = useRef<{ tag: string; done: boolean } | null>(null);
   const finishTimer = useRef<number | null>(null);
+  const celebrating = useRef(false);
   const [justFinished, setJustFinished] = useState(false);
+  /** Pulsa e avisa uma única vez, no momento em que o processo fecha. */
+  const celebrateFinish = useCallback(() => {
+    if (celebrating.current) return;
+    celebrating.current = true;
+    setJustFinished(true);
+    toast.success("Processo concluído ✓", { description: `${targetName ?? "Cliente"}: todas as ${allKeys.length} etapas foram marcadas como feitas.` });
+    if (finishTimer.current) window.clearTimeout(finishTimer.current);
+    finishTimer.current = window.setTimeout(() => {
+      setJustFinished(false);
+      celebrating.current = false;
+    }, 9000);
+  }, [targetName, allKeys.length]);
   useEffect(() => {
     if (!loaded) return;
     const tag = `${target?.type ?? "-"}:${target?.id ?? "-"}:${proc?.id ?? "-"}`;
     const prev = doneEdge.current;
     doneEdge.current = { tag, done: allDone };
-    if (!prev || prev.tag !== tag || prev.done || !allDone) return;
-    setJustFinished(true);
-    toast.success("Processo concluído ✓", { description: `${targetName ?? "Cliente"}: todas as ${allKeys.length} etapas foram marcadas como feitas.` });
-    if (finishTimer.current) window.clearTimeout(finishTimer.current);
-    finishTimer.current = window.setTimeout(() => setJustFinished(false), 9000);
-  }, [loaded, allDone, target?.type, target?.id, proc?.id, targetName, allKeys.length]);
+    if (!prev || prev.tag !== tag) { setJustFinished(false); return; }
+    if (prev.done || !allDone) return;
+    celebrateFinish();
+  }, [loaded, allDone, target?.type, target?.id, proc?.id, celebrateFinish]);
   useEffect(() => () => { if (finishTimer.current) window.clearTimeout(finishTimer.current); }, []);
   const { data: finishedAt } = useQuery({
     queryKey: ["cs-process-finished-at", target?.type, target?.id, proc?.id],
