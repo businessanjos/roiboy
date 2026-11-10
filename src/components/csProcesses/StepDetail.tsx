@@ -55,7 +55,13 @@ export function ProcessLinkButton({ url, ctx, fallbackLabel }: { url: string; ct
       </span>
     );
   }
-  if (r.kind === "needsClient") return <Button size="sm" variant="outline" disabled className="gap-1.5" title="Abra a tela a partir da cliente para usar o link dela"><ExternalLink className="h-4 w-4" />{r.label}</Button>;
+  if (r.kind === "needsClient") return (
+    <Button size="sm" variant="outline" aria-disabled="true"
+      className="gap-1.5 cursor-not-allowed opacity-60 hover:bg-background"
+      onClick={() => toast.info("Selecione uma cliente primeiro", { description: "Escolha a cliente no topo da tela para abrir o link dela." })}>
+      <ExternalLink className="h-4 w-4" />{r.label}
+    </Button>
+  );
   const label = r.kind === "client" ? r.label : fallbackLabel;
   if (!label) return <a href={r.url} target="_blank" rel="noreferrer" className="break-all text-primary underline">{r.url}</a>;
   return (
