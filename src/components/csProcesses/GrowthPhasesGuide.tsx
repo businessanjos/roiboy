@@ -81,6 +81,22 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
   let n = 0;
   const go = (id: string) => { setActive(id); setTab("phases"); };
 
+  const stripRef = useRef<HTMLDivElement>(null);
+  const timer = useRef<number | null>(null);
+  const [edge, setEdge] = useState({ left: false, right: true });
+  const updateEdge = () => { const el = stripRef.current; if (!el) return; setEdge({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 }); };
+  const stopScroll = () => { if (timer.current) { cancelAnimationFrame(timer.current); timer.current = null; } };
+  const startScroll = (d: 1 | -1) => { stopScroll(); const tick = () => { stripRef.current?.scrollBy({ left: d * 6 }); timer.current = requestAnimationFrame(tick); }; timer.current = requestAnimationFrame(tick); };
+  useEffect(() => stopScroll, []);
+  useEffect(() => {
+    if (!open || tab !== "phases") return;
+    const id = requestAnimationFrame(() => {
+      stripRef.current?.querySelector<HTMLElement>(`[data-phase="${active}"]`)?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+      updateEdge();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [active, open, tab]);
+
   useEffect(() => {
     if (!open || tab !== "phases") return;
     const step = (dir: 1 | -1) => {
@@ -127,12 +143,20 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
         {tab === "phases" ? (
           <div className="flex min-h-0 flex-1 flex-col">
             {/* Jornada */}
-            <div className="overflow-x-auto border-b bg-muted/20 px-6 py-4">
+            <div className="group/strip relative border-b bg-muted/20">
+            {([-1, 1] as const).map((d) => (
+              <button key={d} type="button" tabIndex={-1} aria-label={d === 1 ? "Rolar fases para a direita" : "Rolar fases para a esquerda"}
+                onMouseEnter={() => startScroll(d)} onMouseLeave={stopScroll}
+                className={cn("absolute inset-y-0 z-10 flex w-10 items-center justify-center text-muted-foreground/70 opacity-0 transition-opacity hover:text-primary group-hover/strip:opacity-100", d === 1 ? "right-0 bg-gradient-to-l from-background via-background/80 to-transparent" : "left-0 bg-gradient-to-r from-background via-background/80 to-transparent", (d === 1 ? !edge.right : !edge.left) && "pointer-events-none !opacity-0")}>
+                {d === 1 ? <ChevronRight className="h-5 w-5" /> : <ChevronRight className="h-5 w-5 rotate-180" />}
+              </button>
+            ))}
+            <div ref={stripRef} onScroll={updateEdge} className="overflow-x-auto px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <ol className="flex min-w-max items-center">
                 {PHASES.map((p, i) => {
                   const pc = counts[p.id]; const on = p.id === active; const complete = pc.total > 0 && pc.done === pc.total; const I = p.icon;
                   return (
-                    <li key={p.id} className="flex items-center">
+                    <li key={p.id} data-phase={p.id} className="flex items-center">
                       <button onClick={() => setActive(p.id)} className={cn("group flex items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40", on ? "border-primary bg-primary/10 shadow-sm" : "border-transparent hover:bg-muted")}>
                         <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors", complete ? "border-success bg-success text-success-foreground" : on ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground")}>
                           {complete ? <Check className="h-5 w-5" /> : <I className="h-5 w-5" />}
@@ -148,6 +172,7 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
                   );
                 })}
               </ol>
+            </div>
             </div>
 
             <div key={phase.id} className="min-h-0 flex-1 animate-fade-in overflow-y-auto">
