@@ -1,16 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Instagram, Layers, Users, Target, Trophy, Wallet, History } from 'lucide-react';
+import { Instagram, Layers, Users, Target, Trophy, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { useCommercialIntelligence } from '@/hooks/useCommercialIntelligence';
 import { getDealStatusBadge } from '@/lib/sales/dealStatusBadge';
 import { cn } from '@/lib/utils';
 import { DashboardPeriodFilter, resolvePeriod, type PeriodValue } from './DashboardPeriodFilter';
 import { AcquisitionTrendChart } from './AcquisitionTrendChart';
-import { commercialEvolution, commercialGroups, commercialSummary, type CommercialRow } from './commercialIntelligenceData';
+import { commercialEvolution, commercialGroups, commercialSummary } from './commercialIntelligenceData';
 
 const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 const pct = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
@@ -24,7 +22,6 @@ export function InsightsChannelOverview() {
   const { data: rows = [], isLoading } = useCommercialIntelligence(range.startDate, range.endDate);
   const [view, setView] = useState<View>({ kind: 'instagram', value: null });
   const [page, setPage] = useState(0);
-  const [selected, setSelected] = useState<CommercialRow | null>(null);
 
   const channels = useMemo(() => [...new Set(rows.map(r => r.channel))].sort(), [rows]);
   const igRows = useMemo(() => rows.filter(r => r.origins.some(isInstagramOrigin)), [rows]);
@@ -110,9 +107,9 @@ export function InsightsChannelOverview() {
           <div className="flex items-center justify-between border-b px-4 py-3"><h4 className="text-sm font-semibold">Leads</h4><span className="text-xs text-muted-foreground tabular-nums">{filtered.length.toLocaleString('pt-BR')} negócios</span></div>
           <div className="overflow-x-auto">
             <table className="w-full table-fixed text-sm">
-              <colgroup><col className="w-[30%]" /><col className="w-[22%]" /><col className="hidden md:table-column w-[14%]" /><col className="w-[14%]" /><col className="hidden sm:table-column w-[12%]" /><col className="w-12" /></colgroup>
+              <colgroup><col className="w-[32%]" /><col className="w-[24%]" /><col className="hidden md:table-column w-[16%]" /><col className="w-[16%]" /><col className="hidden sm:table-column w-[12%]" /></colgroup>
               <thead className="bg-muted/50 text-xs text-muted-foreground"><tr>
-                <th className="h-10 px-4 text-left font-medium">Nome</th><th className="px-3 text-left font-medium">Perfil de origem</th><th className="hidden px-3 text-left font-medium md:table-cell">Canal</th><th className="px-3 text-left font-medium">Status</th><th className="hidden px-3 text-left font-medium sm:table-cell">Criado em</th><th />
+                <th className="h-10 px-4 text-left font-medium">Nome</th><th className="px-3 text-left font-medium">Perfil de origem</th><th className="hidden px-3 text-left font-medium md:table-cell">Canal</th><th className="px-3 text-left font-medium">Status</th><th className="hidden px-3 text-left font-medium sm:table-cell">Criado em</th>
               </tr></thead>
               <tbody className="divide-y">
                 {pageRows.map(r => {
@@ -124,11 +121,10 @@ export function InsightsChannelOverview() {
                       <td className="hidden truncate px-3 py-2.5 text-muted-foreground md:table-cell">{r.channel}</td>
                       <td className="px-3 py-2.5">{st && <Badge variant="outline" className={st.className}>{st.label}</Badge>}</td>
                       <td className="hidden px-3 py-2.5 tabular-nums text-muted-foreground sm:table-cell">{new Date(r.createdAt).toLocaleDateString('pt-BR')}</td>
-                      <td className="px-2"><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Ver histórico de ${r.name}`} disabled={!r.leadId} onClick={() => setSelected(r)}><History className="h-4 w-4" /></Button></td>
                     </tr>
                   );
                 })}
-                {pageRows.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">Nenhum lead neste recorte.</td></tr>}
+                {pageRows.length === 0 && <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">Nenhum lead neste recorte.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -136,9 +132,6 @@ export function InsightsChannelOverview() {
         </div>
       </>}
 
-      <Dialog open={!!selected} onOpenChange={o => !o && setSelected(null)}>
-        <DialogContent className="flex max-h-[86vh] max-w-2xl flex-col overflow-hidden"><DialogHeader><DialogTitle>Histórico de {selected?.name}</DialogTitle></DialogHeader><div className="min-h-0 flex-1 overflow-y-auto">{selected?.leadId && <LeadTimeline leadId={selected.leadId} readOnly />}</div></DialogContent>
-      </Dialog>
     </section>
   );
 }
