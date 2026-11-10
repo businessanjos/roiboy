@@ -34,6 +34,7 @@ import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { ptBR } from "date-fns/locale";
+import { RykaUsageDashboard } from "@/components/ryka/RykaUsageDashboard";
 
 const RYKA_ELIGIBLE_KEYWORDS = ["rykas mentoring", "eternum club"];
 
@@ -49,6 +50,7 @@ interface ClientRow {
   avatar_url: string | null;
   status: string;
   created_at: string;
+  responsible_user_id: string | null;
   client_products: Array<{
     products: { id: string; name: string; color: string | null } | null;
   }>;
@@ -68,6 +70,7 @@ export default function ClinicaRyka() {
   const accountId = currentUser?.account_id;
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Filter>("all");
+  const [view, setView] = useState<"painel" | "clientes">("painel");
   const [search, setSearch] = useState("");
   const [provisioningId, setProvisioningId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -82,7 +85,7 @@ export default function ClinicaRyka() {
         supabase
           .from("clients")
           .select(
-            `id, full_name, company_name, phone_e164, emails, logo_url, avatar_url, status, created_at,
+            `id, full_name, company_name, phone_e164, emails, logo_url, avatar_url, status, created_at, responsible_user_id,
              client_products(products(id, name, color))`,
           )
           .eq("account_id", accountId!)
@@ -258,6 +261,14 @@ export default function ClinicaRyka() {
         </div>
       </div>
 
+      <Tabs value={view} onValueChange={(v) => setView(v as any)}>
+        <TabsList>
+          <TabsTrigger value="painel">Painel</TabsTrigger>
+          <TabsTrigger value="clientes">Clientes</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {view === "painel" ? <RykaUsageDashboard rows={enriched as any} accountId={accountId} /> : (<>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <SummaryCard label="Total elegíveis" value={counts.total} />
         <SummaryCard label="Já com acesso" value={counts.provisioned} accent="text-success" />
