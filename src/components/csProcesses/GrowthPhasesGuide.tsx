@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Sprout, Wallet, Megaphone, Gem, Magnet, MessageSquareHeart, Handshake, Lightbulb, AlertTriangle, LayoutGrid, ListChecks, Check, Map, Maximize2, Minimize2, Network, ArrowRight } from "lucide-react";
+import { Sprout, Wallet, Megaphone, Gem, Magnet, MessageSquareHeart, Handshake, Lightbulb, AlertTriangle, LayoutGrid, ListChecks, Check, Map, Maximize2, Minimize2, Network, ArrowRight, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -137,7 +137,7 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
                           <span className="block text-xs tabular-nums text-muted-foreground">{pc.done}/{pc.total}</span>
                         </span>
                       </button>
-                      {i < PHASES.length - 1 && <span className="mx-1 h-0.5 w-6 rounded bg-border" />}
+                      {i < PHASES.length - 1 && <button onClick={() => setActive(PHASES[i + 1].id)} aria-label={`Ir para ${PHASES[i + 1].tag}`} title={`Ir para ${PHASES[i + 1].tag}`} className="mx-1 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/60 transition-all duration-200 hover:translate-x-1 hover:bg-muted hover:text-primary"><ChevronRight className="h-4 w-4" /></button>}
                     </li>
                   );
                 })}
