@@ -243,10 +243,10 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
           <CardContent className="p-0">
             {shown.length === 0 && <p className="text-sm text-muted-foreground py-10 text-center">Nenhuma clínica com uso registrado.</p>}
             <div className="grid border-border lg:grid-cols-2">
-              <ol start={1} className="order-1 border-border [&>li]:border-b [&>li]:border-border lg:order-none lg:col-start-2 lg:border-l">
+              <ol start={1} className="order-1 border-border [&>li]:border-b [&>li]:border-border lg:order-none lg:col-start-2 lg:row-start-1 lg:border-l">
                 {rightCol.map((x, i) => <RankRow key={x.r.client.id} x={x} pos={i + 1} consultantName={x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora"} />)}
               </ol>
-              <ol start={rightCount + 1} className="order-2 border-border [&>li]:border-b [&>li]:border-border lg:order-none lg:col-start-1">
+              <ol start={rightCount + 1} className="order-2 border-border [&>li]:border-b [&>li]:border-border lg:order-none lg:col-start-1 lg:row-start-1">
                 {leftCol.map((x, i) => <RankRow key={x.r.client.id} x={x} pos={rightCount + i + 1} consultantName={x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora"} />)}
               </ol>
             </div>
