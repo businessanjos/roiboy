@@ -127,7 +127,7 @@ Abaixo está todo o conteúdo dos processos.
 
 **Depois da reunião:**
 - [ ] Normalmente já pedirá aulas: já faz o compromisso, monta e envia o Plano de Ação personalizado — com base nos Faróis (onde tem todo o cronograma a seguir) para começar a montar esteira, método, consulta matadora, abordagens de leads
-- 🚨 **IMPORTANTE:** salvar no Drive do Eternum Club a gravação do onboarding, dentro de "Gravação de Onboarding": https://drive.google.com/drive/u/0/folders/1bJsxp4lralcct4eOdf-JVWcolXU0s2D
+- 🚨 **IMPORTANTE:** salvar no Drive do Eternum Club a gravação do onboarding, dentro de "Gravação de Onboarding": https://drive.google.com/drive/u/0/folders/1bJsxp4Iralcct4eOdf-JVWcoIXU0s2D_
 
 ### Etapa 3.3 — Plano de Ação Personalizado (Cliente Membro/Sócio)
 - Diante das maiores demandas, montar um plano mensurável de aprendizado, com sequência lógica dentro da metodologia.
