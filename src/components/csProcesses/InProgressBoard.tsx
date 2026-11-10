@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Hourglass, Search } from "lucide-react";
+import { CircleDashed, Hourglass, Layers, Search, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,6 +50,7 @@ export function InProgressBoard({ processes, onOpenCard }: { processes: Process[
     if (loose.length) cols.unshift({ id: NONE, title: "Sem fase definida", cards: loose });
     return cols;
   }, [proc, cards]);
+  const busiest = columns.reduce<(typeof columns)[number] | null>((b, c) => (c.cards.length > (b?.cards.length ?? 0) ? c : b), null);
 
   return (
     <div className="space-y-4" data-tour="board">
@@ -95,15 +96,42 @@ export function InProgressBoard({ processes, onOpenCard }: { processes: Process[
         </div>
       )}
 
+      {!loading && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { l: pi === 0 ? "Clientes em andamento" : "Encontros em andamento", v: cards.length, I: Users },
+            { l: "Aguardando cliente", v: cards.filter((c) => c.waiting).length, I: Hourglass },
+            { l: "Fase com mais gente", v: busiest ? busiest.title : "—", I: Layers, small: true },
+            { l: "Sem fase definida", v: cards.filter((c) => !c.stepKey).length, I: CircleDashed },
+          ].map(({ l, v, I, small }) => (
+            <div key={l} className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><I className="h-4 w-4" /></span>
+              <div className="min-w-0">
+                <p className="truncate text-xs text-muted-foreground">{l}</p>
+                <p className={cn("truncate font-semibold tabular-nums", small ? "text-sm" : "text-xl")} title={String(v)}>{v}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {loading ? (
-        <div className="flex gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-64 w-72 shrink-0 rounded-xl" />)}</div>
+        <div className="grid gap-3 sm:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-64 rounded-xl" />)}</div>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {columns.filter((_, i) => !isMobile || i === Math.min(mobileCol, columns.length - 1)).map((col) => (
-            <div key={col.id} className={cn("flex shrink-0 flex-col rounded-xl bg-muted/40 p-2", isMobile ? "w-full" : "w-72")}>
-              <div className="px-1.5 pb-2 pt-1 text-sm font-medium">{col.title} <span className="text-muted-foreground">· {col.cards.length}</span></div>
-              <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-0.5">
-                {col.cards.length === 0 && <p className="px-2 py-6 text-center text-xs text-muted-foreground">Ninguém nesta fase agora</p>}
+        <div className={cn("gap-3 pb-2", isMobile ? "flex" : "grid")} style={isMobile ? undefined : { gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(240px, 1fr))`, overflowX: "auto" }}>
+          {columns.filter((_, i) => !isMobile || i === Math.min(mobileCol, columns.length - 1)).map((col, ci) => (
+            <div key={col.id} className={cn("flex min-h-[55vh] flex-col rounded-xl border bg-muted/30 p-2", isMobile && "w-full")}>
+              <div className="mb-2 flex items-center gap-2 border-b px-1.5 pb-2 pt-1">
+                {col.id !== NONE && <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-primary-foreground", fills[pi % 3])}>{Number(col.id) + 1}</span>}
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold" title={col.title}>{col.title}</span>
+                <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium tabular-nums", col.cards.length ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>{col.cards.length}</span>
+              </div>
+              <div className="max-h-[65vh] flex-1 space-y-2 overflow-y-auto pr-0.5">
+                {col.cards.length === 0 && (
+                  <div className="flex h-full min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-3 text-center text-xs text-muted-foreground">
+                    <CircleDashed className="h-5 w-5 opacity-50" />Ninguém nesta fase agora
+                  </div>
+                )}
                 {col.cards.map((c) => {
                   const [cp, cs] = c.stepKey ? c.stepKey.split("-").map(Number) : [-1, -1];
                   const phase = cp >= 0 ? proc.phases[cp] : null;
