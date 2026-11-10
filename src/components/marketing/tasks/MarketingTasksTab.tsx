@@ -346,7 +346,7 @@ export function MarketingTasksTab() {
           tasks={filteredTasks}
           columns={columns}
           onEditTask={handleEditTask}
-          onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
+          onToggleComplete={handleToggleComplete}
           onColumnChange={handleColumnChange}
           onAddTask={(columnId) => handleAddTask(undefined, columnId)}
           subtaskCounts={subtaskCounts}
@@ -372,7 +372,7 @@ export function MarketingTasksTab() {
               tasks={tasksBySection[section.id] || []}
               onAddTask={() => handleAddTask(section.id)}
               onEditTask={handleEditTask}
-              onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
+              onToggleComplete={handleToggleComplete}
               resetKey={listFiltersKey}
             />
           ))}
@@ -381,7 +381,7 @@ export function MarketingTasksTab() {
             <MarketingTaskList
               tasks={uncategorizedTasks}
               onEditTask={handleEditTask}
-              onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
+              onToggleComplete={handleToggleComplete}
               resetKey={listFiltersKey}
             />
           )}
