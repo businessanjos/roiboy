@@ -181,7 +181,7 @@ export default function CSProcesses() {
     },
   });
   const progressKey = ["cs-process-progress", target?.type, target?.id, proc?.id];
-  const { data: doneKeys = new Set<string>() } = useQuery({
+  const { data: doneKeys = new Set<string>(), isSuccess: progressLoaded } = useQuery({
     queryKey: progressKey,
     enabled: !!target && !!proc,
     queryFn: async () => {
@@ -191,7 +191,7 @@ export default function CSProcesses() {
   });
   // Sincronia com o Onboarding Hub: etapa da ficha define o ponto de partida e avança sozinha.
   const syncOnboarding = target?.type === "client" && active === 0;
-  const { data: hub } = useQuery({
+  const { data: hub, isSuccess: hubLoaded } = useQuery({
     queryKey: ["cs-process-hub-stage", target?.id, currentUser?.account_id],
     enabled: !!syncOnboarding && !!currentUser?.account_id,
     queryFn: async () => {
@@ -258,6 +258,32 @@ export default function CSProcesses() {
   const currentKey = target ? allKeys.find((k) => !isDone(k)) : undefined;
   const statusOf = useCallback((k: string): StepStatus => !target ? undefined : isDone(k) ? "done" : k === currentKey ? "current" : "pending", [target, isDone, currentKey]);
   const pct = allKeys.length ? Math.round((allKeys.filter((k) => isDone(k)).length / allKeys.length) * 100) : 0;
+  /** Processo de verdade terminado: todas as etapas marcadas como feitas. */
+  const allDone = isProcessFinished(allKeys, isDone);
+  const loaded = progressLoaded && (!syncOnboarding || hubLoaded);
+  const doneEdge = useRef<{ tag: string; done: boolean } | null>(null);
+  const finishTimer = useRef<number | null>(null);
+  const [justFinished, setJustFinished] = useState(false);
+  useEffect(() => {
+    if (!loaded) return;
+    const tag = `${target?.type ?? "-"}:${target?.id ?? "-"}:${proc?.id ?? "-"}`;
+    const prev = doneEdge.current;
+    doneEdge.current = { tag, done: allDone };
+    if (!prev || prev.tag !== tag || prev.done || !allDone) return;
+    setJustFinished(true);
+    toast.success("Processo concluído ✓", { description: `${targetName ?? "Cliente"}: todas as ${allKeys.length} etapas foram marcadas como feitas.` });
+    if (finishTimer.current) window.clearTimeout(finishTimer.current);
+    finishTimer.current = window.setTimeout(() => setJustFinished(false), 9000);
+  }, [loaded, allDone, target?.type, target?.id, proc?.id, targetName, allKeys.length]);
+  useEffect(() => () => { if (finishTimer.current) window.clearTimeout(finishTimer.current); }, []);
+  const { data: finishedAt } = useQuery({
+    queryKey: ["cs-process-finished-at", target?.type, target?.id, proc?.id],
+    enabled: !!target && !!proc && allDone,
+    queryFn: async () => {
+      const { data } = await supabase.from("cs_process_progress").select("done_at").eq("target_type", target!.type).eq("target_id", target!.id).eq("process_id", proc.id).order("done_at", { ascending: false }).limit(1).maybeSingle();
+      return (data?.done_at as string | undefined) ?? null;
+    },
+  });
 
   const phases = useMemo(() => (proc?.phases ?? []).map((ph, pi) => ({ ...ph, pi, steps: ph.steps.map((s, si) => ({ s, key: `${pi}-${si}` })).filter(({ s }) => !q.trim() || norm(s.title + JSON.stringify(s.blocks)).includes(norm(q))) })).filter((ph) => ph.steps.length), [proc, q]);
 
