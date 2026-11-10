@@ -201,6 +201,21 @@ export function MarketingTasksTab() {
     });
   };
 
+  const handleToggleComplete = async (taskId: string, completed: boolean) => {
+    const task = tasks.find((t) => t.id === taskId);
+    const current = columns.find((c) => c.id === (task as any)?.column_id);
+    const target = completed
+      ? columns.find((c) => c.is_done)
+      : current?.is_done
+        ? columns.find((c) => !c.is_done)
+        : undefined;
+    if (target && target.id !== current?.id) {
+      await handleColumnChange(taskId, target);
+      return;
+    }
+    toggleComplete.mutate({ id: taskId, isCompleted: completed });
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -331,7 +346,7 @@ export function MarketingTasksTab() {
           tasks={filteredTasks}
           columns={columns}
           onEditTask={handleEditTask}
-          onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
+          onToggleComplete={handleToggleComplete}
           onColumnChange={handleColumnChange}
           onAddTask={(columnId) => handleAddTask(undefined, columnId)}
           subtaskCounts={subtaskCounts}
@@ -357,7 +372,7 @@ export function MarketingTasksTab() {
               tasks={tasksBySection[section.id] || []}
               onAddTask={() => handleAddTask(section.id)}
               onEditTask={handleEditTask}
-              onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
+              onToggleComplete={handleToggleComplete}
               resetKey={listFiltersKey}
             />
           ))}
@@ -366,7 +381,7 @@ export function MarketingTasksTab() {
             <MarketingTaskList
               tasks={uncategorizedTasks}
               onEditTask={handleEditTask}
-              onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
+              onToggleComplete={handleToggleComplete}
               resetKey={listFiltersKey}
             />
           )}
