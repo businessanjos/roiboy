@@ -14,6 +14,7 @@ import { StepDetail } from "@/components/csProcesses/StepDetail";
 import { StepEditDialog } from "@/components/csProcesses/StepEditDialog";
 import { StepNavigator, ProcessOverview, type NavStatus } from "@/components/csProcesses/StepNavigator";
 import { toStepInfo, waitKey } from "@/lib/csProcessActions";
+import { applyArtVisibility } from "@/lib/csProcessArtProducts";
 import { waitingFor, type StepContext } from "@/components/csProcesses/StepDetail";
 import { processVars, type ProcessClient, type ClientField } from "@/lib/csClientLinks";
 import { ClientProcessDataDialog } from "@/components/csProcesses/ClientProcessDataDialog";
@@ -259,13 +260,27 @@ export default function CSProcesses() {
 
   const lastActive = useRef(active);
   useEffect(() => { if (lastActive.current !== active) { lastActive.current = active; if (!stepParam) setSel(null); } }, [active, stepParam]);
+  /** Produtos da cliente selecionada (pela ficha e pelos contratos), para mostrar só a arte do produto dela. */
+  const { data: clientProducts = [] as string[] } = useQuery({
+    queryKey: ["cs-process-client-products", clientId], enabled: !!clientId, staleTime: 60_000,
+    queryFn: async () => {
+      const [viaProduto, viaContrato] = await Promise.all([
+        supabase.from("client_products").select("product_id").eq("client_id", clientId!),
+        supabase.from("client_contracts").select("product_id").eq("client_id", clientId!).not("product_id", "is", null),
+      ]);
+      const ids = [...new Set([...(viaProduto.data ?? []), ...(viaContrato.data ?? [])].map((r: any) => r.product_id).filter(Boolean))] as string[];
+      if (!ids.length) return [];
+      const { data } = await supabase.from("products").select("name").in("id", ids);
+      return (data ?? []).map((p: any) => p.name as string);
+    },
+  });
   const infoOf = useCallback((k: string) => { const [pi, si] = k.split("-").map(Number); const st = proc?.phases[pi]?.steps[si]; return st ? toStepInfo(st) : null; }, [proc]);
   const visibleKeys = useMemo(() => allKeys.filter((k) => { if (!q.trim()) return true; const [pi, si] = k.split("-").map(Number); const st = proc.phases[pi].steps[si]; return norm(st.title + JSON.stringify(st.blocks)).includes(norm(q)); }), [allKeys, q, proc]);
   const selKey = sel && visibleKeys.includes(sel) ? sel : (currentKey && visibleKeys.includes(currentKey) ? currentKey : visibleKeys[0] ?? "0-0");
   const selIdx = allKeys.indexOf(selKey);
   const [spi, ssi] = selKey.split("-").map(Number);
   const selStep = proc?.phases[spi]?.steps[ssi];
-  const selInfo = selStep ? toStepInfo(selStep) : null;
+  const selInfo = selStep ? applyArtVisibility(toStepInfo(selStep), clientProducts) : null;
   const selNumber = `${spi + 1}.${ssi + 1}`;
   const selPhaseLabel = `Fase ${spi + 1} · ${(proc?.phases[spi]?.title ?? "").replace(/^Fase\s+\d+\s*[—-]\s*/i, "")}`;
   const navStatus = useCallback((k: string): NavStatus => isDone(k) ? "done" : (target ? k === currentKey : k === selKey) ? "current" : "pending", [isDone, target, currentKey, selKey]);
@@ -487,7 +502,7 @@ export default function CSProcesses() {
           </div>
           {visibleKeys.length === 0 ? <p className="text-sm text-muted-foreground">Nada encontrado.</p> : (
             <div className="flex flex-col gap-6 lg:flex-row">
-              <StepNavigator process={proc} selected={selKey} onSelect={setSel} statusOf={navStatus} badgeOf={badgeOf} onEdit={canEdit ? setEditKey : undefined} visible={(k) => visibleKeys.includes(k)} mobile={isMobile} />
+              <StepNavigator process={proc} selected={selKey} onSelect={setSel} statusOf={navStatus} badgeOf={badgeOf} onEdit={canEdit ? setEditKey : undefined} visible={(k) => visibleKeys.includes(k)} mobile={isMobile} productNames={clientProducts} />
               <div className="min-w-0 flex-1 rounded-xl bg-muted/40 p-4 md:p-6">
                 {selStep && (
                   <>
@@ -522,7 +537,7 @@ export default function CSProcesses() {
               </div>
               {isCycle(opened) && <CycleView step={opened} />}
               {(() => { const [pi, si] = openKey.split("-").map(Number); return (
-                <StepDetail step={opened} number={`${pi + 1}.${si + 1}`} phaseLabel={`Fase ${pi + 1} · ${proc.phases[pi].title.replace(/^Fase\s+\d+\s*[—-]\s*/i, "")}`} info={toStepInfo(opened)} vars={vars}
+                <StepDetail step={opened} number={`${pi + 1}.${si + 1}`} phaseLabel={`Fase ${pi + 1} · ${proc.phases[pi].title.replace(/^Fase\s+\d+\s*[—-]\s*/i, "")}`} info={applyArtVisibility(toStepInfo(opened), clientProducts)} vars={vars}
                   canTick={!!target} doneKeys={doneKeys} stepKey={openKey} onTask={toggle} ctx={stepCtx(openKey)} />); })()}
               {stepFooter(openKey)}
             </div>
