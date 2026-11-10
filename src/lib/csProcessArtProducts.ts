@@ -1,4 +1,4 @@
-import type { Action, StepInfo } from "@/lib/csProcessActions";
+import type { StepInfo } from "@/lib/csProcessActions";
 
 /** Etiquetas de arte que existem nos processos (EM = Eternum Mentoring, EC = Eternum Club). */
 export type ArtTag = "EM" | "EC";
