@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { filterMarketingPeople } from "@/lib/marketing/marketingPeopleVisibility";
 
 export interface MarketingTeamUser {
   /** users.id */
@@ -16,6 +17,7 @@ export interface MarketingTeamUser {
  * Pessoas com acesso ao setor de Marketing.
  * Fonte da verdade: user_sector_access (sector_id = 'marketing').
  * Usar em TODO seletor de pessoas dentro da área de Marketing.
+ * Lucas Suporte fica fora dos seletores (filterMarketingPeople).
  */
 export function useMarketingTeamUsers() {
   const { currentUser } = useCurrentUser();
@@ -37,16 +39,18 @@ export function useMarketingTeamUsers() {
 
       if (error) throw error;
 
-      const users = (data || [])
-        .map((row: any) => row.user)
-        .filter((u: any) => u && u.is_active !== false)
-        .map((u: any) => ({
-          id: u.id,
-          auth_user_id: u.auth_user_id ?? null,
-          name: u.name || u.email || "Sem nome",
-          email: u.email || "",
-          avatar_url: u.avatar_url ?? null,
-        })) as MarketingTeamUser[];
+      const users = filterMarketingPeople(
+        (data || [])
+          .map((row: any) => row.user)
+          .filter((u: any) => u && u.is_active !== false)
+          .map((u: any) => ({
+            id: u.id,
+            auth_user_id: u.auth_user_id ?? null,
+            name: u.name || u.email || "Sem nome",
+            email: u.email || "",
+            avatar_url: u.avatar_url ?? null,
+          })),
+      ) as MarketingTeamUser[];
 
       const unique = new Map(users.map((u) => [u.id, u]));
       return Array.from(unique.values()).sort((a, b) =>

@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { fetchAllRows } from '@/lib/fetchAllRows';
+import { filterMarketingPeople } from '@/lib/marketing/marketingPeopleVisibility';
 
 interface MarketingLink {
   id: string;
@@ -145,7 +146,7 @@ export function MarketingLinksUtm() {
       setLinks((linksRes.data as MarketingLink[]) || []);
       setCampaigns(campRes.data || []);
       setEvents(evRes.data || []);
-      setSellers(userRes.data || []);
+      setSellers(filterMarketingPeople(userRes.data || []));
     } catch (e) {
       console.error(e);
     } finally {
