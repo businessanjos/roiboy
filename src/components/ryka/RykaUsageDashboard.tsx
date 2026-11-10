@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { Activity, AlertTriangle, CalendarCheck, ExternalLink, Flame, Info, Search, Target, Trophy, Users, UserX, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,7 +16,7 @@ import {
 } from "@/lib/ryka/clinicUsage";
 
 export interface DashRow {
-  client: { id: string; full_name: string; responsible_user_id?: string | null; client_products: Array<{ products: { name: string; color: string | null } | null }> };
+  client: { id: string; full_name: string; logo_url?: string | null; avatar_url?: string | null; responsible_user_id?: string | null; client_products: Array<{ products: { name: string; color: string | null } | null }> };
   prov: { status: string; ryka_response: any | null } | null;
   state: "provisioned" | "pending" | "failed";
 }
@@ -241,7 +242,7 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
               {risk.slice(0, 40).map((x) => (
                 <li key={x.r.client.id}>
                   <Link to={`/clients/${x.r.client.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50">
-                    <Initials name={x.r.client.full_name} />
+                    <Initials name={x.r.client.full_name} photo={x.r.client.logo_url || x.r.client.avatar_url} />
                     <span className="flex-1 min-w-0">
                       <span className="block truncate text-sm font-medium">{x.r.client.full_name}</span>
                       <span className="block truncate text-xs text-muted-foreground">{x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora"} · {x.product}</span>
@@ -312,7 +313,10 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
     const medal = pos === 1 ? "bg-primary text-primary-foreground" : pos === 2 ? "bg-muted-foreground/70 text-background" : pos === 3 ? "bg-warning/80 text-background" : "bg-muted text-muted-foreground";
     return (
       <li className="group flex items-center gap-3 px-4 py-3 hover:bg-muted/40">
-        <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums", medal)}>{pos}</span>
+        <span className="relative shrink-0">
+          <Initials name={x.r.client.full_name} photo={x.r.client.logo_url || x.r.client.avatar_url} size="h-10 w-10" />
+          <span className={cn("absolute -bottom-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums ring-2 ring-card", medal)}>{pos}</span>
+        </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0">
             <Link to={`/clients/${x.r.client.id}`} className="truncate text-sm font-medium hover:text-primary">{x.r.client.full_name}</Link>
@@ -400,9 +404,14 @@ function BarLine({ label, right, pct, tone = "primary" }: { label: string; right
   );
 }
 
-function Initials({ name }: { name: string }) {
+function Initials({ name, photo, size = "h-8 w-8" }: { name: string; photo?: string | null; size?: string }) {
   const ini = name.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join("").toUpperCase();
-  return <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">{ini}</span>;
+  return (
+    <Avatar className={cn(size, "shrink-0")}>
+      {photo && <AvatarImage src={photo} alt={name} className="object-cover" draggable={false} />}
+      <AvatarFallback className="bg-muted text-[11px] font-semibold text-muted-foreground">{ini}</AvatarFallback>
+    </Avatar>
+  );
 }
 
 function Kpi({ icon: Icon, label, value, suffix, hint, tone }: { icon: any; label: string; value: number; suffix?: string; hint?: string; tone?: "primary" | "success" | "danger" }) {
