@@ -58,7 +58,7 @@ export function CountdownArtsButton() {
               {ARTS.map((x, i) => (
                 <div key={x.days} className="group overflow-hidden rounded-xl border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                   <button type="button" onClick={() => setSel(i)} className="block w-full">
-                    <img src={x.url} alt={label(x.days)} loading="lazy" draggable={false} className="aspect-square w-full object-cover" />
+                    <img src={x.url} alt={label(x.days)} loading="lazy" draggable={false} className="aspect-square w-full bg-muted object-contain" />
                   </button>
                   <div className="flex items-center justify-between px-3 py-2">
                     <span className="text-sm font-semibold">{label(x.days)}</span>
