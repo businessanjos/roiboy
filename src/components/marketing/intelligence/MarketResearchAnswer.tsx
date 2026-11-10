@@ -47,8 +47,12 @@ const iconColor = {
 };
 
 function parseAnswer(raw: string): { tldr: string | null; stats: KeyStat[]; sections: Section[]; rest: string } {
-  const text = stripCitations(raw).replace(/([^\n])\s*(#{2,4}\s)/g, "$1\n$2");
-  const lines = text.split(/\r?\n/);
+  const text = stripCitations(raw)
+    .replace(/\s*-{3,}\s*/g, "\n")
+    .replace(/([^\n])\s*(#{2,4}\s)/g, "$1\n$2")
+    .replace(/([.;:)])\s+-\s+(?=\S)/g, "$1\n- ")
+    .replace(/([.;:)])\s+(\d{1,2}\.\s+\*{0,2}[A-ZÁÉÍÓÚÂÊÔÃÕÇ])/g, "$1\n$2");
+  const lines = text.split(/\r?\n/).flatMap((l) => splitHeading(l));
 
   let tldr: string | null = null;
   const stats: KeyStat[] = [];
