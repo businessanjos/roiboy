@@ -49,13 +49,13 @@ function StepPreview({ step, number, phaseLabel, status }: { step: Step; number:
 
 export function ProcessOverview({ process, statusOf, onPick }: { process: Process; statusOf: (k: string) => NavStatus; onPick: (pi: number) => void }) {
   return (
-    <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
+    <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
       {process.phases.map((ph, pi) => {
         const keys = ph.steps.map((_, si) => `${pi}-${si}`);
         const done = keys.filter((k) => statusOf(k) === "done").length;
         return (
-          <div key={pi} className="flex shrink-0 items-center gap-2">
-            <button type="button" onClick={() => onPick(pi)} className="w-48 rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-primary/60">
+          <div key={pi} className="flex min-w-[11rem] flex-1 items-center gap-1">
+            <button type="button" onClick={() => onPick(pi)} className="min-w-0 flex-1 rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-primary/60">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">Fase {pi + 1}</span>
               <p className="truncate font-medium">{phaseName(ph.title)}</p>
               <p className="mb-2 text-xs text-muted-foreground">{done} de {keys.length} etapas</p>
