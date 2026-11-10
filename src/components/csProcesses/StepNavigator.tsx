@@ -49,15 +49,16 @@ function StepPreview({ step, number, phaseLabel, status, productNames }: { step:
   );
 }
 
-export function ProcessOverview({ process, statusOf, onPick }: { process: Process; statusOf: (k: string) => NavStatus; onPick: (pi: number) => void }) {
+export function ProcessOverview({ process, statusOf, onPick, currentPhase }: { process: Process; statusOf: (k: string) => NavStatus; onPick: (pi: number) => void; currentPhase?: number }) {
   return (
     <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
       {process.phases.map((ph, pi) => {
         const keys = ph.steps.map((_, si) => `${pi}-${si}`);
         const done = keys.filter((k) => statusOf(k) === "done").length;
+        const here = currentPhase === pi;
         return (
           <div key={pi} className="flex min-w-[11rem] flex-1 items-center gap-1">
-            <button type="button" onClick={() => onPick(pi)} className="min-w-0 flex-1 rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-primary/60">
+            <button type="button" onClick={() => onPick(pi)} aria-current={here ? "step" : undefined} className={cn("min-w-0 flex-1 rounded-xl border p-3 text-left shadow-sm transition hover:border-primary/60", here ? "border-primary/70 bg-primary/[0.06] ring-2 ring-primary/25" : "bg-card")}>
               <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">Fase {pi + 1}</span>
               <p className="truncate font-medium">{phaseName(ph.title)}</p>
               <p className="mb-2 text-xs text-muted-foreground">{done} de {keys.length} etapas</p>

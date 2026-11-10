@@ -560,7 +560,7 @@ export default function CSProcesses() {
         </div>
       ) : (
         <>
-          <ProcessOverview process={proc} statusOf={navStatus} onPick={pickPhase} />
+          <ProcessOverview process={proc} statusOf={navStatus} onPick={pickPhase} currentPhase={spi} />
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar etapa ou mensagem…" className="pl-9" />
