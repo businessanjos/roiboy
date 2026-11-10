@@ -40,7 +40,7 @@ export function GuidedTour({ steps, open, onClose, onSkip }: { steps: TourStep[]
     if (!open) return;
     const hold = () => {
       const a = document.activeElement;
-      if (!a || a === document.body || a === document.documentElement || a.tagName === "IFRAME") primary.current?.focus();
+      if (bubble.current && !bubble.current.contains(a)) primary.current?.focus();
     };
     const t = setTimeout(hold, 60);
     const k = (e: KeyboardEvent) => {
