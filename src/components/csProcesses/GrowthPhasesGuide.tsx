@@ -295,7 +295,7 @@ function FourFA() {
           {FUNNELS.map((f, fi) => <FunnelCard key={f.title} f={f} fi={fi} />)}
         </div>
         {/* Grade 3x3: o selo fica na célula central, exatamente no meio do vão entre os 4 cartões. */}
-        <div className="hidden md:grid" style={{ gridTemplateColumns: `1fr ${G * 2}px 1fr`, gridTemplateRows: `1fr ${G * 2}px 1fr` }}>
+        <div className="hidden md:grid" style={{ gridTemplateColumns: `1fr ${G * 2}px 1fr`, gridTemplateRows: `auto ${G * 2}px auto` }}>
           {FUNNELS.map((f, fi) => (
             <div key={f.title} style={{ gridColumn: fi % 2 ? 3 : 1, gridRow: fi < 2 ? 1 : 3 }}><FunnelCard f={f} fi={fi} /></div>
           ))}
