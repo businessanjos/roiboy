@@ -164,7 +164,7 @@ export function GrowthPhasesGuide({ open, onOpenChange, clientName }: { open: bo
                   const pc = counts[p.id]; const on = p.id === active; const complete = pc.total > 0 && pc.done === pc.total; const I = p.icon;
                   return (
                     <li key={p.id} data-phase={p.id} className="flex items-center">
-                      <button onClick={() => setActive(p.id)} className={cn("group flex items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40", on ? "border-primary bg-primary/10 shadow-sm" : "border-transparent hover:bg-muted")}>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => setActive(p.id)} className={cn("group flex items-center gap-3 rounded-xl border px-3 py-2 text-left outline-none transition-all focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 [&:focus:not(:focus-visible)]:ring-0", on ? "border-primary bg-primary/10 shadow-sm" : "border-transparent hover:bg-muted")}>
                         <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors", complete ? "border-success bg-success text-success-foreground" : on ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground")}>
                           {complete ? <Check className="h-5 w-5" /> : <I className="h-5 w-5" />}
                         </span>
