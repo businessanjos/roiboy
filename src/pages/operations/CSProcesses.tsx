@@ -338,7 +338,8 @@ export default function CSProcesses() {
       const { data } = await supabase.from("clients").select("id, full_name, instagram, ryka_url, platform_login, phone_e164, responsible_user_id").eq("id", clientId!).maybeSingle();
       if (!data) return null;
       const { data: prov } = await supabase.from("client_ryka_provisions").select("email, status, ryka_response").eq("client_id", clientId!).order("created_at", { ascending: false }).limit(1).maybeSingle();
-      return { ...(data as ProcessClient), ryka_clinic_id: (prov as any)?.status === "success" ? ((prov as any).ryka_response?.clinic_id ?? null) : null, loginFallback: (prov?.email as string | undefined) ?? null, rykaProv: prov ? { status: prov.status as string, lastLogin: ((prov as any).ryka_response?.last_login_at as string | null) ?? null } : null };
+      const { data: usage } = await supabase.from("client_ryka_usage_daily").select("last_login_at, active_users_7d, active_users_30d, leads_30d, appointments_30d, consultations_30d, has_action_plan, action_plan_updated_at, modules_used, snapshot_date").eq("client_id", clientId!).order("snapshot_date", { ascending: false }).limit(1).maybeSingle();
+      return { ...(data as ProcessClient), rykaUsage: usage ?? null, ryka_clinic_id: (prov as any)?.status === "success" ? ((prov as any).ryka_response?.clinic_id ?? null) : null, loginFallback: (prov?.email as string | undefined) ?? null, rykaProv: prov ? { status: prov.status as string, lastLogin: ((prov as any).ryka_response?.last_login_at as string | null) ?? null } : null };
     },
   });
   const vars = useMemo(() => processVars(client, (client as any)?.loginFallback, (currentUser as any)?.name), [client, currentUser]);

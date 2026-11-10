@@ -8,6 +8,7 @@ import { OnboardingGuideButton, ONBOARDING_GUIDE_URL } from "@/components/csProc
 import { GrowthPhasesButton, GROWTH_PHASES_URL } from "@/components/csProcesses/GrowthPhasesGuide";
 import { CountdownArtsButton, COUNTDOWN_DRIVE_URL } from "@/components/csProcesses/CountdownArtsGallery";
 import { toast } from "sonner";
+import { RykaUsagePanel } from "@/components/csProcesses/RykaUsagePanel";
 import { fillVars, plainText, stepTitle, visibleActions, type Action, type StepInfo } from "@/lib/csProcessActions";
 import { resolveProcessLink, replaceClientLinks, FIELD_LABEL, type ProcessClient, type ClientField } from "@/lib/csClientLinks";
 import type { Step } from "@/lib/csProcesses";
@@ -256,6 +257,9 @@ export function StepDetail({ step, number, phaseLabel, info, vars, canTick, done
         {info.when && <span className="inline-flex items-center gap-1"><CalendarClock className="h-4 w-4" />{info.when}</span>}
         <span className="inline-flex items-center gap-1"><ListChecks className="h-4 w-4" />{visibleActions(info.actions).length} {visibleActions(info.actions).length === 1 ? "ação" : "ações"}</span>
       </div>
+      {ctx.client && /^3\.(3|5)\b/.test(number.trim()) && (
+        <RykaUsagePanel usage={(ctx.client as any).rykaUsage} mode={number.trim().startsWith("3.3") ? "plan" : "monthly"} />
+      )}
       {links.length >= 3 && (
         <Button className="mt-4 gap-2" onClick={openAll}><Layers className="h-4 w-4" />Abrir tudo para a reunião</Button>
       )}
