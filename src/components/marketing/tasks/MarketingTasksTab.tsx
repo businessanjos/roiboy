@@ -201,6 +201,21 @@ export function MarketingTasksTab() {
     });
   };
 
+  const handleToggleComplete = async (taskId: string, completed: boolean) => {
+    const task = tasks.find((t) => t.id === taskId);
+    const current = columns.find((c) => c.id === (task as any)?.column_id);
+    const target = completed
+      ? columns.find((c) => c.is_done)
+      : current?.is_done
+        ? columns.find((c) => !c.is_done)
+        : undefined;
+    if (target && target.id !== current?.id) {
+      await handleColumnChange(taskId, target);
+      return;
+    }
+    toggleComplete.mutate({ id: taskId, isCompleted: completed });
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
