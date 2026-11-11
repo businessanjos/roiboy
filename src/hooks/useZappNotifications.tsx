@@ -2,6 +2,7 @@ import { useCallback, useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { ZappNotificationToast } from "@/components/royzapp/ZappNotificationToast";
 import { supabase } from "@/integrations/supabase/client";
+import { isUnknownContactName, resolveZappContactNames } from "@/lib/zappContactNames";
 
 interface NotificationData {
   conversationId: string;
@@ -299,14 +300,21 @@ export function useZappNotifications({
   }, [selectedConversationId, sectorId]);
 
   // Show notification for new message
-  const notifyNewMessage = useCallback((data: NotificationData) => {
-    const { conversationId, contactName, messagePreview, avatarUrl, agentId, isGroup } = data;
+  const notifyNewMessage = useCallback(async (data: NotificationData) => {
+    let { conversationId, contactName, messagePreview, avatarUrl, agentId, isGroup } = data;
     
     // Check if we should notify
     if (!shouldNotify(conversationId)) {
       return;
     }
     
+    if (!isGroup && isUnknownContactName(contactName)) {
+      try {
+        const resolved = (await resolveZappContactNames([conversationId])).get(conversationId);
+        if (resolved) contactName = resolved;
+      } catch { /* mantém o nome original */ }
+    }
+
     // Update last notification tracking
     lastNotificationRef.current = {
       conversationId,
