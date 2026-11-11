@@ -28996,6 +28996,7 @@ export type Database = {
         Row: {
           account_id: string
           archived_at: string | null
+          avatar_checked_at: string | null
           avatar_url: string | null
           channel: string
           client_id: string | null
@@ -29025,6 +29026,7 @@ export type Database = {
         Insert: {
           account_id: string
           archived_at?: string | null
+          avatar_checked_at?: string | null
           avatar_url?: string | null
           channel?: string
           client_id?: string | null
@@ -29054,6 +29056,7 @@ export type Database = {
         Update: {
           account_id?: string
           archived_at?: string | null
+          avatar_checked_at?: string | null
           avatar_url?: string | null
           channel?: string
           client_id?: string | null
