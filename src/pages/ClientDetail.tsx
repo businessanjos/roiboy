@@ -2101,7 +2101,7 @@ export default function ClientDetail() {
               )}
               {client.instagram && (
                 <a
-                  href={`https://instagram.com/${client.instagram.replace(/^@/, '')}`}
+                  href={`https://www.instagram.com/${client.instagram.replace(/^@/, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-pink-600 hover:text-pink-700 hover:underline transition-colors"

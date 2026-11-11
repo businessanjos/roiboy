@@ -82,7 +82,7 @@ export function formatSocialLink(
   
   // Construir URL baseada na plataforma
   const baseUrls: Record<string, string> = {
-    instagram: 'https://instagram.com/',
+    instagram: 'https://www.instagram.com/',
     linkedin: 'https://linkedin.com/in/',
     twitter: 'https://twitter.com/',
     website: 'https://',

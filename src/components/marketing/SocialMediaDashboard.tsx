@@ -487,7 +487,7 @@ export function SocialMediaDashboard() {
                     <TableCell className="text-right">{formatNumber(profile.avg_link_clicks)}</TableCell>
                     <TableCell>
                       <a
-                        href={`https://instagram.com/${profile.username}`}
+                        href={`https://www.instagram.com/${profile.username}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="opacity-0 group-hover:opacity-100 transition-opacity"

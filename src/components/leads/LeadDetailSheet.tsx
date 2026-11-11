@@ -434,7 +434,7 @@ export function LeadDetailSheet({
                     <div className="flex items-center gap-3">
                       <Instagram className="h-4 w-4 text-pink-500" />
                       <a 
-                        href={`https://instagram.com/${lead.instagram.replace(/^@/, '')}`}
+                        href={`https://www.instagram.com/${lead.instagram.replace(/^@/, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-pink-600 hover:underline"
@@ -448,7 +448,7 @@ export function LeadDetailSheet({
                       {lead.instagrams.map((ig, idx) => (
                         <a
                           key={idx}
-                          href={`https://instagram.com/${ig.replace(/^@/, '')}`}
+                          href={`https://www.instagram.com/${ig.replace(/^@/, '')}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 px-2 py-1 rounded bg-pink-500/15 text-pink-600 text-sm hover:bg-pink-500/25"

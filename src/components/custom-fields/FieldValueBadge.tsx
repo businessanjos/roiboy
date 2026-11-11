@@ -224,7 +224,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
     }
     // Remove @ if present and clean the handle
     const handle = value.replace(/^@/, '').trim();
-    const instagramUrl = `https://instagram.com/${handle}`;
+    const instagramUrl = `https://www.instagram.com/${handle}`;
     return (
       <a
         href={instagramUrl}
@@ -249,7 +249,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
       <div className="flex flex-wrap gap-1 max-w-full overflow-hidden">
         {instagrams.slice(0, 3).map((ig, index) => {
           const handle = String(ig).replace(/^@/, '').trim();
-          const instagramUrl = `https://instagram.com/${handle}`;
+          const instagramUrl = `https://www.instagram.com/${handle}`;
           return (
             <div key={index} className="group inline-flex items-center max-w-[calc(100%-8px)] min-w-0">
               <a
