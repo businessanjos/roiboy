@@ -24,9 +24,9 @@ export function MeetDriveSyncBar({ onSynced }: { onSynced?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [params, setParams] = useSearchParams();
 
-  const load = async () => {
+  const load = async (): Promise<Conn | null> => {
     const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return setLoading(false);
+    if (!auth.user) { setLoading(false); return null; }
     const { data } = await supabase
       .from("google_drive_connections")
       .select("id, google_email, scope, last_sync_at, last_sync_error, is_active")
@@ -34,6 +34,7 @@ export function MeetDriveSyncBar({ onSynced }: { onSynced?: () => void }) {
       .maybeSingle();
     setConn((data as Conn) ?? null);
     setLoading(false);
+    return (data as Conn) ?? null;
   };
 
   const sync = async (silent = false) => {
@@ -51,7 +52,11 @@ export function MeetDriveSyncBar({ onSynced }: { onSynced?: () => void }) {
   };
 
   useEffect(() => {
-    load();
+    load().then((c) => {
+      // Busca silenciosa no máximo a cada 30 min, só para quem já liberou o Drive
+      const stale = !c?.last_sync_at || Date.now() - new Date(c.last_sync_at).getTime() > 30 * 60_000;
+      if (c?.is_active && c.scope?.includes("drive") && stale && !params.get("gdrive")) sync(true);
+    });
     const s = params.get("gdrive");
     if (s) {
       if (s === "connected") { toast.success("Google conectado! Buscando suas transcrições…"); sync(true).then(() => onSynced?.()); }
@@ -92,7 +97,7 @@ export function MeetDriveSyncBar({ onSynced }: { onSynced?: () => void }) {
               <p className="flex items-center gap-1.5 font-medium"><CheckCircle2 className="h-3.5 w-3.5 text-primary" />Meet conectado · {conn.google_email}</p>
               <p className="text-muted-foreground">
                 {conn.last_sync_at ? `Última busca ${formatDistanceToNow(new Date(conn.last_sync_at), { addSuffix: true, locale: ptBR })}` : "Aguardando primeira busca"}
-                {" · "}busca automática a cada hora
+                {" · "}busca sozinha sempre que você abre esta tela
               </p>
             </>
           )}
