@@ -223,7 +223,7 @@ function ZappMessagesListInner({
 
   // Menções por LID (@2634...): troca pelo número real (ou nome) do participante.
   const hasLidMentions = useMemo(
-    () => isGroup && deduplicatedMessages.some((m) => m.content && /@\d{14,}/.test(m.content)),
+    () => isGroup && deduplicatedMessages.some((m) => m.content && /@\d{10,}/.test(m.content)),
     [isGroup, deduplicatedMessages],
   );
   const lidMentionMap = useZappGroupLidMap({
