@@ -36,6 +36,18 @@ export async function buildKnowledgeBlock(req: Request): Promise<string> {
     const accountId = userRow?.account_id;
     if (!accountId) return "";
 
+    return buildKnowledgeBlockForAccount(admin, accountId);
+  } catch (_e) {
+    return "";
+  }
+}
+
+/**
+ * Same knowledge block, but for callers that already know the account and hold
+ * an admin client (scheduled jobs have no user token to decode).
+ */
+export async function buildKnowledgeBlockForAccount(admin: any, accountId: string): Promise<string> {
+  try {
     const [settingsRes, correctionsRes, docsRes] = await Promise.all([
       admin.from("ai_knowledge_settings").select("*").eq("account_id", accountId).maybeSingle(),
       admin
