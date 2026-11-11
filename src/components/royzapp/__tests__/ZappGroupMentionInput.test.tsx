@@ -40,9 +40,10 @@ it("does not tag Ana Clara while typing @Ana on the way to @Anabela", async () =
     expect(onMentionInsert).not.toHaveBeenCalled();
   }
   fireEvent.click(screen.getByRole("button", { name: /Anabela Silva/ }));
+  // A menção inserida usa só o primeiro nome, nunca o nome completo
   expect(onMentionInsert).toHaveBeenCalledExactlyOnceWith({
     phone: "5511999990002", jid: "5511999990002@s.whatsapp.net",
-    name: "Anabela Silva", is_lid: false,
+    name: "Anabela", is_lid: false,
   });
 });
 
