@@ -1,3 +1,4 @@
+import { isUnknownContactName } from "@/lib/zappContactNames";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ConversationAssignment } from "@/components/royzapp";
@@ -54,6 +55,45 @@ export const ASSIGNMENTS_SELECT = `
   zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, sector_id, integration_id, client:clients(id, full_name, phone_e164, avatar_url, timezone, state), lead:leads(id, full_name, phone, email, status)),
   conversation_tags:zapp_conversation_tags(tag_id, tag:zapp_tags(id, name, color))
 `;
+
+
+/**
+ * Loads a department's assignments with every open conversation guaranteed
+ * (paged, not capped by the shared history window), plus the most recent
+ * closed ones. A single 1000-row window used to leave most of an agent's open
+ * chats out of "Minhas" in busy sectors.
+ */
+async function fetchDepartmentAssignments(accountId: string, departmentId: string): Promise<any[]> {
+  const PAGE = 1000;
+  const MAX_OPEN = 5000;
+  const open: any[] = [];
+  for (let from = 0; from < MAX_OPEN; from += PAGE) {
+    const { data, error } = await supabase
+      .from("zapp_conversation_assignments")
+      .select(ASSIGNMENTS_SELECT)
+      .eq("account_id", accountId)
+      .eq("department_id", departmentId)
+      .neq("status", "closed")
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    open.push(...(data || []));
+    if (!data || data.length < PAGE) break;
+  }
+  const { data: closed, error: closedError } = await supabase
+    .from("zapp_conversation_assignments")
+    .select(ASSIGNMENTS_SELECT)
+    .eq("account_id", accountId)
+    .eq("department_id", departmentId)
+    .eq("status", "closed")
+    .order("last_message_at", { referencedTable: "zapp_conversation", ascending: false, nullsFirst: false })
+    .order("updated_at", { ascending: false })
+    .limit(500);
+  if (closedError) throw closedError;
+  const ts = (a: any) => new Date(a.zapp_conversation?.last_message_at || a.updated_at || 0).getTime();
+  return [...open, ...(closed || [])].sort((a, b) => ts(b) - ts(a));
+}
 
 export function useZappConversations(options: UseZappConversationsOptions) {
   const { accountId, sectorId, integrationId, departments, onNewInboundMessage, hasGlobalVisibility = false } = options;
@@ -335,20 +375,8 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
         if (!dept) return null;
 
-        const { data: assignmentsData, error } = await supabase
-          .from("zapp_conversation_assignments")
-          .select(ASSIGNMENTS_SELECT)
-          .eq("account_id", accountId)
-          .eq("department_id", dept.id)
-          // Ordena pela última mensagem da conversa (e não pelo updated_at do
-          // assignment, que não muda quando chega/sai mensagem). Sem isso, o
-          // limite abaixo recortava uma janela que ignorava conversas recentes.
-          .order("last_message_at", { referencedTable: "zapp_conversation", ascending: false, nullsFirst: false })
-          .order("updated_at", { ascending: false })
-          .limit(1000);
-
-        if (error) throw error;
-        return { deptId: dept.id, assignments: assignmentsData || [] };
+        const assignmentsData = await fetchDepartmentAssignments(accountId, dept.id);
+        return { deptId: dept.id, assignments: assignmentsData };
       }, 2, 1500);
 
       if (!result) {
@@ -381,17 +409,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
     try {
       const data = await withRetry(async () => {
-        const { data, error } = await supabase
-          .from("zapp_conversation_assignments")
-          .select(ASSIGNMENTS_SELECT)
-          .eq("account_id", accountId)
-          .eq("department_id", departmentId)
-          .order("last_message_at", { referencedTable: "zapp_conversation", ascending: false, nullsFirst: false })
-          .order("updated_at", { ascending: false })
-          .limit(1000);
-
-        if (error) throw error;
-        return data;
+        return fetchDepartmentAssignments(accountId, departmentId);
       }, 3, 1500);
 
       const result = applyRecencyFloor(dedupeAssignments(data || []));
@@ -778,7 +796,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
               const rawContactName = assignment.zapp_conversation?.contact_name;
               const contactName = assignment.zapp_conversation?.client?.full_name
                 || assignment.zapp_conversation?.lead?.full_name
-                || (rawContactName && rawContactName !== "Desconhecido" ? rawContactName : null)
+                || (!isUnknownContactName(rawContactName) ? rawContactName : null)
                 || assignment.zapp_conversation?.phone_e164
                 || "Contato";
 

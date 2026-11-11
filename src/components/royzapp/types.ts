@@ -1,3 +1,4 @@
+import { isUnknownContactName } from "@/lib/zappContactNames";
 export interface ZappTag {
   id: string;
   account_id: string;
@@ -244,7 +245,9 @@ export const getContactInfo = (assignment: ConversationAssignment): ContactInfo 
     // Isso evita o bug onde o nome de um cliente aparece em conversas de outros
     const name = zappConv.is_group 
       ? (zappConv.contact_name || "Grupo sem nome")
-      : (clientData?.full_name || leadData?.full_name || zappConv.contact_name || zappConv.phone_e164 || "Desconhecido");
+      : (clientData?.full_name || leadData?.full_name
+          || (!isUnknownContactName(zappConv.contact_name, zappConv.phone_e164) ? zappConv.contact_name : null)
+          || formatUnknownPhone(zappConv.phone_e164) || "Contato");
     
     const phone =
       zappConv.phone_e164 ||
@@ -353,3 +356,13 @@ export const getInitials = (name: string): string =>
     .join("")
     .toUpperCase()
     .slice(0, 2);
+
+function formatUnknownPhone(phone?: string | null): string | null {
+  const d = (phone || "").replace(/\D/g, "");
+  if (!d) return null;
+  if (d.startsWith("55") && (d.length === 12 || d.length === 13)) {
+    const ddd = d.slice(2, 4), rest = d.slice(4);
+    return `+55 (${ddd}) ${rest.slice(0, rest.length - 4)}-${rest.slice(-4)}`;
+  }
+  return `+${d}`;
+}
