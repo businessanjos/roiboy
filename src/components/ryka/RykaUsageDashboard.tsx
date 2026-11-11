@@ -119,7 +119,7 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, sort, q]);
   const shown = showAll ? ranking.slice(0, 50) : ranking.slice(0, 10);
-  // A sequência desce primeiro pela coluna da direita (1,2,3...) e continua na da esquerda.
+  // A sequência desce primeiro pela coluna da esquerda (1,2,3...) e continua na da direita.
   const rightCount = Math.ceil(shown.length / 2);
   const rightCol = shown.slice(0, rightCount);
   const leftCol = shown.slice(rightCount);
@@ -243,10 +243,10 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
           <CardContent className="p-0">
             {shown.length === 0 && <p className="text-sm text-muted-foreground py-10 text-center">Nenhuma clínica com uso registrado.</p>}
             <div className="grid border-border lg:grid-cols-2">
-              <ol start={1} className="order-1 border-border [&>li]:border-b [&>li]:border-border lg:order-none lg:col-start-2 lg:row-start-1 lg:border-l">
+              <ol start={1} className="order-1 border-border [&>li]:border-b [&>li]:border-border lg:order-none lg:col-start-1 lg:row-start-1">
                 {rightCol.map((x, i) => <RankRow key={x.r.client.id} x={x} pos={i + 1} consultantName={x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora"} />)}
               </ol>
-              <ol start={rightCount + 1} className="order-2 border-border [&>li]:border-b [&>li]:border-border lg:order-none lg:col-start-1 lg:row-start-1">
+              <ol start={rightCount + 1} className="order-2 border-border [&>li]:border-b [&>li]:border-border lg:order-none lg:col-start-2 lg:row-start-1 lg:border-l">
                 {leftCol.map((x, i) => <RankRow key={x.r.client.id} x={x} pos={rightCount + i + 1} consultantName={x.consultant ? teamName.get(x.consultant) ?? "—" : "Sem consultora"} />)}
               </ol>
             </div>
