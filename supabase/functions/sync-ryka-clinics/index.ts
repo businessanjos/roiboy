@@ -152,21 +152,25 @@ Deno.serve(async (req) => {
   // 2) Indexar por email / telefone
   const byEmail = new Map<string, any>();
   const byPhone = new Map<string, any>();
+  const byDoc = new Map<string, any>();
+  const docKey = (v: any) => { const d = String(v || "").replace(/\D/g, ""); return d.length >= 11 ? d : null; };
   for (const c of rykaList) {
+    const dk = docKey(c?.cnpj);
+    if (dk) byDoc.set(dk, c);
     const e = canonicalEmail(c?.email);
     if (e) byEmail.set(e, c);
     const k = phoneCoreKey(c?.phone);
     if (k) byPhone.set(k, c);
   }
 
-  const ELIGIBLE = ["rykas mentoring", "eternum club"];
+  const ELIGIBLE = ["mentoring", "club", "conselho de anjo", "ryka", "mvp", "private"];
   const totals = { matched: 0, inserted: 0, updated: 0, unmatched: 0 };
 
   for (const accountId of accountIds) {
     // 3) Clientes elegíveis da conta
     const { data: clients, error: clErr } = await admin
       .from("clients")
-      .select("id, account_id, full_name, emails, phone_e164, client_products(products(name))")
+      .select("id, account_id, full_name, emails, phone_e164, cpf, cnpj, client_products(products(name))")
       .eq("account_id", accountId);
     if (clErr) { console.error("[sync-ryka-clinics] clients err", accountId, clErr.message); continue; }
 
@@ -179,13 +183,16 @@ Deno.serve(async (req) => {
     const clientIds = eligible.map((c: any) => c.id);
     const existingByClient = new Map<string, any>();
     if (clientIds.length) {
-      const { data: provs } = await admin
-        .from("client_ryka_provisions")
-        .select("id, client_id, status, ryka_response, created_at")
-        .in("client_id", clientIds)
-        .order("created_at", { ascending: false });
-      for (const p of provs || []) {
-        if (!existingByClient.has(p.client_id)) existingByClient.set(p.client_id, p);
+      for (let i = 0; i < clientIds.length; i += 100) {
+        const { data: provs, error: pErr } = await admin
+          .from("client_ryka_provisions")
+          .select("id, client_id, status, ryka_response, created_at")
+          .in("client_id", clientIds.slice(i, i + 100))
+          .order("created_at", { ascending: false });
+        if (pErr) throw new Error(`provisões: ${pErr.message}`);
+        for (const p of provs || []) {
+          if (!existingByClient.has(p.client_id)) existingByClient.set(p.client_id, p);
+        }
       }
     }
 
@@ -206,6 +213,9 @@ Deno.serve(async (req) => {
       if (!rykaMatch) {
         const k = phoneCoreKey(c.phone_e164);
         if (k && byPhone.has(k)) { rykaMatch = byPhone.get(k); matchedBy = "phone"; }
+      }
+      if (!rykaMatch) {
+        for (const d of [c.cnpj, c.cpf]) { const k = docKey(d); if (k && byDoc.has(k)) { rykaMatch = byDoc.get(k); matchedBy = "document"; break; } }
       }
       if (!rykaMatch) { totals.unmatched += 1; continue; }
 
