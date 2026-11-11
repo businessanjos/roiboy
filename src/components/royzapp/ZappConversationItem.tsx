@@ -410,7 +410,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
           )}
           {/* Consultor responsável — só exibe se for diferente do atendente já mostrado acima */}
           {(() => {
-            if (!responsible) return null;
+            if (!responsible || contact.isGroup) return null;
             const agentName = assignment.agent_id ? getAgentName(assignment.agent_id) : null;
             const norm = (s: string) =>
               s
