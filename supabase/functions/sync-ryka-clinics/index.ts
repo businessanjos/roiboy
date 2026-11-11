@@ -183,13 +183,16 @@ Deno.serve(async (req) => {
     const clientIds = eligible.map((c: any) => c.id);
     const existingByClient = new Map<string, any>();
     if (clientIds.length) {
-      const { data: provs } = await admin
-        .from("client_ryka_provisions")
-        .select("id, client_id, status, ryka_response, created_at")
-        .in("client_id", clientIds)
-        .order("created_at", { ascending: false });
-      for (const p of provs || []) {
-        if (!existingByClient.has(p.client_id)) existingByClient.set(p.client_id, p);
+      for (let i = 0; i < clientIds.length; i += 100) {
+        const { data: provs, error: pErr } = await admin
+          .from("client_ryka_provisions")
+          .select("id, client_id, status, ryka_response, created_at")
+          .in("client_id", clientIds.slice(i, i + 100))
+          .order("created_at", { ascending: false });
+        if (pErr) throw new Error(`provisões: ${pErr.message}`);
+        for (const p of provs || []) {
+          if (!existingByClient.has(p.client_id)) existingByClient.set(p.client_id, p);
+        }
       }
     }
 
