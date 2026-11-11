@@ -1,0 +1,1 @@
+DELETE FROM public.google_drive_connections WHERE user_id = '72ae91bc-0d35-4574-b9ea-76aa866296a3';
