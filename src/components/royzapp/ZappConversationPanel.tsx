@@ -302,15 +302,24 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   const isConversationListVisible = activeView === "inbox" || showConversationList;
 
   const navigate = useNavigate();
+  const scopeAgent = filterAgentId !== "all" && filterAgentId !== "__team__"
+    ? agents.find((a) => a.id === filterAgentId)
+    : undefined;
+  const scopeLabel = filterAgentId === "__team__"
+    ? "Equipe"
+    : scopeAgent
+      ? (scopeAgent.user?.name || "Atendente").split(" ")[0]
+      : "Minhas";
+  const mineTabLabel = canSeeAllSectorConversations ? scopeLabel : "Minhas";
   const agentScopeSelector = inboxTab === "mine" && canSeeAllSectorConversations ? (
           <Select value={filterAgentId} onValueChange={setFilterAgentId}>
             <SelectTrigger
               aria-label="Exibir conversas de"
-              className="h-11 lg:h-9 w-full lg:w-auto lg:max-w-[112px] shrink-0 gap-1 bg-zapp-input border-0 text-zapp-text text-[11px] focus:ring-0"
+              className="h-11 lg:h-9 w-full lg:w-auto lg:max-w-[140px] shrink-0 gap-1 bg-zapp-input border-0 text-zapp-text text-[11px] focus:ring-0"
               title="Exibir conversas de"
             >
               <Users className="h-3.5 w-3.5 shrink-0 text-zapp-text-muted" />
-              <SelectValue placeholder="Minhas" />
+              <span className="truncate">{scopeLabel}</span>
             </SelectTrigger>
             <SelectContent className="bg-zapp-panel border-zapp-border">
               <SelectItem value="all" className="text-zapp-text text-xs min-h-11">Somente minhas conversas</SelectItem>
@@ -685,7 +694,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           )}
         >
           <span className="flex items-center justify-center gap-2">
-            Minhas
+            {mineTabLabel}
             <span className="text-zapp-text-muted text-xs">({myConversations})</span>
             {myUnreadCount > 0 && (
               <Badge variant="secondary" className="bg-zapp-accent text-primary-foreground text-[10px] px-1.5 py-0 h-4 min-w-[18px]">

@@ -563,6 +563,13 @@ export default function RoyZapp() {
     }
   }, [filterTagId]);
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
+  // Gestores (visão total do setor) abrem vendo toda a equipe; aplicado uma vez.
+  const teamDefaultAppliedRef = useRef(false);
+  useEffect(() => {
+    if (teamDefaultAppliedRef.current || !zappCaps.canSeeAllSectorConversations) return;
+    teamDefaultAppliedRef.current = true;
+    setFilterAgentId((prev) => (prev === "all" ? "__team__" : prev));
+  }, [zappCaps.canSeeAllSectorConversations]);
   const [forceCrmView, setForceCrmView] = useState(false);
   const isCrmSectorView =
     activeView === "sector" &&
