@@ -8,6 +8,7 @@ export type GatewayOutcome = "ok" | "retry" | "pause" | "fail";
 
 /** Decide o que fazer com um status do gateway de IA: repetir, pausar a fila ou desistir. */
 export function classifyGatewayStatus(status: number): GatewayOutcome {
+  if (status < 400) return "ok";
   if (status === 402 || status === 403) return "pause";
   if (status === 429 || status >= 500) return "retry";
   return "fail";
