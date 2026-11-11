@@ -20044,6 +20044,42 @@ export type Database = {
           },
         ]
       }
+      meet_analysis_state: {
+        Row: {
+          account_id: string
+          created_at: string
+          is_paused: boolean
+          last_error: string | null
+          last_run_at: string | null
+          lease_until: string | null
+          paused_reason: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          is_paused?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          lease_until?: string | null
+          paused_reason?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          is_paused?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          lease_until?: string | null
+          paused_reason?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       members_book_settings: {
         Row: {
           access_password: string | null
