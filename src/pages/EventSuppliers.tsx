@@ -511,7 +511,7 @@ export default function EventSuppliers() {
                     )}
                     {s.instagram && (
                       <a
-                        href={s.instagram.startsWith("http") ? s.instagram : `https://instagram.com/${s.instagram.replace("@", "")}`}
+                        href={s.instagram.startsWith("http") ? s.instagram : `https://www.instagram.com/${s.instagram.replace("@", "")}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-pink-600"

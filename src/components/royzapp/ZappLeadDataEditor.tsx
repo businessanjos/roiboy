@@ -562,7 +562,7 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
                                   {lead.instagrams.map((ig, idx) => (
                                     <a
                                       key={idx}
-                                      href={`https://instagram.com/${ig.replace(/^@/, '')}`}
+                                      href={`https://www.instagram.com/${ig.replace(/^@/, '')}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 text-[10px] hover:bg-pink-500/25"

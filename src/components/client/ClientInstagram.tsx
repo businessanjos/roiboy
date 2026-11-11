@@ -207,7 +207,7 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
                   {snapshot.is_private && <Badge variant="secondary" className="gap-1"><Lock className="h-3 w-3" />Privado</Badge>}
                   {snapshot.is_business && <Badge variant="secondary">Business</Badge>}
                   {snapshot.category && <Badge variant="outline">{snapshot.category}</Badge>}
-                  <a href={`https://instagram.com/${snapshot.username}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`https://www.instagram.com/${snapshot.username}`} target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" size="sm" className="gap-1.5 h-7">
                       <ExternalLink className="h-3.5 w-3.5" />Abrir
                     </Button>

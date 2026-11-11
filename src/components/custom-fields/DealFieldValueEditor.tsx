@@ -553,7 +553,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
                       className="flex items-center justify-between px-2 py-1.5 rounded bg-pink-500/10 border border-pink-500/20"
                     >
                       <a
-                        href={`https://instagram.com/${ig}`}
+                        href={`https://www.instagram.com/${ig}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 text-pink-600 dark:text-pink-400 hover:underline text-sm"

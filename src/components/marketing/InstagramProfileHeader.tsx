@@ -123,7 +123,7 @@ export function InstagramProfileHeader({
             </div>
             <div className="flex items-center gap-2">
               <a
-                href={`https://instagram.com/${profile.username}`}
+                href={`https://www.instagram.com/${profile.username}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
