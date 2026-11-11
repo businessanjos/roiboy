@@ -1,0 +1,2 @@
+ALTER TABLE public.zapp_conversations ADD COLUMN IF NOT EXISTS avatar_checked_at timestamptz;
+CREATE INDEX IF NOT EXISTS idx_zapp_conv_avatar_check ON public.zapp_conversations (avatar_checked_at NULLS FIRST) WHERE is_group = false;
