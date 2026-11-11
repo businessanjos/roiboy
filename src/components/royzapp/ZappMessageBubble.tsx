@@ -91,7 +91,7 @@ function resolveMentions(text: string, mentionMap?: Record<string, string> | nul
     if (!mentionMap) return match;
     
     // Direct lookup
-    if (mentionMap[jidNumber]) return `@${mentionMap[jidNumber]}`;
+    if (mentionMap[jidNumber]) return `\u2063@${mentionMap[jidNumber]}\u2064`;
     
     // Try partial matching: prioritize LONGER suffix matches to avoid false positives
     // Check 11 digits first, then 10, 9, 8 — return first match at highest precision
@@ -104,13 +104,25 @@ function resolveMentions(text: string, mentionMap?: Record<string, string> | nul
         if (!name) continue;
         const keySuffix = key.slice(-len);
         if (keySuffix.length >= len && jidSuffix === keySuffix) {
-          return `@${name}`;
+          return `\u2063@${name}\u2064`;
         }
       }
     }
     
-    return match;
+    return `\u2063${match}\u2064`;
   });
+}
+
+// Menções marcadas (entre \u2063 e \u2064) ganham uma cor por cima, como no WhatsApp
+function formatWithMentions(text: string, key: string): React.ReactNode[] {
+  if (!text.includes("\u2063")) return applyWhatsAppFormatting(text, key);
+  return text.split(/(\u2063[^\u2064]*\u2064)/).map((seg, i) =>
+    seg.startsWith("\u2063") ? (
+      <span key={`${key}-m${i}`} className="rounded px-0.5 font-medium text-primary bg-primary/15">{seg.slice(1, -1)}</span>
+    ) : (
+      <span key={`${key}-t${i}`}>{applyWhatsAppFormatting(seg, `${key}-t${i}`)}</span>
+    ),
+  );
 }
 
 
@@ -125,7 +137,7 @@ function renderTextWithLinks(text: string, mentionMap?: Record<string, string> |
   const parts = resolvedText.split(urlRegex);
   
   if (parts.length === 1) {
-    return applyWhatsAppFormatting(resolvedText, "fmt");
+    return formatWithMentions(resolvedText, "fmt");
   }
   
   return parts.map((part, index) => {
@@ -146,7 +158,7 @@ function renderTextWithLinks(text: string, mentionMap?: Record<string, string> |
         </a>
       );
     }
-    return <span key={index}>{applyWhatsAppFormatting(part, `fmt-${index}`)}</span>;
+    return <span key={index}>{formatWithMentions(part, `fmt-${index}`)}</span>;
   });
 }
 
