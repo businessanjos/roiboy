@@ -27718,6 +27718,7 @@ export type Database = {
           daily_room_name: string | null
           daily_room_url: string | null
           deal_id: string | null
+          drive_file_id: string | null
           duration_seconds: number | null
           ended_at: string | null
           id: string
@@ -27748,6 +27749,7 @@ export type Database = {
           daily_room_name?: string | null
           daily_room_url?: string | null
           deal_id?: string | null
+          drive_file_id?: string | null
           duration_seconds?: number | null
           ended_at?: string | null
           id?: string
@@ -27778,6 +27780,7 @@ export type Database = {
           daily_room_name?: string | null
           daily_room_url?: string | null
           deal_id?: string | null
+          drive_file_id?: string | null
           duration_seconds?: number | null
           ended_at?: string | null
           id?: string
