@@ -292,15 +292,17 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
     const selectMention = useCallback((participant: GroupParticipant) => {
       const beforeMention = value.slice(0, mentionStartIndex);
       const afterMention = value.slice(mentionStartIndex + mentionQuery.length + 1);
+      // Menções usam só o primeiro nome (@Lucas), nunca o nome completo
+      const mentionName = participant.name.trim().split(/\s+/)[0] || participant.name;
       // Insert the name in the message text, the phone/JID is tracked separately for the API
-      const newValue = `${beforeMention}@${participant.name} ${afterMention}`;
-      
+      const newValue = `${beforeMention}@${mentionName} ${afterMention}`;
+
       onChange(newValue);
       setShowSuggestions(false);
-      
+
       // JID real do participante: usa o domínio correto (@lid quando o WhatsApp só expõe o LID)
       const jid = participant.jid || `${participant.phone}@s.whatsapp.net`;
-      onMentionInsert?.({ phone: participant.phone, jid, name: participant.name, is_lid: participant.isLid });
+      onMentionInsert?.({ phone: participant.phone, jid, name: mentionName, is_lid: participant.isLid });
 
       setTimeout(() => inputRef.current?.focus(), 0);
     }, [value, mentionStartIndex, mentionQuery, onChange, onMentionInsert]);
