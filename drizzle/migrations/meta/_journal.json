@@ -484,6 +484,13 @@
       "when": 1794399423530,
       "tag": "0068_meet_analysis_state",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1794422034791,
+      "tag": "0069_tighten_offer_and_leader_meeting_policies",
+      "breakpoints": true
     }
   ]
 }
