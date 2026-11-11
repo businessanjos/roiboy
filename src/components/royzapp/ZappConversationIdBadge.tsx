@@ -39,7 +39,7 @@ export function ZappConversationIdBadge({ conversationId, className }: ZappConve
             className={cn(
               "hidden sm:inline-flex items-center gap-1 rounded-md border border-zapp-border bg-zapp-bg-dark/40 px-1.5 py-0.5",
               "font-mono text-[10px] tracking-wide text-zapp-text-muted transition-colors",
-              "hover:bg-zapp-hover hover:text-zapp-text",
+              "hover:bg-zapp-hover hover:text-zapp-text opacity-0 hover:opacity-100 focus-visible:opacity-100",
               className
             )}
             aria-label={`Copiar ID da conversa ${conversationId}`}
