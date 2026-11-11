@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Users } from "lucide-react";
 import { canonicalE164 } from "@/lib/phoneNormalize";
+import { zappMentionName } from "@/lib/zappMentionName";
 
 interface GroupParticipant {
   id: string;
@@ -147,7 +148,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
               jid: realJid || `${phone}@s.whatsapp.net`,
               isLid,
               phone: phone,
-              name: displayName || known[phone.slice(-8)] || clientName || phone,
+              name: zappMentionName("", phone) || displayName || known[phone.slice(-8)] || clientName || phone,
               isAdmin: isAdmin,
               clientName,
             };
@@ -293,7 +294,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
       const beforeMention = value.slice(0, mentionStartIndex);
       const afterMention = value.slice(mentionStartIndex + mentionQuery.length + 1);
       // Menções usam só o primeiro nome (@Lucas), nunca o nome completo
-      const mentionName = participant.name.trim().split(/\s+/)[0] || participant.name;
+      const mentionName = zappMentionName(participant.name, participant.phone);
       // Insert the name in the message text, the phone/JID is tracked separately for the API
       const newValue = `${beforeMention}@${mentionName} ${afterMention}`;
 
@@ -346,7 +347,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
 
     // Highlight @mentions (WhatsApp-style) via a mirrored overlay behind the textarea
     const highlightRef = useRef<HTMLDivElement>(null);
-    const mentionNames = [...participants.map((p) => p.name), ...autoNames]
+    const mentionNames = [...participants.flatMap((p) => [p.name, zappMentionName(p.name, p.phone)]), ...autoNames]
       .filter((n) => n && !/^\+?\d[\d\s()-]*$/.test(n))
       .sort((a, b) => b.length - a.length);
 
