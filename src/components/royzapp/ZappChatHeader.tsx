@@ -175,7 +175,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
       )}
 
       {/* Header */}
-      <div className="shrink-0 bg-zapp-panel-header px-2 lg:px-4 py-2 lg:py-3 flex flex-nowrap items-center gap-1 lg:gap-3 border-b border-zapp-border">
+      <div className="group/zapphdr shrink-0 bg-zapp-panel-header px-2 lg:px-4 py-2 lg:py-3 flex flex-nowrap items-center gap-1 lg:gap-3 border-b border-zapp-border">
         <Button
           variant="ghost"
           size="icon"
