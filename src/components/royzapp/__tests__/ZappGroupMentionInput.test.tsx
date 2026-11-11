@@ -7,6 +7,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   functions: { invoke: vi.fn(async () => ({ data: { participants: [
     { PhoneNumber: "5511999990001", DisplayName: "Ana Clara" },
     { PhoneNumber: "5511999990002", DisplayName: "Anabela Silva" },
+    { PhoneNumber: "5551995471095", DisplayName: "Eternum Suporte" },
   ] }, error: null })) },
   from: () => {
     const chain = {
@@ -18,6 +19,15 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
 } }));
 
 afterEach(cleanup);
+
+it("keeps the support identity in Bruno's mention even with the old WhatsApp name", async () => {
+  const { onMentionInsert } = await composer();
+  fireEvent.click(screen.getByRole("button", { name: /Bruno Suporte/ }));
+  expect(onMentionInsert).toHaveBeenCalledExactlyOnceWith({
+    phone: "5551995471095", jid: "5551995471095@s.whatsapp.net",
+    name: "Bruno Suporte", is_lid: false,
+  });
+});
 
 async function composer() {
   const onMentionInsert = vi.fn();

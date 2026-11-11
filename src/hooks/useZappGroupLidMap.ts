@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { zappMentionName } from "@/lib/zappMentionName";
 
 const digits = (v: unknown) => String(v ?? "").split("@")[0].split(":")[0].replace(/\D/g, "");
 
@@ -71,17 +72,17 @@ export function useZappGroupLidMap(opts: {
   const { map: lidToPhone = {}, names = {}, teamBySuffix = {} } = query.data || {};
   const result: Record<string, string> = {};
   // Menções exibem só o primeiro nome (@Lucas), nunca o nome completo
-  const firstName = (n: string) => n.trim().split(/\s+/)[0] || "";
+  const firstName = zappMentionName;
   const nameFor = (phone: string, lid?: string) => {
     const full =
       knownNames[phone] || knownNames[phone.slice(-11)] || knownNames[phone.slice(-10)]
         || knownNames[phone.slice(-9)] || knownNames[phone.slice(-8)]
         || names[phone] || (lid ? names[lid] : "") || teamBySuffix[phone.slice(-8)] || "";
-    return full ? firstName(full) : "";
+    return firstName(full, phone);
   };
   // Também cobre menções por número real (@5511...), não só por LID.
   for (const [k, nm] of Object.entries(names)) if (!lidToPhone[k]) result[k] = nameFor(k) || firstName(nm);
-  for (const [suf, nm] of Object.entries(teamBySuffix)) if (!result[suf]) result[suf] = firstName(nm);
+  for (const [suf, nm] of Object.entries(teamBySuffix)) if (!result[suf]) result[suf] = firstName(nm, suf);
   for (const [lid, phone] of Object.entries(lidToPhone)) {
     result[lid] = nameFor(phone, lid) || formatMentionPhone(phone);
   }
