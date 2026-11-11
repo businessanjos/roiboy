@@ -360,7 +360,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
               Aguard. cliente
             </Badge>
           )}
-          {assignment.agent_id && (
+          {assignment.agent_id && !contact.isGroup && (
             <Badge 
               variant="secondary" 
               className="bg-zapp-accent/15 text-zapp-accent border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
@@ -410,7 +410,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
           )}
           {/* Consultor responsável — só exibe se for diferente do atendente já mostrado acima */}
           {(() => {
-            if (!responsible) return null;
+            if (!responsible || contact.isGroup) return null;
             const agentName = assignment.agent_id ? getAgentName(assignment.agent_id) : null;
             const norm = (s: string) =>
               s
