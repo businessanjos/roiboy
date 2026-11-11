@@ -221,6 +221,9 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
     useEffect(() => {
       if (!value) { autoMentioned.current.clear(); autoNamesRef.current.clear(); setAutoNames([]); return; }
       if (!groupJid || !value.includes("@") || participants.length === 0) return;
+      // Typing only opens suggestions; automatic resolution requires an actual paste.
+      const pasted = pastedText.current;
+      if (!pasted) return;
       const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       const isNum = (s: string) => /^\+?\d[\d\s()-]*$/.test(s);
       // Nomes possíveis por participante: nome do WhatsApp + nome da ficha (achado pelo número)
@@ -237,6 +240,9 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
       while ((m = re.exec(value)) !== null) {
         const words = m[2].split(/\s/);
         const fullTyped = words.join(" ");
+        // A paste must not resolve other names already being typed in the draft.
+        const escaped = fullTyped.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        if (!new RegExp(`(^|\\s)@${escaped}(?![\\p{L}'-])`, "u").test(pasted)) continue;
         let resolved = false;
         for (let n = words.length; n >= 1; n--) {
           const typed = words.slice(0, n).join(" ");
