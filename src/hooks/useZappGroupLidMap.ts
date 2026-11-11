@@ -80,8 +80,8 @@ export function useZappGroupLidMap(opts: {
     return full ? firstName(full) : "";
   };
   // Também cobre menções por número real (@5511...), não só por LID.
-  for (const [k, nm] of Object.entries(names)) if (!lidToPhone[k]) result[k] = nameFor(k) || nm;
-  for (const [suf, nm] of Object.entries(teamBySuffix)) if (!result[suf]) result[suf] = nm;
+  for (const [k, nm] of Object.entries(names)) if (!lidToPhone[k]) result[k] = nameFor(k) || firstName(nm);
+  for (const [suf, nm] of Object.entries(teamBySuffix)) if (!result[suf]) result[suf] = firstName(nm);
   for (const [lid, phone] of Object.entries(lidToPhone)) {
     result[lid] = nameFor(phone, lid) || formatMentionPhone(phone);
   }
