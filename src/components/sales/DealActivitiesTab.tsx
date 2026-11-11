@@ -301,8 +301,16 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
     [tasks, sortMode],
   );
   const completedTasks = useMemo(
-    () => sortTasks(tasks.filter(t => t.custom_status?.is_completed_status || t.completed_at), sortMode),
-    [tasks, sortMode],
+    // Concluídas: sempre a mais recentemente concluída primeiro, independente da ordem das pendentes.
+    () => tasks
+      .filter(t => t.custom_status?.is_completed_status || t.completed_at)
+      .slice()
+      .sort((a, b) => {
+        const ta = new Date((a as any).completed_at || (a as any).updated_at || (a as any).created_at || 0).getTime();
+        const tb = new Date((b as any).completed_at || (b as any).updated_at || (b as any).created_at || 0).getTime();
+        return tb - ta;
+      }),
+    [tasks],
   );
 
   const toggleSelected = (id: string) => {
