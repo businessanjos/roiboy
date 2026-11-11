@@ -58,8 +58,10 @@ export function useZappGroupLidMap(opts: {
         sb.from("hr_collaborators").select("phone, full_name"),
       ]);
       const teamBySuffix: Record<string, string> = {};
-      (ic || []).forEach((r: any) => { const d = digits(r.phone_e164); if (d && r.label && !isNum(r.label)) teamBySuffix[d.slice(-8)] = r.label; });
-      (hr || []).forEach((r: any) => { const d = digits(r.phone); if (d && r.full_name && !teamBySuffix[d.slice(-8)]) teamBySuffix[d.slice(-8)] = r.full_name; });
+            (hr || []).forEach((r: any) => { const d = digits(r.phone); if (d && r.full_name) teamBySuffix[d.slice(-8)] = r.full_name; });
+      // Rótulos genéricos ("Interno", "Equipe"...) não são nome de pessoa
+      const generic = /^(interno|interna|equipe|time|staff|colaborador|teste)$/i;
+      (ic || []).forEach((r: any) => { const d = digits(r.phone_e164); if (d && r.label && !isNum(r.label) && !generic.test(r.label.trim()) && !teamBySuffix[d.slice(-8)]) teamBySuffix[d.slice(-8)] = r.label; });
       return { map, names, teamBySuffix };
     },
   });
