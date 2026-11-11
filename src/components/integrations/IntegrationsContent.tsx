@@ -64,7 +64,7 @@ export function IntegrationsContent() {
   const [copied, setCopied] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [newIntegrationOpen, setNewIntegrationOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("zoom");
+  const [activeTab, setActiveTab] = useState("google");
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
   
   // Zoom config state
@@ -486,13 +486,13 @@ export function IntegrationsContent() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto">
           <TabsList className="inline-flex h-auto gap-1 p-1">
-            <TabsTrigger value="zoom" className="gap-2 px-3 py-2">
-              <Video className="h-4 w-4" />
-              <span>Zoom</span>
-            </TabsTrigger>
             <TabsTrigger value="google" className="gap-2 px-3 py-2">
               <Calendar className="h-4 w-4" />
               <span>Meet</span>
+            </TabsTrigger>
+            <TabsTrigger value="zoom" className="gap-2 px-3 py-2">
+              <Video className="h-4 w-4" />
+              <span>Zoom</span>
             </TabsTrigger>
             <TabsTrigger value="webhooks" className="gap-2 px-3 py-2">
               <Webhook className="h-4 w-4" />
