@@ -470,6 +470,13 @@
       "when": 1794398805432,
       "tag": "0066_meet_drive_transcripts",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1794399255164,
+      "tag": "0067_remove_maikol_google_drive_connection",
+      "breakpoints": true
     }
   ]
 }
