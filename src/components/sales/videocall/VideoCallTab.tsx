@@ -72,6 +72,7 @@ import { ImportTranscriptDialog } from "./ImportTranscriptDialog";
 import { SellerSelector, useAccountSellers, initials } from "./SellerSelector";
 import { ProductSelector, useCallProducts } from "./ProductSelector";
 import MarkdownRenderer from "@/components/sales/MarkdownRenderer";
+import { MeetDriveSyncBar } from "./MeetDriveSyncBar";
 
 function formatDuration(seconds: number): string {
   if (!seconds) return "0s";
@@ -436,6 +437,8 @@ export function VideoCallTab() {
             <VideoCallDialog />
           </div>
         </div>
+
+        <MeetDriveSyncBar onSynced={() => refetch()} />
 
         {/* Filtros */}
         <Card>
