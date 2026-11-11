@@ -274,10 +274,11 @@ function ZappMessagesListInner({
 
       // Merge mention names for group messages
       if (isGroup && enriched.content && mentionRegex.test(enriched.content)) {
-        const merged = { ...combinedMentionMap, ...lidMentionMap, ...(enriched.mention_map || {}) };
+        // "Interno"/"Equipe" é rótulo, não nome: não deixa sobrescrever o nome real
+        const generic = (v?: string) => !v || /^(interno|interna|equipe|time|desconhecido)$/i.test(v.trim());
         const cleaned: Record<string, string> = {};
-        for (const [k, v] of Object.entries(merged)) {
-          if (v) cleaned[k] = v;
+        for (const src of [enriched.mention_map || {}, combinedMentionMap, lidMentionMap]) {
+          for (const [k, v] of Object.entries(src)) if (!generic(v)) cleaned[k] = v;
         }
         enriched = { ...enriched, mention_map: Object.keys(cleaned).length > 0 ? cleaned : null };
       }
