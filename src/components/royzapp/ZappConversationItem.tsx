@@ -113,6 +113,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
   const zappConvId = assignment.zapp_conversation?.id;
   const { internalCores } = useZappInternalContacts();
   const showNameTags = useZappTagNameTagsEnabled();
+  const teamMentionNames = useZappTeamMentionNames();
   // Número da própria equipe não é atendimento de cliente: sem selo de espera.
   const internal =
     isInternalGroup(contact.name, !!contact.isGroup, !!contact.isPinned) ||

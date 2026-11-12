@@ -23,11 +23,11 @@ export function useZappTeamMentionNames() {
   }).data || {};
 }
 
-/** Troca @<número/LID> por @Nome; sem nome conhecido, mostra só "@". */
+/** Troca @<número/LID> por @Nome; sem nome conhecido, mostra "@contato". */
 export function resolvePreviewMentions(text: string, names: Record<string, string>): string {
   if (!text) return text;
   return text.replace(/@(\d{8,})/g, (_m, num: string) => {
     const n = names[num.slice(-8)];
-    return n ? `@${n}` : "@";
+    return n ? `@${n}` : "@contato";
   });
 }
