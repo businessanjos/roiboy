@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { effectiveLimit } from "./useZappMessageLimit";
+import { effectiveLimit, clampLimit, needsLimitConfirmation } from "./useZappMessageLimit";
 
 describe("limite de mensagens por hora", () => {
   it("padrão é 80", () => expect(effectiveLimit(null)).toBe(80));

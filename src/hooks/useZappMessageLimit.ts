@@ -12,6 +12,16 @@ export function todayBrasilia(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 }
 
+/** Valor dentro da faixa permitida (20 a 300). */
+export function clampLimit(n: number) {
+  return Math.min(ZAPP_LIMIT_MAX, Math.max(ZAPP_LIMIT_MIN, Math.round(n || 0)));
+}
+
+/** Acima do teto seguro o pedido de ciência aparece só depois do clique em salvar/aplicar. */
+export function needsLimitConfirmation(n: number) {
+  return clampLimit(n) > ZAPP_LIMIT_SAFE_MAX;
+}
+
 /** Limite de mensagens por hora por atendente; o "só hoje" vence na meia-noite de Brasília. */
 export function effectiveLimit(s?: { hourly_limit?: number | null; today_limit?: number | null; today_date?: string | null } | null, today = todayBrasilia()) {
   const base = s?.hourly_limit || ZAPP_LIMIT_DEFAULT;
