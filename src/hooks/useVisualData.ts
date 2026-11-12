@@ -2279,7 +2279,8 @@ const normCr = (v: unknown) => String(v ?? '').normalize('NFD').replace(/[\u0300
 /** Nome de produto/opção que conta como Clínica Ryka nas calls comerciais. */
 export function isCrItemLabel(label: unknown): boolean {
   const n = normCr(label);
-  return n.includes('clinica ryka') || n.includes('e-pass') || n.includes('rykas pass');
+  return n.includes('clinica ryka') || n.includes('e-pass') || n.includes('rykas pass')
+    || n.includes('programa de aceleracao') || /^cr(\s+[|li\u2013-]\s+|\s*$)/.test(n.trim());
 }
 
 // Negócios cujo "Item da Venda" é Clínica Ryka / E-Pass (aceita uuid do produto, slug ou opção).
