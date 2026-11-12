@@ -4,24 +4,43 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
-  useZappMessageLimit, ZAPP_LIMIT_DEFAULT, ZAPP_LIMIT_SAFE_MAX, ZAPP_LIMIT_MIN, ZAPP_LIMIT_MAX,
+  useZappMessageLimit, clampLimit, needsLimitConfirmation,
+  ZAPP_LIMIT_DEFAULT, ZAPP_LIMIT_SAFE_MAX, ZAPP_LIMIT_MIN, ZAPP_LIMIT_MAX,
 } from "@/hooks/useZappMessageLimit";
 
-function clamp(n: number) {
-  return Math.min(ZAPP_LIMIT_MAX, Math.max(ZAPP_LIMIT_MIN, Math.round(n || 0)));
-}
+type PendingChange = { kind: "base" | "today"; value: number };
 
 export function ZappMessageLimitSection({ sectorId }: { sectorId: string }) {
   const l = useZappMessageLimit(sectorId);
   const [base, setBase] = useState(String(l.base));
   const [today, setToday] = useState(String(l.todayLimit ?? 120));
+  const [pending, setPending] = useState<PendingChange | null>(null);
   const [ack, setAck] = useState(false);
   useEffect(() => setBase(String(l.base)), [l.base]);
 
-  const risky = (n: number) => n > ZAPP_LIMIT_SAFE_MAX;
-  const baseN = clamp(Number(base));
-  const todayN = clamp(Number(today));
-  const needsAck = risky(baseN) || risky(todayN);
+  const baseN = clampLimit(Number(base));
+  const todayN = clampLimit(Number(today));
+
+  // A ciência do risco vem depois do clique: o botão abre a confirmação em vez de ficar travado.
+  const ask = (kind: PendingChange["kind"], value: number) => {
+    if (!needsLimitConfirmation(value)) {
+      if (kind === "base") l.setBase(value);
+      else l.setToday(value);
+      return;
+    }
+    setAck(false);
+    setPending({ kind, value });
+  };
+
+  const confirmPending = () => {
+    if (!pending || !ack) return;
+    if (pending.kind === "base") l.setBase(pending.value);
+    else l.setToday(pending.value);
+    setPending(null);
+    setAck(false);
+  };
+
+  const dropPending = () => { setPending(null); setAck(false); };
 
   return (
     <div className="space-y-3 pt-4 border-t border-zapp-border">
@@ -51,9 +70,9 @@ export function ZappMessageLimitSection({ sectorId }: { sectorId: string }) {
               <p className="text-zapp-text text-sm">Limite fixo (todos os dias)</p>
               <div className="flex gap-2">
                 <Input type="number" min={ZAPP_LIMIT_MIN} max={ZAPP_LIMIT_MAX} value={base}
-                  onChange={(e) => setBase(e.target.value)} className="h-8 w-24" />
-                <Button size="sm" variant="outline" disabled={l.saving || (risky(baseN) && !ack)}
-                  onClick={() => l.setBase(baseN)}>Salvar</Button>
+                  onChange={(e) => { setBase(e.target.value); dropPending(); }} className="h-8 w-24" />
+                <Button size="sm" variant="outline" disabled={l.saving}
+                  onClick={() => ask("base", baseN)}>Salvar</Button>
               </div>
             </div>
             <div className="p-3 bg-zapp-panel rounded-lg space-y-2">
@@ -61,22 +80,34 @@ export function ZappMessageLimitSection({ sectorId }: { sectorId: string }) {
               <p className="text-zapp-text-muted text-xs">Volta sozinho ao limite fixo à meia-noite.</p>
               <div className="flex flex-wrap gap-2">
                 <Input type="number" min={ZAPP_LIMIT_MIN} max={ZAPP_LIMIT_MAX} value={today}
-                  onChange={(e) => setToday(e.target.value)} className="h-8 w-24" />
-                <Button size="sm" disabled={l.saving || (risky(todayN) && !ack)}
-                  onClick={() => l.setToday(todayN)}>Aplicar hoje</Button>
+                  onChange={(e) => { setToday(e.target.value); dropPending(); }} className="h-8 w-24" />
+                <Button size="sm" disabled={l.saving}
+                  onClick={() => ask("today", todayN)}>Aplicar hoje</Button>
                 {l.todayLimit && (
-                  <Button size="sm" variant="ghost" disabled={l.saving} onClick={() => l.setToday(null)}>
+                  <Button size="sm" variant="ghost" disabled={l.saving} onClick={() => { dropPending(); l.setToday(null); }}>
                     Cancelar
                   </Button>
                 )}
               </div>
             </div>
           </div>
-          {needsAck && (
-            <label className="flex items-start gap-2 text-xs text-zapp-text">
-              <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="mt-0.5" />
-              Estou ciente de que acima de {ZAPP_LIMIT_SAFE_MAX} mensagens por hora o número pode ser banido pelo WhatsApp.
-            </label>
+
+          {pending && (
+            <div className="space-y-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+              <p className="text-xs text-zapp-text">
+                <b>Confirmar aumento:</b> {pending.kind === "base" ? "o limite fixo" : "o limite de hoje"} passa a
+                <b> {pending.value}</b> mensagens por hora.
+                Acima de {ZAPP_LIMIT_SAFE_MAX}/hora o número pode ser banido pelo WhatsApp.
+              </p>
+              <label className="flex items-start gap-2 text-xs text-zapp-text">
+                <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="mt-0.5" />
+                Estou ciente do risco de banimento e quero aplicar mesmo assim.
+              </label>
+              <div className="flex gap-2">
+                <Button size="sm" disabled={!ack || l.saving} onClick={confirmPending}>Confirmar aumento</Button>
+                <Button size="sm" variant="ghost" disabled={l.saving} onClick={dropPending}>Voltar</Button>
+              </div>
+            </div>
           )}
 
           <div className="p-3 bg-zapp-panel rounded-lg">
