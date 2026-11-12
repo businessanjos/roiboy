@@ -4,24 +4,43 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
-  useZappMessageLimit, ZAPP_LIMIT_DEFAULT, ZAPP_LIMIT_SAFE_MAX, ZAPP_LIMIT_MIN, ZAPP_LIMIT_MAX,
+  useZappMessageLimit, clampLimit, needsLimitConfirmation,
+  ZAPP_LIMIT_DEFAULT, ZAPP_LIMIT_SAFE_MAX, ZAPP_LIMIT_MIN, ZAPP_LIMIT_MAX,
 } from "@/hooks/useZappMessageLimit";
 
-function clamp(n: number) {
-  return Math.min(ZAPP_LIMIT_MAX, Math.max(ZAPP_LIMIT_MIN, Math.round(n || 0)));
-}
+type PendingChange = { kind: "base" | "today"; value: number };
 
 export function ZappMessageLimitSection({ sectorId }: { sectorId: string }) {
   const l = useZappMessageLimit(sectorId);
   const [base, setBase] = useState(String(l.base));
   const [today, setToday] = useState(String(l.todayLimit ?? 120));
+  const [pending, setPending] = useState<PendingChange | null>(null);
   const [ack, setAck] = useState(false);
   useEffect(() => setBase(String(l.base)), [l.base]);
 
-  const risky = (n: number) => n > ZAPP_LIMIT_SAFE_MAX;
-  const baseN = clamp(Number(base));
-  const todayN = clamp(Number(today));
-  const needsAck = risky(baseN) || risky(todayN);
+  const baseN = clampLimit(Number(base));
+  const todayN = clampLimit(Number(today));
+
+  // A ciência do risco vem depois do clique: o botão abre a confirmação em vez de ficar travado.
+  const ask = (kind: PendingChange["kind"], value: number) => {
+    if (!needsLimitConfirmation(value)) {
+      if (kind === "base") l.setBase(value);
+      else l.setToday(value);
+      return;
+    }
+    setAck(false);
+    setPending({ kind, value });
+  };
+
+  const confirmPending = () => {
+    if (!pending || !ack) return;
+    if (pending.kind === "base") l.setBase(pending.value);
+    else l.setToday(pending.value);
+    setPending(null);
+    setAck(false);
+  };
+
+  const dropPending = () => { setPending(null); setAck(false); };
 
   return (
     <div className="space-y-3 pt-4 border-t border-zapp-border">
