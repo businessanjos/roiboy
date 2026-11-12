@@ -5,8 +5,8 @@ describe("productShortName", () => {
     expect(productShortName("EM l Eternum Mentoring")).toBe("EM");
     expect(productShortName("RM l Rykas Mentoring")).toBe("RM");
   });
-  it("renovação vira R. + sigla", () => {
-    expect(productShortName("REN. EM l Eternum Mentoring")).toBe("R. EM");
-    expect(productShortName("REN. RM l Rykas Mentoring")).toBe("R. RM");
+  it("renovação vira REN. + sigla", () => {
+    expect(productShortName("REN. EM l Eternum Mentoring")).toBe("REN. EM");
+    expect(productShortName("REN. RM l Rykas Mentoring")).toBe("REN. RM");
   });
 });

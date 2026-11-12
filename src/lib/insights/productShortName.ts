@@ -18,13 +18,13 @@ function baseShortName(raw: string): string {
   return (words.slice(0, 3).map((w) => w[0]).join("") || raw.slice(0, 3)).toUpperCase();
 }
 
-/** Sigla curta do Item da Venda (ex.: "EM", "CR"; renovação vira "R. EM"). */
+/** Sigla curta do Item da Venda (ex.: "EM", "CR"; renovação vira "REN. EM"). */
 export function productShortName(name: string): string {
   const raw = (name || "").trim();
   if (!raw) return "?";
   if (isRenewalProduct(raw)) {
     const rest = raw.replace(/^ren(ova[cç][aã]o)?\.?\s*[-:|]?\s*/i, "");
-    return `R. ${baseShortName(rest || raw)}`;
+    return `REN. ${baseShortName(rest || raw)}`;
   }
   return baseShortName(raw);
 }
