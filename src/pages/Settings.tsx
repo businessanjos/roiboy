@@ -8,6 +8,7 @@ import { UserSectorAccessManager } from "@/components/settings/UserSectorAccessM
 import { TeamManager } from "@/components/settings/TeamManager";
 import { ActivityTypesManager } from "@/components/sales";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { LeadRevenueRoutingManager } from "@/components/settings/LeadRevenueRoutingManager";
 import { LossReasonsManager } from "@/components/settings/LossReasonsManager";
 import { SectorPinSettings } from "@/components/settings/SectorPinSettings";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -70,6 +71,7 @@ export default function Settings() {
       case "sales":
         return hasVendasAccess && canEditSettings ? (
           <div className="space-y-6">
+            <LeadRevenueRoutingManager />
             <ActivityTypesManager />
             <LossReasonsManager />
           </div>

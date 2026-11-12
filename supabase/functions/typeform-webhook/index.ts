@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { canonicalEmail } from "../_shared/email-normalize.ts";
 import { canonicalE164, phoneVariants, phoneCoreKey } from "../_shared/phone-normalize.ts";
 import { createLeadCore } from "../_shared/create-lead-core.ts";
+import { resolveRevenueRoutedPipeline } from "../_shared/leadRevenueRouting.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
