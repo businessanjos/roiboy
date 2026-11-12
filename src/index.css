@@ -52,6 +52,7 @@
     /* ROY Custom Tokens */
     --success: 152 69% 31%;
     --renewal: 262 70% 55%;
+    --renewal-foreground: 0 0% 100%;
     --success-foreground: 0 0% 100%;
     --success-muted: 152 40% 90%;
 
@@ -169,6 +170,7 @@
 
     --success: 152 60% 42%;
     --renewal: 262 80% 72%;
+    --renewal-foreground: 262 45% 12%;
     --success-muted: 152 35% 15%;
     --warning: 39 60% 55%;
     --warning-muted: 39 45% 15%;

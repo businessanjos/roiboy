@@ -67,6 +67,7 @@ export default {
         },
         renewal: {
           DEFAULT: "hsl(var(--renewal, 258 90% 66%))",
+          foreground: "hsl(var(--renewal-foreground, 0 0% 100%))",
         },
         "activity-overdue": {
           DEFAULT: "hsl(var(--activity-overdue, 0 85% 55%))",
