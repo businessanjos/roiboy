@@ -519,6 +519,13 @@
       "when": 1794515116381,
       "tag": "0073_zapp_hourly_message_limit",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1794515389247,
+      "tag": "0074_zapp_sector_message_limits",
+      "breakpoints": true
     }
   ]
 }
