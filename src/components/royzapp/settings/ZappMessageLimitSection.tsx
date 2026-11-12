@@ -95,8 +95,8 @@ export function ZappMessageLimitSection({ sectorId }: { sectorId: string }) {
           {pending && (
             <div className="space-y-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
               <p className="text-xs text-zapp-text">
-                <b>Confirmar aumento:</b> {pending.kind === "base" ? "o limite fixo" : "o limite de hoje"}
-                passa a <b>{pending.value}</b> mensagens por hora.
+                <b>Confirmar aumento:</b> {pending.kind === "base" ? "o limite fixo" : "o limite de hoje"} passa a
+                <b> {pending.value}</b> mensagens por hora.
                 Acima de {ZAPP_LIMIT_SAFE_MAX}/hora o número pode ser banido pelo WhatsApp.
               </p>
               <label className="flex items-start gap-2 text-xs text-zapp-text">
