@@ -505,6 +505,13 @@
       "when": 1794514170955,
       "tag": "0071_lead_revenue_routing",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1794514730047,
+      "tag": "0072_lead_revenue_routing_history",
+      "breakpoints": true
     }
   ]
 }
