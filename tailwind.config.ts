@@ -66,8 +66,8 @@ export default {
           strong: "hsl(var(--warning-strong, var(--warning-foreground)))",
         },
         renewal: {
-          DEFAULT: "hsl(var(--renewal, 258 90% 66%))",
-          foreground: "hsl(var(--renewal-foreground, 0 0% 100%))",
+          DEFAULT: "hsl(var(--renewal))",
+          foreground: "hsl(var(--renewal-foreground))",
         },
         "pill-sale": {
           DEFAULT: "hsl(var(--pill-sale, 41 42% 48.2%))",
