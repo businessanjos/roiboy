@@ -222,7 +222,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
         </div>
       </div>
 
-      <ZappMessageLimitSection />
+      {sectorId === "vendas" && <ZappMessageLimitSection sectorId={sectorId} />}
 
       {/* Access Configuration Notice */}      <div className="space-y-3 pt-4 border-t border-zapp-border">
         <div>

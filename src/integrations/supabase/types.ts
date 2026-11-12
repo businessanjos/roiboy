@@ -29897,6 +29897,78 @@ export type Database = {
           },
         ]
       }
+      zapp_sector_message_limit_history: {
+        Row: {
+          account_id: string
+          changed_at: string
+          changed_by: string | null
+          changed_by_name: string | null
+          id: string
+          new_hourly: number | null
+          new_today: number | null
+          old_hourly: number | null
+          old_today: number | null
+          sector_id: string
+          today_date: string | null
+        }
+        Insert: {
+          account_id: string
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          id?: string
+          new_hourly?: number | null
+          new_today?: number | null
+          old_hourly?: number | null
+          old_today?: number | null
+          sector_id: string
+          today_date?: string | null
+        }
+        Update: {
+          account_id?: string
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          id?: string
+          new_hourly?: number | null
+          new_today?: number | null
+          old_hourly?: number | null
+          old_today?: number | null
+          sector_id?: string
+          today_date?: string | null
+        }
+        Relationships: []
+      }
+      zapp_sector_message_limits: {
+        Row: {
+          account_id: string
+          hourly_limit: number
+          sector_id: string
+          today_date: string | null
+          today_limit: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          hourly_limit?: number
+          sector_id: string
+          today_date?: string | null
+          today_limit?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          hourly_limit?: number
+          sector_id?: string
+          today_date?: string | null
+          today_limit?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       zapp_sequence_run_steps: {
         Row: {
           account_id: string
@@ -31667,6 +31739,15 @@ export type Database = {
         Returns: Json
       }
       zapp_sales_lean_views: { Args: never; Returns: string[] }
+      zapp_sector_message_usage_today: {
+        Args: { p_sector_id: string }
+        Returns: {
+          last_hour: number
+          today: number
+          user_id: string
+          user_name: string
+        }[]
+      }
       zapp_sector_role: {
         Args: { _auth_user_id: string; _sector_id: string }
         Returns: string

@@ -11,8 +11,8 @@ function clamp(n: number) {
   return Math.min(ZAPP_LIMIT_MAX, Math.max(ZAPP_LIMIT_MIN, Math.round(n || 0)));
 }
 
-export function ZappMessageLimitSection() {
-  const l = useZappMessageLimit();
+export function ZappMessageLimitSection({ sectorId }: { sectorId: string }) {
+  const l = useZappMessageLimit(sectorId);
   const [base, setBase] = useState(String(l.base));
   const [today, setToday] = useState(String(l.todayLimit ?? 120));
   const [ack, setAck] = useState(false);
@@ -43,7 +43,7 @@ export function ZappMessageLimitSection() {
       </div>
 
       {!l.canEdit ? (
-        <p className="text-zapp-text-muted text-xs">Só administradores podem alterar.</p>
+        <p className="text-zapp-text-muted text-xs">Só gestor ou admin deste setor pode alterar.</p>
       ) : (
         <>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -103,6 +103,30 @@ export function ZappMessageLimitSection() {
                   );
                 })}
               </div>
+            )}
+          </div>
+          <div className="p-3 bg-zapp-panel rounded-lg">
+            <p className="text-zapp-text text-sm mb-2">Histórico de mudanças</p>
+            {l.history.length === 0 ? (
+              <p className="text-zapp-text-muted text-xs">Nenhuma mudança registrada ainda.</p>
+            ) : (
+              <ul className="space-y-1.5 max-h-56 overflow-y-auto text-xs">
+                {l.history.map((h) => {
+                  const parts: string[] = [];
+                  if (h.old_hourly !== h.new_hourly) parts.push(`Limite fixo: ${h.old_hourly ?? ZAPP_LIMIT_DEFAULT} → ${h.new_hourly}`);
+                  if (h.old_today !== h.new_today) parts.push(h.new_today ? `Só hoje: ${h.new_today}/hora` : "Cancelou o aumento de hoje");
+                  return (
+                    <li key={h.id} className="flex justify-between gap-2 border-b border-zapp-border/60 pb-1 last:border-0">
+                      <span className="text-zapp-text">
+                        <b>{h.changed_by_name || "Alguém"}</b> · {parts.join(" · ") || "Salvou sem mudar"}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-zapp-text-muted">
+                        {new Date(h.changed_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
         </>
