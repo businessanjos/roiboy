@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, GitBranch, Info } from "lucide-react";
+import { ArrowRight, GitBranch, History, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,15 +30,19 @@ export function LeadRevenueRoutingManager() {
     queryKey: ["lead-revenue-routing", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const [field, pipes, rules] = await Promise.all([
+      const [field, pipes, rules, history] = await Promise.all([
         supabase.from("custom_fields").select("options").eq("id", FATURAMENTO_FIELD_ID).maybeSingle(),
         supabase.from("pipelines").select("id, name").eq("account_id", accountId!).eq("is_active", true).order("created_at"),
         supabase.from("lead_revenue_routing").select("revenue_value, pipeline_id").eq("account_id", accountId!),
+        (supabase as any).from("lead_revenue_routing_history").select("id, revenue_value, old_pipeline_id, new_pipeline_id, changed_by, changed_at").eq("account_id", accountId!).order("changed_at", { ascending: false }).limit(50),
       ]);
+      const hist = (history.data || []) as any[];
+      const userIds = [...new Set(hist.map((h) => h.changed_by).filter(Boolean))];
+      const users = userIds.length ? (await supabase.from("users").select("id, name").in("id", userIds)).data || [] : [];
       const options = ((field.data?.options as any[]) || [])
         .map((o) => ({ value: String(o.value), label: String(o.label) }))
         .sort((a, b) => rangeTop(a.label) - rangeTop(b.label));
-      return { options, pipelines: pipes.data || [], rules: rules.data || [] };
+      return { options, pipelines: pipes.data || [], rules: rules.data || [], history: hist, users: users as { id: string; name: string | null }[] };
     },
   });
 
@@ -116,6 +120,28 @@ export function LeadRevenueRoutingManager() {
             ))}
           </div>
         )}
+        <div className="space-y-2">
+          <p className="flex items-center gap-2 text-sm font-medium text-foreground"><History className="h-4 w-4 text-primary" />Histórico de mudanças</p>
+          {!data?.history.length ? (
+            <p className="text-xs text-muted-foreground">Nenhuma mudança registrada ainda.</p>
+          ) : (
+            <div className="max-h-64 divide-y divide-border overflow-y-auto rounded-lg border border-border">
+              {data.history.map((h) => {
+                const label = data.options.find((o) => o.value === h.revenue_value)?.label ?? h.revenue_value;
+                const who = data.users.find((u) => u.id === h.changed_by)?.name?.split(" ")[0] ?? "Alguém";
+                const from = h.old_pipeline_id ? pipeName(h.old_pipeline_id) ?? "funil removido" : `Padrão (${defaultPipe(label)})`;
+                const to = h.new_pipeline_id ? pipeName(h.new_pipeline_id) ?? "funil removido" : `Padrão (${defaultPipe(label)})`;
+                const when = new Date(h.changed_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+                return (
+                  <div key={h.id} className="p-2.5 text-xs">
+                    <p className="text-muted-foreground"><span className="tabular-nums">{when}</span> · <strong className="text-foreground">{who}</strong></p>
+                    <p className="text-foreground"><strong>{label}</strong>: {from} → <strong className="text-primary">{to}</strong></p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
