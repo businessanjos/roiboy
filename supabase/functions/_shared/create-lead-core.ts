@@ -1,3 +1,4 @@
+import { resolveRevenueRoutedPipeline } from "./leadRevenueRouting.ts";
 // Core lead-creation logic shared between the public create-lead endpoint
 // (called by external integrations / N8N) and internal callers like the
 // typeform-webhook (which needs to create the same shape of lead without
@@ -260,6 +261,12 @@ export async function createLeadCore(
           .ilike("name", payload.pipeline_name)
           .maybeSingle();
         pipelineId = pipe?.id || null;
+      }
+
+      // Regra do gestor por faixa de faturamento (Configurações > Roteamento de leads)
+      if (!pipelineId) {
+        pipelineId = await resolveRevenueRoutedPipeline(supabase, accountId, payload.revenue_range);
+        if (pipelineId) console.log(`[create-lead-core] Roteado pela faixa de faturamento → ${pipelineId}`);
       }
 
       // MQL-based auto-routing: opt_1 (MQL) → Closer, opt_2 (não-MQL) → TP - Eternum Pass

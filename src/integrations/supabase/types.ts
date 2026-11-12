@@ -17388,6 +17388,41 @@ export type Database = {
           },
         ]
       }
+      lead_revenue_routing: {
+        Row: {
+          account_id: string
+          id: string
+          pipeline_id: string | null
+          revenue_value: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          id?: string
+          pipeline_id?: string | null
+          revenue_value: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          id?: string
+          pipeline_id?: string | null
+          revenue_value?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_revenue_routing_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_timeline: {
         Row: {
           account_id: string
