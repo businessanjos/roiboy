@@ -1,3 +1,4 @@
+import { useZappTeamMentionNames, resolvePreviewMentions } from "@/hooks/useZappTeamMentionNames";
 import { ZappTagBadge, ZappTagMore, getConversationTags } from "@/components/royzapp/ZappTagBadge";
 import { useZappTagNameTagsEnabled } from "@/hooks/useZappTagNameTags";
 import { memo } from "react";
@@ -327,7 +328,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
               <CheckCheck className="h-3.5 w-3.5 text-info flex-shrink-0" />
             )}
             <span className="text-zapp-text-muted text-xs truncate">
-              {contact.lastMessagePreview || contact.phone || "Nova conversa"}
+              {(contact.lastMessagePreview ? resolvePreviewMentions(contact.lastMessagePreview, teamMentionNames) : null) || contact.phone || "Nova conversa"}
             </span>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
