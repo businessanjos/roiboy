@@ -109,7 +109,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
               {/* Pills */}
               <div className="flex gap-1">
                 {/* Agendadas em aberto */}
-                <div className="flex flex-col items-center gap-0.5 rounded-lg bg-muted px-3 py-2 min-w-[52px]">
+                <div className="flex flex-col items-center gap-0.5 rounded-lg bg-muted px-2 py-2 w-[58px]">
                   <Calendar className="h-3.5 w-3.5 text-warning" />
                   <span className="font-bold text-foreground tabular-nums leading-none" style={{ fontSize: `${Math.round(18 * m)}px` }}>
                     {scheduled}
@@ -120,7 +120,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
                 </div>
 
                 {/* Concluídas */}
-                <div className="flex flex-col items-center gap-0.5 rounded-lg bg-muted px-3 py-2 min-w-[52px]">
+                <div className="flex flex-col items-center gap-0.5 rounded-lg bg-muted px-2 py-2 w-[58px]">
                   <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                   <span className="font-bold text-foreground tabular-nums leading-none" style={{ fontSize: `${Math.round(18 * m)}px` }}>
                     {completed}
@@ -132,7 +132,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
 
                 {/* Vendas do mês + conversão */}
                 <div
-                  className="flex flex-col items-center gap-0.5 rounded-lg bg-primary/10 px-3 py-2 min-w-[52px]"
+                  className="relative flex flex-col items-center gap-0.5 rounded-lg bg-primary/10 ring-1 ring-primary/30 px-2 py-2 w-[58px]"
                   title={`${sales} venda(s) ganha(s) neste mês • ${conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das calls feitas`}
                 >
                   <Target className="h-3.5 w-3.5 text-primary" />
@@ -140,7 +140,10 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
                     {sales}
                   </span>
                   <span className="text-[9px] text-muted-foreground font-medium leading-none">
-                    Vendas · {conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
+                    Vendas
+                  </span>
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-px text-[9px] font-bold leading-none text-primary-foreground tabular-nums whitespace-nowrap">
+                    {conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%
                   </span>
                 </div>
               </div>
