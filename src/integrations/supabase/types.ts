@@ -28411,18 +28411,27 @@ export type Database = {
       zapp_account_settings: {
         Row: {
           account_id: string
+          msg_hourly_limit: number
+          msg_today_date: string | null
+          msg_today_limit: number | null
           ruler_keep_title: boolean
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           account_id: string
+          msg_hourly_limit?: number
+          msg_today_date?: string | null
+          msg_today_limit?: number | null
           ruler_keep_title?: boolean
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           account_id?: string
+          msg_hourly_limit?: number
+          msg_today_date?: string | null
+          msg_today_limit?: number | null
           ruler_keep_title?: boolean
           updated_at?: string
           updated_by?: string | null
@@ -31576,6 +31585,15 @@ export type Database = {
       zapp_is_unrestricted_user: {
         Args: { _user_id: string }
         Returns: boolean
+      }
+      zapp_message_usage_today: {
+        Args: never
+        Returns: {
+          last_hour: number
+          today: number
+          user_id: string
+          user_name: string
+        }[]
       }
       zapp_my_group_unread: {
         Args: { p_conv_ids: string[] }

@@ -512,6 +512,13 @@
       "when": 1794514730047,
       "tag": "0072_lead_revenue_routing_history",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1794515116381,
+      "tag": "0073_zapp_hourly_message_limit",
+      "breakpoints": true
     }
   ]
 }
