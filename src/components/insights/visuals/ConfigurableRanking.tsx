@@ -297,7 +297,7 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
                               <span
                                 key={g.short}
                                 title={g.items.map(i => `${i.qty}x ${i.name}`).join('\n')}
-                                className={`inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-semibold leading-none tabular-nums ${g.renewal ? 'border-renewal bg-renewal text-renewal-foreground' : 'border-primary bg-primary text-primary-foreground'}`}
+                                className={`inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-semibold leading-none tabular-nums ${g.renewal ? 'border-renewal bg-renewal text-renewal-foreground' : 'border-pill-sale bg-pill-sale text-pill-sale-foreground'}`}
                                 style={{ fontSize: `${Math.round(11 * m)}px` }}
                               >
                                 <span className="opacity-80">{g.qty}x</span>
