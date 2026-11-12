@@ -1177,14 +1177,16 @@ Deno.serve(async (req) => {
       // Limite configurável em Configurações do RoyZapp (padrão 80; "só hoje" vale até a meia-noite de Brasília)
       let MAX_MESSAGES_PER_HOUR = 80;
       try {
-        const { data: lim } = await supabase
-          .from("zapp_account_settings")
-          .select("msg_hourly_limit, msg_today_limit, msg_today_date")
+        const limSector = sector_id || intData?.sector_id || null;
+        const { data: lim } = limSector ? await supabase
+          .from("zapp_sector_message_limits")
+          .select("hourly_limit, today_limit, today_date")
           .eq("account_id", accountId)
-          .maybeSingle();
+          .eq("sector_id", limSector)
+          .maybeSingle() : { data: null as any };
         const todayBr = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
-        const base = Number(lim?.msg_hourly_limit) || 80;
-        const eff = lim?.msg_today_limit && lim?.msg_today_date === todayBr ? Number(lim.msg_today_limit) : base;
+        const base = Number(lim?.hourly_limit) || 80;
+        const eff = lim?.today_limit && lim?.today_date === todayBr ? Number(lim.today_limit) : base;
         MAX_MESSAGES_PER_HOUR = Math.min(300, Math.max(20, eff));
       } catch (_) { /* mantém padrão */ }
       if ((hourlyCount || 0) >= MAX_MESSAGES_PER_HOUR) {
