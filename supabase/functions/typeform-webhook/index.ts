@@ -465,7 +465,9 @@ Deno.serve(async (req) => {
           : ["TP - Eternum Pass", "E-Pass / Clinica Ryka", "%E-Pass%", "%Eternum Pass%"];
         const targetName = candidates[0];
         let pipe: { id: string } | null = null;
-        for (const cand of candidates) {
+        const routedId = await resolveRevenueRoutedPipeline(supabase, accountId, bundle.revenue_range);
+        if (routedId) pipe = { id: routedId };
+        for (const cand of pipe ? [] : candidates) {
           const { data } = await supabase
             .from("pipelines")
             .select("id")
@@ -520,7 +522,7 @@ Deno.serve(async (req) => {
             } else if (newDeal) {
               dealId = newDeal.id;
               reopenedFrom = lastLost?.id || null;
-              console.log(`[typeform-webhook] Deal created on match: ${newDeal.id} → ${isMql ? "Closer" : "TP - Eternum Pass"}`);
+              console.log(`[typeform-webhook] Deal created on match: ${newDeal.id} → ${routedId ? "faixa configurada" : isMql ? "Closer" : "TP - Eternum Pass"}`);
             }
           } else {
             noteFailure(`Pipeline "${targetName}" sem estágio inicial`);
