@@ -26,6 +26,10 @@ export interface AggregatedDataPoint {
   /** Negócios perdidos na etapa (apenas funil por etapa). */
   lostValue?: number;
   lostCount?: number;
+  /** Produtos vendidos no grupo (ranking): nome e quantidade de negócios. */
+  products?: { name: string; qty: number }[];
+  /** Calls comerciais: vendas ganhas no mês atual. */
+  salesMonth?: number;
 }
 
 interface UseVisualDataParams {
@@ -1104,7 +1108,29 @@ async function fetchDealsData(
   // Enrich deals with "Valor Recebido da Venda" custom field for tiebreaker
   const enrichedWithEntryValue = await enrichDealsWithReceivedValue(accountId, filteredData);
 
-  return aggregateData(enrichedWithEntryValue, measure, aggregationDimension, dateDisplayFormat);
+  const aggregated = aggregateData(enrichedWithEntryValue, measure, aggregationDimension, dateDisplayFormat);
+  if (aggregationDimension.type === 'date' || enrichedWithEntryValue.length === 0) return aggregated;
+
+  // Identificação: produtos (Item da Venda) e quantidade por grupo.
+  try {
+    const withProduct = await enrichDealsWithProduct(accountId, enrichedWithEntryValue);
+    const byGroup = new Map<string, Map<string, number>>();
+    for (const d of withProduct) {
+      if (!d.product || d.product === 'Não informado') continue;
+      const key = getGroupKey(d, aggregationDimension, dateDisplayFormat);
+      if (!byGroup.has(key)) byGroup.set(key, new Map());
+      const m = byGroup.get(key)!;
+      m.set(d.product, (m.get(d.product) || 0) + 1);
+    }
+    return aggregated.map(p => {
+      const m = byGroup.get(p.name);
+      if (!m) return p;
+      const products = Array.from(m, ([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty);
+      return { ...p, products };
+    });
+  } catch {
+    return aggregated;
+  }
 }
 
 // Calculate conversion rate as (won deals / total deals) * 100
@@ -2392,9 +2418,39 @@ async function fetchTasksCallCommercialData(
     ensure(userName).completedDeals.add(task.deal_id || task.id);
   }
 
+  // Vendas ganhas no mês atual (por responsável), no mesmo escopo CR/geral.
+  const salesByUser = new Map<string, number>();
+  try {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+    let wq = supabase
+      .from('deals')
+      .select('id, pipeline_id, users!deals_responsible_user_id_fkey(name)')
+      .eq('account_id', accountId)
+      .eq('status', 'won')
+      .is('deleted_at', null)
+      .gte('won_at', monthStart)
+      .lt('won_at', monthEnd);
+    if (filters.userId && filters.userId !== 'all') wq = wq.eq('responsible_user_id', filters.userId);
+    const { data: wonDeals } = await wq.limit(5000);
+    let won = (wonDeals || []) as any[];
+    if (callScope !== 'all' && won.length) {
+      const crWon = await fetchCrItemDealIds(accountId, won.map(d => d.id));
+      const isCrDeal = (d: any) => crPipelineIds.includes(d.pipeline_id) || crWon.has(d.id);
+      won = won.filter(d => (callScope === 'only_cr' ? isCrDeal(d) : !isCrDeal(d)));
+    }
+    for (const d of won) {
+      const n = (d.users as any)?.name;
+      if (n) salesByUser.set(n, (salesByUser.get(n) || 0) + 1);
+    }
+  } catch (e) {
+    console.error('Error fetching month sales for calls:', e);
+  }
+
   const result: AggregatedDataPoint[] = [];
   for (const [name, { scheduledDeals, completedDeals }] of userMap) {
-    result.push({ name, value: scheduledDeals.size, count: completedDeals.size });
+    result.push({ name, value: scheduledDeals.size, count: completedDeals.size, salesMonth: salesByUser.get(name) || 0 });
   }
   result.sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
 
