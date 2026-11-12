@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, CheckCircle2, Target } from "lucide-react";
+import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { FormatType, FONT_SCALE_MULTIPLIERS, AppearanceConfig } from "../visual-builder/types";
 
 interface AggregatedDataPoint {
@@ -40,6 +41,9 @@ function getInitials(name: string): string {
 export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: ConfigurableCallCommercialProps) {
   const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'];
   const { currentUser } = useCurrentUser();
+  const { filters } = useInsightsFilters();
+  // Vendas/conversão são do mês: no filtro de Ano o card fica oculto.
+  const showSales = filters.preset !== 'year';
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
 
   // Fetch user avatars
@@ -131,7 +135,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
                 </div>
 
                 {/* Vendas do mês + conversão */}
-                <div
+                {showSales && (<div
                   className="relative flex flex-col items-center gap-0.5 rounded-lg bg-primary/10 ring-1 ring-primary/30 px-2 py-2 w-[58px]"
                   title={`${sales} venda(s) ganha(s) neste mês • ${conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das calls feitas`}
                 >
@@ -145,7 +149,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
                   <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-px text-[9px] font-bold leading-none text-primary-foreground tabular-nums whitespace-nowrap">
                     {conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%
                   </span>
-                </div>
+                </div>)}
               </div>
             </div>
           );
