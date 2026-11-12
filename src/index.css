@@ -52,6 +52,10 @@
     /* ROY Custom Tokens */
     --success: 152 69% 31%;
     --renewal: 262 70% 55%;
+    --renewal-foreground: 0 0% 100%;
+    /* Pílulas de Item da Venda: fundo cheio + texto escuro legível */
+    --pill-sale: 41 42% 48.2%;
+    --pill-sale-foreground: 20 10% 11%;
     --success-foreground: 0 0% 100%;
     --success-muted: 152 40% 90%;
 
@@ -169,6 +173,9 @@
 
     --success: 152 60% 42%;
     --renewal: 262 80% 72%;
+    --renewal-foreground: 262 45% 12%;
+    --pill-sale: 42 58% 61.7%;
+    --pill-sale-foreground: 37 19% 6.8%;
     --success-muted: 152 35% 15%;
     --warning: 39 60% 55%;
     --warning-muted: 39 45% 15%;
