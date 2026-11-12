@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar, CheckCircle2 } from "lucide-react";
+import { Calendar, CheckCircle2, Target } from "lucide-react";
 import { FormatType, FONT_SCALE_MULTIPLIERS, AppearanceConfig } from "../visual-builder/types";
 
 interface AggregatedDataPoint {
   name: string;
   value: number;
   count?: number;
+  salesMonth?: number;
 }
 
 interface ConfigurableCallCommercialProps {
@@ -84,6 +85,8 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
           const userAvatar = avatars[item.name];
           const scheduled = item.value; // agendadas em aberto
           const completed = item.count ?? 0; // concluídas
+          const sales = item.salesMonth ?? 0; // vendas ganhas no mês atual
+          const conversion = completed > 0 ? (sales / completed) * 100 : 0;
 
           return (
             <div
@@ -124,6 +127,20 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
                   </span>
                   <span className="text-[9px] text-muted-foreground font-medium leading-none">
                     Feitas
+                  </span>
+                </div>
+
+                {/* Vendas do mês + conversão */}
+                <div
+                  className="flex flex-col items-center gap-0.5 rounded-lg bg-primary/10 px-3 py-2 min-w-[52px]"
+                  title={`${sales} venda(s) ganha(s) neste mês • ${conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das calls feitas`}
+                >
+                  <Target className="h-3.5 w-3.5 text-primary" />
+                  <span className="font-bold text-foreground tabular-nums leading-none" style={{ fontSize: `${Math.round(18 * m)}px` }}>
+                    {sales}
+                  </span>
+                  <span className="text-[9px] text-muted-foreground font-medium leading-none">
+                    Vendas · {conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
                   </span>
                 </div>
               </div>

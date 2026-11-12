@@ -11,6 +11,7 @@ interface AggregatedDataPoint {
   value: number;
   count?: number;
   color?: string;
+  products?: { name: string; qty: number }[];
 }
 
 interface ConfigurableRankingProps {
@@ -278,6 +279,15 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
                             style={{ width: `${progress}%`, backgroundColor: rowColor }}
                           />
                         </div>
+                        {item.products && item.products.length > 0 && (
+                          <span
+                            className="block truncate text-muted-foreground mt-1"
+                            style={{ fontSize: `${Math.round(11 * m)}px` }}
+                            title={item.products.map(p => `${p.qty}x ${p.name}`).join(' • ')}
+                          >
+                            {item.products.map(p => `${p.qty}x ${p.name}`).join(' • ')}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
