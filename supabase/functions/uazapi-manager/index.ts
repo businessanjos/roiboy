@@ -1174,7 +1174,19 @@ Deno.serve(async (req) => {
         .eq("sender_user_id", userData.id)
         .gte("created_at", oneHourAgo);
       
-      const MAX_MESSAGES_PER_HOUR = 80;
+      // Limite configurável em Configurações do RoyZapp (padrão 80; "só hoje" vale até a meia-noite de Brasília)
+      let MAX_MESSAGES_PER_HOUR = 80;
+      try {
+        const { data: lim } = await supabase
+          .from("zapp_account_settings")
+          .select("msg_hourly_limit, msg_today_limit, msg_today_date")
+          .eq("account_id", accountId)
+          .maybeSingle();
+        const todayBr = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+        const base = Number(lim?.msg_hourly_limit) || 80;
+        const eff = lim?.msg_today_limit && lim?.msg_today_date === todayBr ? Number(lim.msg_today_limit) : base;
+        MAX_MESSAGES_PER_HOUR = Math.min(300, Math.max(20, eff));
+      } catch (_) { /* mantém padrão */ }
       if ((hourlyCount || 0) >= MAX_MESSAGES_PER_HOUR) {
         console.warn(`[uazapi-manager] ⚠️ RATE LIMIT: User ${userData.name} sent ${hourlyCount} messages in last hour. Limit: ${MAX_MESSAGES_PER_HOUR}`);
         return new Response(JSON.stringify({ 
