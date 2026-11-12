@@ -17423,6 +17423,36 @@ export type Database = {
           },
         ]
       }
+      lead_revenue_routing_history: {
+        Row: {
+          account_id: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_pipeline_id: string | null
+          old_pipeline_id: string | null
+          revenue_value: string
+        }
+        Insert: {
+          account_id: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_pipeline_id?: string | null
+          old_pipeline_id?: string | null
+          revenue_value: string
+        }
+        Update: {
+          account_id?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_pipeline_id?: string | null
+          old_pipeline_id?: string | null
+          revenue_value?: string
+        }
+        Relationships: []
+      }
       lead_timeline: {
         Row: {
           account_id: string
