@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { productShortName } from "@/lib/insights/productShortName";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -280,13 +281,19 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
                           />
                         </div>
                         {item.products && item.products.length > 0 && (
-                          <span
-                            className="block truncate text-muted-foreground mt-1"
-                            style={{ fontSize: `${Math.round(11 * m)}px` }}
-                            title={item.products.map(p => `${p.qty}x ${p.name}`).join(' • ')}
-                          >
-                            {item.products.map(p => `${p.qty}x ${p.name}`).join(' • ')}
-                          </span>
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {item.products.map(p => (
+                              <span
+                                key={p.name}
+                                title={`${p.qty}x ${p.name}`}
+                                className="inline-flex items-center gap-0.5 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-semibold text-foreground leading-none tabular-nums"
+                                style={{ fontSize: `${Math.round(11 * m)}px` }}
+                              >
+                                <span className="text-primary">{p.qty}x</span>
+                                {productShortName(p.name)}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </div>
