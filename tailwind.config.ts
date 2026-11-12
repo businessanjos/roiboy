@@ -65,6 +65,9 @@ export default {
           soft: "hsl(var(--warning-soft, var(--warning-muted)))",
           strong: "hsl(var(--warning-strong, var(--warning-foreground)))",
         },
+        renewal: {
+          DEFAULT: "hsl(var(--renewal, 258 90% 66%))",
+        },
         "activity-overdue": {
           DEFAULT: "hsl(var(--activity-overdue, 0 85% 55%))",
         },

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { productShortName } from "@/lib/insights/productShortName";
+import { productShortName, isRenewalProduct } from "@/lib/insights/productShortName";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -46,6 +46,17 @@ function paletteColors(appearance?: AppearanceConfig): string[] {
   return extendPalette(palette?.length ? palette : COLOR_PALETTES.ryka, 20);
 }
 
+
+/** Junta produtos pela sigla (vendas novas primeiro), mantendo os nomes no tooltip. */
+function groupProducts(products: { name: string; qty: number }[]) {
+  const map = new Map<string, { short: string; qty: number; renewal: boolean; items: { name: string; qty: number }[] }>();
+  for (const p of products) {
+    const short = productShortName(p.name);
+    const g = map.get(short) ?? { short, qty: 0, renewal: isRenewalProduct(p.name), items: [] };
+    g.qty += p.qty; g.items.push(p); map.set(short, g);
+  }
+  return Array.from(map.values()).sort((a, b) => Number(a.renewal) - Number(b.renewal) || b.qty - a.qty);
+}
 
 function getInitials(name: string): string {
   return name
@@ -282,15 +293,15 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
                         </div>
                         {item.products && item.products.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
-                            {item.products.map(p => (
+                            {groupProducts(item.products).map(g => (
                               <span
-                                key={p.name}
-                                title={`${p.qty}x ${p.name}`}
-                                className="inline-flex items-center gap-0.5 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-semibold text-foreground leading-none tabular-nums"
+                                key={g.short}
+                                title={g.items.map(i => `${i.qty}x ${i.name}`).join('\n')}
+                                className={`inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-semibold leading-none tabular-nums ${g.renewal ? 'border-renewal/40 bg-renewal/15 text-renewal' : 'border-primary/30 bg-primary/10 text-foreground'}`}
                                 style={{ fontSize: `${Math.round(11 * m)}px` }}
                               >
-                                <span className="text-primary">{p.qty}x</span>
-                                {productShortName(p.name)}
+                                <span className={g.renewal ? 'text-renewal' : 'text-primary'}>{g.qty}x</span>
+                                {g.short}
                               </span>
                             ))}
                           </div>
