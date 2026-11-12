@@ -398,7 +398,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
                 {message.quoted_sender_name || ""}
               </p>
               <p className="text-xs text-zapp-text-muted/80 line-clamp-2">
-                {message.quoted_content}
+                {resolveMentions(message.quoted_content, (message as any).mention_map)}
               </p>
             </div>
           )}
