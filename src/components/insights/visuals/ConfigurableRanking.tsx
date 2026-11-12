@@ -297,10 +297,10 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
                               <span
                                 key={g.short}
                                 title={g.items.map(i => `${i.qty}x ${i.name}`).join('\n')}
-                                className={`inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-semibold leading-none tabular-nums ${g.renewal ? 'border-renewal bg-renewal text-renewal-foreground' : 'border-pill-sale bg-pill-sale text-pill-sale-foreground'}`}
+                                className={`inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-semibold leading-none tabular-nums ${g.renewal ? 'border-renewal/45 bg-renewal/10 text-renewal' : 'border-primary/30 bg-primary/10 text-foreground'}`}
                                 style={{ fontSize: `${Math.round(11 * m)}px` }}
                               >
-                                <span className="opacity-80">{g.qty}x</span>
+                                <span className={g.renewal ? 'text-renewal' : 'text-primary'}>{g.qty}x</span>
                                 {g.short}
                               </span>
                             ))}
