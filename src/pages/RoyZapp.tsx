@@ -881,9 +881,14 @@ export default function RoyZapp() {
 
   // Conversation actions hook (assign, release, transfer, delete, flags)
   const [transferRequest, setTransferRequest] = useState<{ assignmentId: string; ownerName: string } | null>(null);
+  const [canPullDirectly, setCanPullDirectly] = useState(false);
+  useEffect(() => {
+    (supabase as any).rpc("zapp_can_pull_directly").then(({ data }: any) => setCanPullDirectly(!!data));
+  }, []);
   const convActions = useZappConversationActions({
     sectorId: selectedSectorId,
     onRequestTransfer: setTransferRequest,
+    canPullDirectly,
     currentAgent,
     assignments,
     selectedConversation,

@@ -28,6 +28,13 @@ interface UseZappConversationActionsProps {
   getAgentName: (agentId: string | null) => string | null;
   sectorId?: string | null;
   onRequestTransfer?: (req: { assignmentId: string; ownerName: string }) => void;
+  /** Gestor/admin puxa sem pedir aprovação. */
+  canPullDirectly?: boolean;
+}
+
+/** Vendas: vendedor que não é gestor precisa de aprovação para puxar, mesmo da triagem. */
+export function needsPullApproval(sectorId: string | null | undefined, canPullDirectly: boolean | undefined): boolean {
+  return sectorId === "vendas" && !canPullDirectly;
 }
 
 export function useZappConversationActions({
@@ -47,6 +54,7 @@ export function useZappConversationActions({
   getAgentName,
   sectorId,
   onRequestTransfer,
+  canPullDirectly,
 }: UseZappConversationActionsProps) {
 
   // Assign conversation to current agent (pull from queue)
@@ -65,6 +73,10 @@ export function useZappConversationActions({
         return;
       }
       toast.warning(`Este contato já está em atendimento por ${agentName}`);
+      return;
+    }
+    if (onRequestTransfer && needsPullApproval(sectorId, canPullDirectly)) {
+      onRequestTransfer({ assignmentId, ownerName: "Fila / Triagem" });
       return;
     }
 
@@ -96,7 +108,7 @@ export function useZappConversationActions({
       console.error("Error assigning conversation:", error);
       toast.error(error.message || "Erro ao atribuir conversa");
     }
-  }, [currentAgent, assignments, selectedConversation, getAgentName, fetchData, setSelectedConversation, sectorId, onRequestTransfer]);
+  }, [currentAgent, assignments, selectedConversation, getAgentName, fetchData, setSelectedConversation, sectorId, onRequestTransfer, canPullDirectly]);
 
   // Pull next available conversation from queue
   const pullFromQueue = useCallback(async () => {
@@ -121,6 +133,10 @@ export function useZappConversationActions({
     }
 
     const nextConversation = unassignedConversations[0];
+    if (onRequestTransfer && needsPullApproval(sectorId, canPullDirectly)) {
+      onRequestTransfer({ assignmentId: nextConversation.id, ownerName: "Fila / Triagem" });
+      return;
+    }
     
     try {
       const { error } = await supabase
@@ -154,7 +170,7 @@ export function useZappConversationActions({
       console.error("Error pulling from queue:", error);
       toast.error(error.message || "Erro ao puxar da fila");
     }
-  }, [currentAgent, assignments, fetchData, setInboxTab, setSelectedConversation, markAsRead]);
+  }, [currentAgent, assignments, fetchData, setInboxTab, setSelectedConversation, markAsRead, sectorId, canPullDirectly, onRequestTransfer]);
 
   // Release conversation back to queue
   const releaseToQueue = useCallback(async (assignmentId: string) => {
