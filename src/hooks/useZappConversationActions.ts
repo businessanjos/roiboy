@@ -30,11 +30,18 @@ interface UseZappConversationActionsProps {
   onRequestTransfer?: (req: { assignmentId: string; ownerName: string }) => void;
   /** Gestor/admin puxa sem pedir aprovação. */
   canPullDirectly?: boolean;
+  /** Chave do gestor: puxar da triagem em Vendas pede aprovação (padrão ligada). */
+  queuePullApproval?: boolean;
 }
 
 /** Vendas: vendedor que não é gestor precisa de aprovação para puxar, mesmo da triagem. */
-export function needsPullApproval(sectorId: string | null | undefined, canPullDirectly: boolean | undefined): boolean {
-  return sectorId === "vendas" && !canPullDirectly;
+export function needsPullApproval(sectorId: string | null | undefined, canPullDirectly: boolean | undefined, queuePullApproval: boolean = true): boolean {
+  return sectorId === "vendas" && !canPullDirectly && queuePullApproval;
+}
+
+/** Vendas com a chave desligada: vendedor puxa direto e o gestor só é avisado. */
+export function shouldNotifyQueuePull(sectorId: string | null | undefined, canPullDirectly: boolean | undefined, queuePullApproval: boolean = true): boolean {
+  return sectorId === "vendas" && !canPullDirectly && !queuePullApproval;
 }
 
 export function useZappConversationActions({
@@ -55,6 +62,7 @@ export function useZappConversationActions({
   sectorId,
   onRequestTransfer,
   canPullDirectly,
+  queuePullApproval = true,
 }: UseZappConversationActionsProps) {
 
   // Assign conversation to current agent (pull from queue)
@@ -75,7 +83,7 @@ export function useZappConversationActions({
       toast.warning(`Este contato já está em atendimento por ${agentName}`);
       return;
     }
-    if (onRequestTransfer && needsPullApproval(sectorId, canPullDirectly)) {
+    if (onRequestTransfer && needsPullApproval(sectorId, canPullDirectly, queuePullApproval)) {
       onRequestTransfer({ assignmentId, ownerName: "Fila / Triagem" });
       return;
     }
@@ -94,6 +102,9 @@ export function useZappConversationActions({
       if (error) throw error;
       
       toast.success("Conversa atribuída a você!");
+      if (shouldNotifyQueuePull(sectorId, canPullDirectly, queuePullApproval)) {
+        (supabase as any).rpc("notify_zapp_queue_pull", { _assignment_id: assignmentId }).then(() => {});
+      }
       fetchData();
       
       if (selectedConversation?.id === assignmentId) {
@@ -108,7 +119,7 @@ export function useZappConversationActions({
       console.error("Error assigning conversation:", error);
       toast.error(error.message || "Erro ao atribuir conversa");
     }
-  }, [currentAgent, assignments, selectedConversation, getAgentName, fetchData, setSelectedConversation, sectorId, onRequestTransfer, canPullDirectly]);
+  }, [currentAgent, assignments, selectedConversation, getAgentName, fetchData, setSelectedConversation, sectorId, onRequestTransfer, canPullDirectly, queuePullApproval]);
 
   // Pull next available conversation from queue
   const pullFromQueue = useCallback(async () => {
@@ -133,7 +144,7 @@ export function useZappConversationActions({
     }
 
     const nextConversation = unassignedConversations[0];
-    if (onRequestTransfer && needsPullApproval(sectorId, canPullDirectly)) {
+    if (onRequestTransfer && needsPullApproval(sectorId, canPullDirectly, queuePullApproval)) {
       onRequestTransfer({ assignmentId: nextConversation.id, ownerName: "Fila / Triagem" });
       return;
     }
@@ -152,6 +163,9 @@ export function useZappConversationActions({
       if (error) throw error;
       
       toast.success("Conversa puxada da fila!");
+      if (shouldNotifyQueuePull(sectorId, canPullDirectly, queuePullApproval)) {
+        (supabase as any).rpc("notify_zapp_queue_pull", { _assignment_id: nextConversation.id }).then(() => {});
+      }
       fetchData();
       
       setInboxTab("mine");
@@ -170,7 +184,7 @@ export function useZappConversationActions({
       console.error("Error pulling from queue:", error);
       toast.error(error.message || "Erro ao puxar da fila");
     }
-  }, [currentAgent, assignments, fetchData, setInboxTab, setSelectedConversation, markAsRead, sectorId, canPullDirectly, onRequestTransfer]);
+  }, [currentAgent, assignments, fetchData, setInboxTab, setSelectedConversation, markAsRead, sectorId, canPullDirectly, onRequestTransfer, queuePullApproval]);
 
   // Release conversation back to queue
   const releaseToQueue = useCallback(async (assignmentId: string) => {
