@@ -1034,6 +1034,38 @@ Deno.serve(async (req) => {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
+          // Resposta de botão do pedido de transferência de conversa do RoyZapp.
+          const ztr = btnId.match(/^ztr:(approve|reject):([0-9a-f-]{36})$/i);
+          if (ztr) {
+            const approve = ztr[1].toLowerCase() === "approve";
+            const { data: res } = await supabase.rpc("decide_zapp_transfer_by_phone", {
+              _request_id: ztr[2], _phone: phone, _approve: approve,
+            });
+            const r: any = res || {};
+            let reply = "";
+            if (r.ok) {
+              reply = r.status === "approved"
+                ? `Aprovado: a conversa com ${r.contact_name || "o contato"} foi transferida para ${r.requester_name}.`
+                : `Recusado: o pedido de ${r.requester_name} pela conversa com ${r.contact_name || "o contato"} foi recusado.`;
+            } else if (r.already) {
+              reply = `Esse pedido já foi ${r.already === "approved" ? "aprovado" : "recusado"}.`;
+            } else if (r.error === "not_manager") {
+              reply = "Este número não está autorizado a aprovar transferências.";
+            }
+            const fn = `${Deno.env.get("SUPABASE_URL")}/functions/v1/zapp-transfer-whatsapp`;
+            const hdrs = { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` };
+            if (reply) {
+              await fetch(fn, { method: "POST", headers: hdrs, body: JSON.stringify({ action: "confirm", request_id: ztr[2], phone, text: reply }) })
+                .catch((e) => console.warn("[WEBHOOK] ztr confirm falhou:", e));
+            }
+            if (r.ok) {
+              await fetch(fn, { method: "POST", headers: hdrs, body: JSON.stringify({ action: "decided", request_id: ztr[2] }) })
+                .catch((e) => console.warn("[WEBHOOK] ztr decided falhou:", e));
+            }
+            return new Response(JSON.stringify({ handled: "zapp_transfer_decision" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
           // Resposta de botão do pedido de giro de roleta (Aprovar/Recusar).
           const srq = btnId.match(/^srq:(approve|reject):([0-9a-f-]{36})$/i);
           if (srq) {
