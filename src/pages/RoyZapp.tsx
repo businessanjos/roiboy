@@ -879,7 +879,10 @@ export default function RoyZapp() {
   });
 
   // Conversation actions hook (assign, release, transfer, delete, flags)
+  const [transferRequest, setTransferRequest] = useState<{ assignmentId: string; ownerName: string } | null>(null);
   const convActions = useZappConversationActions({
+    sectorId: selectedSectorId,
+    onRequestTransfer: setTransferRequest,
     currentAgent,
     assignments,
     selectedConversation,

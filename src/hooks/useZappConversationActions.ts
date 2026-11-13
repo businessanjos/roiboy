@@ -26,6 +26,8 @@ interface UseZappConversationActionsProps {
   markAsRead: (conversationId: string) => void;
   markGroupUnread?: (conversationId: string, lastMessageAt?: string | null) => Promise<void>;
   getAgentName: (agentId: string | null) => string | null;
+  sectorId?: string | null;
+  onRequestTransfer?: (req: { assignmentId: string; ownerName: string }) => void;
 }
 
 export function useZappConversationActions({
