@@ -40,7 +40,7 @@ export function ZappTransferRequestDialog({ request, onClose }: Props) {
         <DialogHeader>
           <DialogTitle>Solicitar transferência da conversa</DialogTitle>
           <DialogDescription>
-            Essa conversa está com <strong>{request?.ownerName}</strong>. O gestor recebe o pedido no ROY e no WhatsApp para aprovar.
+            {request?.ownerName === "Fila / Triagem" ? <>Essa conversa está na <strong>fila / triagem</strong>.</> : <>Essa conversa está com <strong>{request?.ownerName}</strong>.</>} O gestor recebe o pedido no ROY e no WhatsApp para aprovar.
           </DialogDescription>
         </DialogHeader>
         <Textarea
