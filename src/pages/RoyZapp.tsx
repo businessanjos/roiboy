@@ -885,10 +885,18 @@ export default function RoyZapp() {
   useEffect(() => {
     (supabase as any).rpc("zapp_can_pull_directly").then(({ data }: any) => setCanPullDirectly(!!data));
   }, []);
+  const [queuePullApproval, setQueuePullApproval] = useState(true);
+  useEffect(() => {
+    const load = () => (supabase as any).rpc("zapp_queue_pull_approval_enabled").then(({ data }: any) => setQueuePullApproval(data !== false));
+    load();
+    window.addEventListener("zapp-queue-approval-changed", load);
+    return () => window.removeEventListener("zapp-queue-approval-changed", load);
+  }, []);
   const convActions = useZappConversationActions({
     sectorId: selectedSectorId,
     onRequestTransfer: setTransferRequest,
     canPullDirectly,
+    queuePullApproval,
     currentAgent,
     assignments,
     selectedConversation,
