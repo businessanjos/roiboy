@@ -1,3 +1,4 @@
+import { ZappTransferRequestDialog } from "@/components/royzapp/dialogs/ZappTransferRequestDialog";
 import { resolveZappHistorySelection, zappSelectionHistoryStates } from "@/lib/navigation/zappMobileSelection";
 import { getZappConversationReturn } from "@/lib/navigation/zappAnalyticsReturn";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
@@ -879,7 +880,10 @@ export default function RoyZapp() {
   });
 
   // Conversation actions hook (assign, release, transfer, delete, flags)
+  const [transferRequest, setTransferRequest] = useState<{ assignmentId: string; ownerName: string } | null>(null);
   const convActions = useZappConversationActions({
+    sectorId: selectedSectorId,
+    onRequestTransfer: setTransferRequest,
     currentAgent,
     assignments,
     selectedConversation,
@@ -2290,6 +2294,7 @@ export default function RoyZapp() {
 
 
       {/* Transfer Dialog */}
+      <ZappTransferRequestDialog request={transferRequest} onClose={() => setTransferRequest(null)} />
       <ZappTransferDialog
         open={transferDialogOpen}
         onOpenChange={setTransferDialogOpen}

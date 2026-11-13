@@ -29066,6 +29066,57 @@ export type Database = {
           },
         ]
       }
+      zapp_conversation_transfer_requests: {
+        Row: {
+          account_id: string
+          assignment_id: string
+          contact_name: string | null
+          created_at: string
+          current_agent_id: string | null
+          current_owner_name: string | null
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          reason: string | null
+          requester_agent_id: string
+          requester_id: string
+          status: string
+          zapp_conversation_id: string | null
+        }
+        Insert: {
+          account_id: string
+          assignment_id: string
+          contact_name?: string | null
+          created_at?: string
+          current_agent_id?: string | null
+          current_owner_name?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          reason?: string | null
+          requester_agent_id: string
+          requester_id: string
+          status?: string
+          zapp_conversation_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          assignment_id?: string
+          contact_name?: string | null
+          created_at?: string
+          current_agent_id?: string | null
+          current_owner_name?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          reason?: string | null
+          requester_agent_id?: string
+          requester_id?: string
+          status?: string
+          zapp_conversation_id?: string | null
+        }
+        Relationships: []
+      }
       zapp_conversations: {
         Row: {
           account_id: string
@@ -30829,6 +30880,18 @@ export type Database = {
         Args: { _approve: boolean; _phone: string; _request_id: string }
         Returns: Json
       }
+      decide_zapp_transfer: {
+        Args: { _approve: boolean; _request_id: string }
+        Returns: Json
+      }
+      decide_zapp_transfer_by_phone: {
+        Args: { _approve: boolean; _phone: string; _request_id: string }
+        Returns: Json
+      }
+      decide_zapp_transfer_core: {
+        Args: { _approve: boolean; _manager_id: string; _request_id: string }
+        Returns: Json
+      }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
       delete_admission_doc_attachment: {
         Args: { _doc_id: string; _path: string; _token: string }
@@ -31276,6 +31339,10 @@ export type Database = {
       request_integration_access: {
         Args: { _platform: string; _reason?: string }
         Returns: Json
+      }
+      request_zapp_conversation_transfer: {
+        Args: { _assignment_id: string; _reason?: string }
+        Returns: string
       }
       respond_job_offer: {
         Args: {

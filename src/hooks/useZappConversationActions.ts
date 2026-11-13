@@ -26,6 +26,8 @@ interface UseZappConversationActionsProps {
   markAsRead: (conversationId: string) => void;
   markGroupUnread?: (conversationId: string, lastMessageAt?: string | null) => Promise<void>;
   getAgentName: (agentId: string | null) => string | null;
+  sectorId?: string | null;
+  onRequestTransfer?: (req: { assignmentId: string; ownerName: string }) => void;
 }
 
 export function useZappConversationActions({
@@ -43,6 +45,8 @@ export function useZappConversationActions({
   markAsRead,
   markGroupUnread,
   getAgentName,
+  sectorId,
+  onRequestTransfer,
 }: UseZappConversationActionsProps) {
 
   // Assign conversation to current agent (pull from queue)
@@ -55,6 +59,11 @@ export function useZappConversationActions({
     const assignment = assignments.find(a => a.id === assignmentId);
     if (assignment?.agent_id && assignment.agent_id !== currentAgent.id) {
       const agentName = getAgentName(assignment.agent_id) || "outro atendente";
+      // No setor Vendas, o vendedor pode pedir a conversa ao gestor.
+      if (onRequestTransfer && sectorId === "vendas") {
+        onRequestTransfer({ assignmentId, ownerName: agentName });
+        return;
+      }
       toast.warning(`Este contato já está em atendimento por ${agentName}`);
       return;
     }
@@ -87,7 +96,7 @@ export function useZappConversationActions({
       console.error("Error assigning conversation:", error);
       toast.error(error.message || "Erro ao atribuir conversa");
     }
-  }, [currentAgent, assignments, selectedConversation, getAgentName, fetchData, setSelectedConversation]);
+  }, [currentAgent, assignments, selectedConversation, getAgentName, fetchData, setSelectedConversation, sectorId, onRequestTransfer]);
 
   // Pull next available conversation from queue
   const pullFromQueue = useCallback(async () => {

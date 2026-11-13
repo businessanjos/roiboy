@@ -526,6 +526,13 @@
       "when": 1794515389247,
       "tag": "0074_zapp_sector_message_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1794569883572,
+      "tag": "0075_zapp_conversation_transfer_requests",
+      "breakpoints": true
     }
   ]
 }
