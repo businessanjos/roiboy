@@ -28415,6 +28415,7 @@ export type Database = {
           msg_today_date: string | null
           msg_today_limit: number | null
           ruler_keep_title: boolean
+          sales_queue_pull_approval: boolean
           updated_at: string
           updated_by: string | null
         }
@@ -28424,6 +28425,7 @@ export type Database = {
           msg_today_date?: string | null
           msg_today_limit?: number | null
           ruler_keep_title?: boolean
+          sales_queue_pull_approval?: boolean
           updated_at?: string
           updated_by?: string | null
         }
@@ -28433,6 +28435,7 @@ export type Database = {
           msg_today_date?: string | null
           msg_today_limit?: number | null
           ruler_keep_title?: boolean
+          sales_queue_pull_approval?: boolean
           updated_at?: string
           updated_by?: string | null
         }
@@ -31260,6 +31263,10 @@ export type Database = {
       }
       normalize_invoice_status: { Args: { _status: string }; Returns: string }
       normalize_stage_name: { Args: { p_name: string }; Returns: string }
+      notify_zapp_queue_pull: {
+        Args: { _assignment_id: string }
+        Returns: undefined
+      }
       pda_is_hr_or_director: { Args: never; Returns: boolean }
       pda_synergy_pct: {
         Args: { _dominant: string; _role_profile: string; _secondary: string }
@@ -31491,6 +31498,10 @@ export type Database = {
       }
       set_deal_transfer_whatsapp_recipient: {
         Args: { _phone: string; _user_id: string }
+        Returns: undefined
+      }
+      set_zapp_queue_pull_approval: {
+        Args: { _enabled: boolean }
         Returns: undefined
       }
       settle_installment_from_import: {
@@ -31806,6 +31817,7 @@ export type Database = {
         }
         Returns: Json
       }
+      zapp_queue_pull_approval_enabled: { Args: never; Returns: boolean }
       zapp_sales_lean_views: { Args: never; Returns: string[] }
       zapp_sector_message_usage_today: {
         Args: { p_sector_id: string }
