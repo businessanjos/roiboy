@@ -1,3 +1,4 @@
+import { ZappTransferRequestDialog } from "@/components/royzapp/dialogs/ZappTransferRequestDialog";
 import { resolveZappHistorySelection, zappSelectionHistoryStates } from "@/lib/navigation/zappMobileSelection";
 import { getZappConversationReturn } from "@/lib/navigation/zappAnalyticsReturn";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
@@ -2293,6 +2294,7 @@ export default function RoyZapp() {
 
 
       {/* Transfer Dialog */}
+      <ZappTransferRequestDialog request={transferRequest} onClose={() => setTransferRequest(null)} />
       <ZappTransferDialog
         open={transferDialogOpen}
         onOpenChange={setTransferDialogOpen}
