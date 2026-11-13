@@ -533,6 +533,13 @@
       "when": 1794569883572,
       "tag": "0075_zapp_conversation_transfer_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1794570908652,
+      "tag": "0076_zapp_transfer_request_from_queue",
+      "breakpoints": true
     }
   ]
 }

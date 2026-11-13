@@ -31694,6 +31694,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      zapp_can_pull_directly: { Args: never; Returns: boolean }
       zapp_can_transfer_any: {
         Args: { _auth_user_id: string }
         Returns: boolean
