@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ZappConnectionsSection } from "./settings/ZappConnectionsSection";
 import { ZappMessageLimitSection } from "./settings/ZappMessageLimitSection";
+import { ZappQueuePullApprovalSection } from "./settings/ZappQueuePullApprovalSection";
 import { useZappTagNameTags } from "@/hooks/useZappTagNameTags";
 import { useZappFirstNameTitle } from "@/hooks/useZappFirstNameTitle";
 import { useZappRulerKeepTitle } from "@/hooks/useZappRulerKeepTitle";
@@ -222,6 +223,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
         </div>
       </div>
 
+      {sectorId === "vendas" && <ZappQueuePullApprovalSection />}
       {sectorId === "vendas" && <ZappMessageLimitSection sectorId={sectorId} />}
 
       {/* Access Configuration Notice */}      <div className="space-y-3 pt-4 border-t border-zapp-border">

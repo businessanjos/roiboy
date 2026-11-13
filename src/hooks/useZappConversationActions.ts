@@ -184,7 +184,7 @@ export function useZappConversationActions({
       console.error("Error pulling from queue:", error);
       toast.error(error.message || "Erro ao puxar da fila");
     }
-  }, [currentAgent, assignments, fetchData, setInboxTab, setSelectedConversation, markAsRead, sectorId, canPullDirectly, onRequestTransfer]);
+  }, [currentAgent, assignments, fetchData, setInboxTab, setSelectedConversation, markAsRead, sectorId, canPullDirectly, onRequestTransfer, queuePullApproval]);
 
   // Release conversation back to queue
   const releaseToQueue = useCallback(async (assignmentId: string) => {
