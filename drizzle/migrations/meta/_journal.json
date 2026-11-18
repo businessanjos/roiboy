@@ -547,6 +547,13 @@
       "when": 1794571182830,
       "tag": "0077_zapp_queue_pull_approval_setting",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1795002832858,
+      "tag": "0078_restrict_delete_account_cascade",
+      "breakpoints": true
     }
   ]
 }

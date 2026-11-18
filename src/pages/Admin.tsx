@@ -602,10 +602,11 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
     mutationFn: async (id: string) => {
       // Cascade delete: removes ALL related data (contracts, clients, financial, etc.)
       // in a single transaction via SECURITY DEFINER function.
-      const { error } = await (supabase as any).rpc('delete_account_cascade', {
-        p_account_id: id,
+      const { data, error } = await supabase.functions.invoke('admin-delete-account', {
+        body: { account_id: id },
       });
       if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-accounts'] });
