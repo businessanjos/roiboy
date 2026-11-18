@@ -94,6 +94,29 @@ export function InsightsMainContent() {
     });
   }, [visuals, fixedYear, selectedMonth]);
 
+  // Lembra o ajuste de TV (modo e zoom) de cada painel neste aparelho
+  const tvPrefKey = activeDashboardId ? `insights-tv-pref:${activeDashboardId}` : null;
+  useEffect(() => {
+    if (!tvPrefKey) return;
+    try {
+      const raw = localStorage.getItem(tvPrefKey);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (typeof p.tvFit === "boolean") setTvFit(p.tvFit);
+        if (typeof p.zoom === "number") setFocusZoom(p.zoom);
+      } else {
+        setTvFit(true);
+        setFocusZoom(100);
+      }
+    } catch { /* ignore */ }
+  }, [tvPrefKey]);
+  useEffect(() => {
+    if (!tvPrefKey || !isFocusMode) return;
+    try {
+      localStorage.setItem(tvPrefKey, JSON.stringify({ tvFit, zoom: focusZoom }));
+    } catch { /* ignore */ }
+  }, [tvPrefKey, isFocusMode, tvFit, focusZoom]);
+
   // Reset month filter when dashboard changes
   useEffect(() => {
     setSelectedMonth(null);
@@ -254,7 +277,6 @@ export function InsightsMainContent() {
               </Button>
               <Button variant="outline" size="icon" onClick={() => {
                 setIsFocusMode(false);
-                setFocusZoom(100);
                 if (document.fullscreenElement) document.exitFullscreen();
               }}>
                 <X className="h-4 w-4" />
