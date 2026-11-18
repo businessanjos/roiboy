@@ -1,3 +1,4 @@
+import { productShortName } from "@/lib/insights/productShortName";
 import {
   ResponsiveContainer,
   BarChart,
@@ -66,30 +67,27 @@ const CustomTooltip = ({ active, payload, label, formatting, singleSeries }: any
   );
 };
 
-const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMultiplier: number) => {
+const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMultiplier: number, seriesName?: string) => {
   const { x, y, width, height, value, fill } = props;
   if (!value || value === 0 || height < 14) return null;
 
   const formatted = formatValueCompact(value, formatting.type);
-  // Diminui a fonte (até 8px) para o número caber dentro do bloco.
-  let effectiveFontSize = Math.min(Math.round(10 * fontMultiplier), height - 2);
-  while (effectiveFontSize > 8 && formatted.length * effectiveFontSize * 0.6 + 4 > width) effectiveFontSize -= 1;
-
-  if (formatted.length * effectiveFontSize * 0.6 + 4 > width) return null;
-
-  return (
-    <text
-      x={x + width / 2}
-      y={y + height / 2}
-      fill={readableTextOn(fill)}
-      textAnchor="middle"
-      dominantBaseline="middle"
-      fontSize={effectiveFontSize}
-      fontWeight={600}
-    >
-      {formatted}
-    </text>
-  );
+  const short = seriesName ? productShortName(seriesName) : '';
+  // Tenta "EM · 45"; se não couber, só o número; diminui a fonte até 8px.
+  const candidates = short ? [`${short} · ${formatted}`, formatted] : [formatted];
+  const base = Math.min(Math.round(10 * fontMultiplier), height - 2);
+  for (const text of candidates) {
+    let fs = base;
+    while (fs > 8 && text.length * fs * 0.6 + 4 > width) fs -= 1;
+    if (text.length * fs * 0.6 + 4 <= width) {
+      return (
+        <text x={x + width / 2} y={y + height / 2} fill={readableTextOn(fill)} textAnchor="middle" dominantBaseline="middle" fontSize={fs} fontWeight={600}>
+          {text}
+        </text>
+      );
+    }
+  }
+  return null;
 };
 
 export function StackedHorizontalBarChart({
@@ -217,7 +215,7 @@ export function StackedHorizontalBarChart({
               {/* Valor de cada fatia dentro do próprio bloco (azul, dourado...). */}
               <LabelList
                 dataKey={key}
-                content={(props: any) => renderInsideLabel({ ...props, fill: getSeriesColor(key, index) }, safeFormatting, m)}
+                content={(props: any) => renderInsideLabel({ ...props, fill: getSeriesColor(key, index) }, safeFormatting, m, key)}
               />
 
               {showTotals && key === lastKey && (
@@ -334,7 +332,7 @@ export function StackedHorizontalBarChart({
                 {safeAppearance.showDataLabels && (
                   <LabelList
                     dataKey={key}
-                    content={(props: any) => renderInsideLabel(props, safeFormatting, m)}
+                    content={(props: any) => renderInsideLabel(props, safeFormatting, m, key)}
                   />
                 )}
               </Bar>
