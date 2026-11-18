@@ -4,7 +4,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Shield, Book, Plug, Users, UserCircle, Target, User,
-  CreditCard, Video, Key, ArrowLeft, Activity, Building2, Brain,
+  CreditCard, Video, Key, ArrowLeft, Activity, Building2, Brain, Tv,
 } from "lucide-react";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { PERMISSIONS, usePermissions } from "@/hooks/usePermissions";
@@ -70,6 +70,7 @@ export function SettingsSidebarNav({ collapsed, onNavigate, searchQuery = "" }: 
       }
       if (canEditSettings) {
         adminItems.push({ id: "ai-knowledge", label: "Base de Conhecimento IA", icon: Brain });
+        adminItems.push({ id: "tvs", label: "TVs", icon: Tv });
       }
       groups.push({ title: "Gestão", items: adminItems });
     }

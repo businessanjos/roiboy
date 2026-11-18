@@ -23,6 +23,7 @@ import { TechProjectsTokensManager } from "@/components/settings/TechProjectsTok
 import { CompaniesManager } from "@/components/settings/CompaniesManager";
 import { ContractTypesManager } from "@/components/settings/ContractTypesManager";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { TvWallManager } from "@/components/settings/tv/TvWallManager";
 import { AIKnowledgeManager } from "@/components/settings/ai-knowledge/AIKnowledgeManager";
 
 export default function Settings() {
@@ -59,6 +60,8 @@ export default function Settings() {
         return canEditSettings ? <ContractTypesManager scope="renewals" /> : null;
       case "contract-lists":
         return canEditSettings ? <ContractTypesManager scope="contracts" /> : null;
+      case "tvs":
+        return <TvWallManager />;
       case "ai-knowledge":
         return canEditSettings ? <AIKnowledgeManager /> : null;
       case "sectors":

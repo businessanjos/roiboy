@@ -554,6 +554,13 @@
       "when": 1795002832858,
       "tag": "0078_restrict_delete_account_cascade",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1795042074721,
+      "tag": "0079_tv_wall_control",
+      "breakpoints": true
     }
   ]
 }

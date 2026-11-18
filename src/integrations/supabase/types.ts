@@ -26973,6 +26973,198 @@ export type Database = {
         }
         Relationships: []
       }
+      tv_commands: {
+        Row: {
+          command: string
+          created_at: string
+          created_by: string | null
+          done_at: string | null
+          id: string
+          payload: Json
+          result: string | null
+          slot: number | null
+          status: string
+          taken_at: string | null
+        }
+        Insert: {
+          command: string
+          created_at?: string
+          created_by?: string | null
+          done_at?: string | null
+          id?: string
+          payload?: Json
+          result?: string | null
+          slot?: number | null
+          status?: string
+          taken_at?: string | null
+        }
+        Update: {
+          command?: string
+          created_at?: string
+          created_by?: string | null
+          done_at?: string | null
+          id?: string
+          payload?: Json
+          result?: string | null
+          slot?: number | null
+          status?: string
+          taken_at?: string | null
+        }
+        Relationships: []
+      }
+      tv_events: {
+        Row: {
+          created_at: string
+          id: number
+          kind: string
+          message: string | null
+          slot: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          kind: string
+          message?: string | null
+          slot?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          kind?: string
+          message?: string | null
+          slot?: number | null
+        }
+        Relationships: []
+      }
+      tv_screens: {
+        Row: {
+          custom_days: number[] | null
+          custom_off_time: string | null
+          custom_on_time: string | null
+          enabled: boolean
+          keepalive: boolean
+          location: string | null
+          muted: boolean
+          name: string
+          notes: string | null
+          refresh_min: number
+          schedule_mode: string
+          slot: number
+          updated_at: string
+          url: string | null
+          volume: number | null
+        }
+        Insert: {
+          custom_days?: number[] | null
+          custom_off_time?: string | null
+          custom_on_time?: string | null
+          enabled?: boolean
+          keepalive?: boolean
+          location?: string | null
+          muted?: boolean
+          name: string
+          notes?: string | null
+          refresh_min?: number
+          schedule_mode?: string
+          slot: number
+          updated_at?: string
+          url?: string | null
+          volume?: number | null
+        }
+        Update: {
+          custom_days?: number[] | null
+          custom_off_time?: string | null
+          custom_on_time?: string | null
+          enabled?: boolean
+          keepalive?: boolean
+          location?: string | null
+          muted?: boolean
+          name?: string
+          notes?: string | null
+          refresh_min?: number
+          schedule_mode?: string
+          slot?: number
+          updated_at?: string
+          url?: string | null
+          volume?: number | null
+        }
+        Relationships: []
+      }
+      tv_settings: {
+        Row: {
+          agent_interval_sec: number
+          days: number[]
+          holidays: string[]
+          id: number
+          keep_off_until: string | null
+          keep_on_until: string | null
+          off_time: string
+          on_time: string
+          updated_at: string
+        }
+        Insert: {
+          agent_interval_sec?: number
+          days?: number[]
+          holidays?: string[]
+          id?: number
+          keep_off_until?: string | null
+          keep_on_until?: string | null
+          off_time?: string
+          on_time?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_interval_sec?: number
+          days?: number[]
+          holidays?: string[]
+          id?: number
+          keep_off_until?: string | null
+          keep_on_until?: string | null
+          off_time?: string
+          on_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tv_status: {
+        Row: {
+          foreground_app: string | null
+          ip: string | null
+          last_error: string | null
+          last_seen: string | null
+          online: boolean | null
+          paired: boolean | null
+          power_state: string | null
+          screenshot_at: string | null
+          screenshot_url: string | null
+          slot: number
+        }
+        Insert: {
+          foreground_app?: string | null
+          ip?: string | null
+          last_error?: string | null
+          last_seen?: string | null
+          online?: boolean | null
+          paired?: boolean | null
+          power_state?: string | null
+          screenshot_at?: string | null
+          screenshot_url?: string | null
+          slot: number
+        }
+        Update: {
+          foreground_app?: string | null
+          ip?: string | null
+          last_error?: string | null
+          last_seen?: string | null
+          online?: boolean | null
+          paired?: boolean | null
+          power_state?: string | null
+          screenshot_at?: string | null
+          screenshot_url?: string | null
+          slot?: number
+        }
+        Relationships: []
+      }
       typeform_form_stats: {
         Row: {
           account_id: string
@@ -31645,6 +31837,7 @@ export type Database = {
         Args: { _deal_id: string; _new_owner_id: string; _reason?: string }
         Returns: Json
       }
+      tv_can_manage: { Args: { _uid: string }; Returns: boolean }
       unaccent: { Args: { "": string }; Returns: string }
       unaccent_immutable: { Args: { p_text: string }; Returns: string }
       undo_deal_merge: { Args: { p_action: string }; Returns: string }

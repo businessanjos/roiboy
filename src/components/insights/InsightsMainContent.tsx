@@ -1,3 +1,4 @@
+import { SendToTvButton } from "@/components/insights/SendToTvButton";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { BarChart3, Plus, Monitor, Link2, Maximize2, Minimize2, X, Share2, Tv, GitCompareArrows } from "lucide-react";
@@ -426,6 +427,7 @@ export function InsightsMainContent() {
                 <Link2 className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Copiar link</span>
               </Button>
+              <SendToTvButton />
               {!isMobile && (
                 <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
                   <Monitor className="h-4 w-4 mr-2" />

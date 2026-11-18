@@ -119,7 +119,8 @@ export function AppLayout() {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    const next = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={next && next !== "/" ? `/auth?next=${encodeURIComponent(next)}` : "/auth"} replace />;
   }
 
   // Hard block: if a super admin has deactivated this user (users.is_active=false),
