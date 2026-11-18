@@ -122,7 +122,7 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
   useEffect(() => {
     if (!isLoading && dashboards.length > 0 && !activeDashboardId && !dashboardId) {
       const firstDashboard = dashboards[0];
-      navigate(`/insights/${firstDashboard.id}`, { replace: true });
+      navigate(`/insights/${firstDashboard.id}${window.location.search}`, { replace: true });
     }
   }, [isLoading, dashboards, activeDashboardId, dashboardId, navigate]);
 
@@ -402,7 +402,7 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
   }, [duplicateMutation]);
 
   const navigateToDashboard = useCallback((id: string) => {
-    navigate(`/insights/${id}`);
+    navigate(`/insights/${id}${window.location.search}`);
   }, [navigate]);
 
   const addVisual = useCallback(async (visual: Omit<InsightsVisual, "id" | "created_at">) => {

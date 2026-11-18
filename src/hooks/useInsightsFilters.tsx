@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, ReactNode } from "react";
+import { parseUrlFilters, writeUrlFilters, replaceSearch } from "@/lib/insights/urlState";
 import {
   startOfDay,
   endOfDay,
@@ -109,8 +110,45 @@ const getDefaultFilters = (): InsightsFilters => {
   };
 };
 
-export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
-  const [filters, setFilters] = useState<InsightsFilters>(getDefaultFilters);
+function presetRange(preset: DatePreset, now = new Date()): { start: Date; end: Date } | null {
+  switch (preset) {
+    case "today": return { start: startOfDay(now), end: endOfDay(now) };
+    case "week": return { start: startOfWeek(now, { weekStartsOn: 0 }), end: endOfWeek(now, { weekStartsOn: 0 }) };
+    case "month": return { start: startOfMonth(now), end: endOfMonth(now) };
+    case "quarter": return { start: startOfQuarter(now), end: endOfQuarter(now) };
+    case "year": return { start: startOfYear(now), end: endOfYear(now) };
+    case "last_month": { const lm = subMonths(now, 1); return { start: startOfMonth(lm), end: endOfMonth(lm) }; }
+    default: return null;
+  }
+}
+
+/** Estado inicial lido da URL antes do primeiro render (links compartilháveis / TVs). */
+const getInitialFilters = (syncUrl: boolean): InsightsFilters => {
+  const base = getDefaultFilters();
+  if (!syncUrl || typeof window === "undefined") return base;
+  const u = parseUrlFilters(window.location.search);
+  const out: InsightsFilters = { ...base };
+  if (u.preset === "custom" && u.startDate && u.endDate) {
+    Object.assign(out, { preset: "custom", startDate: u.startDate, endDate: u.endDate });
+  } else if (u.preset) {
+    const r = presetRange(u.preset);
+    if (r) Object.assign(out, { preset: u.preset, startDate: r.start.toISOString(), endDate: r.end.toISOString() });
+  }
+  if (u.userId) out.userId = u.userId;
+  if (u.productId) out.productId = u.productId;
+  if (u.pipelineId) out.pipelineId = u.pipelineId;
+  if (u.globalFieldFilter) out.globalFieldFilter = u.globalFieldFilter;
+  return out;
+};
+
+export function InsightsFiltersProvider({ children, syncUrl = false }: { children: ReactNode; syncUrl?: boolean }) {
+  const [filters, setFilters] = useState<InsightsFilters>(() => getInitialFilters(syncUrl));
+
+  // Mantém a URL igual aos filtros (sem recarregar nem encher o histórico).
+  useEffect(() => {
+    if (!syncUrl) return;
+    replaceSearch(writeUrlFilters(window.location.search, filters));
+  }, [syncUrl, filters.preset, filters.startDate, filters.endDate, filters.userId, filters.productId, filters.pipelineId, filters.globalFieldFilter]);
 
   const setPreset = useCallback((preset: DatePreset) => {
     const now = new Date();

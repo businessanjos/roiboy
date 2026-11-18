@@ -5,7 +5,7 @@ import { InsightsDashboardTabs } from "@/components/insights/InsightsDashboardTa
 
 export default function Insights() {
   return (
-    <InsightsFiltersProvider>
+    <InsightsFiltersProvider syncUrl>
       <InsightsDashboardsProvider>
         <div className="flex flex-col h-[calc(100vh-4rem)]">
           {/* Dashboard tabs - replaces sidebar */}

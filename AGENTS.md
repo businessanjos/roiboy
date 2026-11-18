@@ -49,3 +49,4 @@
 - Playbook free fields are `{{campo:slug}}` in event_vars.customFields; `playbook-ai-assist` rejects edits to {{...}}. Why: no schema change, fields stay safe.
 - Lost deal closes lead chats (`close_zapp_on_deal_lost`). Why: triage.
 - CS processes parse `src/content/csProcesses.md`, overridable per account in `cs_process_content` (managers via `is_cs_process_editor`); progress `cs_process_progress`, tours `user_tour_views`. Why: one text source, editable.
+- Insights (Vendas) view state lives in the URL query via `src/lib/insights/urlState.ts` (relative period presets, filters, foco/tv/zoom/atualizar) using history.replaceState; it never writes dashboard settings. Why: links open the same view on any device or TV without changing it for others.

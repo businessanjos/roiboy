@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X, Share2, Tv, GitCompareArrows } from "lucide-react";
+import { BarChart3, Plus, Monitor, Link2, Maximize2, Minimize2, X, Share2, Tv, GitCompareArrows } from "lucide-react";
 import { ZoomControls } from "@/components/ui/zoom-controls";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -20,6 +20,9 @@ import { startOfMonth, endOfMonth } from "date-fns";
 import { hasExactRole } from "@/lib/roles";
 
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { parseUrlView, writeUrlView, replaceSearch } from "@/lib/insights/urlState";
 
 export function InsightsMainContent() {
   const { 
@@ -41,10 +44,15 @@ export function InsightsMainContent() {
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
-  const [isFocusMode, setIsFocusMode] = useState(false);
+  // Estado de visualização vindo do link (foco/tv/zoom/atualizar) — lido antes do 1º render
+  const initialView = useRef(parseUrlView(typeof window !== "undefined" ? window.location.search : "")).current;
+  const urlViewOverride = useRef(initialView.tv !== null || initialView.zoom !== null);
+  const queryClient = useQueryClient();
+  const [isFocusMode, setIsFocusMode] = useState(initialView.foco);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [focusZoom, setFocusZoom] = useState(100);
-  const [tvFit, setTvFit] = useState(true);
+  const [focusZoom, setFocusZoom] = useState(initialView.zoom ?? 100);
+  const [tvFit, setTvFit] = useState(initialView.tv ?? (initialView.zoom === null));
+  const [controlsVisible, setControlsVisible] = useState(true);
   const [tvRequiredHeight, setTvRequiredHeight] = useState(0);
   const focusModeRef = useRef<HTMLDivElement>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
@@ -103,6 +111,7 @@ export function InsightsMainContent() {
   const tvPrefKey = activeDashboardId ? `insights-tv-pref-v4:${activeDashboardId}` : null;
   useEffect(() => {
     if (!tvPrefKey) return;
+    if (urlViewOverride.current) { urlViewOverride.current = false; return; }
     try {
       const raw = localStorage.getItem(tvPrefKey);
       if (raw) {
@@ -122,6 +131,44 @@ export function InsightsMainContent() {
       localStorage.setItem(tvPrefKey, JSON.stringify({ tvFit, zoom: focusZoom }));
     } catch { /* ignore */ }
   }, [tvPrefKey, isFocusMode, tvFit, focusZoom]);
+
+  // Sincroniza foco/tv/zoom com a URL
+  useEffect(() => {
+    replaceSearch(writeUrlView(window.location.search, { foco: isFocusMode, tv: tvFit, zoom: focusZoom }));
+  }, [isFocusMode, tvFit, focusZoom, activeDashboardId]);
+
+  // atualizar=N: recarrega os dados dos gráficos a cada N minutos, sem recarregar a página
+  useEffect(() => {
+    if (!initialView.atualizar) return;
+    const id = window.setInterval(() => {
+      queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "insights-dashboards" });
+    }, initialView.atualizar * 60_000);
+    return () => window.clearInterval(id);
+  }, [queryClient, initialView.atualizar]);
+
+  // No Modo Foco, a barra de controles some após 4s sem mexer o mouse
+  useEffect(() => {
+    if (!isFocusMode) { setControlsVisible(true); return; }
+    let t: number;
+    const show = () => {
+      setControlsVisible(true);
+      window.clearTimeout(t);
+      t = window.setTimeout(() => setControlsVisible(false), 4000);
+    };
+    show();
+    window.addEventListener("mousemove", show);
+    window.addEventListener("touchstart", show);
+    return () => { window.clearTimeout(t); window.removeEventListener("mousemove", show); window.removeEventListener("touchstart", show); };
+  }, [isFocusMode]);
+
+  const copyViewLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Link desta visualização copiado");
+    } catch {
+      toast.error("Não foi possível copiar o link");
+    }
+  };
 
   // Reset month filter when dashboard changes
   useEffect(() => {
@@ -256,8 +303,8 @@ export function InsightsMainContent() {
           ref={focusModeRef}
           className="fixed inset-0 z-[9999] bg-background flex flex-col"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          {/* Header — some sozinho após alguns segundos sem mouse */}
+          <div className={`flex items-center justify-between px-6 border-b border-border shrink-0 overflow-hidden transition-all duration-300 ${controlsVisible ? "py-4 max-h-24 opacity-100" : "py-0 max-h-0 opacity-0 border-b-0"}`}>
             <div className="flex items-center gap-3">
               <BarChart3 className="h-6 w-6 text-primary" />
               <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
@@ -375,6 +422,10 @@ export function InsightsMainContent() {
                   onUpdateVisual={updateVisual}
                 />
               )}
+              <Button variant="outline" size="sm" onClick={copyViewLink} aria-label="Copiar link desta visualização">
+                <Link2 className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Copiar link</span>
+              </Button>
               {!isMobile && (
                 <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
                   <Monitor className="h-4 w-4 mr-2" />
