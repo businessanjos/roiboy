@@ -60,6 +60,9 @@ const PRODUCT_SLUG_TO_ID: Record<string, string> = {
   eternum_pass: PRODUCT_IDS.EPASS,
   e_pass: PRODUCT_IDS.EPASS,
   clinica_ryka: PRODUCT_IDS.CLINICA_RYKA,
+  // Opção "CR l Programa de Aceleração" do campo Item da Venda = mesmo produto
+  opt_1787176918301: PRODUCT_IDS.CLINICA_RYKA,
+  opt_1790079700540: PRODUCT_IDS.CONSULTORIA,
   consultoria_premium: PRODUCT_IDS.CONSULTORIA,
   // Renovações — produtos próprios
   ren_eternum_mentoring: PRODUCT_IDS.REN_EM,

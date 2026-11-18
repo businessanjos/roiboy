@@ -27,7 +27,7 @@ const PRODUCT_ID_ALIAS: Record<string, string> = {
   "eae406e9-6076-41eb-96ed-df0ab187a11c": "27d83762-7ce0-49d5-a12b-b51571303096", // REN. RM -> REN. EM
 };
 
-const looksCoded = (v: string) => UUID_RE.test(v.trim()) || /^[a-z0-9]+(_[a-z0-9]+)+$/.test(v.trim());
+const looksCoded = (v: string) => UUID_RE.test(v.trim()) || /^opt_\d+$/.test(v.trim()) || /^[a-z0-9]+(_[a-z0-9]+)+$/.test(v.trim());
 
 
 /**
