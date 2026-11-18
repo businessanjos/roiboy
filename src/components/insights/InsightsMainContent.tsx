@@ -97,10 +97,10 @@ export function InsightsMainContent() {
   // Lembra o ajuste de TV (modo e zoom) de cada painel neste aparelho
   // Padrão de TV 42" por painel (v2 descarta ajustes antigos salvos)
   const TV_DEFAULT_ZOOM: Record<string, number> = {
-    "29104b57-a5bf-41aa-b28a-2bd42a525206": 60, // [MQL] Análise de Funil
+    "29104b57-a5bf-41aa-b28a-2bd42a525206": 55, // [MQL] Análise de Funil
     "05fe3fc0-139f-4de2-b46c-da526bcd022a": 80, // Leaderboard
   };
-  const tvPrefKey = activeDashboardId ? `insights-tv-pref-v2:${activeDashboardId}` : null;
+  const tvPrefKey = activeDashboardId ? `insights-tv-pref-v3:${activeDashboardId}` : null;
   useEffect(() => {
     if (!tvPrefKey) return;
     try {
