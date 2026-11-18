@@ -70,13 +70,12 @@ const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMul
   const { x, y, width, height, value, fill } = props;
   if (!value || value === 0 || height < 14) return null;
 
-  const baseFontSize = Math.round(10 * fontMultiplier);
-  const effectiveFontSize = Math.min(baseFontSize, height - 2);
-
   const formatted = formatValueCompact(value, formatting.type);
-  const estimatedTextWidth = formatted.length * effectiveFontSize * 0.65;
+  // Diminui a fonte (até 8px) para o número caber dentro do bloco.
+  let effectiveFontSize = Math.min(Math.round(10 * fontMultiplier), height - 2);
+  while (effectiveFontSize > 8 && formatted.length * effectiveFontSize * 0.6 + 4 > width) effectiveFontSize -= 1;
 
-  if (estimatedTextWidth + 8 > width) return null;
+  if (formatted.length * effectiveFontSize * 0.6 + 4 > width) return null;
 
   return (
     <text
