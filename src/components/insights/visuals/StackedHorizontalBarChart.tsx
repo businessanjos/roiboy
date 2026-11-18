@@ -215,6 +215,11 @@ export function StackedHorizontalBarChart({
               onClick={(payload: any) => onDrilldown?.(payload?.name ?? payload?.payload?.name)}
               style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
             >
+              {/* Valor de cada fatia dentro do próprio bloco (azul, dourado...). */}
+              <LabelList
+                dataKey={key}
+                content={(props: any) => renderInsideLabel({ ...props, fill: getSeriesColor(key, index) }, safeFormatting, m)}
+              />
 
               {showTotals && key === lastKey && (
                 <LabelList
