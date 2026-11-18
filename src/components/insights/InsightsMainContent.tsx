@@ -95,7 +95,12 @@ export function InsightsMainContent() {
   }, [visuals, fixedYear, selectedMonth]);
 
   // Lembra o ajuste de TV (modo e zoom) de cada painel neste aparelho
-  const tvPrefKey = activeDashboardId ? `insights-tv-pref:${activeDashboardId}` : null;
+  // Padrão de TV 42" por painel (v2 descarta ajustes antigos salvos)
+  const TV_DEFAULT_ZOOM: Record<string, number> = {
+    "29104b57-a5bf-41aa-b28a-2bd42a525206": 60, // [MQL] Análise de Funil
+    "05fe3fc0-139f-4de2-b46c-da526bcd022a": 80, // Leaderboard
+  };
+  const tvPrefKey = activeDashboardId ? `insights-tv-pref-v2:${activeDashboardId}` : null;
   useEffect(() => {
     if (!tvPrefKey) return;
     try {
@@ -105,8 +110,9 @@ export function InsightsMainContent() {
         if (typeof p.tvFit === "boolean") setTvFit(p.tvFit);
         if (typeof p.zoom === "number") setFocusZoom(p.zoom);
       } else {
-        setTvFit(true);
-        setFocusZoom(100);
+        const def = activeDashboardId ? TV_DEFAULT_ZOOM[activeDashboardId] : undefined;
+        setTvFit(def == null);
+        setFocusZoom(def ?? 100);
       }
     } catch { /* ignore */ }
   }, [tvPrefKey]);
