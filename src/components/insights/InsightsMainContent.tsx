@@ -97,10 +97,10 @@ export function InsightsMainContent() {
   // Lembra o ajuste de TV (modo e zoom) de cada painel neste aparelho
   // Padrão de TV 42" por painel (v2 descarta ajustes antigos salvos)
   const TV_DEFAULT_ZOOM: Record<string, number> = {
-    "29104b57-a5bf-41aa-b28a-2bd42a525206": 55, // [MQL] Análise de Funil
+    "29104b57-a5bf-41aa-b28a-2bd42a525206": 60, // [MQL] Análise de Funil
     "05fe3fc0-139f-4de2-b46c-da526bcd022a": 80, // Leaderboard
   };
-  const tvPrefKey = activeDashboardId ? `insights-tv-pref-v3:${activeDashboardId}` : null;
+  const tvPrefKey = activeDashboardId ? `insights-tv-pref-v4:${activeDashboardId}` : null;
   useEffect(() => {
     if (!tvPrefKey) return;
     try {
@@ -309,7 +309,7 @@ export function InsightsMainContent() {
             </div>
           ) : (
 
-            <div className="flex-1 overflow-auto p-6">
+            <div className="flex-1 overflow-auto px-6 pb-6 pt-0">
               <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top left', width: `${10000 / focusZoom}%` }}>
                 {hasVisuals && (
                   <InsightsGrid
