@@ -300,7 +300,9 @@ function getCategoryValue(deal: any, field: string): string {
   if (field === 'product' || field === 'product_name') return deal.product || 'Não informado';
   if (field === 'canal') return deal.canal || 'Não informado';
   if (field === 'mql') return deal._mql_label || 'Não informado';
-  if (field === 'responsible') return (deal.users as any)?.name || 'Sem Responsável';
+  if (field === 'responsible' || field === 'responsible_name') return (deal.users as any)?.name || 'Sem Responsável';
+  if (field === 'pipeline_name') return (deal.pipelines as any)?.name || 'Sem Funil';
+  if (field === 'stage_name') return (deal.deal_stages as any)?.name || 'Sem Etapa';
   return deal[field] || 'Não informado';
 }
 
@@ -324,6 +326,8 @@ async function fetchStackedDealsData(
     .from('deals')
     .select(`
       id, lead_id, value, status, created_at, won_at, lost_at,
+      deal_stages!deals_stage_id_fkey(name, color),
+      pipelines!deals_pipeline_id_fkey(name),
       users!deals_responsible_user_id_fkey(name)
     `)
     .eq('account_id', accountId);
