@@ -5,7 +5,7 @@ import { NewVersionDialog } from "@/components/system/NewVersionDialog";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CurrentUserProvider } from "@/hooks/useCurrentUser";
@@ -252,6 +252,19 @@ function PageLoader() {
   return <LoadingScreen message="Carregando..." fullScreen={false} />;
 }
 
+// Avisos flutuantes (toasts) não aparecem nos dashboards de Insights,
+// para não poluir as TVs que espelham esses painéis.
+function RouteAwareToasters() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/insights")) return null;
+  return (
+    <>
+      <Toaster />
+      <Sonner />
+    </>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
@@ -260,10 +273,9 @@ const App = () => (
           <ImpersonationProvider>
             <PermissionsProvider>
                   <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
                     <NewVersionDialog />
                     <BrowserRouter>
+                      <RouteAwareToasters />
                       <SectorProvider>
                         <CompanyProvider>
                         <ImpersonationBanner />
