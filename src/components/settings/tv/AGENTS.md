@@ -1,0 +1,1 @@
+- Office TVs: ROY stores config/commands in `tv_*` tables (managers via `tv_can_manage`); the LAN agent only talks to edge function `tv-agent` (header `x-agent-token`). Why: ROY cannot reach the TVs; agent contract must stay stable.
