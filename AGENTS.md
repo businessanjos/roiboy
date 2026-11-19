@@ -49,3 +49,4 @@
 - Playbook free fields are `{{campo:slug}}` in event_vars.customFields; `playbook-ai-assist` rejects edits to {{...}}. Why: no schema change, fields stay safe.
 - Lost deal closes lead chats (`close_zapp_on_deal_lost`). Why: triage.
 - CS processes parse `src/content/csProcesses.md`, overridable per account in `cs_process_content` (managers via `is_cs_process_editor`); progress `cs_process_progress`, tours `user_tour_views`. Why: one text source, editable.
+- Office TVs: ROY only stores config/commands in `tv_*` tables (managers via `tv_can_manage`); the LAN agent talks exclusively to edge function `tv-agent` with header `x-agent-token`. Why: ROY cannot reach the TVs on the office network, and the agent contract must stay stable.
