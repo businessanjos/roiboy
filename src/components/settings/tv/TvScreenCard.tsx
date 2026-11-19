@@ -39,9 +39,9 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
     <div role="button" tabIndex={0} onClick={onOpen} onKeyDown={(e) => e.key === "Enter" && onOpen()}
       className={cn("group rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden cursor-pointer transition hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         !screen.enabled && "opacity-50")}>
-      <div className="relative aspect-video bg-muted">
+      <div className="relative aspect-video overflow-hidden bg-muted">
         {caps.screenshot && status?.screenshot_url ? (
-          <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+          <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="absolute inset-0 h-full w-full scale-[1.04] object-cover" loading="lazy" />
         ) : !caps.screenshot ? (
           <img src={tvSemCaptura.url} alt="Esse modelo de TV não possui suporte a capturas" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
         ) : (
