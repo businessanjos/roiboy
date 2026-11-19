@@ -35,14 +35,42 @@ Deno.serve(async (req) => {
       await db.from("tv_events").delete().lt("created_at", new Date(Date.now() - 30 * 86400_000).toISOString());
 
       const status = Array.isArray(body.status) ? body.status : [];
-      const rows = status
-        .filter((s: any) => Number.isInteger(s?.slot))
-        .map((s: any) => ({
+      const CONN = ["boa", "instavel", "ruim", "offline"];
+      const intOrNull = (v: any) => (v === null ? null : Number.isFinite(Number(v)) ? Math.round(Number(v)) : undefined);
+      const valid = status.filter((s: any) => Number.isInteger(s?.slot));
+      const rows = valid.map((s: any) => {
+        const r: Record<string, unknown> = {
           slot: s.slot, online: s.online ?? null, power_state: s.power_state ?? null,
           foreground_app: s.foreground_app ?? null, paired: s.paired ?? null,
           ip: s.ip ?? null, last_error: s.last_error ?? null, last_seen: now,
-        }));
-      if (rows.length) await db.from("tv_status").upsert(rows, { onConflict: "slot" });
+        };
+        // new optional fields: only write when present (absent = keep previous value)
+        if ("latency_ms" in s) { const v = intOrNull(s.latency_ms); if (v !== undefined) r.latency_ms = v; }
+        if ("packet_loss_pct" in s) { const v = intOrNull(s.packet_loss_pct); if (v !== undefined) r.packet_loss_pct = v === null ? null : Math.min(100, Math.max(0, v)); }
+        if ("drops_today" in s) { const v = intOrNull(s.drops_today); if (v !== undefined) r.drops_today = v; }
+        if (typeof s.connection === "string" && CONN.includes(s.connection)) r.connection = s.connection;
+        if (typeof s.released === "boolean") r.released = s.released;
+        return r;
+      });
+      // one upsert per row so absent keys are never written as null
+      await Promise.all(rows.map((r: any) => db.from("tv_status").upsert(r, { onConflict: "slot" })));
+
+      // connection history: at most one point per TV every 5 min, kept 7 days
+      try {
+        const withConn = rows.filter((r: any) => "connection" in r || "latency_ms" in r || "packet_loss_pct" in r);
+        if (withConn.length) {
+          const since = new Date(Date.now() - 5 * 60_000 + 5_000).toISOString();
+          const { data: recent } = await db.from("tv_conn_history").select("slot").gte("created_at", since)
+            .in("slot", withConn.map((r: any) => r.slot));
+          const skip = new Set((recent ?? []).map((x: any) => x.slot));
+          const hist = withConn.filter((r: any) => !skip.has(r.slot)).map((r: any) => ({
+            slot: r.slot, latency_ms: r.latency_ms ?? null, packet_loss_pct: r.packet_loss_pct ?? null, connection: r.connection ?? null,
+          }));
+          if (hist.length) await db.from("tv_conn_history").insert(hist);
+          if (Math.random() < 0.05)
+            await db.from("tv_conn_history").delete().lt("created_at", new Date(Date.now() - 7 * 86400_000).toISOString());
+        }
+      } catch (_) { /* never break sync */ }
 
       const events = (Array.isArray(body.events) ? body.events : [])
         .filter((e: any) => typeof e?.kind === "string")

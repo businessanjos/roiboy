@@ -27012,6 +27012,33 @@ export type Database = {
         }
         Relationships: []
       }
+      tv_conn_history: {
+        Row: {
+          connection: string | null
+          created_at: string
+          id: number
+          latency_ms: number | null
+          packet_loss_pct: number | null
+          slot: number
+        }
+        Insert: {
+          connection?: string | null
+          created_at?: string
+          id?: number
+          latency_ms?: number | null
+          packet_loss_pct?: number | null
+          slot: number
+        }
+        Update: {
+          connection?: string | null
+          created_at?: string
+          id?: number
+          latency_ms?: number | null
+          packet_loss_pct?: number | null
+          slot?: number
+        }
+        Relationships: []
+      }
       tv_events: {
         Row: {
           created_at: string
@@ -27048,6 +27075,7 @@ export type Database = {
           name: string
           notes: string | null
           refresh_min: number
+          released_until: string | null
           schedule_mode: string
           slot: number
           updated_at: string
@@ -27065,6 +27093,7 @@ export type Database = {
           name: string
           notes?: string | null
           refresh_min?: number
+          released_until?: string | null
           schedule_mode?: string
           slot: number
           updated_at?: string
@@ -27082,6 +27111,7 @@ export type Database = {
           name?: string
           notes?: string | null
           refresh_min?: number
+          released_until?: string | null
           schedule_mode?: string
           slot?: number
           updated_at?: string
@@ -27128,37 +27158,52 @@ export type Database = {
       }
       tv_status: {
         Row: {
+          connection: string | null
+          drops_today: number | null
           foreground_app: string | null
           ip: string | null
           last_error: string | null
           last_seen: string | null
+          latency_ms: number | null
           online: boolean | null
+          packet_loss_pct: number | null
           paired: boolean | null
           power_state: string | null
+          released: boolean | null
           screenshot_at: string | null
           screenshot_url: string | null
           slot: number
         }
         Insert: {
+          connection?: string | null
+          drops_today?: number | null
           foreground_app?: string | null
           ip?: string | null
           last_error?: string | null
           last_seen?: string | null
+          latency_ms?: number | null
           online?: boolean | null
+          packet_loss_pct?: number | null
           paired?: boolean | null
           power_state?: string | null
+          released?: boolean | null
           screenshot_at?: string | null
           screenshot_url?: string | null
           slot: number
         }
         Update: {
+          connection?: string | null
+          drops_today?: number | null
           foreground_app?: string | null
           ip?: string | null
           last_error?: string | null
           last_seen?: string | null
+          latency_ms?: number | null
           online?: boolean | null
+          packet_loss_pct?: number | null
           paired?: boolean | null
           power_state?: string | null
+          released?: boolean | null
           screenshot_at?: string | null
           screenshot_url?: string | null
           slot?: number
@@ -31838,6 +31883,10 @@ export type Database = {
         Returns: Json
       }
       tv_can_manage: { Args: { _uid: string }; Returns: boolean }
+      tv_release: {
+        Args: { _slots: number[]; _until: string }
+        Returns: undefined
+      }
       unaccent: { Args: { "": string }; Returns: string }
       unaccent_immutable: { Args: { p_text: string }; Returns: string }
       undo_deal_merge: { Args: { p_action: string }; Returns: string }

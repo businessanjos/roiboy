@@ -1,6 +1,6 @@
 import { formatDistanceToNowStrict } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Camera, Power, PowerOff, RefreshCw, Tv } from "lucide-react";
+import { Camera, Power, PowerOff, RefreshCw, Tv, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -9,8 +9,10 @@ import { sendTvCommand } from "@/hooks/useTvWall";
 import { tvCapabilities, tvVisualState } from "@/lib/tv/tvUrl";
 import tvSemCaptura from "@/assets/tv-sem-captura.png.asset.json";
 import { STATE, describeContent, runTv } from "./tvShared";
+import { isReleased } from "@/lib/tv/tvConn";
+import { ReleaseMenu, ReturnButton, SignalWithTip, hhmm } from "./TvConnRelease";
 
-interface Props { screen: any; status?: any; dashboards: { id: string; name: string }[]; onOpen: () => void }
+interface Props { screen: any; status?: any; dashboards: { id: string; name: string }[]; settings?: any; onOpen: () => void }
 
 function IconAction({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -24,10 +26,11 @@ function IconAction({ label, onClick, children }: { label: string; onClick: () =
   );
 }
 
-export function TvScreenCard({ screen, status, dashboards, onOpen }: Props) {
+export function TvScreenCard({ screen, status, dashboards, settings, onOpen }: Props) {
   const state = tvVisualState(status);
   const caps = tvCapabilities(screen.slot);
   const isOn = state === "on" || state === "saver";
+  const released = isReleased(screen);
   const cmd = (c: string) => runTv(() => sendTvCommand(screen.slot, c));
 
   return (
@@ -44,16 +47,25 @@ export function TvScreenCard({ screen, status, dashboards, onOpen }: Props) {
             <Tv className="h-6 w-6" />
           </div>
         )}
+        {released && <Badge variant="outline" className="absolute top-1.5 left-1.5 text-[10px] px-1.5 py-0 h-5 bg-background/90 text-foreground border-border">Liberada até {hhmm(screen.released_until)}</Badge>}
         <Badge variant="outline" className={cn("absolute top-1.5 right-1.5 text-[10px] px-1.5 py-0 h-5", STATE[state].cls)}>{STATE[state].label}</Badge>
       </div>
       <div className="p-2.5 space-y-0.5">
-        <p className="text-sm font-semibold truncate">{screen.name}</p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="text-sm font-semibold truncate">{screen.name}</p>
+          <SignalWithTip status={status} />
+        </div>
         <p className="text-xs text-muted-foreground truncate">{describeContent(screen.url, dashboards)}</p>
         <div className="flex items-center justify-between pt-0.5">
           <span className="text-[11px] text-muted-foreground truncate">
             {caps.screenshot && status?.screenshot_at ? <><span className="hidden sm:inline">captura </span>{formatDistanceToNowStrict(new Date(status.screenshot_at), { locale: ptBR, addSuffix: true })}</> : "\u00a0"}
           </span>
           <div className="flex shrink-0 -mr-1">
+            {!released && (
+              <ReleaseMenu screens={[screen]} settings={settings}>
+                <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Liberar TV" title="Liberar TV"><Unlock className="h-3.5 w-3.5" /></Button>
+              </ReleaseMenu>
+            )}
             <IconAction label="Recarregar" onClick={() => cmd("reload")}><RefreshCw className="h-3.5 w-3.5" /></IconAction>
             {caps.screenshot && <IconAction label="Ver tela agora" onClick={() => cmd("screenshot")}><Camera className="h-3.5 w-3.5" /></IconAction>}
             <IconAction label={isOn ? "Desligar" : "Ligar"} onClick={() => cmd(isOn ? "off" : "on")}>
@@ -61,6 +73,7 @@ export function TvScreenCard({ screen, status, dashboards, onOpen }: Props) {
             </IconAction>
           </div>
         </div>
+        {released && <ReturnButton slots={[screen.slot]} size="xs" className="w-full mt-1" />}
       </div>
     </div>
   );

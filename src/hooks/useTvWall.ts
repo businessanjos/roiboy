@@ -71,3 +71,22 @@ export async function updateTvSettings(patch: Record<string, unknown>) {
   const { error } = await db.from("tv_settings").update(patch).eq("id", 1);
   if (error) throw error;
 }
+
+export async function releaseTvs(slots: number[], until: string | null) {
+  const { error } = await db.rpc("tv_release", { _slots: slots, _until: until });
+  if (error) throw error;
+}
+
+export function useTvConnHistory(slot: number | null) {
+  return useQuery({
+    queryKey: ["tv-conn-history", slot],
+    enabled: slot != null,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await db.from("tv_conn_history").select("latency_ms,packet_loss_pct,connection,created_at")
+        .eq("slot", slot).gte("created_at", new Date(Date.now() - 86400_000).toISOString()).order("created_at");
+      if (error) throw error;
+      return (data ?? []) as { latency_ms: number | null; packet_loss_pct: number | null; connection: string | null; created_at: string }[];
+    },
+  });
+}

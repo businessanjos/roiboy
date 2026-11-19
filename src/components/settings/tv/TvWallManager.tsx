@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, MoreHorizontal, Power, PowerOff, RefreshCw } from "lucide-react";
+import { CalendarClock, MoreHorizontal, Power, PowerOff, RefreshCw, Undo2, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,6 +11,8 @@ import { TvScreenCard } from "./TvScreenCard";
 import { TvDetailSheet } from "./TvDetailSheet";
 import { TvScheduleSheet } from "./TvScheduleSheet";
 import { runTv, useTvDashboards } from "./tvShared";
+import { ReleaseMenu, returnTvs } from "./TvConnRelease";
+import { isReleased } from "@/lib/tv/tvConn";
 
 const GRID = "grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5";
 
@@ -47,16 +49,20 @@ export function TvWallManager() {
   const open = data?.screens.find((s) => s.slot === openSlot) ?? null;
   const all = (c: string) => runTv(() => sendTvCommand(null, c));
 
+  const unstable = data?.screens.filter((s) => { const c = data.status.find((x) => x.slot === s.slot)?.connection; return c === "instavel" || c === "ruim"; }).length ?? 0;
+  const enabledScreens = data?.screens.filter((s) => s.enabled) ?? [];
+  const releasedSlots = data?.screens.filter((s) => isReleased(s)).map((s) => s.slot) ?? [];
   const parts = [
     `${summary.on} ligada${summary.on === 1 ? "" : "s"}`,
     summary.saver && `${summary.saver} proteção de tela`,
     summary.off && `${summary.off} desligada${summary.off === 1 ? "" : "s"}`,
     summary.nocontact && `${summary.nocontact} sem contato`,
     summary.unpaired && `${summary.unpaired} não pareada${summary.unpaired === 1 ? "" : "s"}`,
+    unstable && `${unstable} com conexão instável`,
   ].filter(Boolean).join(" · ");
 
   const renderCard = (s: any) => (
-    <TvScreenCard key={s.slot} screen={s} status={data!.status.find((x) => x.slot === s.slot)} dashboards={dashboards} onOpen={() => setOpenSlot(s.slot)} />
+    <TvScreenCard key={s.slot} screen={s} status={data!.status.find((x) => x.slot === s.slot)} dashboards={dashboards} settings={data!.settings} onOpen={() => setOpenSlot(s.slot)} />
   );
 
   return (
@@ -70,12 +76,20 @@ export function TvWallManager() {
             </span>
             {!loading && <span className="text-xs text-muted-foreground truncate hidden sm:inline">{parts}</span>}
           </div>
-          <div className="hidden md:flex gap-1.5 shrink-0">
+          <div className="hidden md:flex flex-wrap justify-end gap-1.5 shrink-0">
             <Button size="sm" variant="outline" onClick={() => all("on")}><Power className="h-3.5 w-3.5 mr-1.5" />Ligar todas</Button>
             <Button size="sm" variant="outline" onClick={() => all("off")}><PowerOff className="h-3.5 w-3.5 mr-1.5" />Desligar todas</Button>
             <Button size="sm" variant="outline" onClick={() => all("reload")}><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Recarregar todas</Button>
+            <ReleaseMenu screens={enabledScreens} settings={data?.settings}>
+              <Button size="sm" variant="outline" disabled={!enabledScreens.length}><Unlock className="h-3.5 w-3.5 mr-1.5" />Liberar todas</Button>
+            </ReleaseMenu>
+            <Button size="sm" variant="outline" disabled={!releasedSlots.length} onClick={() => returnTvs(releasedSlots)}><Undo2 className="h-3.5 w-3.5 mr-1.5" />Devolver todas</Button>
             <Button size="sm" onClick={() => setScheduleOpen(true)}><CalendarClock className="h-3.5 w-3.5 mr-1.5" />Horário</Button>
           </div>
+          <div className="flex md:hidden gap-1.5 shrink-0">
+          <ReleaseMenu screens={enabledScreens} settings={data?.settings}>
+            <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Liberar todas"><Unlock className="h-4 w-4" /></Button>
+          </ReleaseMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="icon" variant="outline" className="md:hidden h-8 w-8" aria-label="Ações gerais"><MoreHorizontal className="h-4 w-4" /></Button>
@@ -84,9 +98,11 @@ export function TvWallManager() {
               <DropdownMenuItem onClick={() => all("on")}><Power className="h-4 w-4 mr-2" />Ligar todas</DropdownMenuItem>
               <DropdownMenuItem onClick={() => all("off")}><PowerOff className="h-4 w-4 mr-2" />Desligar todas</DropdownMenuItem>
               <DropdownMenuItem onClick={() => all("reload")}><RefreshCw className="h-4 w-4 mr-2" />Recarregar todas</DropdownMenuItem>
+              <DropdownMenuItem disabled={!releasedSlots.length} onClick={() => returnTvs(releasedSlots)}><Undo2 className="h-4 w-4 mr-2" />Devolver todas</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setScheduleOpen(true)}><CalendarClock className="h-4 w-4 mr-2" />Horário</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
         {!loading && <p className="text-xs text-muted-foreground sm:hidden -mt-2">{parts}</p>}
 
@@ -110,6 +126,7 @@ export function TvWallManager() {
           events={data?.events.filter((e) => e.slot === openSlot || e.slot == null).slice(0, 30) ?? []}
           commands={data?.commands.filter((c) => c.slot === openSlot || c.slot == null).slice(0, 30) ?? []}
           dashboards={dashboards}
+          settings={data?.settings}
           onOpenChange={(v) => !v && setOpenSlot(null)}
         />
         <TvScheduleSheet open={scheduleOpen} onOpenChange={setScheduleOpen} settings={data?.settings} />

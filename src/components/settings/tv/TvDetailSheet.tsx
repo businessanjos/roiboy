@@ -24,11 +24,14 @@ import {
   TV_PERIODS, buildTvUrl, isYoutubePlaylist, parseTvUrl, tvCapabilities, tvContentKind, tvVisualState, type TvContentKind,
 } from "@/lib/tv/tvUrl";
 import { CMD_LABEL, STATE, STATUS_LABEL, describeContent, runTv } from "./tvShared";
+import { isReleased } from "@/lib/tv/tvConn";
+import { ReleaseButton, ReturnButton, hhmm } from "./TvConnRelease";
+import { ConnectionTab } from "./TvConnectionTab";
 import tvSemCaptura from "@/assets/tv-sem-captura.png.asset.json";
 
 interface Props {
   screen: any | null; status?: any; events: any[]; commands: any[];
-  dashboards: { id: string; name: string }[]; onOpenChange: (v: boolean) => void;
+  dashboards: { id: string; name: string }[]; settings?: any; onOpenChange: (v: boolean) => void;
 }
 
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -43,7 +46,7 @@ export function TvDetailSheet(props: Props) {
   );
 }
 
-function Body({ screen, status, events, commands, dashboards }: Props & { screen: any }) {
+function Body({ screen, status, events, commands, dashboards, settings }: Props & { screen: any }) {
   const caps = tvCapabilities(screen.slot);
   const state = tvVisualState(status);
   const [full, setFull] = useState(false);
@@ -76,19 +79,31 @@ function Body({ screen, status, events, commands, dashboards }: Props & { screen
           <span>{status?.foreground_app ?? ""}{status?.ip ? ` · ${status.ip}` : ""}</span>
         </div>
         {status?.last_error && <p className="text-xs text-destructive">{status.last_error}</p>}
+        {isReleased(screen) ? (
+          <div className="rounded-md border bg-muted/50 p-2.5 space-y-2">
+            <p className="text-xs"><span className="font-medium">Liberada até {hhmm(screen.released_until)}.</span>{" "}
+              <span className="text-muted-foreground">A automação não reabre o conteúdo nem aperta teclas nesta TV. No horário de desligar ela desliga normalmente. Ao terminar ou ao devolver, volta ao conteúdo em até 30 s.</span></p>
+            <ReturnButton slots={[screen.slot]} className="w-full" />
+          </div>
+        ) : <ReleaseButton screen={screen} settings={settings} className="w-full" />}
       </div>
 
       <Tabs defaultValue="conteudo" className="flex-1 flex flex-col min-h-0">
-        <TabsList className="mx-4 mt-3 grid grid-cols-4">
-          <TabsTrigger value="conteudo">Conteúdo</TabsTrigger>
-          <TabsTrigger value="controle">Controle</TabsTrigger>
-          <TabsTrigger value="agenda">Agenda</TabsTrigger>
-          <TabsTrigger value="historico">Histórico</TabsTrigger>
+        <TabsList className="mx-4 mt-3 grid grid-cols-5 h-auto">
+          <TabsTrigger value="conteudo" className="px-1 text-xs sm:text-sm">Conteúdo</TabsTrigger>
+          <TabsTrigger value="controle" className="px-1 text-xs sm:text-sm">Controle</TabsTrigger>
+          <TabsTrigger value="agenda" className="px-1 text-xs sm:text-sm">Agenda</TabsTrigger>
+          <TabsTrigger value="conexao" className="px-1 text-xs sm:text-sm">Conexão</TabsTrigger>
+          <TabsTrigger value="historico" className="px-1 text-xs sm:text-sm">Histórico</TabsTrigger>
         </TabsList>
         <div className="flex-1 overflow-y-auto p-4">
-          <TabsContent value="conteudo" className="mt-0"><ContentTab screen={screen} dashboards={dashboards} /></TabsContent>
+          <TabsContent value="conteudo" className="mt-0">
+            {isReleased(screen) && <p className="mb-3 rounded-md border bg-muted/50 px-3 py-2 text-xs">TV liberada para uso pelo controle. Devolva para automação para trocar o conteúdo.</p>}
+            <fieldset disabled={isReleased(screen)} className={cn(isReleased(screen) && "opacity-50 pointer-events-none")}><ContentTab screen={screen} dashboards={dashboards} /></fieldset>
+          </TabsContent>
           <TabsContent value="controle" className="mt-0"><ControlTab screen={screen} /></TabsContent>
           <TabsContent value="agenda" className="mt-0"><AgendaTab screen={screen} /></TabsContent>
+          <TabsContent value="conexao" className="mt-0"><ConnectionTab slot={screen.slot} status={status} /></TabsContent>
           <TabsContent value="historico" className="mt-0"><HistoryTab events={events} commands={commands} /></TabsContent>
         </div>
       </Tabs>
