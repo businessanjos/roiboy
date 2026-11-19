@@ -1,26 +1,29 @@
 import { useEffect, useState } from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { useTvRestContent } from "@/hooks/useTvRestContent";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { REST_FADE_MS, restIsNight } from "@/lib/tv/restScreen";
 import dayDefault from "@/assets/eternum-descanso-claro.webp.asset.json";
 import nightDefault from "@/assets/eternum-descanso-escuro.png.asset.json";
 
 /** Tela de descanso: só a arte Eternum em tela cheia — clara de dia, escura à noite. */
 export default function TvRest() {
-  const { user, loading } = useAuth();
-  const location = useLocation();
-  const { data } = useTvRestContent(!!user);
+  // Rota pública: lê só as artes e horários pela função pública, sem login.
+  const { data } = useQuery({
+    queryKey: ["tv-rest-public"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("tv-rest-public", { method: "GET" });
+      if (error) throw error;
+      return data as { dayUrl: string | null; nightUrl: string | null; dayFrom: string | null; nightFrom: string | null };
+    },
+    refetchInterval: 10 * 60_000, refetchIntervalInBackground: true, retry: 3,
+    retryDelay: (i) => [10_000, 30_000, 60_000][Math.min(i, 2)], staleTime: 5 * 60_000,
+  });
   const [now, setNow] = useState(() => new Date());
   useEffect(() => { const i = setInterval(() => setNow(new Date()), 30_000); return () => clearInterval(i); }, []);
   useEffect(() => {
     const prev = document.body.style.overflow; document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
   }, []);
-
-  if (!loading && !user) {
-    return <Navigate to={`/auth?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
-  }
 
   const night = restIsNight(now, data?.dayFrom, data?.nightFrom);
   const day = data?.dayUrl || dayDefault.url;
