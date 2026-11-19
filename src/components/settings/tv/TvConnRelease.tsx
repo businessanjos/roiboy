@@ -101,9 +101,9 @@ export function ReleaseButton({ screen, settings, className }: { screen: any; se
   );
 }
 
-export function ReturnButton({ slots, className, size = "sm" }: { slots: number[]; className?: string; size?: "sm" | "xs" }) {
+export function ReturnButton({ slots, className, size = "sm", hintSide = "top" }: { slots: number[]; className?: string; size?: "sm" | "xs"; hintSide?: "top" | "bottom" }) {
   return (
-    <Hint text={TV_HINTS.returnOne} className={className}>
+    <Hint text={TV_HINTS.returnOne} className={className} side={hintSide}>
       <Button size="sm" variant="outline" className={cn(size === "xs" && "h-6 px-2 text-[11px]", className)}
         onClick={(e) => { e.stopPropagation(); returnTvs(slots); }}>
         <Undo2 className={cn(size === "xs" ? "h-3 w-3 mr-1" : "h-3.5 w-3.5 mr-1.5")} />Devolver para automação

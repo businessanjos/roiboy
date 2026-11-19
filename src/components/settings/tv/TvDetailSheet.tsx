@@ -83,7 +83,7 @@ function Body({ screen, status, events, commands, dashboards, settings }: Props 
           <div className="rounded-md border bg-muted/50 p-2.5 space-y-2">
             <p className="text-xs"><span className="font-medium">Liberada até {hhmm(screen.released_until)}.</span>{" "}
               <span className="text-muted-foreground">A automação não reabre o conteúdo nem aperta teclas nesta TV. No horário de desligar ela desliga normalmente. Ao terminar ou ao devolver, volta ao conteúdo em até 30 s.</span></p>
-            <ReturnButton slots={[screen.slot]} className="w-full" />
+            <ReturnButton slots={[screen.slot]} className="w-full" hintSide="bottom" />
           </div>
         ) : <ReleaseButton screen={screen} settings={settings} className="w-full" />}
       </div>
