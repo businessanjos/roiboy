@@ -27138,6 +27138,7 @@ export type Database = {
           on_time: string
           rest_day_from: string
           rest_day_image: string | null
+          rest_extra: Json
           rest_logo_url: string | null
           rest_messages: Json
           rest_night_from: string
@@ -27158,6 +27159,7 @@ export type Database = {
           on_time?: string
           rest_day_from?: string
           rest_day_image?: string | null
+          rest_extra?: Json
           rest_logo_url?: string | null
           rest_messages?: Json
           rest_night_from?: string
@@ -27178,6 +27180,7 @@ export type Database = {
           on_time?: string
           rest_day_from?: string
           rest_day_image?: string | null
+          rest_extra?: Json
           rest_logo_url?: string | null
           rest_messages?: Json
           rest_night_from?: string

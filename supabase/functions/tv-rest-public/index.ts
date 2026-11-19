@@ -7,7 +7,7 @@ Deno.serve(async (req) => {
   const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=300" } });
   try {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: row, error } = await sb.from("tv_settings").select("rest_day_image, rest_night_image, rest_day_from, rest_night_from").eq("id", 1).maybeSingle();
+    const { data: row, error } = await sb.from("tv_settings").select("rest_day_image, rest_night_image, rest_day_from, rest_night_from, rest_extra").eq("id", 1).maybeSingle();
     const data = { day_image: row?.rest_day_image, night_image: row?.rest_night_image, day_from: row?.rest_day_from, night_from: row?.rest_night_from };
     if (error) throw error;
     const sign = async (p: unknown) => {
@@ -18,6 +18,7 @@ Deno.serve(async (req) => {
     };
     return json({
       dayUrl: await sign(data?.day_image), nightUrl: await sign(data?.night_image),
+      extras: (await Promise.all((Array.isArray(row?.rest_extra) ? row.rest_extra : []).map(async (e: any) => ({ url: await sign(e?.path), period: e?.period === "night" ? "night" : "day" })))).filter((e) => e.url),
       dayFrom: data?.day_from ?? null, nightFrom: data?.night_from ?? null,
     });
   } catch (e) {

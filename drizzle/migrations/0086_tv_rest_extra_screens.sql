@@ -1,0 +1,1 @@
+ALTER TABLE public.tv_settings ADD COLUMN IF NOT EXISTS rest_extra jsonb NOT NULL DEFAULT '[]'::jsonb;

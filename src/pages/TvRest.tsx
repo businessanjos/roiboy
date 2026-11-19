@@ -6,6 +6,8 @@ import dayDefault from "@/assets/eternum-descanso-claro.webp.asset.json";
 import nightDefault from "@/assets/eternum-descanso-escuro.png.asset.json";
 
 /** Tela de descanso: só a arte Eternum em tela cheia — clara de dia, escura à noite. */
+const REST_ROTATE_MS = 60_000;
+
 export default function TvRest() {
   // Rota pública: lê só as artes e horários pela função pública, sem login.
   const { data } = useQuery({
@@ -13,13 +15,13 @@ export default function TvRest() {
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("tv-rest-public", { method: "GET" });
       if (error) throw error;
-      return data as { dayUrl: string | null; nightUrl: string | null; dayFrom: string | null; nightFrom: string | null };
+      return data as { dayUrl: string | null; nightUrl: string | null; dayFrom: string | null; nightFrom: string | null; extras?: { url: string; period: "day" | "night" }[] };
     },
     refetchInterval: 10 * 60_000, refetchIntervalInBackground: true, retry: 3,
     retryDelay: (i) => [10_000, 30_000, 60_000][Math.min(i, 2)], staleTime: 5 * 60_000,
   });
   const [now, setNow] = useState(() => new Date());
-  useEffect(() => { const i = setInterval(() => setNow(new Date()), 30_000); return () => clearInterval(i); }, []);
+  useEffect(() => { const i = setInterval(() => setNow(new Date()), 5_000); return () => clearInterval(i); }, []);
   useEffect(() => {
     const prev = document.body.style.overflow; document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
@@ -28,10 +30,14 @@ export default function TvRest() {
   const night = restIsNight(now, data?.dayFrom, data?.nightFrom);
   const day = data?.dayUrl || dayDefault.url;
   const dark = data?.nightUrl || nightDefault.url;
+  // Telas extras revezam com a principal do mesmo período, 1 minuto cada.
+  const pool = [night ? dark : day, ...(data?.extras ?? []).filter((e) => (e.period === "night") === night).map((e) => e.url)];
+  const current = pool[Math.floor(now.getTime() / REST_ROTATE_MS) % pool.length];
+  const all = Array.from(new Set([day, dark, ...(data?.extras ?? []).map((e) => e.url)]));
 
   return (
     <div className="fixed inset-0 overflow-hidden select-none cursor-none bg-background">
-      {[{ src: day, on: !night }, { src: dark, on: night }].map((l) => (
+      {all.map((src) => ({ src, on: src === current })).map((l) => (
         <img key={l.src} src={l.src} alt="Eternum" draggable={false}
           className="absolute inset-0 h-full w-full object-cover"
           style={{ opacity: l.on ? 1 : 0, transition: `opacity ${REST_FADE_MS * 2}ms ease-in-out` }} />

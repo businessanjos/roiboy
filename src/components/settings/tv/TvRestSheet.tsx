@@ -58,12 +58,32 @@ function ImageSlot({ icon, title, hint, path, fallback, onPick, onReset, busy }:
   );
 }
 
+function ExtraItem({ item, busy, onToggle, onRemove }: { item: { path: string; period: "day" | "night" }; busy: boolean; onToggle: () => void; onRemove: () => void }) {
+  const url = useSigned(item.path);
+  const night = item.period === "night";
+  return (
+    <div className="space-y-1.5 rounded-lg border p-2">
+      <div className="aspect-video overflow-hidden rounded-md border bg-muted">{url && <img src={url} alt="Tela extra" className="h-full w-full object-cover" draggable={false} />}</div>
+      <div className="flex items-center gap-1">
+        <Button size="sm" variant="ghost" className="h-7 flex-1 px-1.5 text-xs" disabled={busy} onClick={onToggle} title="Trocar entre dia e noite">
+          {night ? <Moon className="h-3.5 w-3.5 mr-1" /> : <Sun className="h-3.5 w-3.5 mr-1" />}{night ? "Noite" : "Dia"}
+        </Button>
+        <Button size="icon" variant="ghost" className="h-7 w-7" disabled={busy} onClick={onRemove} aria-label="Remover"><Trash2 className="h-3.5 w-3.5" /></Button>
+      </div>
+    </div>
+  );
+}
+
 export function TvRestSheet({ open, onOpenChange, settings, screens = [] }: { open: boolean; onOpenChange: (v: boolean) => void; settings?: any; screens?: any[] }) {
   const qc = useQueryClient();
   const windows: RestWindow[] = Array.isArray(settings?.rest_windows) ? settings.rest_windows : [];
   const dayFrom: string = settings?.rest_day_from ?? "06:00";
   const nightFrom: string = settings?.rest_night_from ?? "18:00";
   const [busy, setBusy] = useState(false);
+  const extras: { path: string; period: "day" | "night" }[] = Array.isArray(settings?.rest_extra) ? settings.rest_extra : [];
+  const addInput = useRef<HTMLInputElement>(null);
+  const [addPeriod, setAddPeriod] = useState<"day" | "night">("day");
+  const addExtra = async (f: File) => { setBusy(true); try { const p = await uploadRestImage(f); await save({ rest_extra: [...extras, { path: p, period: addPeriod }] }); } finally { setBusy(false); } };
 
   const refresh = async () => { await qc.invalidateQueries({ queryKey: ["tv-wall"] }); qc.invalidateQueries({ queryKey: ["tv-rest-content"] }); };
   const save = (patch: Record<string, unknown>) => runTv(async () => { await updateTvSettings(patch); await refresh(); }, SAVED);
@@ -109,6 +129,23 @@ export function TvRestSheet({ open, onOpenChange, settings, screens = [] }: { op
             <ImageSlot icon={<Moon className="h-4 w-4" />} title="Noite" hint={`a partir de ${nightFrom}`} path={settings?.rest_night_image ?? null} fallback={nightDefault.url}
               busy={busy} onPick={(f) => pick("rest_night_image", f)} onReset={() => save({ rest_night_image: null })} />
           </div>
+        </section>
+
+        <section className="mt-6 space-y-2">
+          <h4 className={H}>Mais telas de descanso</h4>
+          <p className="text-xs text-muted-foreground">Imagens extras revezam com a principal do mesmo período, 1 minuto cada.</p>
+          {extras.length > 0 && (
+            <div className="grid grid-cols-2 gap-2">
+              {extras.map((e, i) => <ExtraItem key={e.path} item={e} busy={busy}
+                onToggle={() => save({ rest_extra: extras.map((x, j) => (j === i ? { ...x, period: x.period === "day" ? "night" : "day" } : x)) })}
+                onRemove={() => save({ rest_extra: extras.filter((_, j) => j !== i) })} />)}
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => { setAddPeriod("day"); addInput.current?.click(); }}><Plus className="h-3.5 w-3.5 mr-1.5" /><Sun className="h-3.5 w-3.5 mr-1" />Adicionar de dia</Button>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => { setAddPeriod("night"); addInput.current?.click(); }}><Plus className="h-3.5 w-3.5 mr-1.5" /><Moon className="h-3.5 w-3.5 mr-1" />Adicionar de noite</Button>
+          </div>
+          <input ref={addInput} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) addExtra(f); e.target.value = ""; }} />
         </section>
 
         <section className="mt-6 space-y-2">
