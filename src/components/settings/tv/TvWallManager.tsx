@@ -43,7 +43,7 @@ export function TvWallManager() {
 
   const agentOnline = !!data?.status.some((s) => isRecent(s.last_seen));
   const wall = data?.screens.filter((s) => s.location === "Parede") ?? [];
-  const others = data?.screens.filter((s) => s.location !== "Parede") ?? [];
+  const others = (data?.screens.filter((s) => s.location !== "Parede") ?? []).sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { numeric: true }));
   const open = data?.screens.find((s) => s.slot === openSlot) ?? null;
   const all = (c: string) => runTv(() => sendTvCommand(null, c));
 
