@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters, isGlobalFieldFilterActive } from "@/hooks/useInsightsFilters";
+import { visualQueryResilience } from "@/lib/insights/visualRetry";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 
@@ -138,6 +139,7 @@ export function useMapVisualData({ enabled = true }: { enabled?: boolean } = {})
     },
     enabled: enabled && !!accountId,
     staleTime: 120000,
+    ...visualQueryResilience,
     refetchOnWindowFocus: false,
   });
 }

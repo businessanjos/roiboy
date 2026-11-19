@@ -1,4 +1,6 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { reportVisualHealth, unregisterVisual, startVisualErrorWatcher } from "@/lib/insights/visualRetry";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisualErrorBoundary } from "./VisualErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -137,6 +139,19 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
 
   const effectiveLoading = isBubbleMap ? mapLoading : (isStacked ? stackedLoading : isLoading);
   const effectiveError = isBubbleMap ? mapError : (isStacked ? stackedError : error);
+  const hasGoodData = isBubbleMap ? !!mapData : (isStacked ? !!stackedResult : !!data);
+  const location = useLocation();
+  const isFocusView = tv.tv || new URLSearchParams(location.search).get("foco") === "1";
+  const isFailing = !!effectiveError;
+
+  // Registra a saúde do gráfico para a recarga de segurança da página.
+  useEffect(() => {
+    startVisualErrorWatcher();
+    return () => unregisterVisual(visual.id);
+  }, [visual.id]);
+  useEffect(() => {
+    reportVisualHealth(visual.id, isFailing);
+  }, [visual.id, isFailing]);
 
   // Filter stacked data by hidden categories (applies ONLY to series keys for stacked charts)
   const processedStackedData = useMemo(() => {
@@ -256,8 +271,22 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
     );
   }
 
-  // Render error state
-  if (effectiveError) {
+  // Modo Foco / TV: nunca mostrar erro vermelho. Sem dado bom, estado discreto.
+  if (effectiveError && isFocusView && !hasGoodData) {
+    return (
+      <Card className="h-full flex flex-col">
+        <CardHeader className="pb-2 flex-shrink-0">
+          <CardTitle className="text-base text-muted-foreground">{visual.title || "Visual"}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground animate-pulse">Atualizando…</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Render error state (fora do Modo Foco; com dado anterior, mantém o gráfico)
+  if (effectiveError && !(isFocusView && hasGoodData)) {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader className="pb-2 flex-shrink-0">
@@ -297,7 +326,12 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
   return (
     <VisualErrorBoundary title={visual.title || "Visual"}>
       <>
-        <Card className={cn("flex flex-col h-full", tv.tv && "border-border/70 bg-card/80 shadow-lg")}>
+        <Card className={cn("relative flex flex-col h-full", tv.tv && "border-border/70 bg-card/80 shadow-lg")}>
+          {isFailing && hasGoodData && (
+            <span className="pointer-events-none absolute right-3 bottom-2 z-10 text-[11px] text-muted-foreground animate-pulse">
+              Atualizando…
+            </span>
+          )}
           <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2", tv.tv && "px-5 pt-4 pb-1")}>
             <CardTitle
               className={cn(

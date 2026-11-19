@@ -5,6 +5,7 @@ import { useInsightsFilters, mergeGlobalDealFilter, mergeGlobalLeadFilter } from
 import { VisualConfig, filterDateBounds, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
 import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek, endOfDay, getDaysInMonth } from "date-fns";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
+import { visualQueryResilience } from "@/lib/insights/visualRetry";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/applyFilters";
 import { findCounterpartFieldId } from "@/lib/insights/customFieldValues";
@@ -283,6 +284,7 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
     },
     enabled: enabled && !!config && (!!config.stackBy || !!config.stackByCustomField) && !!accountId,
     staleTime: 120000,
+    ...visualQueryResilience,
     refetchOnWindowFocus: false,
   });
 }

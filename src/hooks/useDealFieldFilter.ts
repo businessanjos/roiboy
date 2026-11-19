@@ -2,6 +2,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { resolveNamesToProductIds, resolveRawToProductId } from "@/lib/insights/productLabelResolver";
 import { VisualConfig, FieldFilter, DEAL_CREATED_AT_FIELD_ID } from "@/components/insights/visual-builder/types";
 
+// Definição do campo muda raramente: um funil chama este filtro várias vezes
+// seguidas para o mesmo campo, então guardamos por 5 min.
+const FIELD_DEF_TTL_MS = 5 * 60_000;
+const fieldDefCache = new Map<string, { at: number; p: Promise<{ options: any; field_type: string | null } | null> }>();
+function getFieldDef(fieldId: string) {
+  const hit = fieldDefCache.get(fieldId);
+  if (hit && Date.now() - hit.at < FIELD_DEF_TTL_MS) return hit.p;
+  const p = Promise.resolve(
+    supabase.from('custom_fields').select('options, field_type').eq('id', fieldId).maybeSingle()
+  ).then(({ data, error }) => {
+    if (error) { fieldDefCache.delete(fieldId); return null; }
+    return data as any;
+  });
+  fieldDefCache.set(fieldId, { at: Date.now(), p });
+  return p;
+}
+
 /**
  * Filters deal records by deal custom field values.
  * Supports select (value_text), multi_select (value_json), free text fields,
@@ -65,11 +82,7 @@ export async function filterByDealField<T extends { id: string; created_at?: str
   const dealIds = records.map(r => r.id);
 
   // Get field definition including field_type
-  const { data: fieldDef } = await supabase
-    .from('custom_fields')
-    .select('options, field_type')
-    .eq('id', dealFieldFilter.fieldId)
-    .maybeSingle();
+  const fieldDef = await getFieldDef(dealFieldFilter.fieldId);
 
   const fieldType = fieldDef?.field_type || '';
 

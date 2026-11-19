@@ -7,6 +7,7 @@ import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/appl
 import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay, endOfDay, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { filterByLeadField, filterByLeadFields } from "@/hooks/useLeadFieldFilter";
+import { visualQueryResilience } from "@/lib/insights/visualRetry";
 import { filterByDealField, filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { buildFunnelStageData, detectDuplicateStagesInPipeline, normalizeStageName } from "@/hooks/funnelData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
@@ -245,7 +246,7 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
 
         // Append "Ganhos" (won deals) using the same measure and filters
         // as the regular stages (including the pipeline/funil filter).
-        const wonResult = await fetchDealsData(
+        const wonP = fetchDealsData(
           accountId,
           measure,
           { field: '_total', type: 'text' },
@@ -258,18 +259,11 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
           unifiedFilters,
           'created_at'
         );
-        const wonValue = wonResult.length > 0 ? wonResult[0].value : 0;
-        result.push({
-          name: 'Ganhos',
-          value: wonValue,
-          count: wonResult.length > 0 ? wonResult[0].count : undefined,
-          color: '#10b981',
-        });
 
         // Append "Perdidos" (lost deals) as a separate closing bar, using the
         // same measure/filters. It is not part of the stage progression, so it
         // never enters the cumulative funnel math.
-        const lostResult = await fetchDealsData(
+        const lostP = fetchDealsData(
           accountId,
           measure,
           { field: '_total', type: 'text' },
@@ -282,11 +276,10 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
           unifiedFilters,
           'created_at'
         );
-        const lostValue = lostResult.length > 0 ? lostResult[0].value : 0;
 
         // Perdidos por etapa: usa a etapa em que o negócio estava ao ser perdido,
         // para que o total vermelho possa ser conferido linha a linha.
-        const lostByStage = await fetchDealsData(
+        const lostByStageP = fetchDealsData(
           accountId,
           measure,
           { field: 'stage_name', type: 'text' },
@@ -299,6 +292,16 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
           unifiedFilters,
           'created_at'
         );
+        // As três consultas extras são independentes: rodam em paralelo.
+        const [wonResult, lostResult, lostByStage] = await Promise.all([wonP, lostP, lostByStageP]);
+        const wonValue = wonResult.length > 0 ? wonResult[0].value : 0;
+        result.push({
+          name: 'Ganhos',
+          value: wonValue,
+          count: wonResult.length > 0 ? wonResult[0].count : undefined,
+          color: '#10b981',
+        });
+        const lostValue = lostResult.length > 0 ? lostResult[0].value : 0;
         const lostMap = new Map(
           lostByStage.map((r) => [normalizeStageName(r.name), r])
         );
@@ -323,12 +326,11 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
       }
 
       return result;
-    }, 25_000, signal), signal),
+    }, chartType === 'funnel' ? 45_000 : 25_000, signal), signal),
     enabled: enabled && !!config && !!accountId,
     staleTime: 300000,
     gcTime: 1800000,
-    retry: 1,
-    retryDelay: 1_000,
+    ...visualQueryResilience,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
