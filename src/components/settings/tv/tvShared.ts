@@ -31,7 +31,7 @@ export function useTvDashboards() {
 }
 
 export function describeContent(url: string | null, dashboards: { id: string; name: string }[]) {
-  if (!url) return "Nada configurado";
+  if (!url) return "Tela de descanso";
   if (tvContentKind(url) === "playlist") return playlistLabel(url);
   const p = parseTvUrl(url);
   if (!p) return "Link personalizado";

@@ -133,6 +133,7 @@ const DataDeletion = lazyRetry(() => import("./pages/DataDeletion"));
 const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
 const PublicDigitalContract = lazyRetry(() => import("./pages/PublicDigitalContract"));
+const TvRest = lazyRetry(() => import("./pages/TvRest"));
 const ContractDefaultsSettings = lazyRetry(() => import("./pages/ContractDefaultsSettings"));
 const TeamOpenItems = lazyRetry(() => import("./pages/settings/TeamOpenItems"));
 
@@ -257,7 +258,7 @@ function PageLoader() {
 // para não poluir as TVs que espelham esses painéis.
 function RouteAwareToasters() {
   const { pathname } = useLocation();
-  if (isInsightsDashboardRoute(pathname)) return null;
+  if (isInsightsDashboardRoute(pathname) || pathname.startsWith("/tv/")) return null;
   return (
     <>
       <Toaster />
@@ -285,6 +286,7 @@ const App = () => (
                             <Route path="/" element={<Navigate to="/setores" replace />} />
                           
                           <Route path="/auth" element={<Auth />} />
+                          <Route path="/tv/descanso" element={<TvRest />} />
                           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
                           <Route path="/f/:formId" element={<PublicForm />} />

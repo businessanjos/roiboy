@@ -74,7 +74,7 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
   const [full, setFull] = useState(false);
   const cmd = (c: string) => runTv(() => sendTvCommand(screen.slot, c));
   const kind = tvContentKind(screen.url);
-  const playing = !screen.url ? "Nada configurado" : kind === "playlist" ? describeContent(screen.url, dashboards) : `Dashboard · ${describeContent(screen.url, dashboards)}`;
+  const playing = !screen.url ? "Tela de descanso" : kind === "playlist" ? describeContent(screen.url, dashboards) : `Dashboard · ${describeContent(screen.url, dashboards)}`;
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
@@ -455,8 +455,16 @@ function AgendaTab({ screen, settings }: { screen: any; settings?: any }) {
         </div>
       </div>
 
+      {Array.isArray(settings?.rest_windows) && settings.rest_windows.length > 0 && (
+        <div className="space-y-1">
+          <label className="flex items-center justify-between gap-3 text-sm">Usar nos horários de descanso
+            <Switch checked={screen.rest_enabled === true} onCheckedChange={(v) => save({ rest_enabled: v })} /></label>
+          <Help>Nos horários de descanso cadastrados, esta TV mostra a tela de descanso do Roy mesmo tendo conteúdo.</Help>
+        </div>
+      )}
+
       <div className="space-y-1">
-        <label className="flex items-center justify-between gap-3 text-sm">Impedir a tela de descanso
+        <label className="flex items-center justify-between gap-3 text-sm">Impedir as fotos da LG
           <Switch checked={screen.keepalive} onCheckedChange={(v) => save({ keepalive: v })} /></label>
         <Help>Evita que a TV mostre as fotos da LG depois de alguns minutos parada.</Help>
       </div>

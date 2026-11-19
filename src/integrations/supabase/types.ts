@@ -27076,6 +27076,7 @@ export type Database = {
           notes: string | null
           refresh_min: number
           released_until: string | null
+          rest_enabled: boolean | null
           schedule_mode: string
           slot: number
           updated_at: string
@@ -27094,6 +27095,7 @@ export type Database = {
           notes?: string | null
           refresh_min?: number
           released_until?: string | null
+          rest_enabled?: boolean | null
           schedule_mode?: string
           slot: number
           updated_at?: string
@@ -27112,6 +27114,7 @@ export type Database = {
           notes?: string | null
           refresh_min?: number
           released_until?: string | null
+          rest_enabled?: boolean | null
           schedule_mode?: string
           slot?: number
           updated_at?: string
@@ -27130,6 +27133,11 @@ export type Database = {
           keep_on_until: string | null
           off_time: string
           on_time: string
+          rest_logo_url: string | null
+          rest_messages: Json
+          rest_photos: Json
+          rest_url: string | null
+          rest_windows: Json
           updated_at: string
         }
         Insert: {
@@ -27141,6 +27149,11 @@ export type Database = {
           keep_on_until?: string | null
           off_time?: string
           on_time?: string
+          rest_logo_url?: string | null
+          rest_messages?: Json
+          rest_photos?: Json
+          rest_url?: string | null
+          rest_windows?: Json
           updated_at?: string
         }
         Update: {
@@ -27152,6 +27165,11 @@ export type Database = {
           keep_on_until?: string | null
           off_time?: string
           on_time?: string
+          rest_logo_url?: string | null
+          rest_messages?: Json
+          rest_photos?: Json
+          rest_url?: string | null
+          rest_windows?: Json
           updated_at?: string
         }
         Relationships: []
@@ -31887,6 +31905,7 @@ export type Database = {
         Args: { _slots: number[]; _until: string }
         Returns: undefined
       }
+      tv_rest_content: { Args: never; Returns: Json }
       unaccent: { Args: { "": string }; Returns: string }
       unaccent_immutable: { Args: { p_text: string }; Returns: string }
       undo_deal_merge: { Args: { p_action: string }; Returns: string }

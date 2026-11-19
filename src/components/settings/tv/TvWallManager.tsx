@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, MoreHorizontal, Power, PowerOff, RefreshCw, Undo2, Unlock } from "lucide-react";
+import { CalendarClock, Moon, MoreHorizontal, Power, PowerOff, RefreshCw, Undo2, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +10,7 @@ import { isRecent, tvVisualState } from "@/lib/tv/tvUrl";
 import { TvScreenCard } from "./TvScreenCard";
 import { TvDetailSheet } from "./TvDetailSheet";
 import { TvScheduleSheet } from "./TvScheduleSheet";
+import { TvRestSheet } from "./TvRestSheet";
 import { runTv, useTvDashboards } from "./tvShared";
 import { Hint, ReleaseMenu, TV_HINTS, returnTvs } from "./TvConnRelease";
 import { isReleased } from "@/lib/tv/tvConn";
@@ -31,6 +32,7 @@ export function TvWallManager() {
   const { data: dashboards = [] } = useTvDashboards();
   const [openSlot, setOpenSlot] = useState<number | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [restOpen, setRestOpen] = useState(false);
   const [, tick] = useState(0);
   useEffect(() => { const i = setInterval(() => tick((n) => n + 1), 30_000); return () => clearInterval(i); }, []);
 
@@ -86,6 +88,7 @@ export function TvWallManager() {
               </ReleaseMenu>
             </Hint>
             <Hint text={TV_HINTS.returnAll} side="bottom"><Button size="sm" variant="outline" disabled={!releasedSlots.length} onClick={() => returnTvs(releasedSlots)}><Undo2 className="h-3.5 w-3.5 mr-1.5" />Devolver todas</Button></Hint>
+            <Hint text="Imagens, relógio e mensagens que aparecem nas TVs sem conteúdo." side="bottom"><Button size="sm" variant="outline" onClick={() => setRestOpen(true)}><Moon className="h-3.5 w-3.5 mr-1.5" />Tela de descanso</Button></Hint>
             <Hint text={TV_HINTS.schedule} side="bottom"><Button size="sm" onClick={() => setScheduleOpen(true)}><CalendarClock className="h-3.5 w-3.5 mr-1.5" />Horário</Button></Hint>
           </div>
           <div className="flex md:hidden gap-1.5 shrink-0">
@@ -103,6 +106,7 @@ export function TvWallManager() {
               <DropdownMenuItem onClick={() => all("off")}><PowerOff className="h-4 w-4 mr-2" />Desligar todas</DropdownMenuItem>
               <DropdownMenuItem onClick={() => all("reload")}><RefreshCw className="h-4 w-4 mr-2" />Recarregar todas</DropdownMenuItem>
               <DropdownMenuItem disabled={!releasedSlots.length} onClick={() => returnTvs(releasedSlots)}><Undo2 className="h-4 w-4 mr-2" />Devolver todas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setRestOpen(true)}><Moon className="h-4 w-4 mr-2" />Tela de descanso</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setScheduleOpen(true)}><CalendarClock className="h-4 w-4 mr-2" />Horário</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -133,6 +137,7 @@ export function TvWallManager() {
           settings={data?.settings}
           onOpenChange={(v) => !v && setOpenSlot(null)}
         />
+        <TvRestSheet open={restOpen} onOpenChange={setRestOpen} settings={data?.settings} />
         <TvScheduleSheet open={scheduleOpen} onOpenChange={setScheduleOpen} settings={data?.settings} />
       </div>
     </TooltipProvider>
