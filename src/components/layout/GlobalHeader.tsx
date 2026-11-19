@@ -32,6 +32,7 @@ import { useReloadPermissions } from "@/hooks/useReloadPermissions";
 import { FailedZappSendsAlert } from "@/components/royzapp/FailedZappSendsAlert";
 import { CompanySelector } from "@/components/companies/CompanySelector";
 import { SearchTrigger } from "@/components/ui/global-search";
+import { isInsightsDashboardRoute } from "@/lib/insights/presentationRoute";
 
 
 export function GlobalHeader() {
@@ -49,6 +50,9 @@ export function GlobalHeader() {
   const showAdminButton = isAdmin || isSuperAdmin;
 
   const totalBadgeCount = unreadCount + pendingCount;
+  // Nas telas de painel do Insights (as TVs espelham esses dashboards) o
+  // sininho não aparece: nada "pula" na tela durante a transmissão.
+  const hideBell = isInsightsDashboardRoute(location.pathname);
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
@@ -132,7 +136,8 @@ export function GlobalHeader() {
         {/* Failed RoyZapp sends alert (admins only) */}
         {showAdminButton && <FailedZappSendsAlert />}
 
-        {/* Notifications */}
+        {/* Notifications — fora das telas de painel, que as TVs espelham */}
+        {!hideBell && (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -169,6 +174,7 @@ export function GlobalHeader() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+        )}
 
         {/* User avatar dropdown */}
         <DropdownMenu>

@@ -16,6 +16,7 @@ import { SectorProvider } from "@/contexts/SectorContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingScreen } from "@/components/ui/loading-screen";
+import { isInsightsDashboardRoute } from "@/lib/insights/presentationRoute";
 
 function reloadWithFreshAssets() {
   try {
@@ -252,11 +253,11 @@ function PageLoader() {
   return <LoadingScreen message="Carregando..." fullScreen={false} />;
 }
 
-// Avisos flutuantes (toasts) não aparecem nos dashboards de Insights,
+// Avisos flutuantes (toasts) e sininho não aparecem nos dashboards de Insights,
 // para não poluir as TVs que espelham esses painéis.
 function RouteAwareToasters() {
   const { pathname } = useLocation();
-  if (pathname.startsWith("/insights")) return null;
+  if (isInsightsDashboardRoute(pathname)) return null;
   return (
     <>
       <Toaster />

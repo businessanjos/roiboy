@@ -12,6 +12,7 @@ import { RoyLogo } from "@/components/ui/roy-logo";
 import { cn } from "@/lib/utils";
 import { openGlobalSearch } from "@/components/ui/global-search";
 import { Button } from "@/components/ui/button";
+import { isInsightsDashboardRoute } from "@/lib/insights/presentationRoute";
 
 const iconBtn =
   "touch-press relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-foreground/80 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -31,6 +32,9 @@ export function MobileAppHeader() {
   const location = useLocation();
 
   const totalBadgeCount = unreadCount + pendingCount;
+  // Nas telas de painel do Insights (as TVs espelham esses dashboards) o
+  // sininho não aparece: nada "pula" na tela durante a transmissão.
+  const hideBell = isInsightsDashboardRoute(location.pathname);
 
   const { title, parent } = useMemo(() => mobileRouteContext(navItems, location.pathname, location.search),
     [navItems, location.pathname, location.search]);
@@ -90,6 +94,7 @@ export function MobileAppHeader() {
           <Search className="h-5 w-5" aria-hidden />
         </Button>
 
+        {!hideBell && (
         <Button variant="ghost" size="icon"
           type="button"
           className={iconBtn}
@@ -111,6 +116,7 @@ export function MobileAppHeader() {
             </span>
           )}
         </Button>
+        )}
 
         <Button variant="ghost" size="icon"
           type="button"
