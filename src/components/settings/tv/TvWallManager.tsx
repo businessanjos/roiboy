@@ -138,7 +138,7 @@ export function TvWallManager() {
           onOpenChange={(v) => !v && setOpenSlot(null)}
         />
         <TvRestSheet open={restOpen} onOpenChange={setRestOpen} settings={data?.settings} screens={data?.screens ?? []} />
-        <TvScheduleSheet open={scheduleOpen} onOpenChange={setScheduleOpen} settings={data?.settings} screens={data?.screens ?? []} />
+        <TvScheduleSheet open={scheduleOpen} onOpenChange={setScheduleOpen} settings={data?.settings} />
       </div>
     </TooltipProvider>
   );
