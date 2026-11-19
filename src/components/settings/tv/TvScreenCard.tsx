@@ -10,7 +10,7 @@ import { tvCapabilities, tvVisualState } from "@/lib/tv/tvUrl";
 import tvSemCaptura from "@/assets/tv-sem-captura.png.asset.json";
 import { STATE, describeContent, runTv } from "./tvShared";
 import { isReleased } from "@/lib/tv/tvConn";
-import { ReleaseMenu, ReturnButton, SignalWithTip, hhmm } from "./TvConnRelease";
+import { Hint, ReleaseMenu, ReturnButton, SignalWithTip, TV_HINTS, hhmm } from "./TvConnRelease";
 
 interface Props { screen: any; status?: any; dashboards: { id: string; name: string }[]; settings?: any; onOpen: () => void }
 
@@ -62,9 +62,11 @@ export function TvScreenCard({ screen, status, dashboards, settings, onOpen }: P
           </span>
           <div className="flex shrink-0 -mr-1">
             {!released && (
-              <ReleaseMenu screens={[screen]} settings={settings}>
-                <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Liberar TV" title="Liberar TV"><Unlock className="h-3.5 w-3.5" /></Button>
-              </ReleaseMenu>
+              <Hint text={TV_HINTS.releaseOne}>
+                <ReleaseMenu screens={[screen]} settings={settings}>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Liberar TV" title="Liberar TV"><Unlock className="h-3.5 w-3.5" /></Button>
+                </ReleaseMenu>
+              </Hint>
             )}
             <IconAction label="Recarregar" onClick={() => cmd("reload")}><RefreshCw className="h-3.5 w-3.5" /></IconAction>
             {caps.screenshot && <IconAction label="Ver tela agora" onClick={() => cmd("screenshot")}><Camera className="h-3.5 w-3.5" /></IconAction>}

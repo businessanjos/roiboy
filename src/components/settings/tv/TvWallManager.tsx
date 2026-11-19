@@ -11,7 +11,7 @@ import { TvScreenCard } from "./TvScreenCard";
 import { TvDetailSheet } from "./TvDetailSheet";
 import { TvScheduleSheet } from "./TvScheduleSheet";
 import { runTv, useTvDashboards } from "./tvShared";
-import { ReleaseMenu, returnTvs } from "./TvConnRelease";
+import { Hint, ReleaseMenu, TV_HINTS, returnTvs } from "./TvConnRelease";
 import { isReleased } from "@/lib/tv/tvConn";
 
 const GRID = "grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5";
@@ -77,19 +77,23 @@ export function TvWallManager() {
             {!loading && <span className="text-xs text-muted-foreground truncate hidden sm:inline">{parts}</span>}
           </div>
           <div className="hidden md:flex flex-wrap justify-end gap-1.5 shrink-0">
-            <Button size="sm" variant="outline" onClick={() => all("on")}><Power className="h-3.5 w-3.5 mr-1.5" />Ligar todas</Button>
-            <Button size="sm" variant="outline" onClick={() => all("off")}><PowerOff className="h-3.5 w-3.5 mr-1.5" />Desligar todas</Button>
-            <Button size="sm" variant="outline" onClick={() => all("reload")}><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Recarregar todas</Button>
-            <ReleaseMenu screens={enabledScreens} settings={data?.settings}>
-              <Button size="sm" variant="outline" disabled={!enabledScreens.length}><Unlock className="h-3.5 w-3.5 mr-1.5" />Liberar todas</Button>
-            </ReleaseMenu>
-            <Button size="sm" variant="outline" disabled={!releasedSlots.length} onClick={() => returnTvs(releasedSlots)}><Undo2 className="h-3.5 w-3.5 mr-1.5" />Devolver todas</Button>
-            <Button size="sm" onClick={() => setScheduleOpen(true)}><CalendarClock className="h-3.5 w-3.5 mr-1.5" />Horário</Button>
+            <Hint text={TV_HINTS.onAll} side="bottom"><Button size="sm" variant="outline" onClick={() => all("on")}><Power className="h-3.5 w-3.5 mr-1.5" />Ligar todas</Button></Hint>
+            <Hint text={TV_HINTS.offAll} side="bottom"><Button size="sm" variant="outline" onClick={() => all("off")}><PowerOff className="h-3.5 w-3.5 mr-1.5" />Desligar todas</Button></Hint>
+            <Hint text={TV_HINTS.reloadAll} side="bottom"><Button size="sm" variant="outline" onClick={() => all("reload")}><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Recarregar todas</Button></Hint>
+            <Hint text={TV_HINTS.releaseAll} side="bottom">
+              <ReleaseMenu screens={enabledScreens} settings={data?.settings}>
+                <Button size="sm" variant="outline" disabled={!enabledScreens.length}><Unlock className="h-3.5 w-3.5 mr-1.5" />Liberar todas</Button>
+              </ReleaseMenu>
+            </Hint>
+            <Hint text={TV_HINTS.returnAll} side="bottom"><Button size="sm" variant="outline" disabled={!releasedSlots.length} onClick={() => returnTvs(releasedSlots)}><Undo2 className="h-3.5 w-3.5 mr-1.5" />Devolver todas</Button></Hint>
+            <Hint text={TV_HINTS.schedule} side="bottom"><Button size="sm" onClick={() => setScheduleOpen(true)}><CalendarClock className="h-3.5 w-3.5 mr-1.5" />Horário</Button></Hint>
           </div>
           <div className="flex md:hidden gap-1.5 shrink-0">
-          <ReleaseMenu screens={enabledScreens} settings={data?.settings}>
-            <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Liberar todas"><Unlock className="h-4 w-4" /></Button>
-          </ReleaseMenu>
+          <Hint text={TV_HINTS.releaseAll} side="bottom">
+            <ReleaseMenu screens={enabledScreens} settings={data?.settings}>
+              <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Liberar todas"><Unlock className="h-4 w-4" /></Button>
+            </ReleaseMenu>
+          </Hint>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="icon" variant="outline" className="md:hidden h-8 w-8" aria-label="Ações gerais"><MoreHorizontal className="h-4 w-4" /></Button>

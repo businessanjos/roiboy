@@ -1,11 +1,36 @@
 import { Unlock, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { releaseTvs } from "@/hooks/useTvWall";
 import { connTooltip, endOfDayFor, tvConn, type TvConn } from "@/lib/tv/tvConn";
 import { runTv } from "./tvShared";
+
+/** Explicação curta mostrada ao passar o mouse. Funciona em qualquer lugar da tela. */
+export function Hint({ text, children, className, side = "top" }: { text: string; children: React.ReactNode; className?: string; side?: "top" | "bottom" }) {
+  return (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={cn("inline-flex", className)}>{children}</span>
+        </TooltipTrigger>
+        <TooltipContent side={side} className="max-w-64 text-xs leading-snug">{text}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+export const TV_HINTS = {
+  releaseOne: "Liberar a TV: a automação para de trocar o conteúdo e você usa pelo controle. Escolha até quando.",
+  releaseAll: "Liberar todas: as TVs ficam livres para o controle remoto, sem a automação voltar o dashboard.",
+  returnOne: "Devolver para automação: a TV volta a abrir o conteúdo programado em até 30 segundos.",
+  returnAll: "Devolver todas: as TVs liberadas voltam ao conteúdo programado em até 30 segundos.",
+  onAll: "Liga as TVs que estiverem desligadas.",
+  offAll: "Desliga todas as TVs.",
+  reloadAll: "Atualiza a página aberta em cada TV.",
+  schedule: "Define o horário em que as TVs ligam e desligam sozinhas.",
+};
 
 const BAR_CLS: Record<TvConn, string> = { boa: "bg-success", instavel: "bg-warning", ruim: "bg-destructive", offline: "bg-muted-foreground/50" };
 const LEVEL: Record<TvConn, number> = { boa: 4, instavel: 2, ruim: 1, offline: 0 };
@@ -68,17 +93,21 @@ export function returnTvs(slots: number[]) {
 
 export function ReleaseButton({ screen, settings, className }: { screen: any; settings: any; className?: string }) {
   return (
-    <ReleaseMenu screens={[screen]} settings={settings}>
-      <Button size="sm" variant="outline" className={className}><Unlock className="h-3.5 w-3.5 mr-1.5" />Liberar TV</Button>
-    </ReleaseMenu>
+    <Hint text={TV_HINTS.releaseOne} className={className}>
+      <ReleaseMenu screens={[screen]} settings={settings}>
+        <Button size="sm" variant="outline" className={cn("w-full", className)}><Unlock className="h-3.5 w-3.5 mr-1.5" />Liberar TV</Button>
+      </ReleaseMenu>
+    </Hint>
   );
 }
 
 export function ReturnButton({ slots, className, size = "sm" }: { slots: number[]; className?: string; size?: "sm" | "xs" }) {
   return (
-    <Button size="sm" variant="outline" className={cn(size === "xs" && "h-6 px-2 text-[11px]", className)}
-      onClick={(e) => { e.stopPropagation(); returnTvs(slots); }}>
-      <Undo2 className={cn(size === "xs" ? "h-3 w-3 mr-1" : "h-3.5 w-3.5 mr-1.5")} />Devolver para automação
-    </Button>
+    <Hint text={TV_HINTS.returnOne} className={className}>
+      <Button size="sm" variant="outline" className={cn(size === "xs" && "h-6 px-2 text-[11px]", className)}
+        onClick={(e) => { e.stopPropagation(); returnTvs(slots); }}>
+        <Undo2 className={cn(size === "xs" ? "h-3 w-3 mr-1" : "h-3.5 w-3.5 mr-1.5")} />Devolver para automação
+      </Button>
+    </Hint>
   );
 }
