@@ -27063,17 +27063,46 @@ export type Database = {
         }
         Relationships: []
       }
+      tv_media: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          path: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          path: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          path?: string
+          url?: string
+        }
+        Relationships: []
+      }
       tv_screens: {
         Row: {
           custom_days: number[] | null
           custom_off_time: string | null
           custom_on_time: string | null
           enabled: boolean
+          image_until: string | null
           keepalive: boolean
           location: string | null
           muted: boolean
           name: string
           notes: string | null
+          previous_url: string | null
           refresh_min: number
           released_until: string | null
           rest_enabled: boolean | null
@@ -27089,11 +27118,13 @@ export type Database = {
           custom_off_time?: string | null
           custom_on_time?: string | null
           enabled?: boolean
+          image_until?: string | null
           keepalive?: boolean
           location?: string | null
           muted?: boolean
           name: string
           notes?: string | null
+          previous_url?: string | null
           refresh_min?: number
           released_until?: string | null
           rest_enabled?: boolean | null
@@ -27109,11 +27140,13 @@ export type Database = {
           custom_off_time?: string | null
           custom_on_time?: string | null
           enabled?: boolean
+          image_until?: string | null
           keepalive?: boolean
           location?: string | null
           muted?: boolean
           name?: string
           notes?: string | null
+          previous_url?: string | null
           refresh_min?: number
           released_until?: string | null
           rest_enabled?: boolean | null

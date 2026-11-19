@@ -35,6 +35,14 @@ Deno.serve(async (req) => {
       await db.from("tv_commands").update({ status: "error", result: "tempo_esgotado", done_at: now })
         .eq("status", "taken").eq("command", "pair").lt("taken_at", new Date(Date.now() - 7 * 60_000).toISOString());
       await db.from("tv_events").delete().lt("created_at", new Date(Date.now() - 30 * 86400_000).toISOString());
+      // imagens com "Mostrar até" vencido voltam ao conteúdo anterior
+      try {
+        const { data: due } = await db.from("tv_screens").select("slot, previous_url").not("image_until", "is", null).lte("image_until", now);
+        for (const r of due ?? []) {
+          await db.from("tv_screens").update({ url: r.previous_url ?? null, previous_url: null, image_until: null }).eq("slot", r.slot);
+          await db.from("tv_events").insert({ slot: r.slot, kind: "image_expired", message: "Imagem passou do horário; voltou ao conteúdo anterior" });
+        }
+      } catch (_) { /* never break sync */ }
 
       const status = Array.isArray(body.status) ? body.status : [];
       const CONN = ["boa", "instavel", "ruim", "offline"];

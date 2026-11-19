@@ -33,6 +33,7 @@ export function useTvDashboards() {
 export function describeContent(url: string | null, dashboards: { id: string; name: string }[]) {
   if (!url) return "Tela de descanso";
   if (tvContentKind(url) === "playlist") return playlistLabel(url);
+  if (tvContentKind(url) === "image") return "Imagem";
   const p = parseTvUrl(url);
   if (!p) return "Link personalizado";
   const name = dashboards.find((d) => d.id === p.dashboardId)?.name ?? "Dashboard";

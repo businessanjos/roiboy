@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eternum · Imagem</title>
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;cursor:none;-webkit-user-select:none;user-select:none}
+#i{position:absolute;top:0;left:0;width:100%;height:100%;background-repeat:no-repeat;background-position:center;background-size:contain}
+</style>
+</head>
+<body>
+<div id="i"></div>
+<script>
+/* ES5 para TVs antigas (webOS 4 / Chromium 53). Sem React e sem login. */
+(function () {
+  function param(n) {
+    var m = new RegExp("[?&]" + n + "=([^&]*)").exec(location.search);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : "";
+  }
+  var src = param("src");
+  var fit = param("fit") === "cover" ? "cover" : "contain";
+  var el = document.getElementById("i");
+  el.style.backgroundSize = fit;
+  if (!/^https:\/\//.test(src)) return;
+  function load() {
+    var img = new Image();
+    img.onload = function () { el.style.backgroundImage = "url(\"" + src.replace(/"/g, "%22") + "\")"; };
+    img.onerror = function () { setTimeout(load, 30000); };
+    img.src = src;
+  }
+  load();
+})();
+</script>
+</body>
+</html>

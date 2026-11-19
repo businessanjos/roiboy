@@ -81,9 +81,10 @@ export function isYoutubePlaylist(url: string | null | undefined): boolean {
   }
 }
 
-export type TvContentKind = "dashboard" | "playlist";
+export type TvContentKind = "dashboard" | "playlist" | "image";
 /** O tipo de conteúdo é deduzido da própria URL. */
 export function tvContentKind(url: string | null | undefined): TvContentKind {
+  if (url && /\/tv-imagem\.html(\?|$)/.test(url)) return "image";
   return isYoutubePlaylist(url) ? "playlist" : "dashboard";
 }
 

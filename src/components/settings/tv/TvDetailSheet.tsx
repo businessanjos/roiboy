@@ -25,6 +25,8 @@ import { sendTvCommand, updateTvScreen } from "@/hooks/useTvWall";
 import {
   TV_PERIODS, buildTvUrl, isYoutubePlaylist, parseTvUrl, tvCapabilities, tvContentKind, tvVisualState, type TvContentKind,
 } from "@/lib/tv/tvUrl";
+import { TvImagePicker } from "./TvImagePicker";
+import { buildTvImageUrl, parseTvImageUrl, screenPatchFor, tvMediaSrc, type TvImageFit } from "@/lib/tv/tvImage";
 import { CMD_LABEL, STATE, STATE_HINT, STATUS_LABEL, describeContent, runTv } from "./tvShared";
 import { isReleased } from "@/lib/tv/tvConn";
 import { Hint, ReleaseMenu, ReturnButton, SignalWithTip, TV_HINTS, hhmm } from "./TvConnRelease";
@@ -75,7 +77,7 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
   const [full, setFull] = useState(false);
   const cmd = (c: string) => runTv(() => sendTvCommand(screen.slot, c));
   const kind = tvContentKind(screen.url);
-  const playing = !screen.url ? "Tela de descanso" : kind === "playlist" ? describeContent(screen.url, dashboards) : `Dashboard · ${describeContent(screen.url, dashboards)}`;
+  const playing = !screen.url ? "Tela de descanso" : kind !== "dashboard" ? describeContent(screen.url, dashboards) : `Dashboard · ${describeContent(screen.url, dashboards)}`;
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
@@ -167,9 +169,22 @@ const ZOOM_TICKS = [50, 75, 100, 120];
 
 function ContentTab({ screen, status, dashboards }: { screen: any; status?: any; dashboards: { id: string; name: string }[] }) {
   const parsed = parseTvUrl(screen.url);
+  const imgInit = () => {
+    const im = parseTvImageUrl(screen.url);
+    let img = "";
+    try { img = im ? new URL(im.src).searchParams.get("p") ?? "" : ""; } catch { /* link externo */ }
+    const u = screen.image_until ? new Date(screen.image_until) : null;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return {
+      img, fit: (im?.fit ?? "contain") as TvImageFit,
+      untilD: u ? `${u.getFullYear()}-${pad(u.getMonth() + 1)}-${pad(u.getDate())}` : "",
+      untilT: u ? `${pad(u.getHours())}:${pad(u.getMinutes())}` : "",
+    };
+  };
   const init = () => ({
     kind: tvContentKind(screen.url) as TvContentKind, dash: parsed?.dashboardId ?? "", periodo: parsed?.periodo ?? "este_mes",
     zoom: parsed?.zoom ?? 100, foco: parsed?.foco ?? true, tvFit: parsed?.tvFit ?? false, playlist: isYoutubePlaylist(screen.url) ? screen.url : "",
+    ...imgInit(),
   });
   const [f, setF] = useState(init);
   const set = <K extends keyof ReturnType<typeof init>>(k: K, v: ReturnType<typeof init>[K]) => setF((x) => ({ ...x, [k]: v }));
@@ -177,19 +192,24 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
 
   const toUrl = (x: ReturnType<typeof init>) => {
     if (x.kind === "playlist") return isYoutubePlaylist(x.playlist.trim()) ? x.playlist.trim() : "";
+    if (x.kind === "image") return x.img ? buildTvImageUrl(tvMediaSrc(x.img), x.fit) : "";
     return x.dash ? buildTvUrl({ dashboardId: x.dash, periodo: x.periodo, zoom: x.zoom, foco: x.foco, tvFit: x.tvFit }) : "";
   };
   const url = useMemo(() => toUrl(f), [f]);
   // Endereço equivalente ao salvo, montado do mesmo jeito (o salvo pode ter outra ordem de parâmetros).
   const savedUrl = useMemo(() => toUrl(init()), [screen.url]);
   const invalidPlaylist = f.kind === "playlist" && f.playlist.trim() !== "" && !url;
-  const dirty = !!url && url !== screen.url && url !== savedUrl;
+  const untilIso = f.kind === "image" && f.untilD && f.untilT ? new Date(`${f.untilD}T${f.untilT}:00`).toISOString() : null;
+  const savedUntil = screen.image_until ? new Date(screen.image_until).toISOString() : null;
+  const untilPast = !!untilIso && new Date(untilIso).getTime() <= Date.now();
+  const dirty = !!url && !untilPast && ((url !== screen.url && url !== savedUrl) || (f.kind === "image" && untilIso !== savedUntil));
   const changed = JSON.stringify(f) !== JSON.stringify(init());
   // O agente lê a configuração no próximo contato; um contato depois do envio = aplicado.
   const applied = sentAt != null && !dirty && status?.last_seen && new Date(status.last_seen).getTime() > sentAt;
 
   const save = () => runTv(async () => {
-    await updateTvScreen(screen.slot, f.kind === "playlist" ? { url, refresh_min: 0 } : { url });
+    const patch = screenPatchFor(screen, url, untilIso);
+    await updateTvScreen(screen.slot, f.kind === "playlist" ? { ...patch, refresh_min: 0 } : patch);
     setSentAt(Date.now());
   });
   const copy = () => navigator.clipboard.writeText(url).then(() => toast.success("Endereço copiado"));
@@ -198,9 +218,10 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
     <div>
       <div className="space-y-7 px-5 py-6">
         <Section title="Mostrar">
-          <ToggleGroup type="single" value={f.kind} onValueChange={(v) => v && set("kind", v as TvContentKind)} className="grid grid-cols-2 rounded-lg bg-muted p-1">
+          <ToggleGroup type="single" value={f.kind} onValueChange={(v) => v && set("kind", v as TvContentKind)} className="grid grid-cols-3 rounded-lg bg-muted p-1">
             <ToggleGroupItem value="dashboard" className="h-10 data-[state=on]:bg-background data-[state=on]:shadow-sm">Dashboard</ToggleGroupItem>
-            <ToggleGroupItem value="playlist" className="h-10 data-[state=on]:bg-background data-[state=on]:shadow-sm">Vídeos do YouTube</ToggleGroupItem>
+            <ToggleGroupItem value="playlist" className="h-10 data-[state=on]:bg-background data-[state=on]:shadow-sm">YouTube</ToggleGroupItem>
+            <ToggleGroupItem value="image" className="h-10 data-[state=on]:bg-background data-[state=on]:shadow-sm">Imagem</ToggleGroupItem>
           </ToggleGroup>
         </Section>
 
@@ -246,6 +267,11 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
               </div>
             </Section>
           </>
+        ) : f.kind === "image" ? (
+          <Section title="Imagem">
+            <TvImagePicker path={f.img} fit={f.fit} untilDate={f.untilD} untilTime={f.untilT} onChange={(p) => setF((x) => ({ ...x, ...p }))} />
+            {untilPast && <p className="text-xs text-destructive">O horário de "Mostrar até" já passou.</p>}
+          </Section>
         ) : (
           <Section title="Playlist">
             <div className="space-y-1.5">
