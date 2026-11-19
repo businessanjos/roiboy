@@ -1,4 +1,4 @@
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNowStrict } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Camera, Power, PowerOff, RefreshCw, Tv } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +49,7 @@ export function TvScreenCard({ screen, status, dashboards, onOpen }: Props) {
         <p className="text-xs text-muted-foreground truncate">{describeContent(screen.url, dashboards)}</p>
         <div className="flex items-center justify-between pt-0.5">
           <span className="text-[11px] text-muted-foreground truncate">
-            {caps.screenshot && status?.screenshot_at ? `captura ${formatDistanceToNow(new Date(status.screenshot_at), { locale: ptBR, addSuffix: true })}` : "\u00a0"}
+            {caps.screenshot && status?.screenshot_at ? <><span className="hidden sm:inline">captura </span>{formatDistanceToNowStrict(new Date(status.screenshot_at), { locale: ptBR, addSuffix: true })}</> : "\u00a0"}
           </span>
           <div className="flex shrink-0 -mr-1">
             <IconAction label="Recarregar" onClick={() => cmd("reload")}><RefreshCw className="h-3.5 w-3.5" /></IconAction>
