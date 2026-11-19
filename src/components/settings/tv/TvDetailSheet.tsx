@@ -74,7 +74,7 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
   const [full, setFull] = useState(false);
   const cmd = (c: string) => runTv(() => sendTvCommand(screen.slot, c));
   const kind = tvContentKind(screen.url);
-  const playing = !screen.url ? "Nada configurado" : `${kind === "playlist" ? "YouTube" : "Dashboard"} · ${describeContent(screen.url, dashboards)}`;
+  const playing = !screen.url ? "Nada configurado" : kind === "playlist" ? describeContent(screen.url, dashboards) : `Dashboard · ${describeContent(screen.url, dashboards)}`;
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
@@ -173,12 +173,15 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
   const set = <K extends keyof ReturnType<typeof init>>(k: K, v: ReturnType<typeof init>[K]) => setF((x) => ({ ...x, [k]: v }));
   const [sentAt, setSentAt] = useState<number | null>(null);
 
-  const url = useMemo(() => {
-    if (f.kind === "playlist") return isYoutubePlaylist(f.playlist.trim()) ? f.playlist.trim() : "";
-    return f.dash ? buildTvUrl({ dashboardId: f.dash, periodo: f.periodo, zoom: f.zoom, foco: f.foco, tvFit: f.tvFit }) : "";
-  }, [f]);
+  const toUrl = (x: ReturnType<typeof init>) => {
+    if (x.kind === "playlist") return isYoutubePlaylist(x.playlist.trim()) ? x.playlist.trim() : "";
+    return x.dash ? buildTvUrl({ dashboardId: x.dash, periodo: x.periodo, zoom: x.zoom, foco: x.foco, tvFit: x.tvFit }) : "";
+  };
+  const url = useMemo(() => toUrl(f), [f]);
+  // Endereço equivalente ao salvo, montado do mesmo jeito (o salvo pode ter outra ordem de parâmetros).
+  const savedUrl = useMemo(() => toUrl(init()), [screen.url]);
   const invalidPlaylist = f.kind === "playlist" && f.playlist.trim() !== "" && !url;
-  const dirty = !!url && url !== screen.url;
+  const dirty = !!url && url !== screen.url && url !== savedUrl;
   const changed = JSON.stringify(f) !== JSON.stringify(init());
   // O agente lê a configuração no próximo contato; um contato depois do envio = aplicado.
   const applied = sentAt != null && !dirty && status?.last_seen && new Date(status.last_seen).getTime() > sentAt;
