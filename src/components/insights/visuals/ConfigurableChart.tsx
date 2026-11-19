@@ -136,6 +136,7 @@ export function ConfigurableChart({ type, data: rawData, formatting, appearance,
           appearance={config}
           dimensionLabel={getDimensionLabel(visualConfig)}
           measureLabel={getMeasureLabel(visualConfig)}
+          hiddenProducts={visualConfig?.hiddenProducts}
         />
       );
     case 'call_commercial':

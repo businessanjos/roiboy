@@ -60,6 +60,8 @@ export interface VisualConfig {
   callScope?: 'all' | 'exclude_cr' | 'only_cr';
   // Hidden categories for filtering chart groups
   hiddenCategories?: string[];
+  // Ranking: produtos escondidos das pílulas (nome completo ou sigla), salvo para todos
+  hiddenProducts?: string[];
   // Stack by field for stacked bar charts (e.g., 'responsible_name')
   stackBy?: string;
   // Override chart orientation for stacked charts

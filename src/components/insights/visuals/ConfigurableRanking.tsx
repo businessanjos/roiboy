@@ -25,6 +25,8 @@ interface ConfigurableRankingProps {
   /** Header labels follow the visual configuration ("Ver por" / "Medir por"). */
   dimensionLabel?: string;
   measureLabel?: string;
+  /** Produtos escondidos das pílulas (nome completo ou sigla). */
+  hiddenProducts?: string[];
 }
 
 interface UserAvatar {
@@ -48,7 +50,15 @@ function paletteColors(appearance?: AppearanceConfig): string[] {
 
 
 /** Junta produtos pela sigla (vendas novas primeiro), mantendo os nomes no tooltip. */
-function groupProducts(products: { name: string; qty: number }[]) {
+function groupProducts(products: { name: string; qty: number }[], hidden?: string[]) {
+  const hiddenSet = new Set((hidden ?? []).map((h) => h.trim().toLowerCase()));
+  if (hiddenSet.size) {
+    products = products.filter((p) => {
+      const base = p.name.replace(/^\s*ren(ova[cç][aã]o)?\.?\s*/i, '').trim().toLowerCase();
+      return !hiddenSet.has(p.name.trim().toLowerCase()) && !hiddenSet.has(base)
+        && !hiddenSet.has(productShortName(p.name).replace(/^REN\.\s*/, '').toLowerCase());
+    });
+  }
   const map = new Map<string, { short: string; qty: number; renewal: boolean; items: { name: string; qty: number }[] }>();
   for (const p of products) {
     const short = productShortName(p.name);
@@ -161,7 +171,7 @@ function Podium({
   );
 }
 
-export function ConfigurableRanking({ data, formatting, appearance, dimensionLabel, measureLabel }: ConfigurableRankingProps) {
+export function ConfigurableRanking({ data, formatting, appearance, dimensionLabel, measureLabel, hiddenProducts }: ConfigurableRankingProps) {
   const tv = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'] * tv.scale;
   const { currentUser } = useCurrentUser();
@@ -293,7 +303,7 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
                         </div>
                         {item.products && item.products.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
-                            {groupProducts(item.products).map(g => (
+                            {groupProducts(item.products, hiddenProducts).map(g => (
                               <span
                                 key={g.short}
                                 title={g.items.map(i => `${i.qty}x ${i.name}`).join('\n')}
