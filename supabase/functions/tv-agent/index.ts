@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
 
     if (body?.action === "screenshot") {
       const slot = Number(body.slot);
-      if (!Number.isInteger(slot) || slot < 1 || slot > 10 || typeof body.image_base64 !== "string")
+      if (!Number.isInteger(slot) || slot < 1 || slot > 20 || typeof body.image_base64 !== "string")
         return json({ error: "slot and image_base64 required" }, 400);
       const b64 = body.image_base64.replace(/^data:image\/\w+;base64,/, "");
       const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
