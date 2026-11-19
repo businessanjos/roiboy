@@ -1,0 +1,1 @@
+ALTER TABLE public.tv_settings ALTER COLUMN rest_url SET DEFAULT 'https://iamroy.app/tv-descanso.html';

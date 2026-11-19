@@ -610,6 +610,13 @@
       "when": 1795105712740,
       "tag": "0086_tv_rest_extra_screens",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1795106612064,
+      "tag": "0087_tv_rest_url_static",
+      "breakpoints": true
     }
   ]
 }

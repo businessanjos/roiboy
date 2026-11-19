@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import legacy from "@vitejs/plugin-legacy";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
@@ -41,6 +42,8 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    // Versão compatível carregada só em navegadores antigos (TVs LG webOS 4 / Chromium 53).
+    legacy({ targets: ["chrome >= 53"], modernTargets: ["chrome >= 87", "edge >= 88", "firefox >= 78", "safari >= 14"], modernPolyfills: false }),
     mode === "development" && componentTagger(),
     versionJsonPlugin(APP_BUILD_VERSION),
     mcpPlugin(),
@@ -65,7 +68,6 @@ export default defineConfig(({ mode }) => ({
     },
     chunkSizeWarningLimit: 2000,
     minify: "esbuild",
-    target: "es2020",
     sourcemap: false,
   },
   // Optimize dependencies

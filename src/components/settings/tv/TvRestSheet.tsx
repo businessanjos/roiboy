@@ -107,7 +107,7 @@ export function TvRestSheet({ open, onOpenChange, settings, screens = [] }: { op
         <SheetHeader><SheetTitle>Tela de descanso</SheetTitle></SheetHeader>
         <p className="mt-2 text-sm text-muted-foreground">A arte Eternum em tela cheia: clara durante o dia e escura à noite. Aparece nas TVs sem conteúdo.</p>
         <Button variant="outline" size="sm" className="mt-3" asChild>
-          <a href="/tv/descanso" target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Ver prévia</a>
+          <a href="/tv-descanso.html" target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Ver prévia</a>
         </Button>
 
         <section className="mt-6 space-y-2">

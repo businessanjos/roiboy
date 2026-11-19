@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eternum · Tela de descanso</title>
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#2b1d14;cursor:none;-webkit-user-select:none;user-select:none}
+.l{position:absolute;top:0;left:0;width:100%;height:100%;background-size:cover;background-position:center;opacity:0;-webkit-transition:opacity 3s ease-in-out;transition:opacity 3s ease-in-out}
+.l.on{opacity:1}
+</style>
+</head>
+<body>
+<div id="a" class="l"></div><div id="b" class="l"></div>
+<script>
+/* Versão estática (ES5) para TVs antigas (webOS 4 / Chromium 53). Sem React e sem login. */
+(function () {
+  var FN = "https://mtzoavtbtqflufyccern.supabase.co/functions/v1/tv-rest-public";
+  var KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10em9hdnRidHFmbHVmeWNjZXJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4NDQ2MDYsImV4cCI6MjA4MTQyMDYwNn0.aFVdVFXwpE7iU7G_u-Ehh-FBFxH32fHiZVo8-RzRGUA";
+  var DAY = "/__l5e/assets-v1/1dd06d43-57a2-46a9-a558-6e16d7c26332/eternum-descanso-claro.webp";
+  var NIGHT = "/__l5e/assets-v1/fbc7d063-af2d-4352-8a34-a0182edc5b1a/eternum-descanso-escuro.png";
+  var ROTATE = 60000;
+  var m = /[?&]tv=(\d+)/.exec(location.search);
+  var tv = m ? m[1] : "";
+  var cfg = { dayUrl: null, nightUrl: null, dayFrom: "06:00", nightFrom: "18:00", extras: [] };
+  var layers = [document.getElementById("a"), document.getElementById("b")];
+  var front = 0, shown = "";
+
+  function toMin(s, def) {
+    var r = /^(\d{1,2}):(\d{2})/.exec(s || "");
+    return r ? parseInt(r[1], 10) * 60 + parseInt(r[2], 10) : def;
+  }
+  function isNight(now) {
+    var d = toMin(cfg.dayFrom, 360), n = toMin(cfg.nightFrom, 1080);
+    var cur = ((now.getUTCHours() + 21) % 24) * 60 + now.getUTCMinutes(); /* Brasília, UTC-3 */
+    if (d === n) return false;
+    return d < n ? (cur >= n || cur < d) : (cur >= n && cur < d);
+  }
+  function pick() {
+    var now = new Date(), night = isNight(now), pool = [night ? (cfg.nightUrl || NIGHT) : (cfg.dayUrl || DAY)];
+    for (var i = 0; i < cfg.extras.length; i++) {
+      var e = cfg.extras[i];
+      if (e && e.url && ((e.period === "night") === night)) pool.push(e.url);
+    }
+    return pool[Math.floor(now.getTime() / ROTATE) % pool.length];
+  }
+  function show(url) {
+    if (url === shown) return;
+    var img = new Image();
+    img.onload = function () {
+      var next = layers[1 - front];
+      next.style.backgroundImage = "url('" + url + "')";
+      next.className = "l on";
+      layers[front].className = "l";
+      front = 1 - front; shown = url;
+    };
+    img.src = url;
+  }
+  function tick() { show(pick()); }
+  function load() {
+    var x = new XMLHttpRequest();
+    x.open("GET", FN + (tv ? "?tv=" + tv : ""), true);
+    x.setRequestHeader("apikey", KEY);
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4) return;
+      if (x.status === 200) {
+        try {
+          var d = JSON.parse(x.responseText);
+          cfg.dayUrl = d.dayUrl || null; cfg.nightUrl = d.nightUrl || null;
+          cfg.dayFrom = d.dayFrom || "06:00"; cfg.nightFrom = d.nightFrom || "18:00";
+          cfg.extras = d.extras && d.extras.length ? d.extras : [];
+        } catch (e) {}
+      }
+      tick();
+    };
+    x.send();
+  }
+  tick();
+  load();
+  setInterval(tick, 5000);
+  setInterval(load, 600000);
+})();
+</script>
+</body>
+</html>
