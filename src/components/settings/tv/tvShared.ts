@@ -5,16 +5,16 @@ import { TV_PERIODS, parseTvUrl, playlistLabel, tvContentKind, type TvVisualStat
 
 export const STATE: Record<TvVisualState, { label: string; cls: string }> = {
   on: { label: "Ligada", cls: "bg-success text-success-foreground border-transparent" },
-  saver: { label: "Proteção de tela", cls: "bg-warning text-warning-foreground border-transparent" },
+  saver: { label: "Tela de descanso", cls: "bg-warning text-warning-foreground border-transparent" },
   off: { label: "Desligada", cls: "bg-muted text-muted-foreground border-border" },
   nocontact: { label: "Sem contato", cls: "bg-destructive text-destructive-foreground border-transparent" },
-  unpaired: { label: "Não pareada", cls: "bg-background/90 text-foreground border-foreground/40" },
+  unpaired: { label: "Não conectada", cls: "bg-background/90 text-foreground border-foreground/40" },
 };
 
 export const CMD_LABEL: Record<string, string> = {
   on: "Ligar", off: "Desligar", reload: "Recarregar", open_url: "Abrir link", screenshot: "Capturar tela",
-  wake: "Acordar", screen_off: "Apagar tela", screen_on: "Acender tela", volume: "Volume", mute: "Mudo",
-  unmute: "Tirar mudo", toast: "Aviso", type_text: "Digitar texto", key: "Tecla", pair: "Parear",
+  wake: "Acordar", screen_off: "Apagar tela", screen_on: "Acender tela", volume: "Volume", mute: "Sem som",
+  unmute: "Com som", toast: "Mensagem", type_text: "Digitar texto", key: "Tecla", pair: "Parear",
 };
 export const STATUS_LABEL: Record<string, string> = { pending: "aguardando", taken: "em execução", done: "feito", error: "erro" };
 
@@ -40,7 +40,10 @@ export function describeContent(url: string | null, dashboards: { id: string; na
   return per ? `${name} · ${per}` : name;
 }
 
-export const SENT = "Enviado — a TV aplica em até 30 s";
+export const SENT = "Enviado. A TV atualiza em até 30 segundos.";
+export const STATE_HINT: Partial<Record<TvVisualState, string>> = {
+  nocontact: "O computador do escritório não está conseguindo falar com esta TV.",
+};
 export async function runTv(fn: () => Promise<void>, ok = SENT) {
   try { await fn(); toast.success(ok); } catch (e: any) { toast.error(e?.message ?? "Erro"); }
 }

@@ -22,13 +22,14 @@ export function Hint({ text, children, className, side = "top" }: { text: string
 }
 
 export const TV_HINTS = {
-  releaseOne: "Liberar a TV: a automação para de trocar o conteúdo e você usa pelo controle. Escolha até quando.",
+  releaseOne: "Pausa a automação para usar a TV pelo controle. Ela volta ao conteúdo sozinha no horário escolhido.",
   releaseAll: "Liberar todas: as TVs ficam livres para o controle remoto, sem a automação voltar o dashboard.",
   returnOne: "Devolver para automação: a TV volta a abrir o conteúdo programado em até 30 segundos.",
   returnAll: "Devolver todas: as TVs liberadas voltam ao conteúdo programado em até 30 segundos.",
   onAll: "Liga as TVs que estiverem desligadas.",
   offAll: "Desliga todas as TVs.",
-  reloadAll: "Atualiza a página aberta em cada TV.",
+  reloadAll: "Atualiza a página aberta em cada TV."
+  ,agentOffline: "As TVs seguem como estão, mas não recebem mudanças até ele voltar.",
   schedule: "Define o horário em que as TVs ligam e desligam sozinhas.",
 };
 

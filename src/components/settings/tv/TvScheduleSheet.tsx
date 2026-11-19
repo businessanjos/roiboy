@@ -20,13 +20,14 @@ function splitDt(v: string | null) {
   return { d: `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`, t: `${pad(dt.getHours())}:${pad(dt.getMinutes())}` };
 }
 
-function UntilField({ label, value, onSave }: { label: string; value: string | null; onSave: (v: string | null) => void }) {
+function UntilField({ label, help, value, onSave }: { label: string; help: string; value: string | null; onSave: (v: string | null) => void }) {
   const [d, setD] = useState(splitDt(value).d);
   const [t, setT] = useState(splitDt(value).t || "19:30");
   useEffect(() => { const s = splitDt(value); setD(s.d); if (s.t) setT(s.t); }, [value]);
   return (
     <div className="space-y-1.5">
       <Label className="text-xs">{label}</Label>
+      <p className="text-xs text-muted-foreground">{help}</p>
       <div className="flex gap-2 items-center flex-wrap">
         <DateField value={d} onChange={(e: any) => setD(e.target.value)} className="w-36" />
         <Input type="time" value={t} onChange={(e) => setT(e.target.value)} className="w-24" />
@@ -47,7 +48,7 @@ export function TvScheduleSheet({ open, onOpenChange, settings }: { open: boolea
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader><SheetTitle>Horário geral</SheetTitle></SheetHeader>
+        <SheetHeader><SheetTitle>Horário do escritório</SheetTitle><p className="text-xs text-muted-foreground">Vale para todas as TVs que seguem o horário do escritório.</p></SheetHeader>
         <div className="space-y-5 pt-4">
           <div className="space-y-2">
             <Label className="text-xs">Dias</Label>
@@ -71,7 +72,8 @@ export function TvScheduleSheet({ open, onOpenChange, settings }: { open: boolea
           </div>
           <Separator />
           <div className="space-y-2">
-            <Label className="text-xs">Feriados (não liga)</Label>
+            <Label className="text-xs">Feriados</Label>
+            <p className="text-xs text-muted-foreground">Nesses dias as TVs não ligam.</p>
             <div className="flex gap-2">
               <DateField value={holiday} onChange={(e: any) => setHoliday(e.target.value)} className="w-36" />
               <Button size="sm" variant="outline" disabled={!holiday || holidays.includes(holiday)}
@@ -87,8 +89,8 @@ export function TvScheduleSheet({ open, onOpenChange, settings }: { open: boolea
             </div>
           </div>
           <Separator />
-          <UntilField label="Manter ligadas até…" value={settings?.keep_on_until ?? null} onSave={(v) => save({ keep_on_until: v })} />
-          <UntilField label="Manter desligadas até…" value={settings?.keep_off_until ?? null} onSave={(v) => save({ keep_off_until: v })} />
+          <UntilField label="Deixar ligadas hoje até" help="Exceção ao horário normal, por exemplo num evento à noite." value={settings?.keep_on_until ?? null} onSave={(v) => save({ keep_on_until: v })} />
+          <UntilField label="Deixar desligadas até" help="Útil em férias coletivas ou manutenção." value={settings?.keep_off_until ?? null} onSave={(v) => save({ keep_off_until: v })} />
         </div>
       </SheetContent>
     </Sheet>

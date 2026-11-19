@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { sendTvCommand } from "@/hooks/useTvWall";
 import { tvCapabilities, tvVisualState } from "@/lib/tv/tvUrl";
 import tvSemCaptura from "@/assets/tv-sem-captura.png.asset.json";
-import { STATE, describeContent, runTv } from "./tvShared";
+import { STATE, STATE_HINT, describeContent, runTv } from "./tvShared";
 import { isReleased } from "@/lib/tv/tvConn";
 import { Hint, ReleaseMenu, ReturnButton, SignalWithTip, TV_HINTS, hhmm } from "./TvConnRelease";
 
@@ -48,7 +48,9 @@ export function TvScreenCard({ screen, status, dashboards, settings, onOpen }: P
           </div>
         )}
         {released && <Badge variant="outline" className="absolute top-1.5 left-1.5 text-[10px] px-1.5 py-0 h-5 bg-background/90 text-foreground border-border">Liberada até {hhmm(screen.released_until)}</Badge>}
-        <Badge variant="outline" className={cn("absolute top-1.5 right-1.5 text-[10px] px-1.5 py-0 h-5", STATE[state].cls)}>{STATE[state].label}</Badge>
+        {STATE_HINT[state]
+          ? <Hint text={STATE_HINT[state]!} side="bottom" className="absolute top-1.5 right-1.5"><Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5", STATE[state].cls)}>{STATE[state].label}</Badge></Hint>
+          : <Badge variant="outline" className={cn("absolute top-1.5 right-1.5 text-[10px] px-1.5 py-0 h-5", STATE[state].cls)}>{STATE[state].label}</Badge>}
       </div>
       <div className="p-2.5 space-y-0.5">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -64,13 +66,13 @@ export function TvScreenCard({ screen, status, dashboards, settings, onOpen }: P
             {!released && (
               <Hint text={TV_HINTS.releaseOne}>
                 <ReleaseMenu screens={[screen]} settings={settings}>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Liberar TV" title="Liberar TV"><Unlock className="h-3.5 w-3.5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Liberar para uso manual"><Unlock className="h-3.5 w-3.5" /></Button>
                 </ReleaseMenu>
               </Hint>
             )}
-            <IconAction label="Recarregar" onClick={() => cmd("reload")}><RefreshCw className="h-3.5 w-3.5" /></IconAction>
-            {caps.screenshot && <IconAction label="Ver tela agora" onClick={() => cmd("screenshot")}><Camera className="h-3.5 w-3.5" /></IconAction>}
-            <IconAction label={isOn ? "Desligar" : "Ligar"} onClick={() => cmd(isOn ? "off" : "on")}>
+            <IconAction label="Atualizar a página" onClick={() => cmd("reload")}><RefreshCw className="h-3.5 w-3.5" /></IconAction>
+            {caps.screenshot && <IconAction label="Ver a tela agora" onClick={() => cmd("screenshot")}><Camera className="h-3.5 w-3.5" /></IconAction>}
+            <IconAction label={isOn ? "Desligar a TV" : "Ligar a TV"} onClick={() => cmd(isOn ? "off" : "on")}>
               {isOn ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
             </IconAction>
           </div>

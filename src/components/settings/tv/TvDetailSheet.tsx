@@ -3,7 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, Clock, CornerDownLeft, Home, Info,
-  Link2, Loader2, Monitor, MonitorOff, Send, Tv, Undo2, Volume2,
+  Link2, PowerOff, Loader2, Monitor, MonitorOff, Send, Tv, Undo2, Volume2,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,15 +23,19 @@ import { sendTvCommand, updateTvScreen } from "@/hooks/useTvWall";
 import {
   TV_PERIODS, buildTvUrl, isYoutubePlaylist, parseTvUrl, tvCapabilities, tvContentKind, tvVisualState, type TvContentKind,
 } from "@/lib/tv/tvUrl";
-import { CMD_LABEL, STATE, STATUS_LABEL, describeContent, runTv } from "./tvShared";
+import { CMD_LABEL, STATE, STATE_HINT, STATUS_LABEL, describeContent, runTv } from "./tvShared";
 import { isReleased } from "@/lib/tv/tvConn";
-import { ReleaseButton, ReturnButton, hhmm } from "./TvConnRelease";
+import { Hint, ReleaseButton, ReturnButton, hhmm } from "./TvConnRelease";
 import { ConnectionTab } from "./TvConnectionTab";
 import tvSemCaptura from "@/assets/tv-sem-captura.png.asset.json";
 
 interface Props {
   screen: any | null; status?: any; events: any[]; commands: any[];
   dashboards: { id: string; name: string }[]; settings?: any; onOpenChange: (v: boolean) => void;
+}
+
+function Help({ children }: { children: React.ReactNode }) {
+  return <p className="text-xs text-muted-foreground leading-snug">{children}</p>;
 }
 
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -57,7 +61,9 @@ function Body({ screen, status, events, commands, dashboards, settings }: Props 
         <SheetHeader className="space-y-0.5 text-left">
           <div className="flex items-center gap-2 pr-6">
             <SheetTitle className="truncate">{screen.name}</SheetTitle>
-            <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", STATE[state].cls)}>{STATE[state].label}</Badge>
+            {STATE_HINT[state]
+              ? <Hint text={STATE_HINT[state]!} side="bottom"><Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", STATE[state].cls)}>{STATE[state].label}</Badge></Hint>
+              : <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", STATE[state].cls)}>{STATE[state].label}</Badge>}
           </div>
           <p className="text-xs text-muted-foreground truncate">{describeContent(screen.url, dashboards)}</p>
         </SheetHeader>
@@ -89,10 +95,10 @@ function Body({ screen, status, events, commands, dashboards, settings }: Props 
       </div>
 
       <Tabs defaultValue="conteudo" className="flex-1 flex flex-col min-h-0">
-        <TabsList className="mx-4 mt-3 grid grid-cols-5 h-auto">
-          <TabsTrigger value="conteudo" className="px-1 text-xs sm:text-sm">Conteúdo</TabsTrigger>
-          <TabsTrigger value="controle" className="px-1 text-xs sm:text-sm">Controle</TabsTrigger>
-          <TabsTrigger value="agenda" className="px-1 text-xs sm:text-sm">Agenda</TabsTrigger>
+        <TabsList className="mx-4 mt-3 grid grid-cols-5 h-auto [&>button]:whitespace-normal [&>button]:leading-tight">
+          <TabsTrigger value="conteudo" className="px-1 text-xs sm:text-sm">O que passa na TV</TabsTrigger>
+          <TabsTrigger value="controle" className="px-1 text-xs sm:text-sm">Controle da TV</TabsTrigger>
+          <TabsTrigger value="agenda" className="px-1 text-xs sm:text-sm">Horário</TabsTrigger>
           <TabsTrigger value="conexao" className="px-1 text-xs sm:text-sm">Conexão</TabsTrigger>
           <TabsTrigger value="historico" className="px-1 text-xs sm:text-sm">Histórico</TabsTrigger>
         </TabsList>
@@ -102,7 +108,7 @@ function Body({ screen, status, events, commands, dashboards, settings }: Props 
             <fieldset disabled={isReleased(screen)} className={cn(isReleased(screen) && "opacity-50 pointer-events-none")}><ContentTab screen={screen} dashboards={dashboards} /></fieldset>
           </TabsContent>
           <TabsContent value="controle" className="mt-0"><ControlTab screen={screen} /></TabsContent>
-          <TabsContent value="agenda" className="mt-0"><AgendaTab screen={screen} /></TabsContent>
+          <TabsContent value="agenda" className="mt-0"><AgendaTab screen={screen} settings={settings} /></TabsContent>
           <TabsContent value="conexao" className="mt-0"><ConnectionTab slot={screen.slot} status={status} /></TabsContent>
           <TabsContent value="historico" className="mt-0"><HistoryTab events={events} commands={commands} /></TabsContent>
         </div>
@@ -138,10 +144,11 @@ function ContentTab({ screen, dashboards }: { screen: any; dashboards: { id: str
 
   return (
     <div className="space-y-4">
+      <div className="space-y-1.5"><Label className="text-xs">Mostrar</Label>
       <ToggleGroup type="single" value={kind} onValueChange={(v) => v && setKind(v as TvContentKind)} className="grid grid-cols-2 rounded-md border p-1">
         <ToggleGroupItem value="dashboard" className="h-8">Dashboard</ToggleGroupItem>
-        <ToggleGroupItem value="playlist" className="h-8">Playlist do YouTube</ToggleGroupItem>
-      </ToggleGroup>
+        <ToggleGroupItem value="playlist" className="h-8">Vídeos do YouTube</ToggleGroupItem>
+      </ToggleGroup></div>
 
       {kind === "dashboard" ? (
         <div className="space-y-3">
@@ -161,6 +168,7 @@ function ContentTab({ screen, dashboards }: { screen: any; dashboards: { id: str
             <span className="text-xs w-20">Zoom {zoom}%</span>
             <Slider min={50} max={120} step={5} value={[zoom]} onValueChange={(v) => setZoom(v[0])} className="flex-1" />
           </div>
+          <Help>Diminua se o dashboard estiver cortado na TV.</Help>
           <div className="flex gap-5 text-sm">
             <label className="flex items-center gap-2"><Checkbox checked={foco} onCheckedChange={(v) => setFoco(!!v)} />Modo Foco</label>
             <label className="flex items-center gap-2"><Checkbox checked={tvFit} onCheckedChange={(v) => setTvFit(!!v)} />Ajustar à TV</label>
@@ -172,7 +180,7 @@ function ContentTab({ screen, dashboards }: { screen: any; dashboards: { id: str
           <Input value={playlist} onChange={(e) => setPlaylist(e.target.value)} placeholder="https://www.youtube.com/playlist?list=…" />
           {invalidPlaylist
             ? <p className="text-xs text-destructive">O link precisa ter "list=" (link de playlist do YouTube).</p>
-            : <p className="text-xs text-muted-foreground">A TV abre no app do YouTube, começando por um episódio sorteado. Não recarrega sozinha.</p>}
+            : <p className="text-xs text-muted-foreground">Cole o link de uma playlist do YouTube. A TV começa por um vídeo sorteado e segue a lista.</p>}
         </div>
       )}
 
@@ -180,7 +188,7 @@ function ContentTab({ screen, dashboards }: { screen: any; dashboards: { id: str
         <p className="text-[11px] text-muted-foreground mb-0.5">Endereço que a TV vai abrir</p>
         <p className="text-xs font-mono break-all">{url || "—"}</p>
       </div>
-      <Button className="w-full" disabled={!url || url === screen.url} onClick={save}>Salvar</Button>
+      <Button className="w-full" disabled={!url || url === screen.url} onClick={save}>Aplicar na TV</Button>
     </div>
   );
 }
@@ -196,62 +204,59 @@ function ControlTab({ screen }: { screen: any }) {
   const key = (k: string) => cmd("key", { keys: [k] });
 
   return (
-    <div className="space-y-5">
-      <section className="space-y-2">
-        <Label className="text-xs">Som</Label>
+    <div className="space-y-6">
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold">Tela e som</h3>
+        {caps.screenOff && (
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => cmd("screen_off")}><MonitorOff className="h-3.5 w-3.5 mr-1.5" />Apagar a tela</Button>
+              <Button size="sm" variant="outline" onClick={() => cmd("screen_on")}><Monitor className="h-3.5 w-3.5 mr-1.5" />Acender a tela</Button>
+            </div>
+            <Help>Apaga só a imagem; a TV continua ligada e volta na hora. Bom para o almoço ou reuniões.</Help>
+          </div>
+        )}
+        <div className="space-y-1.5">
+          <Button size="sm" variant="outline" onClick={() => cmd("off")}><PowerOff className="h-3.5 w-3.5 mr-1.5" />Desligar</Button>
+          <Help>Desliga a TV de verdade. Ela volta a ligar sozinha no próximo horário.</Help>
+        </div>
         <div className="flex items-center gap-3">
           <Volume2 className="h-4 w-4 text-muted-foreground shrink-0" />
           {caps.exactVolume ? (
             <>
-              <Slider min={0} max={100} step={1} value={[vol]} onValueChange={(v) => setVol(v[0])} className="flex-1"
+              <Slider min={0} max={100} step={1} value={[vol]} onValueChange={(v) => setVol(v[0])} className="flex-1" aria-label="Volume"
                 onValueCommit={(v) => runTv(async () => { await updateTvScreen(screen.slot, { volume: v[0] }); await sendTvCommand(screen.slot, "volume", { level: v[0] }); })} />
               <span className="text-xs w-8 text-right">{vol}</span>
             </>
-          ) : <span className="flex-1 text-xs text-muted-foreground">Volume exato indisponível nesta TV</span>}
+          ) : <span className="flex-1 text-xs text-muted-foreground">Esta TV não permite escolher o volume exato.</span>}
           <label className="flex items-center gap-1.5 text-xs"><Switch checked={screen.muted}
-            onCheckedChange={(v) => runTv(async () => { await updateTvScreen(screen.slot, { muted: v }); await sendTvCommand(screen.slot, v ? "mute" : "unmute"); })} />Mudo</label>
+            onCheckedChange={(v) => runTv(async () => { await updateTvScreen(screen.slot, { muted: v }); await sendTvCommand(screen.slot, v ? "mute" : "unmute"); })} />Sem som</label>
         </div>
       </section>
 
-      <section className="flex flex-wrap gap-2">
-        {caps.screenOff && <>
-          <Button size="sm" variant="outline" onClick={() => cmd("screen_off")}><MonitorOff className="h-3.5 w-3.5 mr-1.5" />Apagar a tela</Button>
-          <Button size="sm" variant="outline" onClick={() => cmd("screen_on")}><Monitor className="h-3.5 w-3.5 mr-1.5" />Acender a tela</Button>
-        </>}
-        <Button size="sm" variant="outline" onClick={() => cmd("pair")}><Link2 className="h-3.5 w-3.5 mr-1.5" />Repetir pareamento</Button>
-      </section>
-
       {caps.toast && (
-        <section className="space-y-1.5">
-          <Label className="text-xs">Enviar aviso</Label>
-          <div className="flex gap-2">
-            <Input value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Ex.: Reunião às 10h" maxLength={200} />
-            <Button size="icon" variant="outline" aria-label="Enviar aviso" disabled={!msg.trim()}
-              onClick={() => { cmd("toast", { message: msg.trim() }); setMsg(""); }}><Send className="h-4 w-4" /></Button>
-          </div>
-        </section>
+        <>
+          <Separator />
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">Mensagem na tela</h3>
+            <Label className="text-xs">Mostrar mensagem</Label>
+            <div className="flex gap-2">
+              <Input value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Ex.: Reunião geral às 10h" maxLength={200} />
+              <Button size="icon" variant="outline" aria-label="Mostrar mensagem" disabled={!msg.trim()}
+                onClick={() => { cmd("toast", { message: msg.trim() }); setMsg(""); }}><Send className="h-4 w-4" /></Button>
+            </div>
+            <Help>Aparece por alguns segundos no canto da TV, sem interromper o que está passando.</Help>
+          </section>
+        </>
       )}
 
       <Separator />
 
-      <section className="space-y-2">
-        <Label className="text-xs">Login na TV</Label>
-        <p className="text-xs text-muted-foreground">Selecione o campo na TV antes de enviar.</p>
-        <div className="flex gap-2">
-          <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" autoComplete="off" />
-          <Button size="sm" variant="outline" disabled={!email} onClick={() => { cmd("type_text", { text: email }); setEmail(""); }}>Digitar</Button>
+      <section className="space-y-3">
+        <div className="space-y-0.5">
+          <h3 className="text-sm font-semibold">Controle remoto</h3>
+          <Help>Funciona como o controle físico. Use para navegar na TV quando precisar.</Help>
         </div>
-        <div className="flex gap-2">
-          <Input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="Senha" autoComplete="new-password" />
-          <Button size="sm" variant="outline" disabled={!pwd} onClick={() => {
-            runTv(async () => { await sendTvCommand(screen.slot, "type_text", { text: pwd }); await sendTvCommand(screen.slot, "key", { keys: ["ENTER"] }); });
-            setPwd("");
-          }}>Digitar + Enter</Button>
-        </div>
-      </section>
-
-      <section className="space-y-2">
-        <Label className="text-xs">Controle remoto</Label>
         <div className="mx-auto w-fit rounded-2xl border bg-muted/40 p-3 shadow-sm">
           <div className="grid grid-cols-3 gap-1.5 place-items-center">
             <span /><Button size="icon" variant="outline" className="h-10 w-10" aria-label="Cima" onClick={() => key("UP")}><ArrowUp className="h-4 w-4" /></Button><span />
@@ -265,54 +270,122 @@ function ControlTab({ screen }: { screen: any }) {
             <Button size="sm" variant="ghost" onClick={() => key("HOME")}><Home className="h-4 w-4 mr-1" />Home</Button>
           </div>
         </div>
+
+        <div className="space-y-2 rounded-md border p-3">
+          <Label className="text-xs">Entrar no Roy pela TV</Label>
+          <ol className="list-decimal pl-4 text-xs text-muted-foreground space-y-0.5">
+            <li>Na TV, selecione o campo de e-mail com as setas.</li>
+            <li>Clique em Digitar e-mail.</li>
+            <li>Selecione o campo de senha.</li>
+            <li>Clique em Digitar senha e entrar.</li>
+          </ol>
+          <div className="flex gap-2">
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" autoComplete="off" />
+            <Button size="sm" variant="outline" disabled={!email} onClick={() => { cmd("type_text", { text: email }); setEmail(""); }}>Digitar e-mail</Button>
+          </div>
+          <div className="flex gap-2">
+            <Input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="Senha" autoComplete="new-password" />
+            <Button size="sm" variant="outline" disabled={!pwd} onClick={() => {
+              runTv(async () => { await sendTvCommand(screen.slot, "type_text", { text: pwd }); await sendTvCommand(screen.slot, "key", { keys: ["ENTER"] }); });
+              setPwd("");
+            }}>Digitar senha e entrar</Button>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Button size="sm" variant="outline" onClick={() => cmd("pair")}><Link2 className="h-3.5 w-3.5 mr-1.5" />Conectar a TV de novo</Button>
+          <Help>Use se a TV aparecer como Não conectada.</Help>
+        </div>
       </section>
     </div>
   );
 }
 
-function AgendaTab({ screen }: { screen: any }) {
+const MODES = [
+  { value: "global", label: "Horário do escritório", help: "Segue o horário definido para todas as TVs (ex.: seg a sex, 07:50 às 19:30)." },
+  { value: "custom", label: "Horário só desta TV", help: "Escolha dias e horários diferentes para esta TV." },
+  { value: "always_on", label: "Sempre ligada", help: "A TV nunca é desligada automaticamente." },
+  { value: "manual", label: "Sem horário automático", help: "Ninguém liga nem desliga sozinho; só pelos botões ou pelo controle." },
+];
+const REFRESH = [{ v: 0, l: "Nunca" }, { v: 15, l: "15 min" }, { v: 30, l: "30 min" }, { v: 60, l: "1 hora" }];
+
+function officeHours(settings: any) {
+  if (!settings) return "";
+  const d: number[] = [...(settings.days ?? [])].sort();
+  const names = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  const contiguous = d.length > 1 && d.every((x, i) => i === 0 || x === d[i - 1] + 1);
+  const days = !d.length ? "nenhum dia" : contiguous ? `${names[d[0]]} a ${names[d[d.length - 1]]}` : d.map((x) => names[x]).join(", ");
+  const t = (v?: string) => (v ?? "").slice(0, 5);
+  return `${days}, ${t(settings.on_time)} às ${t(settings.off_time)}`;
+}
+
+function AgendaTab({ screen, settings }: { screen: any; settings?: any }) {
   const save = (patch: Record<string, unknown>) => runTv(() => updateTvScreen(screen.slot, patch));
   const playlist = tvContentKind(screen.url) === "playlist";
   const days: number[] = screen.custom_days ?? [];
+  const refresh = playlist ? 0 : screen.refresh_min ?? 0;
+  const refreshOpts = REFRESH.some((r) => r.v === refresh) ? REFRESH : [...REFRESH, { v: refresh, l: `${refresh} min` }].sort((a, b) => a.v - b.v);
   return (
-    <div className="space-y-4">
-      <div className="space-y-1"><Label className="text-xs">Horário</Label>
-        <Select value={screen.schedule_mode} onValueChange={(v) => save({ schedule_mode: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="global">Geral</SelectItem>
-            <SelectItem value="custom">Próprio</SelectItem>
-            <SelectItem value="always_on">Sempre ligada</SelectItem>
-            <SelectItem value="manual">Manual</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      {screen.schedule_mode === "custom" && (
-        <div className="space-y-2 rounded-md border p-3">
-          <div className="flex flex-wrap gap-1.5">
-            {DAYS.map((l, i) => {
-              const on = days.includes(i);
-              return <Button key={i} size="sm" variant={on ? "default" : "outline"} className="h-8 w-11 px-0"
-                onClick={() => save({ custom_days: on ? days.filter((x) => x !== i) : [...days, i].sort() })}>{l}</Button>;
-            })}
-          </div>
-          <div className="flex gap-3">
-            <div className="space-y-1"><Label className="text-xs">Liga</Label>
-              <Input type="time" defaultValue={screen.custom_on_time ?? "07:50"} className="w-28" onBlur={(e) => save({ custom_on_time: e.target.value })} /></div>
-            <div className="space-y-1"><Label className="text-xs">Desliga</Label>
-              <Input type="time" defaultValue={screen.custom_off_time ?? "19:30"} className="w-28" onBlur={(e) => save({ custom_off_time: e.target.value })} /></div>
-          </div>
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <Label className="text-xs">Quando a TV fica ligada</Label>
+        <div role="radiogroup" className="grid gap-2">
+          {MODES.map((m) => {
+            const on = screen.schedule_mode === m.value;
+            return (
+              <div key={m.value} className={cn("rounded-md border transition", on ? "border-primary bg-primary/5" : "hover:border-primary/40")}>
+                <button type="button" role="radio" aria-checked={on} onClick={() => !on && save({ schedule_mode: m.value })}
+                  className="w-full text-left p-3 flex gap-3 items-start">
+                  <span className={cn("mt-0.5 h-4 w-4 shrink-0 rounded-full border-2", on ? "border-primary bg-primary shadow-[inset_0_0_0_2px_hsl(var(--background))]" : "border-muted-foreground/50")} />
+                  <span className="space-y-0.5 min-w-0">
+                    <span className="flex flex-wrap items-baseline gap-x-2 text-sm font-medium">{m.label}
+                      {m.value === "global" && settings && <span className="text-xs font-normal text-muted-foreground">Agora: {officeHours(settings)}</span>}
+                    </span>
+                    <span className="block text-xs text-muted-foreground leading-snug">{m.help}</span>
+                  </span>
+                </button>
+                {on && m.value === "custom" && (
+                  <div className="space-y-2 px-3 pb-3 pl-10">
+                    <div className="flex flex-wrap gap-1.5">
+                      {DAYS.map((l, i) => {
+                        const d = days.includes(i);
+                        return <Button key={i} size="sm" variant={d ? "default" : "outline"} className="h-8 w-11 px-0"
+                          onClick={() => save({ custom_days: d ? days.filter((x) => x !== i) : [...days, i].sort() })}>{l}</Button>;
+                      })}
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="space-y-1"><Label className="text-xs">Liga às</Label>
+                        <Input type="time" defaultValue={screen.custom_on_time ?? "07:50"} className="w-28" onBlur={(e) => save({ custom_on_time: e.target.value })} /></div>
+                      <div className="space-y-1"><Label className="text-xs">Desliga às</Label>
+                        <Input type="time" defaultValue={screen.custom_off_time ?? "19:30"} className="w-28" onBlur={(e) => save({ custom_off_time: e.target.value })} /></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      )}
-      <label className="flex items-center justify-between text-sm">Anti-proteção de tela
-        <Switch checked={screen.keepalive} onCheckedChange={(v) => save({ keepalive: v })} /></label>
-      <label className="flex items-center justify-between text-sm">TV habilitada
-        <Switch checked={screen.enabled} onCheckedChange={(v) => save({ enabled: v })} /></label>
+      </div>
+
       <div className="space-y-1">
-        <Label className="text-xs">Recarregar a cada (min, 0 = nunca)</Label>
-        <Input type="number" min={0} key={`r-${screen.refresh_min}-${playlist}`} defaultValue={playlist ? 0 : screen.refresh_min} disabled={playlist} className="w-28"
-          onBlur={(e) => { const n = Math.max(0, Number(e.target.value) || 0); if (n !== screen.refresh_min) save({ refresh_min: n }); }} />
-        {playlist && <p className="text-xs text-muted-foreground">Travado em 0: recarregar cortaria o episódio.</p>}
+        <label className="flex items-center justify-between gap-3 text-sm">Impedir a tela de descanso
+          <Switch checked={screen.keepalive} onCheckedChange={(v) => save({ keepalive: v })} /></label>
+        <Help>Evita que a TV mostre as fotos da LG depois de alguns minutos parada.</Help>
+      </div>
+
+      <div className="space-y-1">
+        <label className="flex items-center justify-between gap-3 text-sm">TV habilitada
+          <Switch checked={screen.enabled} onCheckedChange={(v) => save({ enabled: v })} /></label>
+        <Help>Desligado, a automação ignora esta TV.</Help>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Atualizar a página a cada</Label>
+        <Select value={String(refresh)} disabled={playlist} onValueChange={(v) => { const n = Number(v); if (n !== screen.refresh_min) save({ refresh_min: n }); }}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>{refreshOpts.map((r) => <SelectItem key={r.v} value={String(r.v)}>{r.l}</SelectItem>)}</SelectContent>
+        </Select>
+        <Help>{playlist ? "Não se aplica a vídeos." : "Recarrega o dashboard para garantir que os números estejam atualizados."}</Help>
       </div>
     </div>
   );
@@ -327,7 +400,7 @@ function HistoryTab({ events, commands }: { events: any[]; commands: any[] }) {
       kind: c.status === "error" ? "error" : c.status === "done" ? "done" : c.status === "taken" ? "taken" : "pending",
     })),
   ].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40);
-  if (!rows.length) return <p className="text-sm text-muted-foreground text-center py-8">Nada ainda.</p>;
+  if (!rows.length) return <p className="text-sm text-muted-foreground text-center py-8">Nenhuma atividade ainda.</p>;
   const Icon = { error: AlertCircle, info: Info, done: CheckCircle2, taken: Loader2, pending: Clock } as const;
   return (
     <ul className="divide-y">

@@ -72,7 +72,7 @@ export function TvWallManager() {
           <div className="min-w-0 flex items-center gap-3">
             <span className="flex items-center gap-1.5 text-sm font-medium shrink-0">
               <span className={cn("h-2.5 w-2.5 rounded-full", loading ? "bg-muted" : agentOnline ? "bg-success" : "bg-destructive")} />
-              {loading ? "Carregando…" : agentOnline ? "Agente online" : "Agente offline"}
+              {loading ? "Carregando…" : agentOnline ? "Computador das TVs ligado" : <Hint text={TV_HINTS.agentOffline} side="bottom"><span>Computador das TVs desligado</span></Hint>}
             </span>
             {!loading && <span className="text-xs text-muted-foreground truncate hidden sm:inline">{parts}</span>}
           </div>
