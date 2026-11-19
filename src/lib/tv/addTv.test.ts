@@ -25,3 +25,20 @@ describe("Adicionar TV", () => {
     expect(normalizePairCode("ab 12-cd9")).toBe("AB12CD");
   });
 });
+
+import { pairState } from "./addTv";
+describe("pairState", () => {
+  const t = new Date(2000).toISOString();
+  it("sucesso pelo resultado { paired: true }", () => {
+    expect(pairState({ status: "done", result: '{"paired":true}' }, [], 13, 0).paired).toBe(true);
+  });
+  it("falha com código simples", () => {
+    expect(pairState({ status: "error", result: "tempo_esgotado" }, [], 13, 0).error).toBe("tempo_esgotado");
+  });
+  it("eventos pair_code_needed, paired e pair_failed", () => {
+    expect(pairState(null, [{ slot: 13, kind: "pair_code_needed", created_at: t }], 13, 0).codeAsked).toBe(true);
+    expect(pairState(null, [{ slot: 13, kind: "paired", created_at: t }], 13, 0).paired).toBe(true);
+    expect(pairState(null, [{ slot: 13, kind: "pair_failed", message: "recusado", created_at: t }], 13, 0).error).toBe("recusado");
+    expect(pairState(null, [{ slot: 13, kind: "paired", created_at: t }], 13, 5000).paired).toBe(false);
+  });
+});

@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { updateTvScreen } from "@/hooks/useTvWall";
 import {
   ANDROID_PAIR_SECONDS, LG_PAIR_SECONDS, PAIR_ERROR_TEXT, type FoundTv, type PairError,
-  nextFreeSlot, normalizePairCode, pairErrorKind, parseDiscover,
+  nextFreeSlot, normalizePairCode, pairState, parseDiscover,
 } from "@/lib/tv/addTv";
 import { runTv } from "./tvShared";
 
@@ -87,11 +87,12 @@ export function TvAddSheet({ open, onOpenChange, screens, events }: { open: bool
   const discovering = !!discoverId && !["done", "error"].includes(disc.data?.status ?? "");
   const found = disc.data?.status === "done" ? parseDiscover(disc.data.result) : [];
   const fresh = found.filter((d) => !d.known);
-  const paired = pair.data?.status === "done";
-  const pairErr: PairError | null = pair.data?.status === "error" ? pairErrorKind(pair.data.result) : null;
-  const limit = tv?.brand === "android" ? ANDROID_PAIR_SECONDS : LG_PAIR_SECONDS;
+  const ps = pairState(pairId ? pair.data : null, events, created, pairStart - 5000);
+  const paired = ps.paired;
+  const pairErr: PairError | null = ps.error;
+  const limit = tv?.brand === "android" || events.some((e) => e.slot === created && e.kind === "pair_code_needed" && new Date(e.created_at).getTime() >= pairStart - 5000) ? ANDROID_PAIR_SECONDS : LG_PAIR_SECONDS;
   const left = Math.max(0, limit - Math.floor((now - pairStart) / 1000));
-  const codeAsked = !!created && events.some((e) => e.slot === created && e.kind === "pair_code_needed" && new Date(e.created_at).getTime() >= pairStart - 5000);
+  const codeAsked = ps.codeAsked;
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["tv-wall"] });
   const reset = () => { setStep(0); setDiscoverId(null); setTv(null); setCreated(null); setPairId(null); setCode(""); setCodeSent(false); setShow("rest"); setLink(""); };
@@ -232,7 +233,7 @@ export function TvAddSheet({ open, onOpenChange, screens, events }: { open: bool
                   <Button className="flex-1" onClick={() => runTv(() => startPair(created!), "")}>Tentar de novo</Button>
                 </div>
               </>
-            ) : tv.brand === "lg" ? (
+            ) : tv.brand === "lg" && !codeAsked ? (
               <>
                 <LgPrompt />
                 <p className="text-sm">Olhe para a TV: em alguns segundos vai aparecer uma janela pedindo permissão. Com o controle, selecione <b>ACEITAR</b> (em algumas TVs aparece como "Sim" ou "Permitir") e aperte OK. Não selecione Recusar.</p>

@@ -54,3 +54,18 @@ export const PAIR_ERROR_TEXT: Record<PairError, string> = {
 export function normalizePairCode(v: string): string {
   return v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
 }
+
+/** Estado do pareamento a partir do comando "pair" e dos eventos da TV desde o início da tentativa. */
+export function pairState(
+  cmd: { status: string; result: unknown } | null | undefined,
+  events: { slot: number | null; kind: string; message?: string | null; created_at: string }[],
+  slot: number | null, since: number,
+): { paired: boolean; error: PairError | null; codeAsked: boolean } {
+  const ev = slot == null ? [] : events.filter((e) => e.slot === slot && new Date(e.created_at).getTime() >= since);
+  const has = (k: string) => ev.some((e) => e.kind === k);
+  const r = cmd?.status === "done" ? parse(cmd.result) : null;
+  const paired = (cmd?.status === "done" && r?.paired !== false) || has("paired");
+  const failEv = ev.find((e) => e.kind === "pair_failed");
+  const error = paired ? null : cmd?.status === "error" ? pairErrorKind(cmd.result) : failEv ? pairErrorKind(failEv.message ?? "") : null;
+  return { paired, error, codeAsked: has("pair_code_needed") };
+}
