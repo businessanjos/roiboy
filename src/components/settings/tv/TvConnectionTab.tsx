@@ -38,7 +38,7 @@ export function ConnectionTab({ slot, status }: { slot: number; status?: any }) 
       </div>
 
       <section className="space-y-1.5">
-        <p className="text-xs font-medium">Últimas 24 h</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Últimas 24 h</p>
         {isLoading ? <div className="h-44 rounded-md bg-muted animate-pulse" />
           : chart.length < 2 ? <p className="text-xs text-muted-foreground py-6 text-center">Ainda sem dados suficientes.</p>
           : (
@@ -60,11 +60,19 @@ export function ConnectionTab({ slot, status }: { slot: number; status?: any }) 
       </section>
 
       <section className="space-y-1.5">
-        <p className="text-xs font-medium">Quedas de hoje</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Quedas de hoje</p>
         {drops.length ? (
           <ul className="divide-y text-xs">{drops.map((d) => <li key={d} className="py-1.5">Caiu da rede às {hhmm(d)}</li>)}</ul>
         ) : <p className="text-xs text-muted-foreground">Nenhuma queda registrada hoje.</p>}
       </section>
+
+      <details className="group rounded-md border px-3 py-2 text-xs">
+        <summary className="cursor-pointer select-none font-medium min-h-10 flex items-center">Detalhes técnicos</summary>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 pb-1 text-muted-foreground">
+          <dt>App aberto</dt><dd className="truncate text-foreground">{status?.foreground_app ?? "—"}</dd>
+          <dt>IP</dt><dd className="text-foreground">{status?.ip ?? "—"}</dd>
+        </dl>
+      </details>
     </div>
   );
 }
