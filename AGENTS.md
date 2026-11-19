@@ -49,4 +49,4 @@
 - Playbook free fields are `{{campo:slug}}` in event_vars.customFields; `playbook-ai-assist` rejects edits to {{...}}. Why: no schema change, fields stay safe.
 - Lost deal closes lead chats (`close_zapp_on_deal_lost`). Why: triage.
 - CS processes parse `src/content/csProcesses.md`, overridable per account in `cs_process_content` (managers via `is_cs_process_editor`); progress `cs_process_progress`, tours `user_tour_views`. Why: one text source, editable.
-- Build: plugin-legacy (chrome>=53) + 6 GB heap. Why: old TVs; OOM otherwise.
+- plugin-legacy+6GB heap: old TVs.
