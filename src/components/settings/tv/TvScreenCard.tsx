@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { sendTvCommand } from "@/hooks/useTvWall";
 import { tvCapabilities, tvVisualState } from "@/lib/tv/tvUrl";
+import tvSemCaptura from "@/assets/tv-sem-captura.png.asset.json";
 import { STATE, describeContent, runTv } from "./tvShared";
 
 interface Props { screen: any; status?: any; dashboards: { id: string; name: string }[]; onOpen: () => void }
@@ -36,10 +37,11 @@ export function TvScreenCard({ screen, status, dashboards, onOpen }: Props) {
       <div className="relative aspect-video bg-muted">
         {caps.screenshot && status?.screenshot_url ? (
           <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+        ) : !caps.screenshot ? (
+          <img src={tvSemCaptura.url} alt="Esse modelo de TV não possui suporte a capturas" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
             <Tv className="h-6 w-6" />
-            {!caps.screenshot && <span className="text-[10px]">Sem captura nesta TV</span>}
           </div>
         )}
         <Badge variant="outline" className={cn("absolute top-1.5 right-1.5 text-[10px] px-1.5 py-0 h-5", STATE[state].cls)}>{STATE[state].label}</Badge>

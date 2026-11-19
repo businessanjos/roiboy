@@ -24,6 +24,7 @@ import {
   TV_PERIODS, buildTvUrl, isYoutubePlaylist, parseTvUrl, tvCapabilities, tvContentKind, tvVisualState, type TvContentKind,
 } from "@/lib/tv/tvUrl";
 import { CMD_LABEL, STATE, STATUS_LABEL, describeContent, runTv } from "./tvShared";
+import tvSemCaptura from "@/assets/tv-sem-captura.png.asset.json";
 
 interface Props {
   screen: any | null; status?: any; events: any[]; commands: any[];
@@ -62,9 +63,11 @@ function Body({ screen, status, events, commands, dashboards }: Props & { screen
             <button className="absolute inset-0" onClick={() => setFull(true)} aria-label="Abrir captura em tela cheia">
               <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="h-full w-full object-cover" />
             </button>
+          ) : !caps.screenshot ? (
+            <img src={tvSemCaptura.url} alt="Esse modelo de TV não possui suporte a capturas" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground text-xs">
-              <Tv className="h-7 w-7" />{caps.screenshot ? "Sem captura ainda" : "Sem captura nesta TV"}
+              <Tv className="h-7 w-7" />Sem captura ainda
             </div>
           )}
         </div>
