@@ -27176,6 +27176,7 @@ export type Database = {
       }
       tv_status: {
         Row: {
+          casting: string | null
           connection: string | null
           drops_today: number | null
           foreground_app: string | null
@@ -27193,6 +27194,7 @@ export type Database = {
           slot: number
         }
         Insert: {
+          casting?: string | null
           connection?: string | null
           drops_today?: number | null
           foreground_app?: string | null
@@ -27210,6 +27212,7 @@ export type Database = {
           slot: number
         }
         Update: {
+          casting?: string | null
           connection?: string | null
           drops_today?: number | null
           foreground_app?: string | null

@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
         if ("drops_today" in s) { const v = intOrNull(s.drops_today); if (v !== undefined) r.drops_today = v; }
         if (typeof s.connection === "string" && CONN.includes(s.connection)) r.connection = s.connection;
         if (typeof s.released === "boolean") r.released = s.released;
+        if ("casting" in s) r.casting = typeof s.casting === "string" && s.casting.trim() ? s.casting.trim().slice(0, 100) : null;
         return r;
       });
       // one upsert per row so absent keys are never written as null

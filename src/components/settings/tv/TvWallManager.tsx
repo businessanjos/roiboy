@@ -64,7 +64,7 @@ export function TvWallManager() {
   ].filter(Boolean).join(" · ");
 
   const renderCard = (s: any) => (
-    <TvScreenCard key={s.slot} screen={s} status={data!.status.find((x) => x.slot === s.slot)} dashboards={dashboards} settings={data!.settings} onOpen={() => setOpenSlot(s.slot)} />
+    <TvScreenCard key={s.slot} screen={s} status={data!.status.find((x) => x.slot === s.slot)} dashboards={dashboards} settings={data!.settings} castSince={data!.events.find((e) => e.slot === s.slot && e.kind === "casting")?.created_at ?? null} onOpen={() => setOpenSlot(s.slot)} />
   );
 
   return (

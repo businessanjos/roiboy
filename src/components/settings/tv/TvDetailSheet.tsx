@@ -5,6 +5,7 @@ import { ptBR } from "date-fns/locale";
 import {
   AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, Clock, CornerDownLeft, Home, Info,
   Link2, PowerOff, Power, RefreshCw, Camera, Unlock, Maximize2, Copy, X, Loader2, Monitor, MonitorOff, Send, Tv, Undo2, Volume2,
+  Cast,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -142,6 +143,7 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
           </TabsList>
         </div>
         <TabsContent value="conteudo" className="mt-0 animate-in fade-in-0 duration-200">
+          {status?.casting && kind !== "playlist" && <p className="mx-5 mt-5 flex items-start gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs"><Cast className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />Esta TV está recebendo uma transmissão. A automação volta sozinha quando a transmissão acabar.</p>}
           {released && <p className="mx-5 mt-5 rounded-md border bg-muted/50 px-3 py-2 text-xs">TV liberada para uso pelo controle. Devolva para automação para trocar o conteúdo.</p>}
           <fieldset disabled={released} className={cn("min-w-0", released && "opacity-50 pointer-events-none")}><ContentTab screen={screen} status={status} dashboards={dashboards} /></fieldset>
         </TabsContent>

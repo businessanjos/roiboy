@@ -1,18 +1,18 @@
 import { formatDistanceToNowStrict } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Camera, Power, PowerOff, RefreshCw, Tv, Unlock } from "lucide-react";
+import { Cast, Camera, Power, PowerOff, RefreshCw, Tv, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { sendTvCommand } from "@/hooks/useTvWall";
-import { tvCapabilities, tvVisualState } from "@/lib/tv/tvUrl";
+import { tvCapabilities, tvContentKind, tvVisualState } from "@/lib/tv/tvUrl";
 import tvSemCaptura from "@/assets/tv-sem-captura.png.asset.json";
 import { STATE, STATE_HINT, describeContent, runTv } from "./tvShared";
 import { isReleased } from "@/lib/tv/tvConn";
 import { Hint, ReleaseMenu, ReturnButton, SignalWithTip, TV_HINTS, hhmm } from "./TvConnRelease";
 
-interface Props { screen: any; status?: any; dashboards: { id: string; name: string }[]; settings?: any; onOpen: () => void }
+interface Props { screen: any; status?: any; dashboards: { id: string; name: string }[]; settings?: any; castSince?: string | null; onOpen: () => void }
 
 function IconAction({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -26,11 +26,13 @@ function IconAction({ label, onClick, children }: { label: string; onClick: () =
   );
 }
 
-export function TvScreenCard({ screen, status, dashboards, settings, onOpen }: Props) {
+export function TvScreenCard({ screen, status, dashboards, settings, castSince, onOpen }: Props) {
   const state = tvVisualState(status);
   const caps = tvCapabilities(screen.slot);
   const isOn = state === "on" || state === "saver";
   const released = isReleased(screen);
+  const casting = status?.casting && tvContentKind(screen.url) !== "playlist" ? String(status.casting) : null;
+  const castApp = casting && /chrome/i.test(casting) ? "Chrome" : casting;
   const cmd = (c: string) => runTv(() => sendTvCommand(screen.slot, c));
 
   return (
@@ -48,6 +50,11 @@ export function TvScreenCard({ screen, status, dashboards, settings, onOpen }: P
           </div>
         )}
         {released && <Badge variant="outline" className="absolute top-1.5 left-1.5 text-[10px] px-1.5 py-0 h-5 bg-background/90 text-foreground border-border">Liberada até {hhmm(screen.released_until)}</Badge>}
+        {casting && (
+          <Hint text={`Recebendo transmissão do ${castApp}${castSince ? ` desde ${hhmm(castSince)}` : ""}`} side="bottom" className={cn("absolute left-1.5", released ? "top-8" : "top-1.5")}>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-1 bg-background/90 text-foreground border-primary/50"><Cast className="h-3 w-3 text-primary" />Transmitindo</Badge>
+          </Hint>
+        )}
         {STATE_HINT[state]
           ? <Hint text={STATE_HINT[state]!} side="bottom" className="absolute top-1.5 right-1.5"><Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5", STATE[state].cls)}>{STATE[state].label}</Badge></Hint>
           : <Badge variant="outline" className={cn("absolute top-1.5 right-1.5 text-[10px] px-1.5 py-0 h-5", STATE[state].cls)}>{STATE[state].label}</Badge>}
