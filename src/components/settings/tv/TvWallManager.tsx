@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, Moon, MoreHorizontal, Power, PowerOff, RefreshCw, Undo2, Unlock } from "lucide-react";
+import { CalendarClock, Moon, Plus, MoreHorizontal, Power, PowerOff, RefreshCw, Undo2, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useTvCanManage, useTvWall, sendTvCommand } from "@/hooks/useTvWall";
+import { useTvCanManage, useTvIsAdmin, useTvWall, sendTvCommand } from "@/hooks/useTvWall";
 import { isRecent, tvVisualState } from "@/lib/tv/tvUrl";
 import { TvScreenCard } from "./TvScreenCard";
 import { TvDetailSheet } from "./TvDetailSheet";
 import { TvScheduleSheet } from "./TvScheduleSheet";
 import { TvRestSheet } from "./TvRestSheet";
+import { TvAddSheet } from "./TvAddSheet";
+import { agentIsOffline } from "@/lib/tv/addTv";
 import { runTv, useTvDashboards } from "./tvShared";
 import { Hint, ReleaseMenu, TV_HINTS, returnTvs } from "./TvConnRelease";
 import { isReleased } from "@/lib/tv/tvConn";
@@ -33,6 +35,8 @@ export function TvWallManager() {
   const [openSlot, setOpenSlot] = useState<number | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [restOpen, setRestOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const { data: isAdmin } = useTvIsAdmin();
   const [, tick] = useState(0);
   useEffect(() => { const i = setInterval(() => tick((n) => n + 1), 30_000); return () => clearInterval(i); }, []);
 
@@ -45,6 +49,8 @@ export function TvWallManager() {
   if (!loadingAccess && !canManage) return <p className="text-sm text-muted-foreground">Somente gestão/administração acessa as TVs.</p>;
   const loading = loadingAccess || isLoading || !data;
 
+  const addBlocked = !data || agentIsOffline(data.status);
+  const ADD_OFF = "O agente das TVs está offline, então não dá para procurar TVs agora.";
   const agentOnline = !!data?.status.some((s) => isRecent(s.last_seen));
   const wall = data?.screens.filter((s) => s.location === "Parede") ?? [];
   const others = (data?.screens.filter((s) => s.location !== "Parede") ?? []).sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { numeric: true }));
@@ -89,6 +95,7 @@ export function TvWallManager() {
             </Hint>
             <Hint text={TV_HINTS.returnAll} side="bottom"><Button size="sm" variant="outline" disabled={!releasedSlots.length} onClick={() => returnTvs(releasedSlots)}><Undo2 className="h-3.5 w-3.5 mr-1.5" />Devolver todas</Button></Hint>
             <Hint text="Arte Eternum clara de dia e escura à noite; coloque todas as TVs em descanso." side="bottom"><Button size="sm" variant="outline" onClick={() => setRestOpen(true)}><Moon className="h-3.5 w-3.5 mr-1.5" />Tela de descanso</Button></Hint>
+            {isAdmin && <Hint text={addBlocked ? ADD_OFF : "Conecte uma TV nova, passo a passo."} side="bottom"><span><Button size="sm" variant="outline" disabled={addBlocked} onClick={() => setAddOpen(true)}><Plus className="h-3.5 w-3.5 mr-1.5" />Adicionar TV</Button></span></Hint>}
             <Hint text={TV_HINTS.schedule} side="bottom"><Button size="sm" onClick={() => setScheduleOpen(true)}><CalendarClock className="h-3.5 w-3.5 mr-1.5" />Horário</Button></Hint>
           </div>
           <div className="flex md:hidden gap-1.5 shrink-0">
@@ -108,6 +115,7 @@ export function TvWallManager() {
               <DropdownMenuItem disabled={!releasedSlots.length} onClick={() => returnTvs(releasedSlots)}><Undo2 className="h-4 w-4 mr-2" />Devolver todas</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setRestOpen(true)}><Moon className="h-4 w-4 mr-2" />Tela de descanso</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setScheduleOpen(true)}><CalendarClock className="h-4 w-4 mr-2" />Horário</DropdownMenuItem>
+              {isAdmin && <DropdownMenuItem disabled={addBlocked} onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-2" />Adicionar TV</DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenu>
           </div>
@@ -137,6 +145,8 @@ export function TvWallManager() {
           settings={data?.settings}
           onOpenChange={(v) => !v && setOpenSlot(null)}
         />
+        {isAdmin && addBlocked && <p className="text-xs text-muted-foreground md:hidden">{ADD_OFF}</p>}
+        <TvAddSheet open={addOpen} onOpenChange={setAddOpen} screens={data?.screens ?? []} events={data?.events ?? []} />
         <TvRestSheet open={restOpen} onOpenChange={setRestOpen} settings={data?.settings} screens={data?.screens ?? []} />
         <TvScheduleSheet open={scheduleOpen} onOpenChange={setScheduleOpen} settings={data?.settings} />
       </div>

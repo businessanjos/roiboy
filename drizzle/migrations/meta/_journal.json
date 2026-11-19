@@ -617,6 +617,13 @@
       "when": 1795106612064,
       "tag": "0087_tv_rest_url_static",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1795107372064,
+      "tag": "0088_tv_add_tv_commands",
+      "breakpoints": true
     }
   ]
 }

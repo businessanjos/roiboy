@@ -45,5 +45,5 @@ export const STATE_HINT: Partial<Record<TvVisualState, string>> = {
   nocontact: "O computador do escritório não está conseguindo falar com esta TV.",
 };
 export async function runTv(fn: () => Promise<void>, ok = SENT) {
-  try { await fn(); toast.success(ok); } catch (e: any) { toast.error(e?.message ?? "Erro"); }
+  try { await fn(); if (ok) toast.success(ok); } catch (e: any) { toast.error(e?.message ?? "Erro"); }
 }

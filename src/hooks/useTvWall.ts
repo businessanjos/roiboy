@@ -17,6 +17,20 @@ export function useTvCanManage() {
   });
 }
 
+/** Só administradores adicionam TVs. */
+export function useTvIsAdmin() {
+  return useQuery({
+    queryKey: ["tv-is-admin"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return false;
+      const { data } = await db.from("users").select("role,is_also_admin").eq("auth_user_id", u.user.id).maybeSingle();
+      return !!data && (["admin", "super_admin"].includes(data.role) || !!data.is_also_admin);
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useTvWall(enabled: boolean) {
   const qc = useQueryClient();
   const q = useQuery({

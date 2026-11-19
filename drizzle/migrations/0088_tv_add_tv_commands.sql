@@ -1,0 +1,2 @@
+ALTER TABLE public.tv_commands DROP CONSTRAINT tv_commands_command_check;
+ALTER TABLE public.tv_commands ADD CONSTRAINT tv_commands_command_check CHECK (command = ANY (ARRAY['on','off','reload','open_url','screenshot','wake','screen_off','screen_on','volume','mute','unmute','toast','type_text','key','pair','discover','pair_code']));

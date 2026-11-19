@@ -31,7 +31,9 @@ Deno.serve(async (req) => {
       const now = new Date().toISOString();
       // housekeeping
       await db.from("tv_commands").update({ status: "error", result: "agente não respondeu", done_at: now })
-        .eq("status", "taken").lt("taken_at", new Date(Date.now() - 5 * 60_000).toISOString());
+        .eq("status", "taken").neq("command", "pair").lt("taken_at", new Date(Date.now() - 5 * 60_000).toISOString());
+      await db.from("tv_commands").update({ status: "error", result: "tempo_esgotado", done_at: now })
+        .eq("status", "taken").eq("command", "pair").lt("taken_at", new Date(Date.now() - 7 * 60_000).toISOString());
       await db.from("tv_events").delete().lt("created_at", new Date(Date.now() - 30 * 86400_000).toISOString());
 
       const status = Array.isArray(body.status) ? body.status : [];
@@ -94,7 +96,12 @@ Deno.serve(async (req) => {
       if (typeof body.id !== "string") return json({ error: "id required" }, 400);
       const { error } = await db.from("tv_commands").update({
         status: body.ok ? "done" : "error",
-        result: body.result != null ? String(body.result).slice(0, 2000) : null,
+        // objects (discover/pair) are stored as JSON; errors may come in `error`
+        result: (() => {
+          const v = body.result ?? body.error ?? null;
+          if (v == null) return null;
+          return (typeof v === "string" ? v : JSON.stringify(v)).slice(0, 20000);
+        })(),
         done_at: new Date().toISOString(),
       }).eq("id", body.id);
       if (error) throw error;
