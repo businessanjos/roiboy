@@ -1,43 +1,24 @@
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useMemo, useState } from "react";
+import { CalendarClock, MoreHorizontal, Power, PowerOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { DateField } from "@/components/ui/date-field";
-import { Power, PowerOff, RefreshCw, Camera, Tv, X, Loader2 } from "lucide-react";
-import { useTvCanManage, useTvWall, sendTvCommand, updateTvSettings } from "@/hooks/useTvWall";
-import { isRecent } from "@/lib/tv/tvUrl";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { useTvCanManage, useTvWall, sendTvCommand } from "@/hooks/useTvWall";
+import { isRecent, tvVisualState } from "@/lib/tv/tvUrl";
 import { TvScreenCard } from "./TvScreenCard";
+import { TvDetailSheet } from "./TvDetailSheet";
+import { TvScheduleSheet } from "./TvScheduleSheet";
+import { runTv, useTvDashboards } from "./tvShared";
 
-const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const GRID = "grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5";
 
-function splitDt(v: string | null) {
-  if (!v) return { d: "", t: "" };
-  const dt = new Date(v);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return { d: `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`, t: `${pad(dt.getHours())}:${pad(dt.getMinutes())}` };
-}
-
-function UntilField({ label, value, onSave }: { label: string; value: string | null; onSave: (v: string | null) => void }) {
-  const init = splitDt(value);
-  const [d, setD] = useState(init.d);
-  const [t, setT] = useState(init.t || "19:30");
-  useEffect(() => { const s = splitDt(value); setD(s.d); if (s.t) setT(s.t); }, [value]);
+function CardSkeleton() {
   return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
-      <div className="flex gap-2 items-center flex-wrap">
-        <DateField value={d} onChange={(e: any) => setD(e.target.value)} className="w-40" />
-        <Input type="time" value={t} onChange={(e) => setT(e.target.value)} className="w-28" />
-        <Button size="sm" variant="outline" disabled={!d} onClick={() => onSave(new Date(`${d}T${t || "00:00"}`).toISOString())}>Salvar</Button>
-        {value && (
-          <Button size="sm" variant="ghost" onClick={() => onSave(null)}><X className="h-4 w-4 mr-1" />Limpar</Button>
-        )}
-      </div>
-      {value && <p className="text-xs text-muted-foreground">Ativo até {new Date(value).toLocaleString("pt-BR")}</p>}
+    <div className="rounded-lg border bg-card overflow-hidden">
+      <Skeleton className="aspect-video rounded-none" />
+      <div className="p-2.5 space-y-1.5"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-full" /><Skeleton className="h-6 w-full" /></div>
     </div>
   );
 }
@@ -45,96 +26,94 @@ function UntilField({ label, value, onSave }: { label: string; value: string | n
 export function TvWallManager() {
   const { data: canManage, isLoading: loadingAccess } = useTvCanManage();
   const { data, isLoading } = useTvWall(!!canManage);
-  const [holiday, setHoliday] = useState("");
+  const { data: dashboards = [] } = useTvDashboards();
+  const [openSlot, setOpenSlot] = useState<number | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [, tick] = useState(0);
   useEffect(() => { const i = setInterval(() => tick((n) => n + 1), 30_000); return () => clearInterval(i); }, []);
 
-  if (loadingAccess || (canManage && isLoading)) {
-    return <div className="flex justify-center p-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
-  }
-  if (!canManage) return <p className="text-sm text-muted-foreground">Somente gestão/administração acessa as TVs.</p>;
-  if (!data) return null;
+  const summary = useMemo(() => {
+    const c = { on: 0, saver: 0, off: 0, nocontact: 0, unpaired: 0 };
+    data?.screens.forEach((s) => { c[tvVisualState(data.status.find((x) => x.slot === s.slot))]++; });
+    return c;
+  }, [data]);
 
-  const settings = data.settings ?? {};
-  const agentOnline = data.status.some((s) => isRecent(s.last_seen));
-  const run = async (fn: () => Promise<void>, ok: string) => {
-    try { await fn(); toast.success(ok); } catch (e: any) { toast.error(e.message ?? "Erro"); }
-  };
-  const saveSettings = (patch: Record<string, unknown>) => run(() => updateTvSettings(patch), "Horário salvo");
-  const days: number[] = settings.days ?? [];
-  const holidays: string[] = settings.holidays ?? [];
+  if (!loadingAccess && !canManage) return <p className="text-sm text-muted-foreground">Somente gestão/administração acessa as TVs.</p>;
+  const loading = loadingAccess || isLoading || !data;
+
+  const agentOnline = !!data?.status.some((s) => isRecent(s.last_seen));
+  const wall = data?.screens.filter((s) => s.location === "Parede") ?? [];
+  const others = data?.screens.filter((s) => s.location !== "Parede") ?? [];
+  const open = data?.screens.find((s) => s.slot === openSlot) ?? null;
+  const all = (c: string) => runTv(() => sendTvCommand(null, c));
+
+  const parts = [
+    `${summary.on} ligada${summary.on === 1 ? "" : "s"}`,
+    summary.saver && `${summary.saver} proteção de tela`,
+    summary.off && `${summary.off} desligada${summary.off === 1 ? "" : "s"}`,
+    summary.nocontact && `${summary.nocontact} sem contato`,
+    summary.unpaired && `${summary.unpaired} não pareada${summary.unpaired === 1 ? "" : "s"}`,
+  ].filter(Boolean).join(" · ");
+
+  const renderCard = (s: any) => (
+    <TvScreenCard key={s.slot} screen={s} status={data!.status.find((x) => x.slot === s.slot)} dashboards={dashboards} onOpen={() => setOpenSlot(s.slot)} />
+  );
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap space-y-0">
-          <CardTitle className="flex items-center gap-2"><Tv className="h-5 w-5" />TVs do escritório</CardTitle>
-          {agentOnline
-            ? <Badge className="bg-success/15 text-success border-success/30" variant="outline">Agente online</Badge>
-            : <Badge variant="destructive">Agente offline</Badge>}
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => run(() => sendTvCommand(null, "on"), "Comando enviado")}><Power className="h-4 w-4 mr-2" />Ligar todas</Button>
-          <Button variant="outline" onClick={() => run(() => sendTvCommand(null, "off"), "Comando enviado")}><PowerOff className="h-4 w-4 mr-2" />Desligar todas</Button>
-          <Button variant="outline" onClick={() => run(() => sendTvCommand(null, "reload"), "Comando enviado")}><RefreshCw className="h-4 w-4 mr-2" />Recarregar todas</Button>
-          <Button variant="outline" onClick={() => run(() => sendTvCommand(null, "screenshot"), "Pedido de capturas enviado")}><Camera className="h-4 w-4 mr-2" />Atualizar capturas</Button>
-        </CardContent>
-      </Card>
+    <TooltipProvider delayDuration={300}>
+      <div className="space-y-4">
+        <div className="sticky top-0 z-10 -mx-1 px-1 py-2 bg-background/95 backdrop-blur border-b flex items-center justify-between gap-3">
+          <div className="min-w-0 flex items-center gap-3">
+            <span className="flex items-center gap-1.5 text-sm font-medium shrink-0">
+              <span className={cn("h-2.5 w-2.5 rounded-full", loading ? "bg-muted" : agentOnline ? "bg-success" : "bg-destructive")} />
+              {loading ? "Carregando…" : agentOnline ? "Agente online" : "Agente offline"}
+            </span>
+            {!loading && <span className="text-xs text-muted-foreground truncate hidden sm:inline">{parts}</span>}
+          </div>
+          <div className="hidden md:flex gap-1.5 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => all("on")}><Power className="h-3.5 w-3.5 mr-1.5" />Ligar todas</Button>
+            <Button size="sm" variant="outline" onClick={() => all("off")}><PowerOff className="h-3.5 w-3.5 mr-1.5" />Desligar todas</Button>
+            <Button size="sm" variant="outline" onClick={() => all("reload")}><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Recarregar todas</Button>
+            <Button size="sm" onClick={() => setScheduleOpen(true)}><CalendarClock className="h-3.5 w-3.5 mr-1.5" />Horário</Button>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="md:hidden h-8 w-8" aria-label="Ações gerais"><MoreHorizontal className="h-4 w-4" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => all("on")}><Power className="h-4 w-4 mr-2" />Ligar todas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => all("off")}><PowerOff className="h-4 w-4 mr-2" />Desligar todas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => all("reload")}><RefreshCw className="h-4 w-4 mr-2" />Recarregar todas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setScheduleOpen(true)}><CalendarClock className="h-4 w-4 mr-2" />Horário</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        {!loading && <p className="text-xs text-muted-foreground sm:hidden -mt-2">{parts}</p>}
 
-      <Card>
-        <CardHeader><CardTitle className="text-base">Horário geral</CardTitle></CardHeader>
-        <CardContent className="space-y-5">
-          <div className="flex flex-wrap gap-4">
-            {DAYS.map((label, i) => (
-              <label key={i} className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={days.includes(i)}
-                  onCheckedChange={(c) => saveSettings({ days: c ? [...days, i].sort() : days.filter((x) => x !== i) })}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-4">
-            <div className="space-y-1.5"><Label>Ligar às</Label>
-              <Input type="time" defaultValue={settings.on_time} key={`on-${settings.on_time}`} className="w-28" onBlur={(e) => e.target.value !== settings.on_time && saveSettings({ on_time: e.target.value })} /></div>
-            <div className="space-y-1.5"><Label>Desligar às</Label>
-              <Input type="time" defaultValue={settings.off_time} key={`off-${settings.off_time}`} className="w-28" onBlur={(e) => e.target.value !== settings.off_time && saveSettings({ off_time: e.target.value })} /></div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Feriados (não liga)</Label>
-            <div className="flex gap-2 items-center">
-              <DateField value={holiday} onChange={(e: any) => setHoliday(e.target.value)} className="w-40" />
-              <Button size="sm" variant="outline" disabled={!holiday || holidays.includes(holiday)}
-                onClick={() => { saveSettings({ holidays: [...holidays, holiday].sort() }); setHoliday(""); }}>Adicionar</Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {holidays.map((h) => (
-                <Badge key={h} variant="secondary" className="gap-1">
-                  {new Date(`${h}T12:00`).toLocaleDateString("pt-BR")}
-                  <button aria-label="Remover feriado" onClick={() => saveSettings({ holidays: holidays.filter((x) => x !== h) })}><X className="h-3 w-3" /></button>
-                </Badge>
-              ))}
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <UntilField label="Manter ligadas até…" value={settings.keep_on_until} onSave={(v) => saveSettings({ keep_on_until: v })} />
-            <UntilField label="Manter desligadas até…" value={settings.keep_off_until} onSave={(v) => saveSettings({ keep_off_until: v })} />
-          </div>
-        </CardContent>
-      </Card>
+        {loading ? (
+          <div className={GRID}>{Array.from({ length: 10 }).map((_, i) => <CardSkeleton key={i} />)}</div>
+        ) : (
+          <>
+            {wall.length > 0 && (
+              <section className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Parede</h3>
+                <div className={GRID}>{wall.map(renderCard)}</div>
+              </section>
+            )}
+            {others.length > 0 && <div className={cn(GRID, wall.length > 0 && "pt-4 border-t")}>{others.map(renderCard)}</div>}
+          </>
+        )}
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        {data.screens.map((s) => (
-          <TvScreenCard
-            key={s.slot}
-            screen={s}
-            status={data.status.find((x) => x.slot === s.slot)}
-            events={data.events.filter((e) => e.slot === s.slot || e.slot == null).slice(0, 15)}
-            commands={data.commands.filter((c) => c.slot === s.slot || c.slot == null).slice(0, 15)}
-          />
-        ))}
+        <TvDetailSheet
+          screen={open}
+          status={data?.status.find((x) => x.slot === openSlot)}
+          events={data?.events.filter((e) => e.slot === openSlot || e.slot == null).slice(0, 30) ?? []}
+          commands={data?.commands.filter((c) => c.slot === openSlot || c.slot == null).slice(0, 30) ?? []}
+          dashboards={dashboards}
+          onOpenChange={(v) => !v && setOpenSlot(null)}
+        />
+        <TvScheduleSheet open={scheduleOpen} onOpenChange={setScheduleOpen} settings={data?.settings} />
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

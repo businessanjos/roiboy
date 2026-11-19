@@ -69,3 +69,37 @@ export function toPublicTvUrl(href: string, base = TV_BASE_URL) {
   const u = new URL(href);
   return `${base}${u.pathname}${u.search}`;
 }
+
+/** Playlist do YouTube: link do youtube.com/youtu.be com "list=". */
+export function isYoutubePlaylist(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    return /(^|\.)(youtube\.com|youtu\.be)$/i.test(u.hostname) && !!u.searchParams.get("list");
+  } catch {
+    return false;
+  }
+}
+
+export type TvContentKind = "dashboard" | "playlist";
+/** O tipo de conteúdo é deduzido da própria URL. */
+export function tvContentKind(url: string | null | undefined): TvContentKind {
+  return isYoutubePlaylist(url) ? "playlist" : "dashboard";
+}
+
+const KNOWN_PLAYLISTS: Record<string, string> = { PLZwqV1vZDYViNXeNDGtpAzoTB0fsNIcbe: "Vida Ryka" };
+export function playlistLabel(url: string): string {
+  try {
+    const id = new URL(url).searchParams.get("list") ?? "";
+    return `YouTube · ${KNOWN_PLAYLISTS[id] ?? "Playlist"}`;
+  } catch {
+    return "YouTube";
+  }
+}
+
+/** TVs sem captura de tela, aviso, volume exato nem "apagar só a tela" (ex.: TV-9 Philips/Android TV). */
+const LIMITED_SLOTS = new Set([9]);
+export function tvCapabilities(slot: number) {
+  const limited = LIMITED_SLOTS.has(slot);
+  return { screenshot: !limited, toast: !limited, exactVolume: !limited, screenOff: !limited };
+}

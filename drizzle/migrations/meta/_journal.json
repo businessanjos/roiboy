@@ -561,6 +561,13 @@
       "when": 1795042074721,
       "tag": "0079_tv_wall_control",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1795093435738,
+      "tag": "0080_tv_screens_slots_up_to_20",
+      "breakpoints": true
     }
   ]
 }

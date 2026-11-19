@@ -1,0 +1,46 @@
+import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { TV_PERIODS, parseTvUrl, playlistLabel, tvContentKind, type TvVisualState } from "@/lib/tv/tvUrl";
+
+export const STATE: Record<TvVisualState, { label: string; cls: string }> = {
+  on: { label: "Ligada", cls: "bg-success text-success-foreground border-transparent" },
+  saver: { label: "Proteção de tela", cls: "bg-warning text-warning-foreground border-transparent" },
+  off: { label: "Desligada", cls: "bg-muted text-muted-foreground border-border" },
+  nocontact: { label: "Sem contato", cls: "bg-destructive text-destructive-foreground border-transparent" },
+  unpaired: { label: "Não pareada", cls: "bg-background/90 text-foreground border-foreground/40" },
+};
+
+export const CMD_LABEL: Record<string, string> = {
+  on: "Ligar", off: "Desligar", reload: "Recarregar", open_url: "Abrir link", screenshot: "Capturar tela",
+  wake: "Acordar", screen_off: "Apagar tela", screen_on: "Acender tela", volume: "Volume", mute: "Mudo",
+  unmute: "Tirar mudo", toast: "Aviso", type_text: "Digitar texto", key: "Tecla", pair: "Parear",
+};
+export const STATUS_LABEL: Record<string, string> = { pending: "aguardando", taken: "em execução", done: "feito", error: "erro" };
+
+export function useTvDashboards() {
+  return useQuery({
+    queryKey: ["tv-insights-dashboards"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("insights_dashboards").select("id,name").eq("sector", "vendas")
+        .order("display_order", { ascending: true });
+      return (data ?? []) as { id: string; name: string }[];
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function describeContent(url: string | null, dashboards: { id: string; name: string }[]) {
+  if (!url) return "Nada configurado";
+  if (tvContentKind(url) === "playlist") return playlistLabel(url);
+  const p = parseTvUrl(url);
+  if (!p) return "Link personalizado";
+  const name = dashboards.find((d) => d.id === p.dashboardId)?.name ?? "Dashboard";
+  const per = TV_PERIODS.find((x) => x.value === p.periodo)?.label;
+  return per ? `${name} · ${per}` : name;
+}
+
+export const SENT = "Enviado — a TV aplica em até 30 s";
+export async function runTv(fn: () => Promise<void>, ok = SENT) {
+  try { await fn(); toast.success(ok); } catch (e: any) { toast.error(e?.message ?? "Erro"); }
+}
