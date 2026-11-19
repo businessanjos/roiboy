@@ -88,7 +88,7 @@ export function TvWallManager() {
               </ReleaseMenu>
             </Hint>
             <Hint text={TV_HINTS.returnAll} side="bottom"><Button size="sm" variant="outline" disabled={!releasedSlots.length} onClick={() => returnTvs(releasedSlots)}><Undo2 className="h-3.5 w-3.5 mr-1.5" />Devolver todas</Button></Hint>
-            <Hint text="Imagens, relógio e mensagens que aparecem nas TVs sem conteúdo." side="bottom"><Button size="sm" variant="outline" onClick={() => setRestOpen(true)}><Moon className="h-3.5 w-3.5 mr-1.5" />Tela de descanso</Button></Hint>
+            <Hint text="Arte Eternum clara de dia e escura à noite; coloque todas as TVs em descanso." side="bottom"><Button size="sm" variant="outline" onClick={() => setRestOpen(true)}><Moon className="h-3.5 w-3.5 mr-1.5" />Tela de descanso</Button></Hint>
             <Hint text={TV_HINTS.schedule} side="bottom"><Button size="sm" onClick={() => setScheduleOpen(true)}><CalendarClock className="h-3.5 w-3.5 mr-1.5" />Horário</Button></Hint>
           </div>
           <div className="flex md:hidden gap-1.5 shrink-0">
@@ -137,8 +137,8 @@ export function TvWallManager() {
           settings={data?.settings}
           onOpenChange={(v) => !v && setOpenSlot(null)}
         />
-        <TvRestSheet open={restOpen} onOpenChange={setRestOpen} settings={data?.settings} />
-        <TvScheduleSheet open={scheduleOpen} onOpenChange={setScheduleOpen} settings={data?.settings} />
+        <TvRestSheet open={restOpen} onOpenChange={setRestOpen} settings={data?.settings} screens={data?.screens ?? []} />
+        <TvScheduleSheet open={scheduleOpen} onOpenChange={setScheduleOpen} settings={data?.settings} screens={data?.screens ?? []} />
       </div>
     </TooltipProvider>
   );

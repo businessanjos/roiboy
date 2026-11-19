@@ -8,6 +8,10 @@ export interface TvRestContent {
   logoUrl: string | null;
   photoUrls: string[];
   messages: string[];
+  dayUrl: string | null;
+  nightUrl: string | null;
+  dayFrom: string | null;
+  nightFrom: string | null;
 }
 
 /** Converte caminhos do bucket privado em links assinados (24 h). Links http passam direto. */
@@ -31,7 +35,9 @@ export function useTvRestContent(enabled = true) {
       const photos: string[] = Array.isArray(data?.photos) ? data.photos.filter((p: unknown) => typeof p === "string") : [];
       const urls = await signTvRestPaths([data?.logo_url, ...photos].filter(Boolean));
       const logoUrl = data?.logo_url ? urls[0] ?? null : null;
-      return { logoUrl, photoUrls: data?.logo_url ? urls.slice(1) : urls, messages: activeRestMessages(data?.messages) };
+      const [dayUrl, nightUrl] = await Promise.all([data?.day_image, data?.night_image].map(async (p) => (p ? (await signTvRestPaths([p]))[0] ?? null : null)));
+      return { logoUrl, photoUrls: data?.logo_url ? urls.slice(1) : urls, messages: activeRestMessages(data?.messages),
+        dayUrl, nightUrl, dayFrom: data?.day_from ?? null, nightFrom: data?.night_from ?? null };
     },
     refetchInterval: 10 * 60_000,
     refetchIntervalInBackground: true,

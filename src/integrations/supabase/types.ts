@@ -27077,6 +27077,7 @@ export type Database = {
           refresh_min: number
           released_until: string | null
           rest_enabled: boolean | null
+          rest_prev_url: string | null
           schedule_mode: string
           slot: number
           updated_at: string
@@ -27096,6 +27097,7 @@ export type Database = {
           refresh_min?: number
           released_until?: string | null
           rest_enabled?: boolean | null
+          rest_prev_url?: string | null
           schedule_mode?: string
           slot: number
           updated_at?: string
@@ -27115,6 +27117,7 @@ export type Database = {
           refresh_min?: number
           released_until?: string | null
           rest_enabled?: boolean | null
+          rest_prev_url?: string | null
           schedule_mode?: string
           slot?: number
           updated_at?: string
@@ -27133,8 +27136,12 @@ export type Database = {
           keep_on_until: string | null
           off_time: string
           on_time: string
+          rest_day_from: string
+          rest_day_image: string | null
           rest_logo_url: string | null
           rest_messages: Json
+          rest_night_from: string
+          rest_night_image: string | null
           rest_photos: Json
           rest_url: string | null
           rest_windows: Json
@@ -27149,8 +27156,12 @@ export type Database = {
           keep_on_until?: string | null
           off_time?: string
           on_time?: string
+          rest_day_from?: string
+          rest_day_image?: string | null
           rest_logo_url?: string | null
           rest_messages?: Json
+          rest_night_from?: string
+          rest_night_image?: string | null
           rest_photos?: Json
           rest_url?: string | null
           rest_windows?: Json
@@ -27165,8 +27176,12 @@ export type Database = {
           keep_on_until?: string | null
           off_time?: string
           on_time?: string
+          rest_day_from?: string
+          rest_day_image?: string | null
           rest_logo_url?: string | null
           rest_messages?: Json
+          rest_night_from?: string
+          rest_night_image?: string | null
           rest_photos?: Json
           rest_url?: string | null
           rest_windows?: Json

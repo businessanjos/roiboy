@@ -47,3 +47,19 @@ export function restShift(tick: number): [number, number] {
 }
 
 export interface RestWindow { days: number[]; start: string; end: string }
+
+/** "HH:MM" → minutos do dia; inválido = null. */
+function toMin(t: string | null | undefined): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t ?? "");
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+/** Noite = a partir de nightFrom até antes de dayFrom (horário de Brasília). Padrão 06:00 / 18:00. */
+export function restIsNight(now: Date, dayFrom?: string | null, nightFrom?: string | null): boolean {
+  const day = toMin(dayFrom) ?? 360;
+  const night = toMin(nightFrom) ?? 1080;
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const cur = Number(parts.find((p) => p.type === "hour")!.value) * 60 + Number(parts.find((p) => p.type === "minute")!.value);
+  if (day === night) return false;
+  return day < night ? cur >= night || cur < day : cur >= night && cur < day;
+}

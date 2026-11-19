@@ -1,158 +1,134 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ExternalLink, GripVertical, ImagePlus, Plus, Trash2, Upload } from "lucide-react";
+import { ChevronDown, ExternalLink, Moon, Plus, RotateCcw, Sun, Trash2, Tv, Undo2, Upload } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-import { updateTvSettings } from "@/hooks/useTvWall";
+import { updateTvScreen, updateTvSettings } from "@/hooks/useTvWall";
 import { TV_REST_BUCKET, signTvRestPaths } from "@/hooks/useTvRestContent";
-import type { RestMessage, RestWindow } from "@/lib/tv/restScreen";
-import { cn } from "@/lib/utils";
+import { isReleased } from "@/lib/tv/tvConn";
+import type { RestWindow } from "@/lib/tv/restScreen";
+import dayDefault from "@/assets/eternum-descanso-claro.webp.asset.json";
+import nightDefault from "@/assets/eternum-descanso-escuro.png.asset.json";
 import { runTv } from "./tvShared";
 
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const SAVED = "Salvo. As TVs pegam a mudança em alguns minutos.";
+const H = "text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
 
-/** Reduz para no máximo 1920 px de largura e grava em WebP (logo mantém PNG pela transparência). */
-async function optimizeForTv(file: File, keepPng: boolean): Promise<{ blob: Blob; ext: string }> {
+async function uploadRestImage(file: File) {
   const bmp = await createImageBitmap(file);
   const scale = Math.min(1, 1920 / bmp.width);
   const c = document.createElement("canvas");
   c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
   c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
-  const type = keepPng ? "image/png" : "image/webp";
-  const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("Não foi possível ler a imagem"))), type, 0.88));
-  return { blob, ext: keepPng ? "png" : "webp" };
-}
-
-async function uploadRestImage(file: File, keepPng = false) {
-  const { blob, ext } = await optimizeForTv(file, keepPng);
-  const path = `custom/${crypto.randomUUID()}.${ext}`;
+  const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("Não foi possível ler a imagem"))), "image/webp", 0.9));
+  const path = `custom/${crypto.randomUUID()}.webp`;
   const { error } = await supabase.storage.from(TV_REST_BUCKET).upload(path, blob, { contentType: blob.type });
   if (error) throw error;
   return path;
 }
 
-function useSigned(paths: string[]) {
-  const [map, setMap] = useState<Record<string, string>>({});
-  const key = paths.join("|");
-  useEffect(() => {
-    let off = false;
-    signTvRestPaths(paths).then((urls) => { if (!off) setMap(Object.fromEntries(paths.map((p, i) => [p, urls[i]]))); });
-    return () => { off = true; };
-  }, [key]);
-  return map;
+function useSigned(path: string | null) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => { let off = false; setUrl(null); if (path) signTvRestPaths([path]).then((u) => !off && setUrl(u[0] ?? null)); return () => { off = true; }; }, [path]);
+  return url;
 }
 
-export function TvRestSheet({ open, onOpenChange, settings }: { open: boolean; onOpenChange: (v: boolean) => void; settings?: any }) {
+function ImageSlot({ icon, title, hint, path, fallback, onPick, onReset, busy }: {
+  icon: React.ReactNode; title: string; hint: string; path: string | null; fallback: string; onPick: (f: File) => void; onReset: () => void; busy: boolean;
+}) {
+  const signed = useSigned(path);
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-2 rounded-lg border p-2.5">
+      <div className="flex items-center gap-1.5 text-sm font-medium">{icon}{title}<span className="ml-auto text-xs font-normal text-muted-foreground">{hint}</span></div>
+      <div className="aspect-video overflow-hidden rounded-md border bg-muted">
+        <img src={path ? signed ?? "" : fallback} alt={title} className="h-full w-full object-cover" draggable={false} />
+      </div>
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" className="flex-1" disabled={busy} onClick={() => input.current?.click()}><Upload className="h-3.5 w-3.5 mr-1.5" />Trocar</Button>
+        {path && <Button size="sm" variant="ghost" disabled={busy} onClick={onReset}><RotateCcw className="h-3.5 w-3.5 mr-1.5" />Padrão</Button>}
+      </div>
+      <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }} />
+    </div>
+  );
+}
+
+export function TvRestSheet({ open, onOpenChange, settings, screens = [] }: { open: boolean; onOpenChange: (v: boolean) => void; settings?: any; screens?: any[] }) {
   const qc = useQueryClient();
-  const logo: string | null = settings?.rest_logo_url ?? null;
-  const photos: string[] = Array.isArray(settings?.rest_photos) ? settings.rest_photos : [];
-  const messages: RestMessage[] = Array.isArray(settings?.rest_messages) ? settings.rest_messages : [];
   const windows: RestWindow[] = Array.isArray(settings?.rest_windows) ? settings.rest_windows : [];
-  const signed = useSigned([logo, ...photos].filter(Boolean) as string[]);
+  const dayFrom: string = settings?.rest_day_from ?? "06:00";
+  const nightFrom: string = settings?.rest_night_from ?? "18:00";
   const [busy, setBusy] = useState(false);
-  const [drag, setDrag] = useState<number | null>(null);
-  const [newMsg, setNewMsg] = useState("");
-  const logoInput = useRef<HTMLInputElement>(null);
-  const photoInput = useRef<HTMLInputElement>(null);
 
-  const save = (patch: Record<string, unknown>) =>
-    runTv(async () => { await updateTvSettings(patch); await qc.invalidateQueries({ queryKey: ["tv-wall"] }); qc.invalidateQueries({ queryKey: ["tv-rest-content"] }); }, SAVED);
+  const refresh = async () => { await qc.invalidateQueries({ queryKey: ["tv-wall"] }); qc.invalidateQueries({ queryKey: ["tv-rest-content"] }); };
+  const save = (patch: Record<string, unknown>) => runTv(async () => { await updateTvSettings(patch); await refresh(); }, SAVED);
+  const pick = async (key: string, f: File) => { setBusy(true); try { const p = await uploadRestImage(f); await save({ [key]: p }); } finally { setBusy(false); } };
 
-  const onLogo = async (f?: File) => {
-    if (!f) return; setBusy(true);
-    try { const path = await uploadRestImage(f, true); await save({ rest_logo_url: path }); } finally { setBusy(false); }
-  };
-  const onPhotos = async (files: FileList | null) => {
-    if (!files?.length) return; setBusy(true);
-    try {
-      const added: string[] = [];
-      for (const f of Array.from(files)) added.push(await uploadRestImage(f));
-      await save({ rest_photos: [...photos, ...added] });
-    } finally { setBusy(false); }
-  };
-  const move = (from: number, to: number) => {
-    if (from === to) return;
-    const next = [...photos]; const [x] = next.splice(from, 1); next.splice(to, 0, x);
-    save({ rest_photos: next });
-  };
+  const free = screens.filter((s) => s.enabled && !isReleased(s));
+  const toRest = free.filter((s) => s.url);
+  const toBack = screens.filter((s) => s.rest_prev_url && !s.url);
+  const allToRest = () => runTv(async () => {
+    await Promise.all(toRest.map((s) => updateTvScreen(s.slot, { rest_prev_url: s.url, url: null })));
+    await refresh();
+  }, `${toRest.length} TV${toRest.length === 1 ? "" : "s"} em descanso. Elas trocam em até 30 segundos.`);
+  const allBack = () => runTv(async () => {
+    await Promise.all(toBack.map((s) => updateTvScreen(s.slot, { url: s.rest_prev_url, rest_prev_url: null })));
+    await refresh();
+  }, "As TVs voltam ao que estavam passando em até 30 segundos.");
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-[480px] overflow-y-auto">
         <SheetHeader><SheetTitle>Tela de descanso</SheetTitle></SheetHeader>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Aparece sozinha nas TVs sem conteúdo, no lugar das fotos da LG. Se alguém estiver transmitindo ou usando um app na TV, ela não interrompe.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">A arte Eternum em tela cheia: clara durante o dia e escura à noite. Aparece nas TVs sem conteúdo.</p>
         <Button variant="outline" size="sm" className="mt-3" asChild>
           <a href="/tv/descanso" target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Ver prévia</a>
         </Button>
 
         <section className="mt-6 space-y-2">
-          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Logo</h4>
-          <div className="flex items-center gap-3">
-            <div className="tv-rest flex h-16 w-40 items-center justify-center rounded-md border px-3">
-              {logo && signed[logo] ? <img src={signed[logo]} alt="Logo" className="max-h-8 w-auto" /> : <span className="tv-rest-wordmark !text-base">ETERNUM</span>}
-            </div>
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => logoInput.current?.click()}><Upload className="h-3.5 w-3.5 mr-1.5" />Trocar</Button>
-            <input ref={logoInput} type="file" accept="image/*" className="hidden" onChange={(e) => { onLogo(e.target.files?.[0]); e.target.value = ""; }} />
+          <h4 className={H}>Todas as TVs</h4>
+          <div className="grid grid-cols-1 gap-2">
+            <Button variant="outline" disabled={!toRest.length} onClick={allToRest}><Moon className="h-4 w-4 mr-1.5" />Colocar todas em descanso</Button>
+            <Button variant="outline" disabled={!toBack.length} onClick={allBack}><Undo2 className="h-4 w-4 mr-1.5" />Voltar ao que passava</Button>
           </div>
-          <p className="text-xs text-muted-foreground">Prefira PNG com fundo transparente e letras claras.</p>
+          <p className="text-xs text-muted-foreground">
+            {toRest.length} com conteúdo · {free.length - toRest.length} já em descanso{toBack.length ? ` · ${toBack.length} pode${toBack.length === 1 ? "" : "m"} voltar ao que passava` : ""}. TVs liberadas não mudam.
+          </p>
         </section>
 
         <section className="mt-6 space-y-2">
-          <div className="flex items-center justify-between">
-            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Fotos ({photos.length})</h4>
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => photoInput.current?.click()}><ImagePlus className="h-3.5 w-3.5 mr-1.5" />Adicionar</Button>
-            <input ref={photoInput} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { onPhotos(e.target.files); e.target.value = ""; }} />
+          <h4 className={H}>Imagens</h4>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <ImageSlot icon={<Sun className="h-4 w-4" />} title="Dia" hint={`a partir de ${dayFrom}`} path={settings?.rest_day_image ?? null} fallback={dayDefault.url}
+              busy={busy} onPick={(f) => pick("rest_day_image", f)} onReset={() => save({ rest_day_image: null })} />
+            <ImageSlot icon={<Moon className="h-4 w-4" />} title="Noite" hint={`a partir de ${nightFrom}`} path={settings?.rest_night_image ?? null} fallback={nightDefault.url}
+              busy={busy} onPick={(f) => pick("rest_night_image", f)} onReset={() => save({ rest_night_image: null })} />
           </div>
-          <p className="text-xs text-muted-foreground">Arraste para mudar a ordem. Use fotos deitadas (16:9) com boa resolução.</p>
-          {photos.length === 0 ? <p className="text-sm text-muted-foreground py-3">Nenhuma foto. A TV mostra só o logo e o relógio.</p> : (
-            <ul className="grid grid-cols-2 gap-2">
-              {photos.map((p, i) => (
-                <li key={p} draggable onDragStart={() => setDrag(i)} onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => { if (drag != null) move(drag, i); setDrag(null); }}
-                  className={cn("group relative overflow-hidden rounded-md border bg-muted aspect-video cursor-grab", drag === i && "opacity-50")}>
-                  {signed[p] && <img src={signed[p]} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" draggable={false} />}
-                  <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded bg-background/85 px-1.5 py-0.5 text-[11px]"><GripVertical className="h-3 w-3" />{i + 1}</span>
-                  <Button size="icon" variant="secondary" aria-label="Remover foto" className="absolute right-1.5 top-1.5 h-7 w-7"
-                    onClick={() => save({ rest_photos: photos.filter((_, j) => j !== i) })}><Trash2 className="h-3.5 w-3.5" /></Button>
-                </li>
-              ))}
-            </ul>
-          )}
         </section>
 
         <section className="mt-6 space-y-2">
-          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Mensagens na faixa de baixo</h4>
-          <p className="text-xs text-muted-foreground">Trocam a cada 15 segundos. Sem mensagens ativas, a faixa não aparece.</p>
-          <ul className="space-y-1.5">
-            {messages.map((m, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <Input defaultValue={m.text} className="h-8" onBlur={(e) => { const t = e.target.value.trim(); if (t !== m.text) save({ rest_messages: messages.map((x, j) => (j === i ? { ...x, text: t } : x)) }); }} />
-                <Switch checked={m.active !== false} aria-label="Ativa" onCheckedChange={(v) => save({ rest_messages: messages.map((x, j) => (j === i ? { ...x, active: v } : x)) })} />
-                <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Remover mensagem" onClick={() => save({ rest_messages: messages.filter((_, j) => j !== i) })}><Trash2 className="h-3.5 w-3.5" /></Button>
-              </li>
-            ))}
-          </ul>
-          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const t = newMsg.trim(); if (!t) return; save({ rest_messages: [...messages, { text: t, active: true }] }); setNewMsg(""); }}>
-            <Input value={newMsg} onChange={(e) => setNewMsg(e.target.value)} placeholder="Nova mensagem" className="h-8" />
-            <Button size="sm" type="submit" variant="outline" disabled={!newMsg.trim()}><Plus className="h-3.5 w-3.5 mr-1" />Adicionar</Button>
-          </form>
+          <h4 className={H}>Quando trocar</h4>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1"><Label className="text-xs">Clara a partir de</Label>
+              <Input key={`d${dayFrom}`} type="time" defaultValue={dayFrom} className="h-9 w-32" onBlur={(e) => e.target.value && e.target.value !== dayFrom && save({ rest_day_from: e.target.value })} /></div>
+            <div className="space-y-1"><Label className="text-xs">Escura a partir de</Label>
+              <Input key={`n${nightFrom}`} type="time" defaultValue={nightFrom} className="h-9 w-32" onBlur={(e) => e.target.value && e.target.value !== nightFrom && save({ rest_night_from: e.target.value })} /></div>
+          </div>
+          <p className="text-xs text-muted-foreground">Horário de Brasília. A troca é suave, sem piscar.</p>
         </section>
 
         <Collapsible className="mt-6 rounded-md border">
           <CollapsibleTrigger className="group flex w-full items-center justify-between p-3 text-sm font-medium">
-            Horários de descanso (opcional){windows.length ? ` · ${windows.length}` : ""}
+            <span className="flex items-center gap-1.5"><Tv className="h-4 w-4" />Descanso automático (opcional){windows.length ? ` · ${windows.length}` : ""}</span>
             <ChevronDown className="h-4 w-4 transition group-data-[state=open]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3 px-3 pb-3">
-            <p className="text-xs text-muted-foreground">Use só se quiser que TVs com conteúdo também mostrem a tela de descanso em certos horários.</p>
+            <p className="text-xs text-muted-foreground">TVs com conteúdo também mostram a tela de descanso nesses horários (ligue em cada TV, aba Horário).</p>
             {windows.map((w, i) => {
               const upd = (patch: Partial<RestWindow>) => save({ rest_windows: windows.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
               return (
