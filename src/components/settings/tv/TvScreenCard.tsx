@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { sendTvCommand } from "@/hooks/useTvWall";
 import { tvCapabilities, tvContentKind, tvVisualState } from "@/lib/tv/tvUrl";
 import tvSemCaptura from "@/assets/tv-sem-captura.png.asset.json";
+import { useTrafficAgencies } from "./TrafficHubFields";
 import { STATE, STATE_HINT, describeContent, runTv } from "./tvShared";
 import { isReleased } from "@/lib/tv/tvConn";
 import { Hint, ReleaseMenu, ReturnButton, SignalWithTip, TV_HINTS, hhmm } from "./TvConnRelease";
@@ -27,6 +28,7 @@ function IconAction({ label, onClick, children }: { label: string; onClick: () =
 }
 
 export function TvScreenCard({ screen, status, dashboards, settings, castSince, onOpen }: Props) {
+  const { data: agencies } = useTrafficAgencies();
   const state = tvVisualState(status);
   const caps = tvCapabilities(screen.slot);
   const isOn = state === "on" || state === "saver";
@@ -64,7 +66,7 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
           <p className="text-sm font-semibold truncate">{screen.name}</p>
           <SignalWithTip status={status} />
         </div>
-        <p className="text-xs text-muted-foreground truncate">{describeContent(screen.url, dashboards)}</p>
+        <p className="text-xs text-muted-foreground truncate">{describeContent(screen.url, dashboards, agencies)}</p>
         <div className="flex items-center justify-between pt-0.5">
           <span className="text-[11px] text-muted-foreground truncate">
             {caps.screenshot && status?.screenshot_at ? <><span className="hidden sm:inline">captura </span>{formatDistanceToNowStrict(new Date(status.screenshot_at), { locale: ptBR, addSuffix: true })}</> : "\u00a0"}

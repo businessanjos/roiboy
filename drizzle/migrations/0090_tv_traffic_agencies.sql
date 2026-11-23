@@ -1,0 +1,1 @@
+ALTER TABLE public.tv_settings ADD COLUMN IF NOT EXISTS traffic_agencies jsonb NOT NULL DEFAULT '[{"name":"Impulse","id":"impulse"},{"name":"Social Nudge","id":"social-nudge"}]'::jsonb;

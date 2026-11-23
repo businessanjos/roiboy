@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { describeTraffic, parseTrafficUrl } from "@/lib/tv/trafficHub";
 import { TV_PERIODS, parseTvUrl, playlistLabel, tvContentKind, type TvVisualState } from "@/lib/tv/tvUrl";
 
 export const STATE: Record<TvVisualState, { label: string; cls: string }> = {
@@ -30,10 +31,12 @@ export function useTvDashboards() {
   });
 }
 
-export function describeContent(url: string | null, dashboards: { id: string; name: string }[]) {
+export function describeContent(url: string | null, dashboards: { id: string; name: string }[], agencies?: { name: string; id: string }[]) {
   if (!url) return "Tela de descanso";
   if (tvContentKind(url) === "playlist") return playlistLabel(url);
   if (tvContentKind(url) === "image") return "Imagem";
+  const t = parseTrafficUrl(url, agencies);
+  if (t) return describeTraffic(t, agencies);
   const p = parseTvUrl(url);
   if (!p) return "Link personalizado";
   const name = dashboards.find((d) => d.id === p.dashboardId)?.name ?? "Dashboard";

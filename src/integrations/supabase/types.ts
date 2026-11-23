@@ -27179,6 +27179,7 @@ export type Database = {
           rest_photos: Json
           rest_url: string | null
           rest_windows: Json
+          traffic_agencies: Json
           updated_at: string
         }
         Insert: {
@@ -27200,6 +27201,7 @@ export type Database = {
           rest_photos?: Json
           rest_url?: string | null
           rest_windows?: Json
+          traffic_agencies?: Json
           updated_at?: string
         }
         Update: {
@@ -27221,6 +27223,7 @@ export type Database = {
           rest_photos?: Json
           rest_url?: string | null
           rest_windows?: Json
+          traffic_agencies?: Json
           updated_at?: string
         }
         Relationships: []

@@ -31,6 +31,8 @@ import { CMD_LABEL, STATE, STATE_HINT, STATUS_LABEL, describeContent, runTv } fr
 import { isReleased } from "@/lib/tv/tvConn";
 import { Hint, ReleaseMenu, ReturnButton, SignalWithTip, TV_HINTS, hhmm } from "./TvConnRelease";
 import { ConnectionTab } from "./TvConnectionTab";
+import { TrafficHubFields, useTrafficAgencies } from "./TrafficHubFields";
+import { DEFAULT_AGENCIES, buildTrafficUrl, parseTrafficUrl, type TrafficParts } from "@/lib/tv/trafficHub";
 import tvSemCaptura from "@/assets/tv-sem-captura.png.asset.json";
 
 interface Props {
@@ -77,7 +79,7 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
   const [full, setFull] = useState(false);
   const cmd = (c: string) => runTv(() => sendTvCommand(screen.slot, c));
   const kind = tvContentKind(screen.url);
-  const playing = !screen.url ? "Tela de descanso" : kind !== "dashboard" ? describeContent(screen.url, dashboards) : `Dashboard · ${describeContent(screen.url, dashboards)}`;
+  const playing = !screen.url ? "Tela de descanso" : (kind !== "dashboard" || parseTrafficUrl(screen.url)) ? describeContent(screen.url, dashboards) : `Dashboard · ${describeContent(screen.url, dashboards)}`;
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
@@ -166,9 +168,22 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
 }
 
 const ZOOM_TICKS = [50, 75, 100, 120];
+const TRAFFIC_PAID = "__traffic_paid";
+const TRAFFIC_ORG = "__traffic_organic";
+function trafficOf(x: { dash: string; agencia: string; tperiodo: string }): TrafficParts | null {
+  if (x.dash === TRAFFIC_PAID) return { kind: "paid", agencia: x.agencia, periodo: x.tperiodo };
+  if (x.dash === TRAFFIC_ORG) return { kind: "organic", periodo: x.tperiodo };
+  return null;
+}
 
 function ContentTab({ screen, status, dashboards }: { screen: any; status?: any; dashboards: { id: string; name: string }[] }) {
   const parsed = parseTvUrl(screen.url);
+  const { data: agencies = DEFAULT_AGENCIES } = useTrafficAgencies();
+  const trafficInit = () => {
+    const t = parseTrafficUrl(screen.url, agencies);
+    return { dash: t ? (t.kind === "paid" ? TRAFFIC_PAID : TRAFFIC_ORG) : parsed?.dashboardId ?? "",
+      agencia: t?.kind === "paid" ? t.agencia : agencies[0]?.id ?? "", tperiodo: t?.periodo ?? "mes" };
+  };
   const imgInit = () => {
     const im = parseTvImageUrl(screen.url);
     let img = "";
@@ -184,7 +199,7 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
   const init = () => ({
     kind: tvContentKind(screen.url) as TvContentKind, dash: parsed?.dashboardId ?? "", periodo: parsed?.periodo ?? "este_mes",
     zoom: parsed?.zoom ?? 100, foco: parsed?.foco ?? true, tvFit: parsed?.tvFit ?? false, playlist: isYoutubePlaylist(screen.url) ? screen.url : "",
-    ...imgInit(),
+    ...imgInit(), ...trafficInit(),
   });
   const [f, setF] = useState(init);
   const set = <K extends keyof ReturnType<typeof init>>(k: K, v: ReturnType<typeof init>[K]) => setF((x) => ({ ...x, [k]: v }));
@@ -193,6 +208,8 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
   const toUrl = (x: ReturnType<typeof init>) => {
     if (x.kind === "playlist") return isYoutubePlaylist(x.playlist.trim()) ? x.playlist.trim() : "";
     if (x.kind === "image") return x.img ? buildTvImageUrl(tvMediaSrc(x.img), x.fit) : "";
+    const tp = trafficOf(x);
+    if (tp) return buildTrafficUrl(tp);
     return x.dash ? buildTvUrl({ dashboardId: x.dash, periodo: x.periodo, zoom: x.zoom, foco: x.foco, tvFit: x.tvFit }) : "";
   };
   const url = useMemo(() => toUrl(f), [f]);
@@ -212,6 +229,16 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
     await updateTvScreen(screen.slot, f.kind === "playlist" ? { ...patch, refresh_min: 0 } : patch);
     setSentAt(Date.now());
   });
+  const isTraffic = f.dash === TRAFFIC_PAID || f.dash === TRAFFIC_ORG;
+  // Central de Tráfego: cada mudança de agência/período já salva o link na TV.
+  const setTraffic = (patch: Partial<ReturnType<typeof init>>) => {
+    const next = { ...f, ...patch };
+    setF(next);
+    const tp = trafficOf(next);
+    if (!tp || (next.kind !== "dashboard")) return;
+    const u = buildTrafficUrl(tp);
+    if (u !== screen.url) runTv(async () => { await updateTvScreen(screen.slot, screenPatchFor(screen, u, null)); setSentAt(Date.now()); });
+  };
   const copy = () => navigator.clipboard.writeText(url).then(() => toast.success("Endereço copiado"));
 
   return (
@@ -230,19 +257,29 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
             <Section title="Painel">
               <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
                 <div className="space-y-1.5"><Label className="text-xs">Dashboard</Label>
-                  <Select value={f.dash} onValueChange={(v) => set("dash", v)}>
+                  <Select value={f.dash} onValueChange={(v) => (v === TRAFFIC_PAID || v === TRAFFIC_ORG) ? setTraffic({ dash: v }) : set("dash", v)}>
                     <SelectTrigger className="h-10"><SelectValue placeholder="Escolha o painel" /></SelectTrigger>
-                    <SelectContent>{dashboards.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                    <SelectContent>
+                      {dashboards.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      <SelectItem value={TRAFFIC_PAID}>Central de Tráfego · Pago</SelectItem>
+                      <SelectItem value={TRAFFIC_ORG}>Central de Tráfego · Orgânico</SelectItem>
+                    </SelectContent>
                   </Select></div>
-                <div className="space-y-1.5"><Label className="text-xs">Período</Label>
+                {isTraffic ? null : <div className="space-y-1.5"><Label className="text-xs">Período</Label>
                   <Select value={f.periodo} onValueChange={(v) => set("periodo", v)}>
                     <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                     <SelectContent>{TV_PERIODS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
-                  </Select></div>
+                  </Select></div>}
               </div>
+              {isTraffic && (
+                <div className="pt-1">
+                  <TrafficHubFields value={trafficOf(f)!} onChange={(p) => setTraffic(p.kind === "paid" ? { agencia: p.agencia, tperiodo: p.periodo } : { tperiodo: p.periodo })} />
+                  <Help>Painel da Central de Tráfego (sistema externo). Ao mudar, o link já é salvo na TV.</Help>
+                </div>
+              )}
             </Section>
 
-            <Section title="Tamanho">
+            {!isTraffic && <Section title="Tamanho">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-4">
                   <Slider min={50} max={120} step={5} value={[f.zoom]} onValueChange={(v) => set("zoom", v[0])} className="flex-1" aria-label="Zoom" />
@@ -265,7 +302,7 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
                   <Switch checked={f.tvFit} onCheckedChange={(v) => set("tvFit", v)} />
                 </label>
               </div>
-            </Section>
+            </Section>}
           </>
         ) : f.kind === "image" ? (
           <Section title="Imagem">
