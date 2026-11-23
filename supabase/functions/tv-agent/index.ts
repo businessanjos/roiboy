@@ -1,7 +1,7 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { monthStartActive, toAnnualUrl } from "../_shared/tvMonthStart.ts";
-import { deriveTvToken, withTvToken } from "../_shared/tvToken.ts";
+import { ensureTvKeys, deriveTvToken, withTvToken } from "../_shared/tvToken.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -122,10 +122,13 @@ Deno.serve(async (req) => {
       ]);
       // "Início do mês": entrega o link anual sem mudar o salvo
       const nowD = new Date();
-      const { data: keys } = await db.from("tv_screen_tokens").select("slot,nonce");
       const secret = Deno.env.get("TV_TOKEN_SECRET") ?? "";
       const tokens = new Map<number, string>();
-      if (secret) for (const k of keys ?? []) tokens.set(k.slot, await deriveTvToken(secret, k.slot, k.nonce));
+      // Every TV always has a key: created when missing, rotated on day 1 at 03:00 (SP); old key valid 7 more days.
+      if (secret) {
+        const nonces = await ensureTvKeys(db, secret, (screens ?? []).map((s: any) => s.slot), nowD);
+        for (const [slot, nonce] of nonces) tokens.set(slot, await deriveTvToken(secret, slot, nonce));
+      }
       // Order matters: annual swap first, then the TV key, so the token survives the period change.
       const served = (screens ?? []).map((sc: any) => {
         const url = monthStartActive(settings, sc, nowD) ? toAnnualUrl(sc.url) : sc.url;

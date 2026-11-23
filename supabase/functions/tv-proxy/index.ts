@@ -74,7 +74,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: { ...cors, "Access-Control-Allow-Headers": req.headers.get("access-control-request-headers") ?? cors["Access-Control-Allow-Headers"], "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS" } });
   const tok = req.headers.get("x-tv-token") ?? "";
   if (tok.length < 40 || tok.length > 100) return json({ error: "tv_token_invalid" }, 403);
-  const { data: key } = await admin.from("tv_screen_tokens").select("slot").eq("token_hash", await hashTvToken(tok)).maybeSingle();
+  const th = await hashTvToken(tok);
+  let { data: key } = await admin.from("tv_screen_tokens").select("slot").eq("token_hash", th).maybeSingle();
+  if (!key) { // previous key stays valid for 7 days after the monthly rotation
+    const { data: prev } = await admin.from("tv_screen_tokens").select("slot").eq("prev_token_hash", th).gt("prev_expires_at", new Date().toISOString()).maybeSingle();
+    key = prev;
+  }
   if (!key) return json({ error: "tv_token_invalid" }, 403);
   if (Date.now() - lastUsed > 60_000) { lastUsed = Date.now(); admin.from("tv_screen_tokens").update({ last_used_at: new Date().toISOString() }).eq("slot", key.slot).then(() => {}); }
 

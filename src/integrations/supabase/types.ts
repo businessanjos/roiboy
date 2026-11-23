@@ -27132,6 +27132,9 @@ export type Database = {
           created_by: string | null
           last_used_at: string | null
           nonce: string
+          prev_expires_at: string | null
+          prev_nonce: string | null
+          prev_token_hash: string | null
           slot: number
           token_hash: string
         }
@@ -27140,6 +27143,9 @@ export type Database = {
           created_by?: string | null
           last_used_at?: string | null
           nonce: string
+          prev_expires_at?: string | null
+          prev_nonce?: string | null
+          prev_token_hash?: string | null
           slot: number
           token_hash: string
         }
@@ -27148,6 +27154,9 @@ export type Database = {
           created_by?: string | null
           last_used_at?: string | null
           nonce?: string
+          prev_expires_at?: string | null
+          prev_nonce?: string | null
+          prev_token_hash?: string | null
           slot?: number
           token_hash?: string
         }

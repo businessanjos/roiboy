@@ -1,4 +1,3 @@
-import { TvKeyControls } from "./TvKeyControls";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -151,7 +150,6 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
           {status?.casting && kind !== "playlist" && <p className="mx-5 mt-5 flex items-start gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs"><Cast className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />Esta TV está recebendo uma transmissão. A automação volta sozinha quando a transmissão acabar.</p>}
           {released && <p className="mx-5 mt-5 rounded-md border bg-muted/50 px-3 py-2 text-xs">TV liberada para uso pelo controle. Devolva para automação para trocar o conteúdo.</p>}
           <fieldset disabled={released} className={cn("min-w-0", released && "opacity-50 pointer-events-none")}><ContentTab screen={screen} status={status} dashboards={dashboards} /></fieldset>
-          <div className="px-5 pb-6"><TvKeyControls slot={screen.slot} /></div>
         </TabsContent>
         <TabsContent value="controle" className="mt-0 px-5 py-6 animate-in fade-in-0 duration-200"><ControlTab screen={screen} /></TabsContent>
         <TabsContent value="horario" className="mt-0 px-5 py-6 animate-in fade-in-0 duration-200"><AgendaTab screen={screen} settings={settings} /></TabsContent>
