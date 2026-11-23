@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { hashTvToken } from "../_shared/tvToken.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -75,20 +74,6 @@ Deno.serve(async (req) => {
     const { action, token, email, filters: reqFilters, tv_token, dashboard_id } = await req.json();
 
     // TV key: read-only access to one Insights dashboard, validated here. Never creates a session.
-    if (action === "tv_load") {
-      const bad = () => new Response(JSON.stringify({ error: "tv_token_invalid" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (typeof tv_token !== "string" || tv_token.length < 40 || tv_token.length > 100) return bad();
-      if (typeof dashboard_id !== "string" || !/^[0-9a-f-]{36}$/i.test(dashboard_id)) return bad();
-      const { data: key } = await supabaseAdmin.from("tv_screen_tokens").select("slot").eq("token_hash", await hashTvToken(tv_token)).maybeSingle();
-      if (!key) return bad();
-      const { data: dash } = await supabaseAdmin.from("insights_dashboards").select("id, account_id").eq("id", dashboard_id).maybeSingle();
-      if (!dash) return new Response(JSON.stringify({ error: "not_found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      await supabaseAdmin.from("tv_screen_tokens").update({ last_used_at: new Date().toISOString() }).eq("slot", key.slot);
-      const f: SharedFilters = { startDate: reqFilters?.startDate, endDate: reqFilters?.endDate };
-      const dashboardData = await fetchDashboardDataWithVisuals(supabaseAdmin, dash.id, dash.account_id, f);
-      return new Response(JSON.stringify({ status: "approved", ...dashboardData }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
     if (!token) {
       return new Response(JSON.stringify({ error: "Token obrigatório" }), {
         status: 400,

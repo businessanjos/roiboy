@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
+import { bootTvToken } from "./lib/tv/tvTokenBoot";
 import "./index.css";
 
 const reloadOnce = () => {
@@ -45,4 +45,7 @@ window.addEventListener("load", () => {
   setTimeout(() => sessionStorage.removeItem("chunk-reload"), 5000);
 });
 
-createRoot(document.getElementById("root")!).render(<App />);
+// TV key must patch fetch/session before the backend client module is created.
+bootTvToken().finally(() =>
+  import("./App.tsx").then(({ default: App }) => createRoot(document.getElementById("root")!).render(<App />)),
+);

@@ -13,8 +13,8 @@
 - [x] TVs: barra com um botão só — "Devolver todas" passou a ser linha dentro do menu de "Liberar todas"
 
 ## Chave de TV = mesma tela logada
-- [ ] Conta dedicada "TV Escritório" (só leitura, perfil igual ao das TVs hoje; senha via cartão seguro)
-- [ ] tv-proxy: valida tv_token, só leituras, sessão persistida (refresh antes de expirar, senha só se refresh falhar)
-- [ ] Aviso "Conta de TV sem acesso — verifique em Configurações > TVs" na TV e na tela de TVs
-- [ ] Front: Insights normal em modo TV com tv_token; remover TvInsightsView
-- [ ] Lista de RPC liberadas + comparação lado a lado dos 4 painéis
+- [x] Conta dedicada "TV Escritório" (só leitura, perfil igual ao das TVs hoje; senha via cartão seguro)
+- [x] tv-proxy: valida tv_token, só leituras, sessão persistida (refresh antes de expirar, senha só se refresh falhar)
+- [x] Aviso "Conta de TV sem acesso — verifique em Configurações > TVs" na TV e na tela de TVs
+- [x] Front: Insights normal em modo TV com tv_token; remover TvInsightsView
+- [x] Lista de RPC liberadas + comparação lado a lado dos 4 painéis

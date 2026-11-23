@@ -11,6 +11,7 @@ import { TvScreenCard } from "./TvScreenCard";
 import { TvDetailSheet } from "./TvDetailSheet";
 import { TvScheduleSheet } from "./TvScheduleSheet";
 import { OfficeCountdownHero } from "./OfficeCountdown";
+import { TvAccountAlert } from "./TvAccountAlert";
 import { TvRestSheet } from "./TvRestSheet";
 import { TvAddSheet } from "./TvAddSheet";
 import { agentIsOffline } from "@/lib/tv/addTv";
@@ -181,6 +182,7 @@ export function TvWallManager() {
           </div>
         )}
 
+        <TvAccountAlert />
         {!loading && <OfficeCountdownHero settings={data!.settings} status={data!.status} screens={data!.screens} onAdjust={() => setScheduleOpen(true)} />}
 
         {loading ? (

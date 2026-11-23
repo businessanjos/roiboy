@@ -27090,6 +27090,42 @@ export type Database = {
         }
         Relationships: []
       }
+      tv_proxy_session: {
+        Row: {
+          access_token: string | null
+          auth_user_id: string | null
+          expires_at: string | null
+          id: number
+          last_error: string | null
+          last_login_at: string | null
+          refresh_token: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          auth_user_id?: string | null
+          expires_at?: string | null
+          id?: number
+          last_error?: string | null
+          last_login_at?: string | null
+          refresh_token?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          auth_user_id?: string | null
+          expires_at?: string | null
+          id?: number
+          last_error?: string | null
+          last_login_at?: string | null
+          refresh_token?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tv_screen_tokens: {
         Row: {
           created_at: string
@@ -32005,6 +32041,15 @@ export type Database = {
         Returns: Json
       }
       tv_can_manage: { Args: { _uid: string }; Returns: boolean }
+      tv_proxy_rpc_is_readonly: { Args: { _fn: string }; Returns: boolean }
+      tv_proxy_status: {
+        Args: never
+        Returns: {
+          last_error: string
+          status: string
+          updated_at: string
+        }[]
+      }
       tv_release: {
         Args: { _slots: number[]; _until: string }
         Returns: undefined
