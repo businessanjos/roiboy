@@ -45,9 +45,9 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
 
   return (
     <div role="button" tabIndex={0} onClick={onOpen} onKeyDown={(e) => e.key === "Enter" && onOpen()}
-      className={cn("group rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden cursor-pointer transition hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      className={cn("group flex h-full flex-col rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden cursor-pointer transition hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         !screen.enabled && "opacity-50")}>
-      <div className="relative aspect-video overflow-hidden bg-muted">
+      <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
         {ytCover ? (
           <TvVideoCover np={status!.now_playing!} name={screen.name} />
         ) : caps.screenshot && status?.screenshot_url ? (
@@ -69,7 +69,7 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
           ? <Hint text={STATE_HINT[state]!} side="bottom" className="absolute top-1.5 right-1.5"><Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5", STATE[state].cls)}>{STATE[state].label}</Badge></Hint>
           : <Badge variant="outline" className={cn("absolute top-1.5 right-1.5 text-[10px] px-1.5 py-0 h-5", STATE[state].cls)}>{STATE[state].label}</Badge>}
       </div>
-      <div className="p-2.5 space-y-0.5">
+      <div className="flex flex-1 flex-col p-2.5 space-y-0.5">
         <div className="flex items-center gap-1.5 min-w-0">
           <p className="text-sm font-semibold truncate">{screen.name}</p>
           <SignalWithTip status={status} />
@@ -77,7 +77,7 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
         <p className="text-xs text-muted-foreground truncate">{describeContent(screen.url, dashboards, agencies)}</p>
         {showMiniPlayer(status?.now_playing, isOn, !!status?.casting) && <div className="pt-1"><TvMiniPlayer slot={screen.slot} np={status.now_playing} /></div>}
         {annual && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/50 text-foreground">Visão anual até dia {settings?.month_start_days ?? 5}</Badge>}
-        <div className="flex items-center justify-between pt-0.5">
+        <div className="mt-auto flex items-center justify-between pt-0.5">
           <span className="text-[11px] text-muted-foreground truncate">
             {ytCover ? "tocando agora" : caps.screenshot && status?.screenshot_at ? <><span className="hidden sm:inline">captura </span>{formatDistanceToNowStrict(new Date(status.screenshot_at), { locale: ptBR, addSuffix: true })}</> : "\u00a0"}
           </span>
