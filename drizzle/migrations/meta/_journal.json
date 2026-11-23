@@ -680,6 +680,13 @@
       "when": 1795465070235,
       "tag": "0096_tv_commands_media_player",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1795466914294,
+      "tag": "0097_tv_command_doorbell",
+      "breakpoints": true
     }
   ]
 }

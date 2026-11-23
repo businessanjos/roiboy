@@ -44,7 +44,7 @@ export function describeContent(url: string | null, dashboards: { id: string; na
   return per ? `${name} · ${per}` : name;
 }
 
-export const SENT = "Enviado. A TV atualiza em até 30 segundos.";
+export const SENT = "Enviado. A TV atualiza em instantes.";
 export const STATE_HINT: Partial<Record<TvVisualState, string>> = {
   nocontact: "O computador do escritório não está conseguindo falar com esta TV.",
 };

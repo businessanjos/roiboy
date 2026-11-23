@@ -27126,6 +27126,24 @@ export type Database = {
         }
         Relationships: []
       }
+      tv_realtime_config: {
+        Row: {
+          created_at: string
+          id: number
+          topic: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          topic: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          topic?: string
+        }
+        Relationships: []
+      }
       tv_screen_tokens: {
         Row: {
           created_at: string

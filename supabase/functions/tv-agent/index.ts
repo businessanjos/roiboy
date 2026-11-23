@@ -134,7 +134,10 @@ Deno.serve(async (req) => {
         const url = monthStartActive(settings, sc, nowD) ? toAnnualUrl(sc.url) : sc.url;
         return { ...sc, url: withTvToken(url, tokens.get(sc.slot)) };
       });
-      return json({ screens: served, settings, commands: pending ?? [], server_time: now });
+      const { data: rt } = await db.from("tv_realtime_config").select("topic").eq("id", 1).maybeSingle();
+      const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "";
+      const realtime = rt?.topic && anon ? { url: Deno.env.get("SUPABASE_URL")!, apikey: anon, topic: rt.topic } : undefined;
+      return json({ screens: served, settings, commands: pending ?? [], server_time: now, ...(realtime ? { realtime } : {}) });
     }
 
     if (body?.action === "command_result") {
