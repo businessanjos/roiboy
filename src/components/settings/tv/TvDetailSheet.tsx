@@ -239,7 +239,7 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
     const u = buildTrafficUrl(tp);
     if (u !== screen.url) runTv(async () => { await updateTvScreen(screen.slot, screenPatchFor(screen, u, null)); setSentAt(Date.now()); });
   };
-  const copy = () => navigator.clipboard.writeText(url).then(() => toast.success("Endereço copiado"));
+  const copy = (text: string, msg = "Endereço copiado") => navigator.clipboard.writeText(text).then(() => toast.success(msg));
 
   return (
     <div>
@@ -313,7 +313,11 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
           <Section title="Playlist">
             <div className="space-y-1.5">
               <Label className="text-xs">Link da playlist</Label>
-              <Input className="h-10" value={f.playlist} onChange={(e) => set("playlist", e.target.value)} placeholder="https://www.youtube.com/playlist?list=…" />
+              <div className="flex items-center gap-2">
+                <Input className="h-10 flex-1" value={f.playlist} onChange={(e) => set("playlist", e.target.value)} placeholder="https://www.youtube.com/playlist?list=…" />
+                <Button size="icon" variant="outline" className="h-10 w-10 shrink-0" aria-label="Copiar link da playlist"
+                  disabled={!f.playlist.trim()} onClick={() => copy(f.playlist.trim(), "Link copiado")}><Copy className="h-3.5 w-3.5" /></Button>
+              </div>
               {invalidPlaylist
                 ? <p className="text-xs text-destructive">O link precisa ter "list=" (link de playlist do YouTube).</p>
                 : <Help>Cole o link de uma playlist do YouTube. A TV começa por um vídeo sorteado e segue a lista.</Help>}
@@ -321,11 +325,11 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
           </Section>
         )}
 
-        {url && (
+        {url && f.kind !== "playlist" && (
           <Section title="Endereço que a TV vai abrir">
             <div className="flex items-center gap-2 rounded-md border bg-muted/40 pl-3">
               <span className="flex-1 truncate font-mono text-[11px] text-muted-foreground" title={url}>{url}</span>
-              <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0" aria-label="Copiar endereço" onClick={copy}><Copy className="h-3.5 w-3.5" /></Button>
+              <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0" aria-label="Copiar endereço" onClick={() => copy(url)}><Copy className="h-3.5 w-3.5" /></Button>
             </div>
           </Section>
         )}
