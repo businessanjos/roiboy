@@ -61,6 +61,7 @@
 
     --warning: 39 55% 63%; /* #d2ae6d */
     --warning-foreground: 20 10% 11%;
+    --countdown-amber: 32 92% 46%;
     --warning-muted: 39 40% 90%;
 
     --danger: 0 72% 51%;
@@ -178,6 +179,7 @@
     --pill-sale-foreground: 37 19% 6.8%;
     --success-muted: 152 35% 15%;
     --warning: 39 60% 55%;
+    --countdown-amber: 36 95% 58%;
     --warning-muted: 39 45% 15%;
     --danger: 0 65% 50%;
     --danger-muted: 0 55% 15%;

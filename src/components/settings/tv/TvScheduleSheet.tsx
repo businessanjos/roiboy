@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { DateField } from "@/components/ui/date-field";
 import { updateTvSettings } from "@/hooks/useTvWall";
 import { runTv } from "./tvShared";
+import { OfficeCountdownCompact } from "./OfficeCountdown";
 
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -40,7 +41,7 @@ function UntilField({ label, help, value, onSave }: { label: string; help: strin
   );
 }
 
-export function TvScheduleSheet({ open, onOpenChange, settings }: { open: boolean; onOpenChange: (v: boolean) => void; settings: any }) {
+export function TvScheduleSheet({ open, onOpenChange, settings, status, screens }: { open: boolean; onOpenChange: (v: boolean) => void; settings: any; status?: any[]; screens?: any[] }) {
   const [holiday, setHoliday] = useState("");
   const save = (patch: Record<string, unknown>) => runTv(() => updateTvSettings(patch), "Horário salvo");
   const days: number[] = settings?.days ?? [];
@@ -51,6 +52,7 @@ export function TvScheduleSheet({ open, onOpenChange, settings }: { open: boolea
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader><SheetTitle>Horário do escritório</SheetTitle><p className="text-xs text-muted-foreground">Vale para todas as TVs que seguem o horário do escritório.</p></SheetHeader>
         <div className="space-y-5 pt-4">
+          <OfficeCountdownCompact settings={settings} status={status} screens={screens} />
           <div className="space-y-2">
             <Label className="text-xs">Dias</Label>
             <div className="flex flex-wrap gap-1.5">

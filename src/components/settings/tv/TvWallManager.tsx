@@ -10,6 +10,7 @@ import { isRecent, tvVisualState } from "@/lib/tv/tvUrl";
 import { TvScreenCard } from "./TvScreenCard";
 import { TvDetailSheet } from "./TvDetailSheet";
 import { TvScheduleSheet } from "./TvScheduleSheet";
+import { OfficeCountdownHero } from "./OfficeCountdown";
 import { TvRestSheet } from "./TvRestSheet";
 import { TvAddSheet } from "./TvAddSheet";
 import { agentIsOffline } from "@/lib/tv/addTv";
@@ -180,6 +181,8 @@ export function TvWallManager() {
           </div>
         )}
 
+        {!loading && <OfficeCountdownHero settings={data!.settings} status={data!.status} screens={data!.screens} onAdjust={() => setScheduleOpen(true)} />}
+
         {loading ? (
           <div className={GRID}>{Array.from({ length: 10 }).map((_, i) => <CardSkeleton key={i} />)}</div>
         ) : (
@@ -206,7 +209,7 @@ export function TvWallManager() {
         {isAdmin && addBlocked && <p className="text-xs text-muted-foreground md:hidden">{ADD_OFF}</p>}
         <TvAddSheet open={addOpen} onOpenChange={setAddOpen} screens={data?.screens ?? []} events={data?.events ?? []} />
         <TvRestSheet open={restOpen} onOpenChange={setRestOpen} settings={data?.settings} screens={data?.screens ?? []} />
-        <TvScheduleSheet open={scheduleOpen} onOpenChange={setScheduleOpen} settings={data?.settings} />
+        <TvScheduleSheet open={scheduleOpen} onOpenChange={setScheduleOpen} settings={data?.settings} status={data?.status} screens={data?.screens} />
       </div>
     </TooltipProvider>
   );

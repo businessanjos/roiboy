@@ -58,6 +58,7 @@ export default {
           soft: "hsl(var(--success-soft, var(--success-muted)))",
           strong: "hsl(var(--success-strong, var(--success-foreground)))",
         },
+        "countdown-amber": "hsl(var(--countdown-amber))",
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
