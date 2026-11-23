@@ -30,6 +30,7 @@ import { NewVersionDialog } from "@/components/system/NewVersionDialog";
 import { isTrafficAgencyUser } from "@/lib/agency";
 import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
 import { useMainScrollRestoration } from "@/hooks/useMainScrollRestoration";
+import TvInsightsView, { isTvTokenInsights } from "@/pages/TvInsightsView";
 
 function MainScrollRestoration() {
   useMainScrollRestoration();
@@ -117,6 +118,9 @@ export function AppLayout() {
       </div>
     );
   }
+
+  // TV key (?tv_token) without login: read-only server-rendered dashboard, never the login screen.
+  if (!user && isTvTokenInsights(location.pathname, location.search)) return <TvInsightsView />;
 
   if (!user) {
     const next = `${location.pathname}${location.search}${location.hash}`;

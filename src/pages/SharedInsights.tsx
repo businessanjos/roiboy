@@ -1020,7 +1020,7 @@ function groupVisualsIntoRows(visuals: VisualItem[]): SharedVisualRow[] {
   return rows;
 }
 
-function SharedVisualsGrid({
+export function SharedVisualsGrid({
   visuals,
   visualsData,
 }: {

@@ -110,7 +110,7 @@ const getDefaultFilters = (): InsightsFilters => {
   };
 };
 
-function presetRange(preset: DatePreset, now = new Date()): { start: Date; end: Date } | null {
+export function presetRange(preset: DatePreset, now = new Date()): { start: Date; end: Date } | null {
   switch (preset) {
     case "today": return { start: startOfDay(now), end: endOfDay(now) };
     case "week": return { start: startOfWeek(now, { weekStartsOn: 0 }), end: endOfWeek(now, { weekStartsOn: 0 }) };

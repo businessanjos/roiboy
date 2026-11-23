@@ -27090,6 +27090,41 @@ export type Database = {
         }
         Relationships: []
       }
+      tv_screen_tokens: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          last_used_at: string | null
+          nonce: string
+          slot: number
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          last_used_at?: string | null
+          nonce: string
+          slot: number
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          last_used_at?: string | null
+          nonce?: string
+          slot?: number
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_screen_tokens_slot_fkey"
+            columns: ["slot"]
+            isOneToOne: true
+            referencedRelation: "tv_screens"
+            referencedColumns: ["slot"]
+          },
+        ]
+      }
       tv_screens: {
         Row: {
           custom_days: number[] | null
