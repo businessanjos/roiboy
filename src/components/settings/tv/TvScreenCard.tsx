@@ -51,9 +51,9 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
         {ytCover ? (
           <><TvVideoCover np={status!.now_playing!} name={screen.name} /><TvVideoOverlay slot={screen.slot} np={status!.now_playing!} /></>
         ) : caps.screenshot && status?.screenshot_url ? (
-          <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="absolute inset-0 h-full w-full scale-[1.04] object-cover" loading="lazy" />
+          <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="absolute inset-0 h-full w-full scale-[1.04] object-cover select-none" loading="lazy" draggable={false} />
         ) : !caps.screenshot ? (
-          <img src={tvSemCaptura.url} alt="Esse modelo de TV não possui suporte a capturas" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
+          <img src={tvSemCaptura.url} alt="Esse modelo de TV não possui suporte a capturas" className="absolute inset-0 h-full w-full object-cover select-none" draggable={false} />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
             <Tv className="h-6 w-6" />

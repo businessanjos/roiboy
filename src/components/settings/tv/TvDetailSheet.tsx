@@ -122,9 +122,9 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
           {ytCover ? (
             <TvVideoCover np={status!.now_playing!} name={screen.name} />
           ) : caps.screenshot && status?.screenshot_url ? (
-            <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="h-full w-full object-cover" />
+            <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="h-full w-full object-cover select-none" draggable={false} />
           ) : !caps.screenshot ? (
-            <img src={tvSemCaptura.url} alt="Esse modelo de TV não possui suporte a capturas" className="h-full w-full object-cover" draggable={false} />
+            <img src={tvSemCaptura.url} alt="Esse modelo de TV não possui suporte a capturas" className="h-full w-full object-cover select-none" draggable={false} />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
               <div className="rounded-full bg-background/70 p-3"><Tv className="h-6 w-6" /></div>
@@ -168,7 +168,7 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
       <Dialog open={full} onOpenChange={setFull}>
         <DialogContent className="max-w-6xl">
           <DialogTitle>{screen.name}</DialogTitle>
-          {status?.screenshot_url && <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="w-full rounded-md" />}
+          {status?.screenshot_url && <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="w-full rounded-md select-none" draggable={false} />}
         </DialogContent>
       </Dialog>
     </div>
