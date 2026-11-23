@@ -33,6 +33,9 @@ import { Hint, ReleaseMenu, ReturnButton, SignalWithTip, TV_HINTS, hhmm } from "
 import { ConnectionTab } from "./TvConnectionTab";
 import { TrafficHubFields, useTrafficAgencies } from "./TrafficHubFields";
 import { DEFAULT_AGENCIES, buildTrafficUrl, parseTrafficUrl, type TrafficParts } from "@/lib/tv/trafficHub";
+import { TvVideoCover } from "./TvVideoCover";
+import { TvMiniPlayer } from "./TvMiniPlayer";
+import { showMiniPlayer } from "@/lib/tv/nowPlaying";
 import tvSemCaptura from "@/assets/tv-sem-captura.png.asset.json";
 
 interface Props {
@@ -78,6 +81,8 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
   const released = isReleased(screen);
   const [full, setFull] = useState(false);
   const cmd = (c: string) => runTv(() => sendTvCommand(screen.slot, c));
+  const ytMini = showMiniPlayer(status?.now_playing, isOn, !!status?.casting);
+  const ytCover = ytMini && !!status?.now_playing?.video_id;
   const kind = tvContentKind(screen.url);
   const playing = !screen.url ? "Tela de descanso" : (kind !== "dashboard" || parseTrafficUrl(screen.url)) ? describeContent(screen.url, dashboards) : `Dashboard · ${describeContent(screen.url, dashboards)}`;
 
@@ -114,7 +119,9 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
 
       <div className="px-5 pt-5">
         <div className="relative aspect-video rounded-xl overflow-hidden border bg-muted shadow-sm">
-          {caps.screenshot && status?.screenshot_url ? (
+          {ytCover ? (
+            <TvVideoCover np={status!.now_playing!} name={screen.name} />
+          ) : caps.screenshot && status?.screenshot_url ? (
             <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="h-full w-full object-cover" />
           ) : !caps.screenshot ? (
             <img src={tvSemCaptura.url} alt="Esse modelo de TV não possui suporte a capturas" className="h-full w-full object-cover" draggable={false} />
@@ -124,7 +131,7 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
               <span className="text-xs">Sem captura nesta TV</span>
             </div>
           )}
-          {caps.screenshot && status?.screenshot_url && (
+          {!ytCover && caps.screenshot && status?.screenshot_url && (
             <div className="absolute inset-x-2 bottom-2 flex items-center justify-between">
               <span className="rounded-md bg-background/80 backdrop-blur px-2 py-1 text-[11px] text-foreground">
                 {status.screenshot_at ? formatDistanceToNow(new Date(status.screenshot_at), { locale: ptBR, addSuffix: true }) : ""}
@@ -135,6 +142,7 @@ function Body({ screen, status, events, commands, dashboards, settings, onOpenCh
             </div>
           )}
         </div>
+        {ytMini && <div className="mt-3"><TvMiniPlayer slot={screen.slot} np={status!.now_playing!} /></div>}
         {status?.last_error && <p className="mt-2 text-xs text-destructive">{status.last_error}</p>}
       </div>
 
