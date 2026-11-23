@@ -1,0 +1,2 @@
+ALTER TABLE public.tv_commands DROP CONSTRAINT tv_commands_command_check;
+ALTER TABLE public.tv_commands ADD CONSTRAINT tv_commands_command_check CHECK ((command = ANY (ARRAY['on'::text, 'off'::text, 'reload'::text, 'open_url'::text, 'screenshot'::text, 'wake'::text, 'screen_off'::text, 'screen_on'::text, 'volume'::text, 'mute'::text, 'unmute'::text, 'toast'::text, 'type_text'::text, 'key'::text, 'pair'::text, 'discover'::text, 'pair_code'::text, 'media_play'::text, 'media_pause'::text, 'media_next'::text, 'media_prev'::text, 'media_seek'::text])));
