@@ -9,7 +9,10 @@ describe("chave de TV no link entregue", () => {
     expect(u.searchParams.get("periodo")).toBe("este_ano"); expect(u.searchParams.get("tv_token")).toBe("abc");
   });
   it("sem chave, link igual", () => { expect(withTvToken(ins, null)).toBe(ins); });
-  it("YouTube e Central de Tráfego saem como estão", () => {
-    for (const x of ["https://www.youtube.com/playlist?list=1", "https://eternum-luxe-hub.lovable.app/tv?periodo=mes"]) expect(withTvToken(x, "abc")).toBe(x);
+  it("YouTube, imagem, descanso e outras páginas saem como estão", () => {
+    for (const x of ["https://www.youtube.com/playlist?list=1", "https://eternum-luxe-hub.lovable.app/outra?periodo=mes", "https://iamroy.app/tv-imagem.html?src=x", "https://iamroy.app/tv-descanso.html"]) expect(withTvToken(x, "abc")).toBe(x);
+  });  it("Central de Tráfego /tv e /tv-organico recebem a chave", () => {
+    expect(withTvToken("https://eternum-luxe-hub.lovable.app/tv?agencia=impulse&periodo=este_mes", "abc")).toBe("https://eternum-luxe-hub.lovable.app/tv?agencia=impulse&periodo=este_mes&tv_token=abc");
+    expect(withTvToken("https://eternum-luxe-hub.lovable.app/tv-organico?periodo=este_mes", "abc")).toContain("tv_token=abc");
   });
 });

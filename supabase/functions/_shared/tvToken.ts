@@ -14,13 +14,14 @@ export function newNonce(): string {
   const a = new Uint8Array(32); crypto.getRandomValues(a);
   return Array.from(a).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-/** Appends tv_token only to ROY Insights dashboard links; everything else is returned unchanged. */
+/** Appends tv_token only to ROY Insights dashboard links and Central de Tráfego /tv and /tv-organico; everything else is returned unchanged. */
 export function withTvToken(url: string | null | undefined, token: string | null | undefined): string | null | undefined {
   if (!url || !token) return url;
   let u: URL;
   try { u = new URL(url); } catch { return url; }
-  if (!/\/insights\/[0-9a-f-]{36}$/i.test(u.pathname)) return url;
-  if (!/(^|\.)iamroy\.app$|lovable\.app$|^localhost$/.test(u.hostname) || u.hostname === "eternum-luxe-hub.lovable.app") return url;
+  const central = u.hostname === "eternum-luxe-hub.lovable.app" && /^\/(tv|tv-organico)\/?$/.test(u.pathname);
+  const insights = /\/insights\/[0-9a-f-]{36}$/i.test(u.pathname) && /(^|\.)iamroy\.app$|lovable\.app$|^localhost$/.test(u.hostname) && u.hostname !== "eternum-luxe-hub.lovable.app";
+  if (!central && !insights) return url;
   u.searchParams.set("tv_token", token);
   return u.toString();
 }
