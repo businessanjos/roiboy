@@ -90,8 +90,15 @@ export function TvRestSheet({ open, onOpenChange, settings, screens = [] }: { op
   const pick = async (key: string, f: File) => { setBusy(true); try { const p = await uploadRestImage(f); await save({ [key]: p }); } finally { setBusy(false); } };
 
   const free = screens.filter((s) => s.enabled && !isReleased(s));
-  const toRest = free.filter((s) => s.url);
-  const toBack = screens.filter((s) => s.rest_prev_url && !s.url);
+  const [picked, setPicked] = useState<number[] | null>(null); // null = todas
+  const inSel = (s: any) => picked === null || picked.includes(s.slot);
+  const togglePick = (slot: number) => setPicked((p) => {
+    const cur = p ?? free.map((s) => s.slot);
+    const next = cur.includes(slot) ? cur.filter((x) => x !== slot) : [...cur, slot];
+    return next.length === free.length ? null : next;
+  });
+  const toRest = free.filter((s) => s.url && inSel(s));
+  const toBack = screens.filter((s) => s.rest_prev_url && !s.url && inSel(s));
   const allToRest = () => runTv(async () => {
     await Promise.all(toRest.map((s) => updateTvScreen(s.slot, { rest_prev_url: s.url, url: null })));
     await refresh();
@@ -111,9 +118,23 @@ export function TvRestSheet({ open, onOpenChange, settings, screens = [] }: { op
         </Button>
 
         <section className="mt-6 space-y-2">
-          <h4 className={H}>Todas as TVs</h4>
+          <div className="flex items-center justify-between">
+            <h4 className={H}>Quais TVs</h4>
+            <div className="flex gap-1">
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setPicked(null)}>Todas</Button>
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setPicked([])}>Nenhuma</Button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {free.map((s) => {
+              const on = inSel(s);
+              return <Button key={s.slot} size="sm" variant={on ? "default" : "outline"} className="h-7 px-2.5 text-xs" aria-pressed={on} onClick={() => togglePick(s.slot)}>
+                {s.name || `TV-${s.slot}`}{!s.url && <Moon className="h-3 w-3 ml-1 opacity-70" />}
+              </Button>;
+            })}
+          </div>
           <div className="grid grid-cols-1 gap-2">
-            <Button variant="outline" disabled={!toRest.length} onClick={allToRest}><Moon className="h-4 w-4 mr-1.5" />Colocar todas em descanso</Button>
+            <Button variant="outline" disabled={!toRest.length} onClick={allToRest}><Moon className="h-4 w-4 mr-1.5" />{picked === null ? "Colocar todas em descanso" : `Colocar ${toRest.length} em descanso`}</Button>
             <Button variant="outline" disabled={!toBack.length} onClick={allBack}><Undo2 className="h-4 w-4 mr-1.5" />Voltar ao que passava</Button>
           </div>
           <p className="text-xs text-muted-foreground">
