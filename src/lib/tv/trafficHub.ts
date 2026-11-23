@@ -44,5 +44,5 @@ export function buildTrafficUrl(p: TrafficParts): string {
 export function describeTraffic(p: TrafficParts, agencies: TrafficAgency[] = DEFAULT_AGENCIES): string {
   if (p.kind === "organic") return `Central de Tráfego · Orgânico · ${ORGANIC_PERIODS.find((x) => x.value === p.periodo)?.label ?? "Este mês"}`;
   const ag = agencies.find((a) => a.id === p.agencia)?.name ?? p.agencia;
-  return `Central de Tráfego · Pago · ${ag} · ${PAID_PERIODS.find((x) => x.value === p.periodo)?.label ?? "Este mês"}`;
+  return `Central de Tráfego · ${ag} · ${PAID_PERIODS.find((x) => x.value === p.periodo)?.label ?? "Este mês"}`;
 }
