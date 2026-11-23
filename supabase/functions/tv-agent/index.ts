@@ -1,5 +1,6 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { monthStartActive, toAnnualUrl } from "../_shared/tvMonthStart.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -97,7 +98,10 @@ Deno.serve(async (req) => {
         db.from("tv_screens").select("*").order("slot"),
         db.from("tv_settings").select("*").eq("id", 1).maybeSingle(),
       ]);
-      return json({ screens: screens ?? [], settings, commands: pending ?? [], server_time: now });
+      // "Início do mês": entrega o link anual sem mudar o salvo
+      const nowD = new Date();
+      const served = (screens ?? []).map((sc: any) => monthStartActive(settings, sc, nowD) ? { ...sc, url: toAnnualUrl(sc.url) } : sc);
+      return json({ screens: served, settings, commands: pending ?? [], server_time: now });
     }
 
     if (body?.action === "command_result") {

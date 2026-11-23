@@ -533,6 +533,12 @@ function AgendaTab({ screen, settings }: { screen: any; settings?: any }) {
       )}
 
       <div className="space-y-1">
+        <label className="flex items-center justify-between gap-3 text-sm">Usar visão anual no início do mês
+          <Switch checked={screen.month_start_annual === true} onCheckedChange={(v) => save({ month_start_annual: v })} /></label>
+        <Help>Nos primeiros {settings?.month_start_days ?? 5} dias do mês, o painel abre em "Este ano"{settings?.month_start_annual ? "" : " (a regra está desligada no Horário do escritório)"}.</Help>
+      </div>
+
+      <div className="space-y-1">
         <label className="flex items-center justify-between gap-3 text-sm">Impedir as fotos da LG
           <Switch checked={screen.keepalive} onCheckedChange={(v) => save({ keepalive: v })} /></label>
         <Help>Evita que a TV mostre as fotos da LG depois de alguns minutos parada.</Help>

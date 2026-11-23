@@ -27099,6 +27099,7 @@ export type Database = {
           image_until: string | null
           keepalive: boolean
           location: string | null
+          month_start_annual: boolean
           muted: boolean
           name: string
           notes: string | null
@@ -27121,6 +27122,7 @@ export type Database = {
           image_until?: string | null
           keepalive?: boolean
           location?: string | null
+          month_start_annual?: boolean
           muted?: boolean
           name: string
           notes?: string | null
@@ -27143,6 +27145,7 @@ export type Database = {
           image_until?: string | null
           keepalive?: boolean
           location?: string | null
+          month_start_annual?: boolean
           muted?: boolean
           name?: string
           notes?: string | null
@@ -27167,6 +27170,8 @@ export type Database = {
           id: number
           keep_off_until: string | null
           keep_on_until: string | null
+          month_start_annual: boolean
+          month_start_days: number
           off_time: string
           on_time: string
           rest_day_from: string
@@ -27189,6 +27194,8 @@ export type Database = {
           id?: number
           keep_off_until?: string | null
           keep_on_until?: string | null
+          month_start_annual?: boolean
+          month_start_days?: number
           off_time?: string
           on_time?: string
           rest_day_from?: string
@@ -27211,6 +27218,8 @@ export type Database = {
           id?: number
           keep_off_until?: string | null
           keep_on_until?: string | null
+          month_start_annual?: boolean
+          month_start_days?: number
           off_time?: string
           on_time?: string
           rest_day_from?: string

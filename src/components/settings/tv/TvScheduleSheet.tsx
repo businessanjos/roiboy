@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { DateField } from "@/components/ui/date-field";
 import { updateTvSettings } from "@/hooks/useTvWall";
 import { runTv } from "./tvShared";
@@ -87,6 +88,19 @@ export function TvScheduleSheet({ open, onOpenChange, settings }: { open: boolea
                 </Badge>
               ))}
             </div>
+          </div>
+          <Separator />
+          <div className="space-y-2">
+            <Label className="text-xs">Início do mês</Label>
+            <label className="flex items-center justify-between gap-3 text-sm">Usar visão anual no início do mês
+              <Switch checked={!!settings?.month_start_annual} onCheckedChange={(v) => save({ month_start_annual: v })} /></label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="ms-days" className="text-xs">Por quantos dias</Label>
+              <Input id="ms-days" type="number" min={1} max={28} inputMode="numeric" className="w-20"
+                defaultValue={settings?.month_start_days ?? 5} key={`ms-${settings?.month_start_days}`}
+                onBlur={(e) => { const n = Math.min(28, Math.max(1, Math.round(Number(e.target.value) || 5))); if (n !== settings?.month_start_days) save({ month_start_days: n }); }} />
+            </div>
+            <p className="text-xs text-muted-foreground">Nos primeiros dias do mês, os painéis abrem em 'Este ano' para não ficarem vazios. Escolha as TVs na aba Horário de cada uma.</p>
           </div>
           <Separator />
           <UntilField label="Deixar ligadas hoje até" help="Exceção ao horário normal, por exemplo num evento à noite." value={settings?.keep_on_until ?? null} onSave={(v) => save({ keep_on_until: v })} />

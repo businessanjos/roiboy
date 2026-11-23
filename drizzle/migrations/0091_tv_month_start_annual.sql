@@ -1,0 +1,2 @@
+ALTER TABLE public.tv_settings ADD COLUMN IF NOT EXISTS month_start_annual boolean NOT NULL DEFAULT false, ADD COLUMN IF NOT EXISTS month_start_days integer NOT NULL DEFAULT 5;
+ALTER TABLE public.tv_screens ADD COLUMN IF NOT EXISTS month_start_annual boolean NOT NULL DEFAULT false;
