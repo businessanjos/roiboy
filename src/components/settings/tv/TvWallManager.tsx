@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, Check, GripVertical, RotateCcw, CalendarClock, Moon, Plus, MoreHorizontal, Power, PowerOff, RefreshCw, Undo2, Unlock } from "lucide-react";
+import { ArrowUpDown, Check, GripVertical, RotateCcw, CalendarClock, Moon, Plus, MoreHorizontal, Power, PowerOff, RefreshCw, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,7 +14,7 @@ import { TvRestSheet } from "./TvRestSheet";
 import { TvAddSheet } from "./TvAddSheet";
 import { agentIsOffline } from "@/lib/tv/addTv";
 import { runTv, useTvDashboards } from "./tvShared";
-import { Hint, ReleaseMenu, TV_HINTS, returnTvs } from "./TvConnRelease";
+import { Hint, ReleaseMenu, TV_HINTS } from "./TvConnRelease";
 import { isReleased } from "@/lib/tv/tvConn";
 import { DndContext, PointerSensor, KeyboardSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
@@ -132,11 +132,10 @@ export function TvWallManager() {
             <Hint text={TV_HINTS.offAll} side="bottom"><Button size="sm" variant="outline" onClick={() => all("off")}><PowerOff className="h-3.5 w-3.5 mr-1.5" />Desligar todas</Button></Hint>
             <Hint text={TV_HINTS.reloadAll} side="bottom"><Button size="sm" variant="outline" onClick={() => all("reload")}><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Recarregar todas</Button></Hint>
             <Hint text={TV_HINTS.releaseAll} side="bottom">
-              <ReleaseMenu screens={enabledScreens} settings={data?.settings}>
+              <ReleaseMenu screens={enabledScreens} settings={data?.settings} releasedSlots={releasedSlots}>
                 <Button size="sm" variant="outline" disabled={!enabledScreens.length}><Unlock className="h-3.5 w-3.5 mr-1.5" />Liberar todas</Button>
               </ReleaseMenu>
             </Hint>
-            <Hint text={TV_HINTS.returnAll} side="bottom"><Button size="sm" variant="outline" disabled={!releasedSlots.length} onClick={() => returnTvs(releasedSlots)}><Undo2 className="h-3.5 w-3.5 mr-1.5" />Devolver todas</Button></Hint>
             <Hint text="Arte Eternum clara de dia e escura à noite; coloque todas as TVs em descanso." side="bottom"><Button size="sm" variant="outline" onClick={() => setRestOpen(true)}><Moon className="h-3.5 w-3.5 mr-1.5" />Tela de descanso</Button></Hint>
             {isAdmin && <Hint text={addBlocked ? ADD_OFF : "Conecte uma TV nova, passo a passo."} side="bottom"><span><Button size="sm" variant="outline" disabled={addBlocked} onClick={() => setAddOpen(true)}><Plus className="h-3.5 w-3.5 mr-1.5" />Adicionar TV</Button></span></Hint>}
             <Hint text="Arraste as TVs para mudar a ordem dos cartões." side="bottom"><Button size="sm" variant={editing ? "secondary" : "outline"} onClick={() => setEditing((v) => !v)}><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Organizar</Button></Hint>
@@ -144,7 +143,7 @@ export function TvWallManager() {
           </div>
           <div className="flex md:hidden gap-1.5 shrink-0">
           <Hint text={TV_HINTS.releaseAll} side="bottom">
-            <ReleaseMenu screens={enabledScreens} settings={data?.settings}>
+            <ReleaseMenu screens={enabledScreens} settings={data?.settings} releasedSlots={releasedSlots}>
               <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Liberar todas"><Unlock className="h-4 w-4" /></Button>
             </ReleaseMenu>
           </Hint>
@@ -156,7 +155,6 @@ export function TvWallManager() {
               <DropdownMenuItem onClick={() => all("on")}><Power className="h-4 w-4 mr-2" />Ligar todas</DropdownMenuItem>
               <DropdownMenuItem onClick={() => all("off")}><PowerOff className="h-4 w-4 mr-2" />Desligar todas</DropdownMenuItem>
               <DropdownMenuItem onClick={() => all("reload")}><RefreshCw className="h-4 w-4 mr-2" />Recarregar todas</DropdownMenuItem>
-              <DropdownMenuItem disabled={!releasedSlots.length} onClick={() => returnTvs(releasedSlots)}><Undo2 className="h-4 w-4 mr-2" />Devolver todas</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setRestOpen(true)}><Moon className="h-4 w-4 mr-2" />Tela de descanso</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setEditing((v) => !v)}><ArrowUpDown className="h-4 w-4 mr-2" />Organizar</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setScheduleOpen(true)}><CalendarClock className="h-4 w-4 mr-2" />Horário</DropdownMenuItem>

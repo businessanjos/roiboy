@@ -10,3 +10,4 @@
 - [ ] Sincronização da Bruna: aguarda reconexão da Meta em “Configurar Meta API” (sessão invalidada pelo provedor)
 - [x] Imagens dos posts: 746 miniaturas salvas no ROY; 19 indisponíveis no Instagram recebem fallback visual
 - [x] Processos: "Processo concluído" com painel próprio, pulso no momento em que termina e fim de processo sem cliente
+- [x] TVs: barra com um botão só — "Devolver todas" passou a ser linha dentro do menu de "Liberar todas"

@@ -23,7 +23,7 @@ export function Hint({ text, children, className, side = "top" }: { text: string
 
 export const TV_HINTS = {
   releaseOne: "Pausa a automação para usar a TV pelo controle. Ela volta ao conteúdo sozinha no horário escolhido.",
-  releaseAll: "Liberar todas: as TVs ficam livres para o controle remoto, sem a automação voltar o dashboard.",
+  releaseAll: "Liberar todas: as TVs ficam livres para o controle remoto, sem a automação voltar o dashboard. Para devolvê-las, use a mesma opção.",
   returnOne: "Devolver para automação: a TV volta a abrir o conteúdo programado em até 30 segundos.",
   returnAll: "Devolver todas: as TVs liberadas voltam ao conteúdo programado em até 30 segundos.",
   onAll: "Liga as TVs que estiverem desligadas.",
@@ -61,8 +61,10 @@ export function SignalWithTip({ status }: { status?: any }) {
 
 export const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
-/** Dropdown with 30 min / 1 h / 2 h / Até o fim do dia. `screens` = TVs affected. */
-export function ReleaseMenu({ screens, settings, children, align = "end" }: { screens: any[]; settings: any; children: React.ReactNode; align?: "start" | "end" }) {
+/** Dropdown with 30 min / 1 h / 2 h / Até o fim do dia. `screens` = TVs affected.
+ *  `releasedSlots` (when given and not empty) adds the "Devolver todas" action in the same menu,
+ *  so the wall toolbar needs a single button for release + return. */
+export function ReleaseMenu({ screens, settings, children, align = "end", releasedSlots = [] }: { screens: any[]; settings: any; children: React.ReactNode; align?: "start" | "end"; releasedSlots?: number[] }) {
   const release = (fn: (s: any) => Date) => runTv(async () => {
     if (screens.length === 1) { await releaseTvs([screens[0].slot], fn(screens[0]).toISOString()); return; }
     // group by end time (end of day can differ per TV)
@@ -83,6 +85,14 @@ export function ReleaseMenu({ screens, settings, children, align = "end" }: { sc
         <DropdownMenuItem onClick={() => release((s) => endOfDayFor(s, settings))}>
           Até o fim do dia{screens.length === 1 ? ` (${hhmm(endOfDayFor(screens[0], settings).toISOString())})` : ""}
         </DropdownMenuItem>
+        {releasedSlots.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => returnTvs(releasedSlots)}>
+              <Undo2 className="h-4 w-4 mr-2" />Devolver todas ({releasedSlots.length})
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
