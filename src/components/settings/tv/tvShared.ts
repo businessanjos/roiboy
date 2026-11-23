@@ -5,7 +5,7 @@ import { describeTraffic, parseTrafficUrl } from "@/lib/tv/trafficHub";
 import { TV_PERIODS, parseTvUrl, playlistLabel, tvContentKind, type TvVisualState } from "@/lib/tv/tvUrl";
 
 export const STATE: Record<TvVisualState, { label: string; cls: string }> = {
-  on: { label: "Ligada", cls: "bg-success text-success-foreground border-transparent" },
+  on: { label: "Ligada", cls: "bg-success-soft text-success-strong border-success/40 font-semibold shadow-sm" },
   saver: { label: "Tela de descanso", cls: "bg-warning text-warning-foreground border-transparent" },
   off: { label: "Desligada", cls: "bg-muted text-muted-foreground border-border" },
   nocontact: { label: "Sem contato", cls: "bg-destructive text-destructive-foreground border-transparent" },
