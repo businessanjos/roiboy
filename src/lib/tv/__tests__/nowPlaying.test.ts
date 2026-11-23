@@ -15,3 +15,12 @@ describe("nowPlaying", () => {
   });
   it("formats", () => { expect(fmtTime(75)).toBe("1:15"); });
 });
+
+import { ytThumbUrl } from "../nowPlaying";
+describe("ytThumbUrl", () => {
+  it("usa maxresdefault por padrão e hqdefault como reserva", () => {
+    expect(ytThumbUrl("dQw4w9WgXcQ")).toBe("https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg");
+    expect(ytThumbUrl("dQw4w9WgXcQ", "hqdefault")).toBe("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
+  });
+  it("sem video_id não há miniatura", () => { expect(ytThumbUrl(null)).toBeNull(); });
+});

@@ -22,7 +22,6 @@ export function TvMiniPlayer({ slot, np }: { slot: number; np: NowPlaying }) {
   return (
     <div className="rounded-md border bg-muted/40 p-1.5 space-y-1" onClick={stop} onKeyDown={stop}>
       <div className="flex items-center gap-2 min-w-0">
-        {np.thumb && <img src={np.thumb} alt="" className="h-9 w-16 shrink-0 rounded object-cover" draggable={false} />}
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium truncate" title={np.title ?? undefined}>{np.title ?? "Vídeo do YouTube"}</p>
           {np.channel && <p className="text-[11px] text-muted-foreground truncate">{np.channel}</p>}

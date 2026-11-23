@@ -14,6 +14,7 @@ import { isReleased } from "@/lib/tv/tvConn";
 import { monthStartActive, toAnnualUrl } from "../../../../supabase/functions/_shared/tvMonthStart";
 import { TvMiniPlayer } from "./TvMiniPlayer";
 import { showMiniPlayer } from "@/lib/tv/nowPlaying";
+import { TvVideoCover } from "./TvVideoCover";
 import { Hint, ReleaseMenu, ReturnButton, SignalWithTip, TV_HINTS, hhmm } from "./TvConnRelease";
 
 interface Props { screen: any; status?: any; dashboards: { id: string; name: string }[]; settings?: any; castSince?: string | null; onOpen: () => void }
@@ -39,6 +40,7 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
   const casting = status?.casting && tvContentKind(screen.url) !== "playlist" ? String(status.casting) : null;
   const castApp = casting && /chrome/i.test(casting) ? "Chrome" : casting;
   const annual = monthStartActive(settings, screen) && toAnnualUrl(screen.url) !== screen.url;
+  const ytCover = showMiniPlayer(status?.now_playing, isOn, !!status?.casting) && !!status?.now_playing?.video_id;
   const cmd = (c: string) => runTv(() => sendTvCommand(screen.slot, c));
 
   return (
@@ -46,7 +48,9 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
       className={cn("group rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden cursor-pointer transition hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         !screen.enabled && "opacity-50")}>
       <div className="relative aspect-video overflow-hidden bg-muted">
-        {caps.screenshot && status?.screenshot_url ? (
+        {ytCover ? (
+          <TvVideoCover np={status!.now_playing!} name={screen.name} />
+        ) : caps.screenshot && status?.screenshot_url ? (
           <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="absolute inset-0 h-full w-full scale-[1.04] object-cover" loading="lazy" />
         ) : !caps.screenshot ? (
           <img src={tvSemCaptura.url} alt="Esse modelo de TV não possui suporte a capturas" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
@@ -75,7 +79,7 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
         {annual && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/50 text-foreground">Visão anual até dia {settings?.month_start_days ?? 5}</Badge>}
         <div className="flex items-center justify-between pt-0.5">
           <span className="text-[11px] text-muted-foreground truncate">
-            {caps.screenshot && status?.screenshot_at ? <><span className="hidden sm:inline">captura </span>{formatDistanceToNowStrict(new Date(status.screenshot_at), { locale: ptBR, addSuffix: true })}</> : "\u00a0"}
+            {ytCover ? "tocando agora" : caps.screenshot && status?.screenshot_at ? <><span className="hidden sm:inline">captura </span>{formatDistanceToNowStrict(new Date(status.screenshot_at), { locale: ptBR, addSuffix: true })}</> : "\u00a0"}
           </span>
           <div className="flex shrink-0 -mr-1">
             {!released && (

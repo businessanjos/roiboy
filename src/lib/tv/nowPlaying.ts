@@ -1,6 +1,6 @@
 export interface NowPlaying {
   exact: boolean; state: "PLAYING" | "PAUSED" | "BUFFERING" | null;
-  title: string | null; channel: string | null; thumb: string | null;
+  video_id?: string | null; title: string | null; channel: string | null; thumb: string | null;
   position_s: number | null; duration_s: number | null; updated_at: string;
 }
 
@@ -22,4 +22,10 @@ export function fmtTime(s: number): string {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
   const mm = h ? String(m).padStart(2, "0") : String(m);
   return `${h ? h + ":" : ""}${mm}:${String(sec).padStart(2, "0")}`;
+}
+
+/** Miniatura 16:9 do vídeo (nunca o campo thumb, que vem 4:3 com faixas). */
+export function ytThumbUrl(videoId: string | null | undefined, quality: "maxresdefault" | "hqdefault" = "maxresdefault"): string | null {
+  if (!videoId || !/^[\w-]{6,20}$/.test(videoId)) return null;
+  return `https://i.ytimg.com/vi/${videoId}/${quality}.jpg`;
 }
