@@ -12,7 +12,7 @@ import { useTrafficAgencies } from "./TrafficHubFields";
 import { STATE, STATE_HINT, describeContent, runTv } from "./tvShared";
 import { isReleased } from "@/lib/tv/tvConn";
 import { monthStartActive, toAnnualUrl } from "../../../../supabase/functions/_shared/tvMonthStart";
-import { TvMiniPlayer } from "./TvMiniPlayer";
+import { TvVideoOverlay } from "./TvMiniPlayer";
 import { showMiniPlayer } from "@/lib/tv/nowPlaying";
 import { TvVideoCover } from "./TvVideoCover";
 import { Hint, ReleaseMenu, ReturnButton, SignalWithTip, TV_HINTS, hhmm } from "./TvConnRelease";
@@ -49,7 +49,7 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
         !screen.enabled && "opacity-50")}>
       <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
         {ytCover ? (
-          <TvVideoCover np={status!.now_playing!} name={screen.name} />
+          <><TvVideoCover np={status!.now_playing!} name={screen.name} /><TvVideoOverlay slot={screen.slot} np={status!.now_playing!} /></>
         ) : caps.screenshot && status?.screenshot_url ? (
           <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="absolute inset-0 h-full w-full scale-[1.04] object-cover" loading="lazy" />
         ) : !caps.screenshot ? (
@@ -75,7 +75,6 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
           <SignalWithTip status={status} />
         </div>
         <p className="text-xs text-muted-foreground truncate">{describeContent(screen.url, dashboards, agencies)}</p>
-        {showMiniPlayer(status?.now_playing, isOn, !!status?.casting) && <div className="pt-1"><TvMiniPlayer slot={screen.slot} np={status.now_playing} /></div>}
         {annual && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/50 text-foreground">Visão anual até dia {settings?.month_start_days ?? 5}</Badge>}
         <div className="mt-auto flex items-center justify-between pt-0.5">
           <span className="text-[11px] text-muted-foreground truncate">
