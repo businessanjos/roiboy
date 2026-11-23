@@ -16,7 +16,7 @@ import { agentIsOffline } from "@/lib/tv/addTv";
 import { runTv, useTvDashboards } from "./tvShared";
 import { Hint, ReleaseMenu, TV_HINTS } from "./TvConnRelease";
 import { isReleased } from "@/lib/tv/tvConn";
-import { DndContext, PointerSensor, KeyboardSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { DndContext, type Modifier, PointerSensor, KeyboardSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -41,6 +41,14 @@ function SortableCard({ id, editing, children }: { id: number; editing: boolean;
   );
 }
 
+// Mantém o cartão arrastado dentro da grade (evita que ele escape para o lado e role a página).
+const keepInsideGrid: Modifier = ({ transform, draggingNodeRect, containerNodeRect }) => {
+  if (!draggingNodeRect || !containerNodeRect) return transform;
+  const c = containerNodeRect, r = draggingNodeRect;
+  const x = Math.min(Math.max(transform.x, c.left - r.left), c.right - r.right);
+  const y = Math.min(Math.max(transform.y, c.top - r.top), c.bottom - r.bottom);
+  return { ...transform, x, y };
+};
 const GRID = "grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5";
 
 function CardSkeleton() {
@@ -91,7 +99,7 @@ export function TvWallManager() {
     saveOrder(group === wall ? [...moved, ...rest] : [...rest, ...moved]);
   };
   const renderGroup = (group: any[]) => (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd(group)}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[keepInsideGrid]} autoScroll={{ threshold: { x: 0, y: 0.2 } }} onDragEnd={onDragEnd(group)}>
       <SortableContext items={group.map((s) => s.slot)} strategy={rectSortingStrategy}>
         <div className={GRID}>{group.map((s) => <SortableCard key={s.slot} id={s.slot} editing={editing}>{renderCard(s)}</SortableCard>)}</div>
       </SortableContext>
