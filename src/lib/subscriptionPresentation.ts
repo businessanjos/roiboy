@@ -1,5 +1,9 @@
 /** Presentation only: never grants subscription access or changes billing. */
-export function hideInternalTrialNotice(email?: string | null): boolean {
+/** Account of the Eternum Club team: every member (including the TV account) skips trial notices. */
+export const ETERNUM_ACCOUNT_ID = "796e7970-fd93-4574-a871-6090624cace6";
+
+export function hideInternalTrialNotice(email?: string | null, accountId?: string | null): boolean {
+  if (accountId === ETERNUM_ACCOUNT_ID) return true;
   const normalized = email?.trim().toLowerCase();
   if (!normalized) return false;
   return normalized.endsWith("@anjosbusiness.com.br") ||

@@ -64,7 +64,7 @@ export function SidebarPlanInfo({ collapsed }: { collapsed: boolean }) {
   }, [accountId]);
 
   if (loading || !planInfo) return null;
-  if (planInfo.subscriptionStatus === "trial" && hideInternalTrialNotice(currentUser?.email)) return null;
+  if (planInfo.subscriptionStatus === "trial" && hideInternalTrialNotice(currentUser?.email, currentUser?.account_id)) return null;
 
   const isTrialing = planInfo.subscriptionStatus === "trial";
   const isActive = ["active", "paid"].includes(planInfo.subscriptionStatus || "");

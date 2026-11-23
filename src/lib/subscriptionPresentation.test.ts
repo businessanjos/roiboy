@@ -19,6 +19,10 @@ describe("internal trial notice", () => {
     expect(hideInternalTrialNotice("m.quintana@me.com")).toBe(true);
     expect(hideInternalTrialNotice("coachevertonsantos@gmail.com")).toBe(true);
   });
+  it("hides the notice for every Eternum Club member, including the TV account", () => {
+    expect(hideInternalTrialNotice("tv-escritorio@iamroy.app", "796e7970-fd93-4574-a871-6090624cace6")).toBe(true);
+    expect(hideInternalTrialNotice("cliente@hotmail.com", "outra-conta")).toBe(false);
+  });
   it("does not hide trial notices for unrelated or missing identities", () => {
     expect(hideInternalTrialNotice("cliente@hotmail.com")).toBe(false);
     expect(hideInternalTrialNotice(null)).toBe(false);
