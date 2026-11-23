@@ -153,6 +153,18 @@ Deno.serve(async (req) => {
         done_at: new Date().toISOString(),
       }).eq("id", body.id);
       if (error) throw error;
+      // media_next/prev: o resultado já traz o vídeo novo; atualiza o card sem esperar o sync
+      if (body.ok) {
+        const { data: c } = await db.from("tv_commands").select("slot, command").eq("id", body.id).maybeSingle();
+        if (c?.slot != null && (c.command === "media_next" || c.command === "media_prev")) {
+          let r: any = body.result;
+          if (typeof r === "string") { try { r = JSON.parse(r); } catch { r = null; } }
+          const np = r && typeof r === "object" ? (r.now_playing ?? (r.video_id ? r : null)) : null;
+          if (np && typeof np === "object" && np.video_id) {
+            await db.from("tv_status").update({ now_playing: np }).eq("slot", c.slot);
+          }
+        }
+      }
       return json({ ok: true });
     }
 
