@@ -67,6 +67,27 @@ Deno.serve(async (req) => {
       // one upsert per row so absent keys are never written as null
       await Promise.all(rows.map((r: any) => db.from("tv_status").upsert(r, { onConflict: "slot" })));
 
+      // now playing (YouTube): latest per TV; TVs absent from the list are not playing
+      try {
+        if (Array.isArray(body.now_playing)) {
+          const str = (v: any, n: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
+          const num = (v: any) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v));
+          const list = body.now_playing.filter((n: any) => Number.isInteger(n?.slot)).map((n: any) => ({
+            slot: n.slot, np: {
+              app: str(n.app, 50), exact: n.exact === true,
+              state: ["PLAYING", "PAUSED", "BUFFERING"].includes(n.state) ? n.state : null,
+              title: str(n.title, 300), channel: str(n.channel, 200), thumb: str(n.thumb, 1000), video_id: str(n.video_id, 50),
+              position_s: num(n.position_s), duration_s: num(n.duration_s), updated_at: str(n.updated_at, 40) ?? now,
+            },
+          }));
+          await Promise.all(list.map((x: any) => db.from("tv_status").upsert({ slot: x.slot, now_playing: x.np }, { onConflict: "slot" })));
+          const slots = list.map((x: any) => x.slot);
+          let q = db.from("tv_status").update({ now_playing: null }).not("now_playing", "is", null);
+          if (slots.length) q = q.not("slot", "in", `(${slots.join(",")})`);
+          await q;
+        }
+      } catch (_) { /* never break sync */ }
+
       // connection history: at most one point per TV every 5 min, kept 7 days
       try {
         const withConn = rows.filter((r: any) => "connection" in r || "latency_ms" in r || "packet_loss_pct" in r);

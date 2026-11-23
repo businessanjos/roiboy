@@ -1,0 +1,1 @@
+ALTER TABLE public.tv_status ADD COLUMN IF NOT EXISTS now_playing jsonb;

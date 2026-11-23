@@ -12,6 +12,8 @@ import { useTrafficAgencies } from "./TrafficHubFields";
 import { STATE, STATE_HINT, describeContent, runTv } from "./tvShared";
 import { isReleased } from "@/lib/tv/tvConn";
 import { monthStartActive, toAnnualUrl } from "../../../../supabase/functions/_shared/tvMonthStart";
+import { TvMiniPlayer } from "./TvMiniPlayer";
+import { showMiniPlayer } from "@/lib/tv/nowPlaying";
 import { Hint, ReleaseMenu, ReturnButton, SignalWithTip, TV_HINTS, hhmm } from "./TvConnRelease";
 
 interface Props { screen: any; status?: any; dashboards: { id: string; name: string }[]; settings?: any; castSince?: string | null; onOpen: () => void }
@@ -69,6 +71,7 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
           <SignalWithTip status={status} />
         </div>
         <p className="text-xs text-muted-foreground truncate">{describeContent(screen.url, dashboards, agencies)}</p>
+        {showMiniPlayer(status?.now_playing, isOn, !!status?.casting) && <div className="pt-1"><TvMiniPlayer slot={screen.slot} np={status.now_playing} /></div>}
         {annual && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/50 text-foreground">Visão anual até dia {settings?.month_start_days ?? 5}</Badge>}
         <div className="flex items-center justify-between pt-0.5">
           <span className="text-[11px] text-muted-foreground truncate">

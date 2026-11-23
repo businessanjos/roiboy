@@ -27247,6 +27247,7 @@ export type Database = {
           last_error: string | null
           last_seen: string | null
           latency_ms: number | null
+          now_playing: Json | null
           online: boolean | null
           packet_loss_pct: number | null
           paired: boolean | null
@@ -27265,6 +27266,7 @@ export type Database = {
           last_error?: string | null
           last_seen?: string | null
           latency_ms?: number | null
+          now_playing?: Json | null
           online?: boolean | null
           packet_loss_pct?: number | null
           paired?: boolean | null
@@ -27283,6 +27285,7 @@ export type Database = {
           last_error?: string | null
           last_seen?: string | null
           latency_ms?: number | null
+          now_playing?: Json | null
           online?: boolean | null
           packet_loss_pct?: number | null
           paired?: boolean | null
