@@ -187,7 +187,7 @@ export function MarketingKanbanCard({
 
         {/* Assignee */}
         {task.assignee && (
-          <Avatar className="h-6 w-6" title={`Responsável: ${task.assignee.name}`}>
+          <Avatar className="h-6 w-6">
             <AvatarImage src={task.assignee.avatar_url || undefined} />
             <AvatarFallback className="text-xs">
               {getInitials(task.assignee.name)}
