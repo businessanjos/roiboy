@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { markerInk, TASK_MARKER_COLORS, validMarkerColor } from "@/lib/marketing/taskDescription";
 import { createTaskMentionExtension, type TaskMentionPerson } from "./TaskMentions";
+import { TaskTimestampExtension } from "./TaskTimestampExtension";
 import "./task-editor.css";
 
 const SafeHighlight = Highlight.extend({
@@ -34,7 +35,7 @@ export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colo
   contentRef.current = initialContent;
   const mentions = useMemo(() => createTaskMentionExtension(() => peopleRef.current), []);
   const editor = useEditor({
-    extensions: [StarterKit.configure({ heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, link: false, underline: false, strike: false }), SafeHighlight.configure({ multicolor: true }), ...(mentionPeople ? [mentions] : [])],
+    extensions: [StarterKit.configure({ heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, link: false, underline: false, strike: false }), SafeHighlight.configure({ multicolor: true }), ...(!compact ? [TaskTimestampExtension] : []), ...(mentionPeople ? [mentions] : [])],
     content: initialContent,
     editable: !disabled,
     editorProps: { attributes: { role: "textbox", "aria-label": label, "aria-multiline": "true", spellcheck: "true" } },

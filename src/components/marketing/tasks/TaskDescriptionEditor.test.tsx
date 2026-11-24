@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
-import type { Editor, UseEditorOptions } from "@tiptap/react";
+import type { Editor, JSONContent, UseEditorOptions } from "@tiptap/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TaskDescriptionEditor } from "./TaskDescriptionEditor";
 import { plainTaskDocument } from "@/lib/marketing/taskDescription";
@@ -61,5 +61,44 @@ describe("Abrir a descrição da tarefa", () => {
     expect(segments?.[0]).toMatchObject({ type: "text", text: "Revisar" });
     expect(segments?.[0].marks?.some((mark) => mark.type === "highlight")).toBe(true);
     expect(segments?.[1]).toEqual({ type: "text", text: " arte" });
+  });
+  it("digitar 26:49 aplica negrito só no tempo, não na frase que vem depois", async () => {
+    const changed=vi.fn();
+    render(<TooltipProvider><TaskDescriptionEditor initialContent={plainTaskDocument("")} valueKey="time" onChange={changed} colors={[]} onColorsChange={vi.fn()} portalContainer={null} /></TooltipProvider>);
+    await waitFor(()=>expect(captured.editor).not.toBeNull());
+    const editor=captured.editor; if (!editor) throw new Error("Editor unavailable");
+    act(()=>{ for (const character of "26:49 — Tira o então.") editor.commands.insertContent(character); });
+    expect(editor.getJSON().content?.[0].content).toEqual([
+      {type:"text",text:"26:49",marks:[{type:"bold"}]}, {type:"text",text:" — Tira o então."},
+    ]);
+    expect(changed.mock.calls.at(-1)?.[0]).toBe("26:49 — Tira o então.");
+  });
+  it("colar vários tempos preserva itálico, listas e texto", async () => {
+    render(<TooltipProvider><TaskDescriptionEditor initialContent={plainTaskDocument("")} valueKey="paste" onChange={vi.fn()} colors={[]} onColorsChange={vi.fn()} portalContainer={null} /></TooltipProvider>);
+    await waitFor(()=>expect(captured.editor).not.toBeNull());
+    const editor=captured.editor; if (!editor) throw new Error("Editor unavailable");
+    act(()=>editor.commands.insertContent('<ul><li><p><em>26:24 a 27:09</em></p></li><li><p>26:49 — Tira</p></li></ul>'));
+    const document: JSONContent=editor.getJSON();
+    const first=document.content?.find(node=>node.type==="bulletList")?.content?.[0].content?.[0].content;
+    expect(first).toEqual([
+      {type:"text",text:"26:24",marks:[{type:"bold"},{type:"italic"}]},
+      {type:"text",text:" a ",marks:[{type:"italic"}]},
+      {type:"text",text:"27:09",marks:[{type:"bold"},{type:"italic"}]},
+    ]);
+    expect(editor.getText()).toContain("26:49 — Tira");
+  });
+  it("carregar a descrição formata tempos sem disparar alteração ou autosalvar", async () => {
+    const changed=vi.fn();
+    const view=render(<TooltipProvider><TaskDescriptionEditor initialContent={plainTaskDocument("26:49 — Tira")} valueKey="existing" onChange={changed} colors={[]} onColorsChange={vi.fn()} portalContainer={null} /></TooltipProvider>);
+    await waitFor(()=>expect(view.getByRole("textbox").textContent).toBe("26:49 — Tira"));
+    expect(captured.editor?.getJSON().content?.[0].content?.[0]).toMatchObject({text:"26:49",marks:[{type:"bold"}]});
+    expect(changed).not.toHaveBeenCalled();
+  });
+  it("o editor compacto dos comentários não recebe o negrito automático", async () => {
+    render(<TooltipProvider><TaskDescriptionEditor initialContent={plainTaskDocument("")} valueKey="comment" compact label="Novo comentário" onChange={vi.fn()} colors={[]} onColorsChange={vi.fn()} portalContainer={null} /></TooltipProvider>);
+    await waitFor(()=>expect(captured.editor).not.toBeNull());
+    const editor=captured.editor; if (!editor) throw new Error("Editor unavailable");
+    act(()=>editor.commands.insertContent("26:49 — Tira"));
+    expect(editor.getJSON().content?.[0].content).toEqual([{type:"text",text:"26:49 — Tira"}]);
   });
 });

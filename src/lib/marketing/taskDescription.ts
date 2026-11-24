@@ -1,5 +1,6 @@
 import type { JSONContent } from "@tiptap/react";
 import { format, isValid, parse } from "date-fns";
+import { boldTaskTimestamps } from "./taskTimestamps";
 
 export const TASK_MARKER_COLORS = [
   { name: "Amarelo", color: "var(--task-marker-yellow)", className: "task-marker-yellow" },
@@ -42,12 +43,12 @@ export function taskDescriptionContent(text: string, stored: unknown): JSONConte
   if (stored && typeof stored === "object") {
     const snapshot = stored as { text?: unknown; document?: unknown };
     const document = cleanTaskDocument(snapshot.document);
-    if (snapshot.text === text && document?.type === "doc") return document;
+    if (snapshot.text === text && document?.type === "doc") return boldTaskTimestamps(document);
   }
-  return plainTaskDocument(text);
+  return boldTaskTimestamps(plainTaskDocument(text));
 }
 export function writeTaskDescription(base: Record<string, unknown>, text: string, document: JSONContent, colors: string[]): Record<string, unknown> {
-  return { ...base, description_editor: { text, document: cleanTaskDocument(document) ?? plainTaskDocument(text), colors: [...new Set(colors.filter((color) => /^#[0-9a-f]{6}$/i.test(color)))] } };
+  return { ...base, description_editor: { text, document: boldTaskTimestamps(cleanTaskDocument(document) ?? plainTaskDocument(text)), colors: [...new Set(colors.filter((color) => /^#[0-9a-f]{6}$/i.test(color)))] } };
 }
 export function readTaskMarkerColors(base?: Record<string, unknown>): string[] {
   const values = (base?.description_editor as { colors?: unknown } | undefined)?.colors;

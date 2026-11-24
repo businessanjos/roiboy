@@ -1,5 +1,13 @@
 # Roadmap — Processos do CS
 
+## Marcações de tempo na descrição
+- [x] Marcações como 26:49 em negrito ao digitar, colar e abrir descrições; preserva texto simples, listas, itálico e marca-texto, sem estender o negrito à frase seguinte, sem mudança em comentários ou dados reais.
+- [x] 25 testes passaram; digitação, colagem real via clipboard, criação/edição e salvar/reabrir conferidos em tarefa fictícia em 390/798/1440 px e claro/escuro. Sem erros de execução e compilação sem erros; não publicado.
+- [ ] Conferir a descrição na conta real: sessão própria indisponível e criação de usuário temporário falhou; respostas fictícias não validam persistência com sessão real.
+
+## Opções de formato e categoria no Social
+- [ ] Aguardar escolha: personalizar as opções ou trocar valores no post; os valores já podem ser trocados nos formulários existentes.
+
 ## Campo Seção na janela de tarefa
 - [x] Regra: a janela da tarefa não deve oferecer um campo que só permite “Sem seção”. Retirado da criação, edição e cópia compartilhadas pelo quadro, lista, tela cheia e links dos avisos; seções existentes e organização da lista preservadas.
 - [x] Código conferido: MarketingTasks/MarketingProjectsHub usam a mesma janela; quadro usa etapas, lista mantém criar/renomear seções com ações úteis; tarefas vinculadas ao projeto, Copilot, MCP e gatilhos de comentários/atribuição não oferecem esse seletor. Sem mudanças em serviços, permissões ou registros.
