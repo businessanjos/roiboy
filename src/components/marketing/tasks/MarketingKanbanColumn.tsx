@@ -47,18 +47,18 @@ export function MarketingKanbanColumn({
         isOver && "bg-muted/50 ring-2 ring-primary/20"
       )}
     >
-      <div className="flex shrink-0 items-center justify-between px-3 py-3 border-b">
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-sm">{column.title}</h3>
-          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+      <div className="flex min-h-[60px] shrink-0 items-center justify-between gap-3 rounded-t-md border-b border-border/70 bg-background/60 px-4 py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <h3 className="min-w-0 break-words text-[15px] font-bold leading-5 text-foreground">{column.title}</h3>
+          <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/60 px-1.5 text-[11px] font-semibold tabular-nums text-muted-foreground" aria-label={`${tasks.length} tarefas`}>
             {tasks.length}
           </span>
         </div>
-        <div className="flex items-center">
-        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Adicionar separador em ${column.title}`} title="Adicionar separador" onClick={onAddSeparator}><ListMinus className="h-4 w-4" /></Button>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Adicionar tarefa em ${column.title}`} title="Adicionar tarefa" onClick={onAddTask}>
-          <Plus className="h-4 w-4" />
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={`Adicionar separador em ${column.title}`} title="Adicionar separador" onClick={onAddSeparator}><ListMinus className="h-4 w-4" /></Button>
+          <Button variant="outline" size="icon" className="h-8 w-8 border-border/70 bg-background/80 text-muted-foreground shadow-none hover:text-foreground" aria-label={`Adicionar tarefa em ${column.title}`} title="Adicionar tarefa" onClick={onAddTask}>
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 

@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Títulos das etapas do quadro
+- [x] Refinar apenas os cabeçalhos: nomes mais destacados, contadores alinhados e ações discretas; manter cores, ordem, contagens e comportamento das etapas.
+- [x] 19 testes passaram; cabeçalhos/contadores, nome longo sem sobreposição, abrir nova tarefa na etapa, separador e tela cheia conferidos com respostas fictícias em 390/798/1440 px, claro/escuro. Sem erros de execução/compilação e sem alterações reais; não publicado.
+- [ ] Conferência na sessão real em /marketing/projetos: sessão própria indisponível e criação de pessoa temporária falhou; a página retorna ao login.
+
 ## Comentários: estado vazio e campo de escrita
 - [x] Remover o quadro vazio acima do editor; placeholder dentro do campo com concordância pelo nome da pessoa logada, incluindo Jessica e Fernanda; barra compacta e envio integrado, sem mudar dados, acesso ou notificações.
 - [x] 23 testes passaram; vazio, concordância Jessica/Fernanda/Lucas, digitação, envio/releitura/reabertura e falha mantendo rascunho conferidos com respostas fictícias em 390/798/1440 px, claro/escuro. Sem erros de execução/compilação, nenhum comentário real alterado; não publicado.
