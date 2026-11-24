@@ -18,10 +18,7 @@ interface PipelineCompanyFilterProps {
 
 export function PipelineCompanyFilter({ companies, value, onChange, loading }: PipelineCompanyFilterProps) {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1 sm:w-[220px]">
-      <label htmlFor="pipeline-company-filter" className="px-1 text-xs font-semibold text-muted-foreground">
-        Empresa
-      </label>
+    <div className="flex w-full min-w-0 flex-col gap-1">
       <Select value={value} onValueChange={onChange} disabled={loading}>
         <SelectTrigger
           id="pipeline-company-filter"

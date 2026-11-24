@@ -1,5 +1,7 @@
 import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ActiveFilter, FilterCondition } from "@/hooks/usePipelineFilters";
 import { DealStage } from "@/hooks/useDeals";
 import { CustomFieldOption } from "./PipelineFilterDialog";
@@ -50,6 +52,7 @@ interface ActiveFilterChipsProps {
   salesUsers: SalesUser[];
   stages: DealStage[];
   customFields?: CustomFieldOption[];
+  compact?: boolean;
 }
 
 function fieldLabel(field: string, customFields: CustomFieldOption[]): string {
@@ -103,6 +106,7 @@ export function ActiveFilterChips({
   salesUsers,
   stages,
   customFields = [],
+  compact = false,
 }: ActiveFilterChipsProps) {
   const hasSearch = !!searchTerm?.trim();
   if (!activeFilter && !hasSearch) return null;
@@ -193,35 +197,39 @@ export function ActiveFilterChips({
   if (chips.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 px-1 py-1">
+    <div className={cn("flex items-center gap-1.5", compact ? "w-max shrink-0" : "flex-wrap px-1 py-1")}>
       {chips.map((chip) => (
         <Badge
           key={chip.key}
           variant="secondary"
-          className="gap-1 pl-2 pr-1 py-1 text-xs font-normal"
+          className="max-w-[320px] gap-1 pl-2 pr-1 py-1 text-xs font-normal [&>span]:min-w-0 [&>span]:truncate"
         >
           {chip.label}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={chip.onRemove}
-            className="ml-0.5 rounded p-0.5 hover:bg-background/60 transition-colors"
+            className="ml-0.5 h-5 w-5 shrink-0"
             aria-label="Remover filtro"
           >
             <X className="h-3 w-3" />
-          </button>
+          </Button>
         </Badge>
       ))}
       {chips.length > 1 && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => {
             onFilterChange(null);
             onSearchClear?.();
           }}
-          className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline ml-1"
+          className="ml-1 h-7 text-[11px] text-muted-foreground"
         >
           Limpar todos
-        </button>
+        </Button>
       )}
     </div>
   );

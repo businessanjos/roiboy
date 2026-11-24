@@ -9,13 +9,14 @@ const ITEMS = [
 ];
 
 /** Legenda das cores dos cartões do funil (barra lateral esquerda). */
-export function PipelineActivityLegend({ className }: { className?: string }) {
+export function PipelineActivityLegend({ className, compact = false }: { className?: string; compact?: boolean }) {
   const items = ITEMS.map((item) => (
     <span key={item.state} className="flex items-center gap-1.5">
       <span className={cn("h-2.5 w-2.5 rounded-full", item.bgColor)} aria-hidden />
       {item.label}
     </span>
   ));
+  if (compact) return <div className={cn("space-y-3 text-xs text-muted-foreground", className)}><p className="font-medium text-foreground">Atividades</p>{items}</div>;
   return (
     <>
     <details className={cn("sm:hidden rounded-lg border border-border/60 bg-muted/40 text-[13px] text-muted-foreground", className)}>

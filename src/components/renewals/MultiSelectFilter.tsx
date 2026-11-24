@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,6 +29,8 @@ export function MultiSelectFilter({
   className,
   width = "w-full sm:w-[180px]",
 }: MultiSelectFilterProps) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const triggerLabel = useMemo(() => {
     if (selected.length === 0) return placeholder;
     if (selected.length === 1) {
@@ -53,10 +55,11 @@ export function MultiSelectFilter({
 
   return (
     <div className={cn("flex flex-col gap-1", className)}>
-      <label className="text-xs font-medium text-muted-foreground px-1">{label}</label>
-      <Popover>
+      {label && <label className="text-xs font-medium text-muted-foreground px-1">{label}</label>}
+      <Popover onOpenChange={open => { if (open) setPortalContainer(triggerRef.current?.closest<HTMLElement>('[role="dialog"]') ?? null); }}>
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             variant="outline"
             className={cn(
               "justify-between font-normal",
@@ -76,7 +79,7 @@ export function MultiSelectFilter({
             </span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="p-0 w-[240px]" align="start">
+        <PopoverContent portalContainer={portalContainer} className="p-0 w-[min(280px,calc(100vw-2rem))] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto" align="start">
           <div className="max-h-[280px] overflow-y-auto py-1">
             <button
               type="button"

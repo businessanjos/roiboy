@@ -104,6 +104,7 @@ import {
   Check,
   AlertTriangle,
   Building2,
+  Info,
 } from "lucide-react";
 import { RefreshCw as ReapplyIcon, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -292,8 +293,8 @@ export default function SalesPipeline() {
   const isMobile = useIsMobile();
   // No celular, Leads tem destino próprio na barra inferior; o funil mostra só o Pipeline.
   useEffect(() => { if (isMobile && mainTab === "prospeccao") setMainTab("pipeline"); }, [isMobile, mainTab]);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [filtersCollapsed, setFiltersCollapsed] = usePersistedFilter<boolean>("salesPipeline", "filtersCollapsed", false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersContentRef = useRef<HTMLDivElement | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
   const [filterCustomFields, setFilterCustomFields] = useState<CustomFieldOption[]>([]);
@@ -2424,170 +2425,15 @@ export default function SalesPipeline() {
     );
   }
 
-  const filtersPanel = (
-                  <div className="flex flex-wrap items-end gap-3 bg-card border border-border rounded-xl p-3 shadow-sm w-full mt-2">
-                    <PipelineCompanyFilter
-                      companies={companies}
-                      value={companyFilter}
-                      onChange={setCompanyFilter}
-                      loading={companiesLoading}
-                    />
-                    {activeTab === 'open' && (
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Avançado</label>
-                        <div className="flex items-center gap-2">
-                          <PipelineFilterButton
-                            salesUsers={salesUsers}
-                            stages={stages}
-                            activeFilter={activeFilter}
-                            onFilterChange={setActiveFilter}
-                            availableTags={availableTags}
-                            products={pipelineProducts}
-                            previewDeals={filterDealsByCompany(openDeals, companyFilter)}
-                            previewProductMap={openDealProductMap}
-                            previewCustomFieldValues={dealCustomFieldValues}
-                            previewNextActivityMap={dealNextActivityMap}
-                            previewTaskCountMap={dealTaskCountMap}
-                            previewPendingCountMap={dealPendingCountMap}
-                            previewPendingTypesMap={dealPendingTypesMap}
-                            previewPendingStatusesMap={dealPendingStatusesMap}
-
-                          />
-                          {canSeeDeleted && (
-                            <PipelineDebugDialog
-                              deals={openDeals}
-                              activityStatusMap={activityStatusMap}
-                              isLoading={activityStatusLoading}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {activeTab === 'open' && (
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Ordenar por atividade</label>
-                        <Select value={activitySort} onValueChange={(v) => setActivitySort(v as typeof activitySort)}>
-                          <SelectTrigger className={cn("h-10 w-full sm:w-[240px]", activitySort !== 'none' && "border-primary/60 text-primary")}>
-                            <SelectValue placeholder="Padrão" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Padrão (sem ordenação)</SelectItem>
-                            <SelectItem value="pending_desc">Atividades pendentes (maior → menor)</SelectItem>
-                            <SelectItem value="pending_asc">Atividades pendentes (menor → maior)</SelectItem>
-                            <SelectItem value="total_desc">Total de atividades (maior → menor)</SelectItem>
-                            <SelectItem value="total_asc">Total de atividades (menor → maior)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    {(
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Formulário</label>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          aria-pressed={onlyReapplied}
-                          onClick={() => setOnlyReapplied(!onlyReapplied)}
-                          title="Mostrar só os negócios que receberam uma nova resposta de formulário"
-                          className={cn(
-                            "h-10 gap-2 text-sm font-normal bg-background",
-                            onlyReapplied && "border-info/60 text-info bg-info/10 hover:bg-info/15 hover:text-info"
-                          )}
-                        >
-                          <ReapplyIcon className="h-4 w-4" />
-                          Aplicou novamente
-                          <Badge variant="secondary" className="text-[10px] px-1.5">{tabReappliedCount}</Badge>
-                          {onlyReapplied && <X className="h-3.5 w-3.5 opacity-70" />}
-                        </Button>
-                      </div>
-                    )}
-                    {(tabTitleTagOptions.length > 0 || titleTagFilter.length > 0) && (
-                      <MultiSelectFilter
-                        label="Origem"
-                        placeholder="Todas as origens"
-                        width="w-full sm:w-[220px]"
-                        options={tabTitleTagOptions.map(o => ({ value: o.value, label: `${o.label} (${o.count})` }))}
-                        selected={titleTagFilter}
-                        onChange={setTitleTagFilter}
-                      />
-                    )}
-                    {activeTab === 'open' && (
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Período</label>
-                        <Popover open={openDatePopoverOpen} onOpenChange={setOpenDatePopoverOpen}>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" className={cn(
-                              "h-10 text-sm font-normal bg-background justify-start gap-2 min-w-[180px]",
-                              openDatePreset !== 'all' && "border-primary/60 text-primary bg-primary/5"
-                            )}>
-                              <Calendar className="h-4 w-4 opacity-70" />
-                              {openDateLabel}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <div className="flex flex-col sm:flex-row">
-                              <div className="border-b sm:border-b-0 sm:border-r p-2 space-y-0.5 min-w-[170px]">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-2 pt-1 pb-1">Criado em</p>
-                                {([
-                                  { key: 'all', label: 'Todas as datas' },
-                                  { key: 'today', label: 'Hoje' },
-                                  { key: 'this_week', label: 'Esta semana' },
-                                  { key: 'this_month', label: 'Este mês' },
-                                  { key: 'last_month', label: 'Mês passado' },
-                                  { key: 'this_quarter', label: 'Este trimestre' },
-                                  { key: 'this_year', label: 'Este ano' },
-                                ] as const).map(p => (
-                                  <Button
-                                    key={p.key}
-                                    variant={openDatePreset === p.key ? 'secondary' : 'ghost'}
-                                    size="sm"
-                                    className="w-full justify-start text-xs h-7"
-                                    onClick={() => {
-                                      setOpenDatePreset(p.key);
-                                      setOpenDateStart('');
-                                      setOpenDateEnd('');
-                                      setOpenDatePopoverOpen(false);
-                                    }}
-                                  >
-                                    {p.label}
-                                  </Button>
-                                ))}
-                              </div>
-                              <div className="p-2">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-1 pb-1">Período personalizado</p>
-                                <CalendarComponent
-                                  mode="range"
-                                  selected={openDateStart && openDateEnd ? { from: new Date(openDateStart), to: new Date(openDateEnd) } : undefined}
-                                  onSelect={(range) => {
-                                    if (range?.from) {
-                                      setOpenDateStart(range.from.toISOString());
-                                      setOpenDateEnd(range.to ? range.to.toISOString() : range.from.toISOString());
-                                      if (range.to) {
-                                        setOpenDatePreset('custom');
-                                        setOpenDatePopoverOpen(false);
-                                      }
-                                    }
-                                  }}
-                                  numberOfMonths={1}
-                                  locale={ptBR}
-                                  className="pointer-events-auto"
-                                />
-                              </div>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-1 flex-1 min-w-[260px]">
-                      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Pesquisa</label>
-                      <div className="relative">
+  const searchControl = (
+                      <div className="relative min-w-0 flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
+                          aria-label="Pesquisar negócios"
                           placeholder={searchMode === 'exact' ? "Correspondência exata..." : "Buscar em qualquer campo do card..."}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-9 pr-[135px] h-10 w-full bg-muted/40 border-border text-sm focus:bg-background transition-colors"
+                          className="pl-9 pr-20 h-11 sm:h-9 w-full bg-background text-sm"
                         />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -2620,257 +2466,10 @@ export default function SalesPipeline() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                    </div>
 
-
-                    {canSeeDeleted && (
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-transparent select-none px-1">.</label>
-                        <Button
-                          variant="outline"
-                          className="h-10 gap-2 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 hover:border-destructive/30 transition-colors"
-                          onClick={() => setIsDeletedDrawerOpen(true)}
-                          title="Ver negócios excluídos"
-                        >
-                          <Trash2Icon className="h-4 w-4" />
-                          Excluídos
-                        </Button>
-                      </div>
-                    )}
-                  </div>
   );
 
-  return (
-    <>
-      <div className={cn(
-        "p-4 space-y-3 sm:space-y-4",
-        isPipelineFullscreen && "fixed inset-0 z-50 bg-background overflow-hidden flex flex-col"
-      )}>
-
-        {/* Main Tabs */}
-        <Tabs
-          value={mainTab}
-          onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}
-          className={cn(isPipelineFullscreen && "flex-1 min-h-0 flex flex-col")}
-        >
-
-          <div className="flex items-center justify-end sm:justify-between gap-2">
-            <TabsList className="hidden md:flex flex-1 min-w-0 md:flex-none md:w-auto h-10 rounded-md [&>button]:h-8">
-
-
-              <TabsTrigger value="prospeccao" className="flex-1 basis-0 min-w-0 overflow-hidden gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
-                <Users className="h-4 w-4 shrink-0 max-[380px]:hidden" />
-                <span className="whitespace-nowrap sm:hidden">Leads</span>
-                <span className="hidden sm:inline">Prospecção</span>
-                <Badge variant="secondary" className={cn("text-[10px] sm:text-xs", mainTab !== 'prospeccao' && "hidden sm:inline-flex")}>{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="pipeline" className="flex-1 basis-0 min-w-0 overflow-hidden gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
-                <Target className="h-4 w-4 shrink-0 max-[380px]:hidden" />
-                <span className="whitespace-nowrap">Pipeline</span>
-                <Badge variant="secondary" className={cn("text-[10px] sm:text-xs", mainTab !== 'pipeline' && "hidden sm:inline-flex")}>{openDeals.length}</Badge>
-              </TabsTrigger>
-
-            </TabsList>
-
-            <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-auto shrink-0">
-
-              {mainTab === 'pipeline' && (
-                <>
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                  {/* Expandir em tela cheia - desktop */}
-                  <Button
-                    variant={isPipelineFullscreen ? 'secondary' : 'outline'}
-                    size="sm"
-                    className="h-8 gap-1.5 hidden sm:inline-flex"
-                    onClick={() => setIsPipelineFullscreen((v) => !v)}
-                    title={isPipelineFullscreen ? "Reduzir (Esc)" : "Expandir em tela cheia"}
-                  >
-                    {isPipelineFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                    <span className="hidden lg:inline text-xs">{isPipelineFullscreen ? "Reduzir" : "Expandir"}</span>
-                  </Button>
-                  {/* View toggle - desktop only */}
-                  <div className="flex items-center border rounded-lg overflow-hidden">
-
-
-                    <Button
-                      variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className="rounded-none h-11 w-11 sm:h-8 sm:w-auto"
-                      aria-label="Ver em Kanban"
-                      aria-pressed={viewMode === 'kanban'}
-                      onClick={() => setViewMode('kanban')}
-                    >
-                      <LayoutGrid className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className="rounded-none h-11 w-11 sm:h-8 sm:w-auto"
-                      aria-label="Ver em lista"
-                      aria-pressed={viewMode === 'list'}
-                      onClick={() => setViewMode('list')}
-                    >
-                      <List className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-
-                  {/* Config dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-11 w-11 sm:h-9 sm:w-auto px-2" aria-label="Configurações do funil">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      {canBulkEdit && <>
-                        <DropdownMenuItem disabled={bulk.running} onClick={() => { setBulkSelectionMode(enabled => !enabled); setBulkSelectedIds(new Set()); }}>
-                          <List className="mr-2 h-4 w-4" />{bulkSelectionMode ? "Sair da seleção" : "Selecionar cards"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem disabled={bulk.running} onClick={() => setBulkHistoryOpen(true)}>
-                          <Clock className="mr-2 h-4 w-4" />Histórico em massa
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                      </>}
-                      <DropdownMenuItem onClick={() => setIsStagesManagerOpen(true)}>
-                        <Columns3 className="h-4 w-4 mr-2" />
-                        Gerenciar Etapas
-                      </DropdownMenuItem>
-                      {isAdmin && (
-                        <DropdownMenuItem onClick={() => setIsFieldsDialogOpen(true)}>
-                          <SlidersHorizontal className="h-4 w-4 mr-2" />
-                          Campos Personalizados
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setIsExportDialogOpen(true)}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Exportar Pipeline
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  </div>
-
-
-                  <Button size="sm" className="h-11 w-11 sm:h-9 sm:w-auto gap-1.5" aria-label="Novo deal" onClick={() => setIsNewDealOpen(true)}>
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Novo Deal</span>
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-
-          <TabsContent value="prospeccao" className="mt-3 sm:mt-4">
-            <LeadsTab />
-          </TabsContent>
-
-          <TabsContent
-            value="pipeline"
-            className={cn(
-              "mt-3 sm:mt-4 space-y-3 sm:space-y-4",
-              isPipelineFullscreen && "flex-1 min-h-0 flex flex-col space-y-2 mt-2"
-            )}
-          >
-            {/* Pipeline Selector + Sub-tabs Row */}
-            <div className={cn("space-y-3", isPipelineFullscreen && "hidden")}>
-
-              {/* Pipeline selector row + unified filters */}
-              <div className="flex flex-col gap-2">
-                <div className={cn("flex flex-col gap-2", !isMobile && filtersCollapsed && "flex-row flex-wrap items-center sm:flex-col sm:items-stretch")}>
-                  <div className={cn("flex flex-wrap items-center gap-2 sm:gap-3", (isMobile || filtersCollapsed) && "min-w-0 flex-nowrap sm:flex-wrap", !isMobile && filtersCollapsed && "flex-1")}>
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <PipelineSelector
-                        pipelines={pipelines}
-                        activePipelineId={activePipelineId}
-                        onSelect={setActivePipelineId}
-                        onCreate={createPipeline}
-                        onUpdate={updatePipeline}
-                        onDelete={deletePipeline}
-                      />
-                    </div>
-                    <Button
-                      variant={isMobile ? "outline" : "ghost"}
-                      size="sm"
-                      aria-label="Filtros"
-                      className="h-11 w-11 sm:w-auto min-w-11 sm:h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                      onClick={() => (isMobile ? setMobileFiltersOpen(true) : setFiltersCollapsed(!filtersCollapsed))}
-                      aria-expanded={isMobile ? mobileFiltersOpen : !filtersCollapsed}
-                    >
-                      <SlidersHorizontal className="h-3.5 w-3.5" />
-                      <span className={cn((isMobile || filtersCollapsed) && "hidden sm:inline")}>Filtros</span>
-                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform hidden sm:inline", !filtersCollapsed && "rotate-180")} />
-                    </Button>
-                  </div>
-
-                  {activeTab === 'open' && (
-                    <div className={cn(
-                      "flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-xs sm:text-sm sm:justify-start sm:gap-5 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0",
-                      !isMobile && filtersCollapsed && "w-auto shrink-0 gap-2 px-2 py-1 text-[11px] sm:w-auto sm:px-0 sm:py-0"
-                    )}>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                        <span className="text-muted-foreground truncate">{filteredOpenDeals.length}<span className={cn(!isMobile && filtersCollapsed && "hidden sm:inline")}> negócios</span></span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="font-semibold truncate">{formatCurrency(filteredOpenTotalValue)}</span>
-                      </div>
-                      <div className="hidden sm:flex items-center gap-1.5">
-                        <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">Ponderado:</span>
-                        <span className="font-medium">{formatCurrency(filteredOpenWeightedValue)}</span>
-                      </div>
-                    </div>
-                  )}
-
-
-                  <div className="w-full">
-
-                  {isMobile ? (
-                    <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
-                      <SheetContent side="bottom" className="h-[85dvh] overflow-y-auto p-4" aria-describedby={undefined}>
-                        <SheetHeader className="mb-3 text-left">
-                          <SheetTitle className="text-base">Filtros</SheetTitle>
-                        </SheetHeader>
-                        {filtersPanel}
-                      </SheetContent>
-                    </Sheet>
-                  ) : (!filtersCollapsed && filtersPanel)}
-                  </div>
-                </div>
-
-                {companyFilter !== "all" && (
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      className="min-h-11 max-w-full gap-2 border-primary/40 text-primary"
-                      onClick={() => setCompanyFilter("all")}
-                      aria-label="Limpar filtro de empresa"
-                      title="Limpar filtro de empresa"
-                    >
-                      <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                      <span className="min-w-0 truncate">{selectedFilterCompany?.trade_name || selectedFilterCompany?.legal_name || "Empresa selecionada"}</span>
-                      <X className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    </Button>
-                  </div>
-                )}
-
-                {/* Active filter chips (only for open pipeline view) */}
-                {activeTab === 'open' && (
-                  <ActiveFilterChips
-                    activeFilter={activeFilter}
-                    searchTerm={searchTerm}
-                    onSearchClear={() => setSearchTerm("")}
-                    onFilterChange={setActiveFilter}
-                    salesUsers={salesUsers}
-                    stages={stages}
-                    customFields={filterCustomFields}
-                  />
-                )}
-
-
+  const contextualFilters = <>
                 {/* Contextual filters for won/lost tabs */}
                 {activeTab === 'won' && (
                   <div className="flex flex-wrap items-center gap-2">
@@ -2883,7 +2482,7 @@ export default function SalesPipeline() {
                         )}>
                           <Calendar className="h-3.5 w-3.5 mr-1.5" />
                           {wonMonthFilter === 'all' && 'Todas as datas'}
-                          {wonMonthFilter === 'custom' && wonDateStart && wonDateEnd && 
+                          {wonMonthFilter === 'custom' && wonDateStart && wonDateEnd &&
                             `${format(new Date(wonDateStart), "dd/MM/yy")} - ${format(new Date(wonDateEnd), "dd/MM/yy")}`
                           }
                           {wonMonthFilter !== 'all' && wonMonthFilter !== 'custom' && (() => {
@@ -2892,7 +2491,7 @@ export default function SalesPipeline() {
                           })()}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent portalContainer={filtersContentRef.current ?? undefined} className="w-auto max-w-[calc(100vw-2rem)] max-h-[80dvh] overflow-y-auto p-0" align="start">
                         <div className="flex flex-col sm:flex-row">
                           {/* Quick presets */}
                           <div className="border-b sm:border-b-0 sm:border-r p-2 space-y-0.5 min-w-[160px]">
@@ -3070,14 +2669,343 @@ export default function SalesPipeline() {
                     </div>
                   </div>
                 )}
+  </>;
 
-              </div>
+  const filtersPanel = (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 [&>div]:min-w-0 [&_button]:max-w-full [&_button[role=combobox]]:w-full [&_button[role=combobox]]:min-h-11">
+                    <PipelineCompanyFilter
+                      companies={companies}
+                      value={companyFilter}
+                      onChange={setCompanyFilter}
+                      loading={companiesLoading}
+                    />
+                    {activeTab === 'open' && (
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Avançado</label>
+                        <div className="flex items-center gap-2">
+                          <PipelineFilterButton
+                            salesUsers={salesUsers}
+                            stages={stages}
+                            activeFilter={activeFilter}
+                            onFilterChange={setActiveFilter}
+                            availableTags={availableTags}
+                            products={pipelineProducts}
+                            previewDeals={filterDealsByCompany(openDeals, companyFilter)}
+                            previewProductMap={openDealProductMap}
+                            previewCustomFieldValues={dealCustomFieldValues}
+                            previewNextActivityMap={dealNextActivityMap}
+                            previewTaskCountMap={dealTaskCountMap}
+                            previewPendingCountMap={dealPendingCountMap}
+                            previewPendingTypesMap={dealPendingTypesMap}
+                            previewPendingStatusesMap={dealPendingStatusesMap}
 
-              {/* Resumo agora vive na linha do botão de filtros (sem duplicar) */}
+                          />
+                          {canSeeDeleted && (
+                            <PipelineDebugDialog
+                              deals={openDeals}
+                              activityStatusMap={activityStatusMap}
+                              isLoading={activityStatusLoading}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {activeTab === 'open' && (
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Ordenar por atividade</label>
+                        <Select value={activitySort} onValueChange={(v) => setActivitySort(v as typeof activitySort)}>
+                          <SelectTrigger className={cn("h-11 w-full", activitySort !== 'none' && "border-primary/60 text-primary")}>
+                            <SelectValue placeholder="Padrão" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Padrão (sem ordenação)</SelectItem>
+                            <SelectItem value="pending_desc">Atividades pendentes (maior → menor)</SelectItem>
+                            <SelectItem value="pending_asc">Atividades pendentes (menor → maior)</SelectItem>
+                            <SelectItem value="total_desc">Total de atividades (maior → menor)</SelectItem>
+                            <SelectItem value="total_asc">Total de atividades (menor → maior)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {(
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Formulário</label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          aria-pressed={onlyReapplied}
+                          onClick={() => setOnlyReapplied(!onlyReapplied)}
+                          title="Mostrar só os negócios que receberam uma nova resposta de formulário"
+                          className={cn(
+                            "h-11 w-full gap-2 text-sm font-normal bg-background",
+                            onlyReapplied && "border-info/60 text-info bg-info/10 hover:bg-info/15 hover:text-info"
+                          )}
+                        >
+                          <ReapplyIcon className="h-4 w-4" />
+                          Aplicou novamente
+                          <Badge variant="secondary" className="text-[10px] px-1.5">{tabReappliedCount}</Badge>
+                          {onlyReapplied && <X className="h-3.5 w-3.5 opacity-70" />}
+                        </Button>
+                      </div>
+                    )}
+                    {(tabTitleTagOptions.length > 0 || titleTagFilter.length > 0) && (
+                      <MultiSelectFilter
+                        label="Origem"
+                        placeholder="Todas as origens"
+                        width="w-full"
+                        options={tabTitleTagOptions.map(o => ({ value: o.value, label: `${o.label} (${o.count})` }))}
+                        selected={titleTagFilter}
+                        onChange={setTitleTagFilter}
+                      />
+                    )}
+                    {activeTab === 'open' && (
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Período</label>
+                        <Popover open={openDatePopoverOpen} onOpenChange={setOpenDatePopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className={cn(
+                              "h-11 w-full text-sm font-normal bg-background justify-start gap-2",
+                              openDatePreset !== 'all' && "border-primary/60 text-primary bg-primary/5"
+                            )}>
+                              <Calendar className="h-4 w-4 opacity-70" />
+                              {openDateLabel}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent portalContainer={filtersContentRef.current ?? undefined} className="max-w-[calc(100vw-2rem)] w-auto max-h-[80dvh] overflow-y-auto p-0" align="start">
+                            <div className="flex flex-col sm:flex-row">
+                              <div className="border-b sm:border-b-0 sm:border-r p-2 space-y-0.5 min-w-[170px]">
+                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-2 pt-1 pb-1">Criado em</p>
+                                {([
+                                  { key: 'all', label: 'Todas as datas' },
+                                  { key: 'today', label: 'Hoje' },
+                                  { key: 'this_week', label: 'Esta semana' },
+                                  { key: 'this_month', label: 'Este mês' },
+                                  { key: 'last_month', label: 'Mês passado' },
+                                  { key: 'this_quarter', label: 'Este trimestre' },
+                                  { key: 'this_year', label: 'Este ano' },
+                                ] as const).map(p => (
+                                  <Button
+                                    key={p.key}
+                                    variant={openDatePreset === p.key ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    className="w-full justify-start text-xs h-7"
+                                    onClick={() => {
+                                      setOpenDatePreset(p.key);
+                                      setOpenDateStart('');
+                                      setOpenDateEnd('');
+                                      setOpenDatePopoverOpen(false);
+                                    }}
+                                  >
+                                    {p.label}
+                                  </Button>
+                                ))}
+                              </div>
+                              <div className="p-2">
+                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-1 pb-1">Período personalizado</p>
+                                <CalendarComponent
+                                  mode="range"
+                                  selected={openDateStart && openDateEnd ? { from: new Date(openDateStart), to: new Date(openDateEnd) } : undefined}
+                                  onSelect={(range) => {
+                                    if (range?.from) {
+                                      setOpenDateStart(range.from.toISOString());
+                                      setOpenDateEnd(range.to ? range.to.toISOString() : range.from.toISOString());
+                                      if (range.to) {
+                                        setOpenDatePreset('custom');
+                                        setOpenDatePopoverOpen(false);
+                                      }
+                                    }
+                                  }}
+                                  numberOfMonths={1}
+                                  locale={ptBR}
+                                  className="pointer-events-auto"
+                                />
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    )}
 
+
+
+
+                    {canSeeDeleted && (
+                      <div className="flex flex-col gap-1">
+
+                        <Button
+                          variant="outline"
+                          className="h-10 gap-2 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 hover:border-destructive/30 transition-colors"
+                          onClick={() => setIsDeletedDrawerOpen(true)}
+                          title="Ver negócios excluídos"
+                        >
+                          <Trash2Icon className="h-4 w-4" />
+                          Excluídos
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+  );
+
+  return (
+    <>
+      <div className={cn(
+        "min-w-0 p-3 sm:p-4 space-y-2",
+        isPipelineFullscreen && "fixed inset-0 z-50 bg-background overflow-hidden flex flex-col"
+      )}>
+
+        {/* Main Tabs */}
+        <Tabs
+          value={mainTab}
+          onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}
+          className={cn(isPipelineFullscreen && "flex-1 min-h-0 flex flex-col")}
+        >
+
+          <div className="flex items-center justify-end sm:justify-between gap-2">
+            <TabsList className="hidden md:flex flex-1 min-w-0 md:flex-none md:w-auto h-10 rounded-md [&>button]:h-8">
+
+
+              <TabsTrigger value="prospeccao" className="flex-1 basis-0 min-w-0 overflow-hidden gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
+                <Users className="h-4 w-4 shrink-0 max-[380px]:hidden" />
+                <span className="whitespace-nowrap sm:hidden">Leads</span>
+                <span className="hidden sm:inline">Prospecção</span>
+                <Badge variant="secondary" className={cn("text-[10px] sm:text-xs", mainTab !== 'prospeccao' && "hidden sm:inline-flex")}>{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="pipeline" className="flex-1 basis-0 min-w-0 overflow-hidden gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
+                <Target className="h-4 w-4 shrink-0 max-[380px]:hidden" />
+                <span className="whitespace-nowrap">Pipeline</span>
+                <Badge variant="secondary" className={cn("text-[10px] sm:text-xs", mainTab !== 'pipeline' && "hidden sm:inline-flex")}>{openDeals.length}</Badge>
+              </TabsTrigger>
+
+            </TabsList>
+
+            <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-auto shrink-0">
+
+              {mainTab === 'pipeline' && (
+                <>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                  {/* Expandir em tela cheia - desktop */}
+                  <Button
+                    variant={isPipelineFullscreen ? 'secondary' : 'outline'}
+                    size="sm"
+                    className="h-8 gap-1.5 hidden sm:inline-flex"
+                    onClick={() => setIsPipelineFullscreen((v) => !v)}
+                    title={isPipelineFullscreen ? "Reduzir (Esc)" : "Expandir em tela cheia"}
+                  >
+                    {isPipelineFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                    <span className="hidden lg:inline text-xs">{isPipelineFullscreen ? "Reduzir" : "Expandir"}</span>
+                  </Button>
+                  {/* View toggle - desktop only */}
+                  <div className="flex items-center border rounded-lg overflow-hidden">
+
+
+                    <Button
+                      variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="rounded-none h-11 w-11 sm:h-8 sm:w-auto"
+                      aria-label="Ver em Kanban"
+                      aria-pressed={viewMode === 'kanban'}
+                      onClick={() => setViewMode('kanban')}
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="rounded-none h-11 w-11 sm:h-8 sm:w-auto"
+                      aria-label="Ver em lista"
+                      aria-pressed={viewMode === 'list'}
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+
+                  {/* Config dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-11 w-11 sm:h-9 sm:w-auto px-2" aria-label="Configurações do funil">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      {canBulkEdit && <>
+                        <DropdownMenuItem disabled={bulk.running} onClick={() => { setBulkSelectionMode(enabled => !enabled); setBulkSelectedIds(new Set()); }}>
+                          <List className="mr-2 h-4 w-4" />{bulkSelectionMode ? "Sair da seleção" : "Selecionar cards"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem disabled={bulk.running} onClick={() => setBulkHistoryOpen(true)}>
+                          <Clock className="mr-2 h-4 w-4" />Histórico em massa
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>}
+                      <DropdownMenuItem onClick={() => setIsStagesManagerOpen(true)}>
+                        <Columns3 className="h-4 w-4 mr-2" />
+                        Gerenciar Etapas
+                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <DropdownMenuItem onClick={() => setIsFieldsDialogOpen(true)}>
+                          <SlidersHorizontal className="h-4 w-4 mr-2" />
+                          Campos Personalizados
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setIsExportDialogOpen(true)}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar Pipeline
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  </div>
+
+
+                  <Button size="sm" className="h-11 w-11 sm:h-9 sm:w-auto gap-1.5" aria-label="Novo deal" onClick={() => setIsNewDealOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Novo Deal</span>
+                  </Button>
+                </>
+              )}
             </div>
+          </div>
 
-            <PipelineActivityLegend className="mb-2" />
+
+          <TabsContent value="prospeccao" className="mt-3 sm:mt-4">
+            <LeadsTab />
+          </TabsContent>
+
+          <TabsContent
+            value="pipeline"
+            className={cn(
+              "mt-2 space-y-2",
+              isPipelineFullscreen && "flex-1 min-h-0 flex flex-col space-y-2 mt-2"
+            )}
+          >
+            <div className="space-y-2">
+              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[minmax(140px,auto)_minmax(160px,1fr)_auto]">
+                <div className="min-w-0">
+                  <PipelineSelector pipelines={pipelines} activePipelineId={activePipelineId} onSelect={setActivePipelineId} onCreate={createPipeline} onUpdate={updatePipeline} onDelete={deletePipeline} />
+                </div>
+                <div className="col-span-2 row-start-2 min-w-0 sm:col-span-1 sm:row-start-auto">{searchControl}</div>
+                <Button variant="outline" size="sm" aria-label="Filtros" className="col-start-2 row-start-1 h-11 gap-2 sm:col-start-3 sm:h-9" onClick={() => setFiltersOpen(true)} aria-expanded={filtersOpen}>
+                  <SlidersHorizontal className="h-4 w-4" />Filtros
+                  {(activeFilter || companyFilter !== "all" || onlyReapplied || titleTagFilter.length > 0 || (activeTab === "open" && openDatePreset !== "all")) && <span className="h-2 w-2 rounded-full bg-primary" />}
+                </Button>
+              </div>
+              <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+                <SheetContent ref={filtersContentRef} side={isMobile ? "bottom" : "right"} className={cn("flex flex-col gap-0 p-0", isMobile ? "h-[85dvh]" : "w-[min(560px,92vw)] sm:max-w-none")} aria-describedby={undefined}>
+                  <SheetHeader className="shrink-0 border-b px-5 py-5 pr-16 text-left"><SheetTitle>Filtros do funil</SheetTitle></SheetHeader>
+                  <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-5">
+                    {filtersPanel}
+                    {activeTab !== "open" && <div className="border-t pt-5">{contextualFilters}</div>}
+                  </div>
+                  <div className="flex shrink-0 justify-end border-t px-5 py-4"><Button className="h-11" onClick={() => setFiltersOpen(false)}>Ver negócios</Button></div>
+                </SheetContent>
+              </Sheet>
+              {(companyFilter !== "all" || (activeTab === "open" && (activeFilter || searchTerm.trim()))) && <div className="flex min-w-0 items-center gap-2 overflow-x-auto overscroll-x-contain">
+                {companyFilter !== "all" && <Button variant="outline" size="sm" className="h-7 max-w-[220px] shrink-0 gap-1.5 text-xs text-primary" onClick={() => setCompanyFilter("all")} aria-label="Limpar filtro de empresa">
+                  <Building2 className="h-3 w-3 shrink-0" /><span className="truncate">{selectedFilterCompany?.trade_name || selectedFilterCompany?.legal_name || "Empresa selecionada"}</span><X className="h-3 w-3 shrink-0" />
+                </Button>}
+                {activeTab === "open" && <ActiveFilterChips compact activeFilter={activeFilter} searchTerm={searchTerm} onSearchClear={() => setSearchTerm("")} onFilterChange={setActiveFilter} salesUsers={salesUsers} stages={stages} customFields={filterCustomFields} />}
+              </div>}
+            </div>
 
             {/* Status sub-tabs */}
             <Tabs
@@ -3086,10 +3014,11 @@ export default function SalesPipeline() {
               className={cn(isPipelineFullscreen && "flex-1 min-h-0 flex flex-col gap-2")}
             >
 
-              <div className="sm:hidden">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+              <div className="min-w-0 flex-1 sm:hidden">
                 <label htmlFor="pipeline-status-mobile" className="sr-only">Situação dos negócios</label>
                 <Select value={activeTab} onValueChange={setActiveTab}>
-                  <SelectTrigger id="pipeline-status-mobile" className="h-11 rounded-xl text-[15px] font-medium">
+                  <SelectTrigger id="pipeline-status-mobile" className="h-11 rounded-md text-sm font-medium">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -3099,7 +3028,7 @@ export default function SalesPipeline() {
                   </SelectContent>
                 </Select>
               </div>
-              <TabsList className="hidden sm:flex w-full sm:w-auto h-12 sm:h-9 rounded-xl sm:rounded-md">
+              <TabsList className="hidden sm:inline-flex w-auto shrink-0 h-9 rounded-md">
                 <TabsTrigger value="open" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-10 sm:h-7 rounded-lg sm:rounded-sm">
                   <TrendingUp className="h-3.5 w-3.5" />
                   Em Aberto
@@ -3120,6 +3049,16 @@ export default function SalesPipeline() {
                   </Badge>
                 </TabsTrigger>
               </TabsList>
+              <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground sm:ml-auto">
+                {activeTab === "open" && <>
+                  <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="cursor-default tabular-nums">{filteredOpenDeals.length.toLocaleString("pt-BR")} {hiddenOpenCount > 0 ? `de ${openDeals.length.toLocaleString("pt-BR")}` : "negócios"}</span></TooltipTrigger><TooltipContent>{hiddenOpenCount > 0 ? `${hiddenOpenCount} negócios ocultos pelos filtros ativos` : "Negócios em aberto"}</TooltipContent></Tooltip></TooltipProvider>
+                  <span className="font-semibold text-foreground tabular-nums">{formatCurrency(filteredOpenTotalValue)}</span>
+                  <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="hidden xl:inline tabular-nums">Pond. {formatCurrency(filteredOpenWeightedValue)}</span></TooltipTrigger><TooltipContent>Valor ponderado pela probabilidade de cada negócio</TooltipContent></Tooltip></TooltipProvider>
+                  {hiddenOpenCount > 0 && <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Limpar todos os filtros" onClick={clearAllPipelineFilters}><X className="h-3.5 w-3.5" /></Button></TooltipTrigger><TooltipContent>Limpar todos os filtros</TooltipContent></Tooltip></TooltipProvider>}
+                </>}
+                <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Legenda das cores"><Info className="h-4 w-4" /></Button></PopoverTrigger><PopoverContent align="end" className="w-64 p-3"><PipelineActivityLegend compact /></PopoverContent></Popover>
+              </div>
+              </div>
               {canBulkEdit && <BulkDealToolbar
                 enabled={bulkSelectionMode}
                 count={bulkSelectedDeals.length}
@@ -3134,17 +3073,6 @@ export default function SalesPipeline() {
                 className={cn("mt-0", isPipelineFullscreen && "flex-1 min-h-0 flex flex-col")}
               >
 
-                {hiddenOpenCount > 0 && (
-                  <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs">
-                    <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
-                    <span className="text-warning-strong dark:text-warning">
-                      <b>{hiddenOpenCount}</b> {hiddenOpenCount === 1 ? "negócio em aberto está oculto" : "negócios em aberto estão ocultos"} pelos filtros ativos (de {openDeals.length} no funil).
-                    </span>
-                    <Button size="sm" variant="outline" className="h-11 sm:h-7 text-xs ml-auto" onClick={clearAllPipelineFilters}>
-                      Limpar filtros
-                    </Button>
-                  </div>
-                )}
                 {viewMode === 'kanban' ? (
                   <DealKanban
                     stages={stages}

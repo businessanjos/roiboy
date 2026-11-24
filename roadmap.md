@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Topo compacto do Pipeline
+- [x] Busca e funil em linha compacta, resumo ao lado das situações e filtros em painel sob demanda; sem alterar dados ou regras.
+- [x] 55 testes passaram; página completa com exemplos conferida em 390/794/1440 px nos dois temas, filtros de empresa/vendedor/origem/data, ganhas/perdidas, seleção por etapa e tela expandida, sem erros ou rolagem lateral da página; não publicado.
+- [ ] Conferir com dados reais: mesmo após entrada confirmada em 24/11, a sessão própria de teste não foi disponibilizada (nenhuma conta correspondente retornada); exemplos não substituem essa conferência.
+
 ## Cliques Story e Feed no comparativo
 - [x] Incluir as duas métricas ao lado das atuais em Eternum RECORDES e na tabela semanal, usando os lançamentos existentes por perfil e período, sem novos campos ou alterações de dados.
 - [x] 21 testes passaram, incluindo isolamento por conta/perfil/ano, paginação completa e preservação do botão Salvar; gráfico conferido com dados fictícios em 390/794/1440 px, sem sobreposição, rolagem lateral ou erros; não publicado.
@@ -20,7 +25,7 @@
 
 ## Alterações em massa no Pipeline
 - [x] “Selecionar todos” por etapa, com contagem, estado parcial, desmarcação independente e filtros preservados; 16 testes passaram e controles conferidos com exemplos em 390/794/1440 px, sem alterar negócios.
-- [ ] Conferir seleção por etapa com cards reais: a sessão própria não foi disponibilizada (`auth-session --self` sem conta correspondente); aguarda entrada na prévia.
+- [ ] Conferir seleção por etapa com cards reais: sessão própria de teste indisponível mesmo após entrada confirmada em 24/11; nenhuma conta correspondente retornada.
 - [x] Reorganizar janela e mover “Selecionar cards” para o menu discreto do funil.
 - [x] Restringir alterações em massa a adm/gestor no servidor e na interface, preservando as permissões individuais existentes.
 - [x] Registrar autor, data, ação e resultados em histórico persistente; desfazer a última movimentação própria com verificação contra alterações posteriores.
