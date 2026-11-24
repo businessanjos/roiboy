@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plus, 
   Package, 
+  Building2,
   Edit2, 
   Trash2,
   Loader2,
@@ -338,7 +339,7 @@ export default function Products() {
       return;
     }
     if (companies.length > 0 && !companyId) {
-      toast.error("Selecione a empresa emissora do produto");
+      toast.error("Selecione a empresa do produto");
       return;
     }
 
@@ -556,10 +557,10 @@ export default function Products() {
 
                 {companies.length > 0 && (
                   <div className="space-y-2">
-                    <Label>Empresa emissora *</Label>
+                    <Label htmlFor="product-company">Empresa *</Label>
                     <Select value={companyId} onValueChange={setCompanyId}>
 
-                      <SelectTrigger>
+                      <SelectTrigger id="product-company">
                         <SelectValue placeholder="Selecione a empresa" />
                       </SelectTrigger>
                       <SelectContent className="bg-popover z-50">
@@ -570,9 +571,6 @@ export default function Products() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Define o CNPJ que fatura e emite nota para este produto.
-                    </p>
                   </div>
                 )}
 
@@ -1200,6 +1198,14 @@ export default function Products() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                <Badge variant="outline" className="max-w-full gap-1.5">
+                  <Building2 className="h-3 w-3 shrink-0" />
+                  <span className="truncate">
+                    {companies.find((company) => company.id === product.company_id)?.trade_name?.trim()
+                      || companies.find((company) => company.id === product.company_id)?.legal_name?.trim()
+                      || "Sem empresa vinculada"}
+                  </span>
+                </Badge>
                 {product.description && (
                   <p className="text-sm text-muted-foreground">
                     {product.description}

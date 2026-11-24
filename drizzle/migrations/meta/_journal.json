@@ -694,6 +694,13 @@
       "when": 1795522912608,
       "tag": "0098_instagram_story_link_clicks",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1795530835691,
+      "tag": "0099_sale_item_company_link",
+      "breakpoints": true
     }
   ]
 }

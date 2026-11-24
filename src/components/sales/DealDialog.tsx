@@ -6,6 +6,7 @@ import { Deal, DealStage } from "@/hooks/useDeals";
 import { supabase } from "@/integrations/supabase/client";
 import { DEAL_FIELD_IDS, mapItemVendaToProductId } from "@/utils/dealToClientContractMapping";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MarkAsLostDialog } from "@/components/sales/MarkAsLostDialog";
 import {
@@ -132,6 +133,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  company_id: string | null;
 }
 
 type DealDialogDraft = {
@@ -152,6 +154,7 @@ export function DealDialog({
   onReopen,
 }: DealDialogProps) {
   const { currentUser } = useCurrentUser();
+  const { companies } = useCompany();
   const { pipelines } = usePipelines();
   const [saving, setSaving] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -167,6 +170,8 @@ export function DealDialog({
   const skipAutosaveRef = useRef(false);
 
   const isEditing = !!deal;
+  const selectedProduct = products.find((product) => product.id === selectedProductId);
+  const selectedCompany = companies.find((company) => company.id === selectedProduct?.company_id);
   // Quando criando um novo deal, `deal` é undefined — não deve ser tratado como "fechado"
   const isClosed = isEditing && deal?.status !== 'open';
 
@@ -221,7 +226,7 @@ export function DealDialog({
           .limit(100),
         supabase
           .from("products")
-          .select("id, name, price")
+          .select("id, name, price, company_id")
           .eq("account_id", currentUser.account_id)
           .eq("is_active", true)
           .order("name"),
@@ -588,7 +593,7 @@ export function DealDialog({
                         disabled={isClosed}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione o produto" />
+                          <SelectValue placeholder="Selecione o produto">{selectedProduct?.name || undefined}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">Nenhum</SelectItem>
@@ -607,6 +612,14 @@ export function DealDialog({
                           ))}
                         </SelectContent>
                       </Select>
+                      {!isEditing && selectedProduct && (
+                        <Badge variant="outline" className="max-w-full gap-1.5">
+                          <Building2 className="h-3 w-3 shrink-0" />
+                          <span className="truncate">
+                            {selectedCompany?.trade_name?.trim() || selectedCompany?.legal_name?.trim() || "Sem empresa vinculada"}
+                          </span>
+                        </Badge>
+                      )}
                     </FormItem>
 
                     {/* Value */}
