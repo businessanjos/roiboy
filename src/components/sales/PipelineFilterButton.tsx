@@ -30,6 +30,8 @@ import { PipelineFilterDialog, CustomFieldOption } from "./PipelineFilterDialog"
 import { Deal, DealStage } from "@/hooks/useDeals";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
+import { usePipelineFilterValues } from "@/hooks/usePipelineFilterValues";
+import { getPipelineCustomFieldIds, PIPELINE_ITEM_VENDA_FIELD_ID } from "@/lib/sales/pipelineFilterValues";
 
 interface SalesUser {
   id: string;
@@ -60,6 +62,7 @@ interface PipelineFilterButtonProps {
   previewPendingCountMap?: Record<string, number>;
   previewPendingTypesMap?: Record<string, string[]>;
   previewPendingStatusesMap?: Record<string, string[]>;
+  previewRefreshKey?: number;
 }
 
 
@@ -78,6 +81,7 @@ export function PipelineFilterButton({
   previewPendingCountMap,
   previewPendingTypesMap,
   previewPendingStatusesMap,
+  previewRefreshKey,
 }: PipelineFilterButtonProps) {
   const { currentUser } = useCurrentUser();
   const { filters, fetchFilters, createFilter, updateFilter, deleteFilter } = usePipelineFilters();
@@ -91,6 +95,8 @@ export function PipelineFilterButton({
   const [customFields, setCustomFields] = useState<CustomFieldOption[]>([]);
   const [activityTypes, setActivityTypes] = useState<Array<{ id: string; name: string }>>([]);
   const [taskStatuses, setTaskStatuses] = useState<Array<{ id: string; name: string }>>([]);
+  const [draftFieldIds, setDraftFieldIds] = useState<string[]>([]);
+  const previewValues = usePipelineFilterValues(isDialogOpen ? previewDeals ?? [] : [], draftFieldIds, previewRefreshKey);
 
 
   useEffect(() => {
@@ -577,9 +583,16 @@ export function PipelineFilterButton({
         customFields={customFields}
         activityTypes={activityTypes}
         taskStatuses={taskStatuses}
+        onConditionsChange={conditions => setDraftFieldIds(previous => {
+          const next = getPipelineCustomFieldIds(conditions);
+          return previous.join(',') === next.join(',') ? previous : next;
+        })}
+        previewLoading={previewValues.loading}
+        previewError={previewValues.error}
         computePreview={
           previewDeals
             ? (conditions: FilterCondition[], matchType: 'all' | 'any') => {
+                if (previewValues.loading || previewValues.error || getPipelineCustomFieldIds(conditions).join(',') !== draftFieldIds.join(',')) return null;
                 const matched = applyFilterToDeals(
                   previewDeals,
                   {
@@ -591,13 +604,14 @@ export function PipelineFilterButton({
                   },
                   undefined,
                   previewProductMap,
-                  previewCustomFieldValues,
+                  draftFieldIds.length ? previewValues.values : previewCustomFieldValues,
                   previewNextActivityMap,
                   undefined,
                   previewTaskCountMap,
                   previewPendingCountMap,
                   previewPendingTypesMap,
                   previewPendingStatusesMap,
+                  { itemOptions: customFields.find(field => field.id === PIPELINE_ITEM_VENDA_FIELD_ID)?.options, products },
                 );
                 return { matched: matched.length, total: previewDeals.length };
               }

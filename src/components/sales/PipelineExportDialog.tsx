@@ -28,6 +28,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
+import { matchesPipelineItemVenda, PIPELINE_ITEM_VENDA_FIELD_ID } from "@/lib/sales/pipelineFilterValues";
+import { fetchAllInChunks } from "@/lib/fetchInChunks";
 
 interface PipelineExportDialogProps {
   open: boolean;
@@ -201,6 +203,7 @@ export function PipelineExportDialog({
             clients!deals_client_id_fkey(full_name, phone_e164, emails)`
           )
           .eq("account_id", currentUser.account_id)
+          .order("id")
           .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
         if (error) throw error;
@@ -212,16 +215,10 @@ export function PipelineExportDialog({
       // 2. Fetch all deal_field_values in chunks
       const dealIds = allDeals.map((d) => d.id);
       let allFieldValues: any[] = [];
-      const CHUNK = 50;
-      for (let i = 0; i < dealIds.length; i += CHUNK) {
-        const chunk = dealIds.slice(i, i + CHUNK);
-        const { data } = await supabase
-          .from("deal_field_values")
-          .select("deal_id, field_id, value_text, value_number, value_boolean, value_date, value_json")
-          .in("deal_id", chunk)
-          .limit(10000);
-        allFieldValues = allFieldValues.concat(data || []);
-      }
+      allFieldValues = await fetchAllInChunks<any>(dealIds, 50, (chunk, from, to) => supabase
+        .from("deal_field_values")
+        .select("deal_id, field_id, value_text, value_number, value_boolean, value_date, value_json")
+        .eq("account_id", currentUser.account_id).in("deal_id", chunk).order("id").range(from, to));
 
       // Index field values by deal_id
       const fieldValuesByDeal: Record<string, any[]> = {};
@@ -313,8 +310,8 @@ export function PipelineExportDialog({
       if (filterProduct !== "all") {
         filtered = filtered.filter((d) => {
           const fvs = fieldValuesByDeal[d.id] || [];
-          const itemVendaFv = fvs.find((fv: any) => fv.field_id === '033b91fb-3add-4c96-aec9-567fefbd0fb2');
-          return itemVendaFv?.value_text === filterProduct;
+          const itemVendaFv = fvs.find((fv: any) => fv.field_id === PIPELINE_ITEM_VENDA_FIELD_ID);
+          return matchesPipelineItemVenda(itemVendaFv?.value_text, filterProduct, { itemOptions: customFields.find(field => field.id === PIPELINE_ITEM_VENDA_FIELD_ID)?.options, products });
         });
       }
 

@@ -59,6 +59,9 @@ interface PipelineFilterDialogProps {
   activityTypes?: Array<{ id: string; name: string }>;
   taskStatuses?: Array<{ id: string; name: string }>;
   computePreview?: (conditions: FilterCondition[], matchType: 'all' | 'any') => { matched: number; total: number } | null;
+  onConditionsChange?: (conditions: FilterCondition[]) => void;
+  previewLoading?: boolean;
+  previewError?: boolean;
 }
 
 
@@ -174,12 +177,16 @@ export function PipelineFilterDialog({
   activityTypes = [],
   taskStatuses = [],
   computePreview,
+  onConditionsChange,
+  previewLoading,
+  previewError,
 }: PipelineFilterDialogProps) {
 
   const [name, setName] = useState("");
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [matchType, setMatchType] = useState<'all' | 'any'>('all');
   const [isPublic, setIsPublic] = useState(false);
+  useEffect(() => { if (isOpen) onConditionsChange?.(conditions); }, [conditions, isOpen, onConditionsChange]);
 
   const preview = useMemo(() => {
     if (!computePreview || !isOpen) return null;
@@ -552,7 +559,7 @@ export function PipelineFilterDialog({
           {computePreview && (
             <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
-              {preview ? (
+              {previewError ? <span className="text-muted-foreground">Não foi possível carregar os campos para conferir a quantidade.</span> : previewLoading ? <span className="text-muted-foreground">Conferindo os campos dos negócios…</span> : preview ? (
                 <span className="text-foreground">
                   <span className="font-semibold text-primary">{preview.matched}</span>
                   <span className="text-muted-foreground"> de {preview.total} negócios em aberto atendem a estas condições</span>

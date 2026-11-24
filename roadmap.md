@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Filtros por Item da Venda e campos preenchidos
+- [x] Reproduzir o filtro “Leads CR”: o cartão usa UUID de produto e a condição usa código da opção; antes mostrava zero para 16 cartões válidos, inclusive Fabienne. RLS consultada e preservada.
+- [x] Corrigir comparação do Pipeline, seletor de produto e exportação com o mesmo comparador de identidade; leitura completa por lote/página, campos da prévia independentes do filtro aplicado e estados de carregamento/erro; nenhum filtro salvo, negócio ou contrato regravado.
+- [x] 49 testes passaram; sessão real conferida: CR 16, EM 455, EC 71, MVP 22, EP 3, Conselho 7, quadro/lista/detalhe de Fabienne e prévia CR 16/588 sem salvar; exportação CR em aberto com 321 registros entre todos os funis e Fabienne incluída (arquivo temporário descartado). 390/794/1440 px sem rolagem lateral ou erros; caminhos irmãos conferidos por leitura em .lovable/reviews/pipeline-filter-check.md; não publicado.
+
 ## Ordem dos funis
 - [x] Adicionar “Reorganizar funis” ao seletor, com arraste e setas para definir a ordem.
 - [x] Salvar na ordem já existente dos funis, preservando acessos, funil selecionado, etapas e negócios; sem migrações ou mudanças de permissões.

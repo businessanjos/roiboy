@@ -12,6 +12,8 @@ import { BulkDealHistoryDialog } from "@/components/sales/BulkDealHistoryDialog"
 import { useBulkDealAccess } from "@/hooks/useBulkDealAccess";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePipelines } from "@/hooks/usePipelines";
+import { usePipelineFilterValues } from "@/hooks/usePipelineFilterValues";
+import { getPipelineCustomFieldIds } from "@/lib/sales/pipelineFilterValues";
 import { useLeads } from "@/hooks/useLeads";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -745,8 +747,11 @@ export default function SalesPipeline() {
 
   // Fetch products list and open deal→product mapping
   const [pipelineProducts, setPipelineProducts] = useState<{ id: string; name: string; color: string | null }[]>([]);
-  const [openDealProductMap, setOpenDealProductMap] = useState<Record<string, string>>({});
-  const [dealCustomFieldValues, setDealCustomFieldValues] = useState<Record<string, Record<string, string>>>({});
+  const filterFieldIds = useMemo(() => [...new Set([DEAL_FIELD_IDS.ITEM_VENDA, ...getPipelineCustomFieldIds(activeFilter?.conditions)])], [activeFilter]);
+  const filterValues = usePipelineFilterValues(deals, filterFieldIds, bulkRefreshTick);
+  const dealCustomFieldValues = filterValues.values;
+  const openDealProductMap = useMemo(() => Object.fromEntries(Object.entries(dealCustomFieldValues).flatMap(([dealId, values]) => values[DEAL_FIELD_IDS.ITEM_VENDA] ? [[dealId, values[DEAL_FIELD_IDS.ITEM_VENDA]]] : [])), [dealCustomFieldValues]);
+  const filterValueContext = useMemo(() => ({ itemOptions: filterCustomFields.find(field => field.id === DEAL_FIELD_IDS.ITEM_VENDA)?.options, products: pipelineProducts }), [filterCustomFields, pipelineProducts]);
 
   const allDealIds = useMemo(() => deals.map(d => d.id).join(','), [deals]);
   const dealSearchRelationKey = useMemo(
@@ -757,99 +762,22 @@ export default function SalesPipeline() {
   useEffect(() => {
     if (!currentUser?.account_id) return;
 
+    let cancelled = false;
     const fetchProducts = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('products')
         .select('id, name, color')
         .eq('account_id', currentUser.account_id)
         .eq('is_active', true)
         .order('name');
+      if (cancelled) return;
+      if (error) { console.error('[SalesPipeline] products filter fetch:', error); return; }
       setPipelineProducts(data || []);
     };
 
-    const fetchDealProducts = async () => {
-      if (deals.length === 0) {
-        setOpenDealProductMap({});
-        return;
-      }
-      const dealIds = deals.map(d => d.id);
-      const batchSize = 200;
-      const map: Record<string, string> = {};
-
-      for (let i = 0; i < dealIds.length; i += batchSize) {
-        const batch = dealIds.slice(i, i + batchSize);
-        const { data } = await supabase
-          .from('deal_field_values')
-          .select('deal_id, value_text')
-          .eq('field_id', DEAL_FIELD_IDS.ITEM_VENDA)
-          .in('deal_id', batch)
-          .not('value_text', 'is', null);
-
-        (data || []).forEach(row => {
-          if (row.deal_id && row.value_text) {
-            map[row.deal_id] = row.value_text;
-          }
-        });
-      }
-      setOpenDealProductMap(map);
-    };
-
     fetchProducts();
-    fetchDealProducts();
-  }, [currentUser?.account_id, allDealIds, bulkRefreshTick]);
-
-  // Fetch custom field values for fields referenced by the active filter
-  const customFieldIdsInFilter = useMemo(() => {
-    const ids = new Set<string>();
-    (activeFilter?.conditions || []).forEach(c => {
-      if (typeof c.field === 'string' && c.field.startsWith('custom:')) {
-        ids.add(c.field.slice('custom:'.length));
-      }
-    });
-    return Array.from(ids).sort().join(',');
-  }, [activeFilter]);
-
-  useEffect(() => {
-    if (!customFieldIdsInFilter || deals.length === 0) {
-      setDealCustomFieldValues({});
-      return;
-    }
-    const fieldIds = customFieldIdsInFilter.split(',').filter(Boolean);
-    const dealIds = deals.map(d => d.id);
-    const batchSize = 200;
-    const result: Record<string, Record<string, string>> = {};
-    (async () => {
-      for (let i = 0; i < dealIds.length; i += batchSize) {
-        const batch = dealIds.slice(i, i + batchSize);
-        const { data } = await supabase
-          .from('deal_field_values')
-          .select('deal_id, field_id, value_text, value_number, value_date, value_json, value_boolean')
-          .in('field_id', fieldIds)
-          .in('deal_id', batch);
-        (data || []).forEach((row: any) => {
-          if (!row.deal_id || !row.field_id) return;
-          if (!result[row.deal_id]) result[row.deal_id] = {};
-          let normalized = '';
-          if (row.value_text != null && row.value_text !== '') {
-            normalized = String(row.value_text);
-          } else if (row.value_number != null) {
-            normalized = String(row.value_number);
-          } else if (row.value_date != null) {
-            normalized = String(row.value_date);
-          } else if (row.value_boolean != null) {
-            normalized = row.value_boolean ? 'true' : 'false';
-          } else if (Array.isArray(row.value_json)) {
-            // multi_select: wrap with pipes for unambiguous "contains" lookup
-            normalized = '|' + row.value_json.map(String).join('|') + '|';
-          } else if (row.value_json != null) {
-            normalized = JSON.stringify(row.value_json);
-          }
-          result[row.deal_id][row.field_id] = normalized;
-        });
-      }
-      setDealCustomFieldValues(result);
-    })();
-  }, [customFieldIdsInFilter, allDealIds, bulkRefreshTick]);
+    return () => { cancelled = true; };
+  }, [currentUser?.account_id, bulkRefreshTick]);
 
   // Fetch ALL searchable secondary data for the current deals when the user is
   // actively searching — enables the search box to match what appears in the
@@ -1286,14 +1214,14 @@ export default function SalesPipeline() {
   // Usado como base para as opções do filtro de origem e como base do filtro final.
   const dealsBeforeTagFilter = useMemo(() => {
     if (activityStatusLoading && activeFilterNeedsActivityCounts) return [];
-    const base = applyFilterToDeals(filterDealsByCompany(openDeals, companyFilter), activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap);
+    const base = applyFilterToDeals(filterDealsByCompany(openDeals, companyFilter), activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap, filterValueContext);
     if (!openDateRange) return base;
     return base.filter(d => {
       if (!d.created_at) return false;
       const created = new Date(d.created_at);
       return isWithinInterval(created, { start: openDateRange.start, end: openDateRange.end });
     });
-  }, [activityStatusLoading, activeFilterNeedsActivityCounts, openDeals, companyFilter, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap, openDateRange, searchOptions]);
+  }, [activityStatusLoading, activeFilterNeedsActivityCounts, openDeals, companyFilter, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap, openDateRange, searchOptions, filterValueContext]);
 
 
   // Opções do filtro de origem — respeitam os demais filtros ativos.
@@ -2828,6 +2756,7 @@ export default function SalesPipeline() {
                             previewPendingCountMap={dealPendingCountMap}
                             previewPendingTypesMap={dealPendingTypesMap}
                             previewPendingStatusesMap={dealPendingStatusesMap}
+                            previewRefreshKey={bulkRefreshTick}
 
                           />
 
@@ -3032,6 +2961,7 @@ export default function SalesPipeline() {
                   </div>
                 </SheetContent>
               </Sheet>
+              {activeTab === "open" && activeFilter && (activeFilter.type === "product" || getPipelineCustomFieldIds(activeFilter.conditions).length > 0) && (filterValues.loading || filterValues.error) && <p role="status" className="text-xs text-muted-foreground">{filterValues.error ? "Não foi possível carregar os campos dos negócios. Reabra a página para tentar novamente." : "Carregando os campos do filtro…"}</p>}
               {(companyFilter !== "all" || (activeTab === "open" && (activeFilter || searchTerm.trim()))) && <div className="flex min-w-0 items-center gap-2 overflow-x-auto overscroll-x-contain">
                 {companyFilter !== "all" && <Button variant="outline" size="sm" className="h-7 max-w-[220px] shrink-0 gap-1.5 text-xs text-primary" onClick={() => setCompanyFilter("all")} aria-label="Limpar filtro de empresa">
                   <Building2 className="h-3 w-3 shrink-0" /><span className="truncate">{selectedFilterCompany?.trade_name || selectedFilterCompany?.legal_name || "Empresa selecionada"}</span><X className="h-3 w-3 shrink-0" />

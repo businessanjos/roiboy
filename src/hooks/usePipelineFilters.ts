@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Deal } from "@/hooks/useDeals";
 import { toast } from "sonner";
+import { matchesPipelineItemVenda, PIPELINE_ITEM_VENDA_FIELD_ID, type PipelineFilterValueContext } from "@/lib/sales/pipelineFilterValues";
 
 export interface FilterCondition {
   field: string;
@@ -298,7 +299,7 @@ export function applyFilterToDeals(
   dealPendingCountMap?: Record<string, number>,
   dealPendingTypesMap?: Record<string, string[]>,
   dealPendingStatusesMap?: Record<string, string[]>,
-
+  valueContext?: PipelineFilterValueContext,
 ): Deal[] {
   if (!activeFilter && !searchTerm?.trim()) return deals;
 
@@ -368,7 +369,7 @@ export function applyFilterToDeals(
 
   if (activeFilter.type === 'product') {
     if (!dealProductMap) return filtered;
-    return filtered.filter(deal => dealProductMap[deal.id] === activeFilter.id);
+    return filtered.filter(deal => matchesPipelineItemVenda(dealProductMap[deal.id], activeFilter.id, valueContext));
   }
 
   const conditions = activeFilter.conditions || [];
@@ -377,7 +378,7 @@ export function applyFilterToDeals(
   if (conditions.length === 0) return filtered;
 
   return filtered.filter(deal => {
-    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap));
+    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap, valueContext));
     if (matchType === 'all') return results.every(Boolean);
     return results.some(Boolean);
   });
@@ -391,7 +392,7 @@ function toArray(value: any): any[] {
   return [value];
 }
 
-function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>, dealNextActivityMap?: Record<string, string | null>, dealTaskCountMap?: Record<string, number>, dealPendingCountMap?: Record<string, number>, dealPendingTypesMap?: Record<string, string[]>, dealPendingStatusesMap?: Record<string, string[]>): boolean {
+function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>, dealNextActivityMap?: Record<string, string | null>, dealTaskCountMap?: Record<string, number>, dealPendingCountMap?: Record<string, number>, dealPendingTypesMap?: Record<string, string[]>, dealPendingStatusesMap?: Record<string, string[]>, valueContext?: PipelineFilterValueContext): boolean {
   const { field, operator, value, include_empty } = condition;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -405,6 +406,10 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
     // "Include empty" escape hatch — empty values pass the filter
     if (include_empty && !raw) return true;
     const values = toArray(value);
+    if (fieldId === PIPELINE_ITEM_VENDA_FIELD_ID && ['equals', 'not_equals', 'contains', 'not_contains'].includes(operator)) {
+      const anyHit = values.some(selected => matchesPipelineItemVenda(raw, selected, valueContext));
+      return operator === 'not_equals' || operator === 'not_contains' ? !anyHit : anyHit;
+    }
     // multi_select values are stored as `|val1|val2|`
     const isMulti = typeof raw === 'string' && raw.startsWith('|') && raw.endsWith('|');
     if (isMulti) {
@@ -414,7 +419,7 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
       if (operator === 'not_contains' || operator === 'not_equals') return hits.every((h) => !h);
       return false;
     }
-    if (['this_week', 'this_month', 'older_than_days', 'next_days', 'before', 'after'].includes(operator)) {
+    if (['today', 'this_week', 'this_month', 'older_than_days', 'next_days', 'next_7_days', 'next_14_days', 'next_30_days', 'overdue', 'before', 'after', 'between'].includes(operator)) {
       return evaluateDateCondition(raw, operator, values[0] ?? value, today);
     }
     if (['greater_than', 'less_than', 'greater_or_equal', 'less_or_equal'].includes(operator)) {
@@ -601,7 +606,8 @@ function evaluateDateCondition(fieldValue: string | null | undefined, operator: 
   if (operator === 'is_empty') return !fieldValue;
   if (operator === 'is_not_empty') return !!fieldValue;
 
-  const date = new Date(fieldValue!);
+  if (!fieldValue) return false;
+  const date = new Date(fieldValue);
   // Semana começa na segunda-feira (igual à toolbar: weekStartsOn: 1)
   const startOfWeek = new Date(today);
   const dow = today.getDay();
