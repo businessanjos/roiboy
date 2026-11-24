@@ -1,11 +1,13 @@
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Plus } from "lucide-react";
+import { Plus, ListMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MarketingKanbanCard } from "./MarketingKanbanCard";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
 import { MarketingTaskColumn } from "@/hooks/useMarketingTaskColumns";
+import { taskBoardItems, type TaskSeparator } from "@/lib/marketing/taskPresentation";
+import { TaskSeparatorItem } from "./TaskSeparator";
 
 interface MarketingKanbanColumnProps {
   column: MarketingTaskColumn;
@@ -14,6 +16,9 @@ interface MarketingKanbanColumnProps {
   onToggleComplete: (id: string, completed: boolean) => void;
   onAddTask: () => void;
   subtaskCounts: Record<string, { total: number; completed: number }>;
+  separators: TaskSeparator[];
+  onAddSeparator: () => void;
+  onEditSeparator: (separator: TaskSeparator) => void;
 }
 
 export function MarketingKanbanColumn({
@@ -23,9 +28,12 @@ export function MarketingKanbanColumn({
   onToggleComplete,
   onAddTask,
   subtaskCounts,
+  separators,
+  onAddSeparator,
+  onEditSeparator,
 }: MarketingKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
-  const taskIds = tasks.map((t) => t.id);
+  const items = taskBoardItems(tasks, separators);
 
   return (
     <div
@@ -43,25 +51,28 @@ export function MarketingKanbanColumn({
             {tasks.length}
           </span>
         </div>
-        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onAddTask}>
+        <div className="flex items-center">
+        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Adicionar separador em ${column.title}`} title="Adicionar separador" onClick={onAddSeparator}><ListMinus className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Adicionar tarefa em ${column.title}`} title="Adicionar tarefa" onClick={onAddTask}>
           <Plus className="h-4 w-4" />
         </Button>
+        </div>
       </div>
 
       <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-280px)]">
-        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          {tasks.map((task) => (
+        <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+          {items.map((item) => item.kind === "separator" ? <TaskSeparatorItem key={item.id} separator={item.separator} onEdit={() => onEditSeparator(item.separator)} /> : (
             <MarketingKanbanCard
-              key={task.id}
-              task={task}
-              onEdit={() => onEditTask(task.id)}
-              onToggleComplete={(completed) => onToggleComplete(task.id, completed)}
-              subtaskInfo={subtaskCounts[task.id]}
+              key={item.id}
+              task={item.task}
+              onEdit={() => onEditTask(item.task.id)}
+              onToggleComplete={(completed) => onToggleComplete(item.task.id, completed)}
+              subtaskInfo={subtaskCounts[item.task.id]}
             />
           ))}
         </SortableContext>
 
-        {tasks.length === 0 && (
+        {items.length === 0 && (
           <div className="text-center py-8 text-muted-foreground text-sm">Nenhuma tarefa</div>
         )}
       </div>

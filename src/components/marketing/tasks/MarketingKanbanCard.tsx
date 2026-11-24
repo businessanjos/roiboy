@@ -11,6 +11,7 @@ import { MarketingTask } from "@/hooks/useMarketingTasks";
 import { Button } from "@/components/ui/button";
 import { readTaskDetails } from "@/lib/marketing/taskDetails";
 import { TaskPeopleAndLabels } from "./TaskPeopleAndLabels";
+import { TaskCardCover } from "./TaskCover";
 
 function isTaskOverdue(task: MarketingTask): boolean {
   if (!task.due_date || task.is_completed || task.status === "done") return false;
@@ -79,6 +80,7 @@ export function MarketingKanbanCard({
       )}
       onClick={onEdit}
     >
+      <TaskCardCover task={task} />
       <div className="flex items-start gap-2">
         {/* Drag handle */}
         <div

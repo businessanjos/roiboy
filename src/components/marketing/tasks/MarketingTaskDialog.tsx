@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { parseLocalDate } from "@/lib/dateUtils";
 import {
   Dialog,
@@ -42,6 +42,9 @@ import { fetchAllRows } from "@/lib/fetchAllRows";
 import { toast } from "sonner";
 import { readTaskDetails, writeTaskDetails, taskCopyDraft, taskLabelCatalog, validDeliveryTime, deliveryTimeInput, type TaskLabel, type TaskCopySubtask } from "@/lib/marketing/taskDetails";
 import { TaskLabelEditor } from "./TaskLabels";
+import { TaskCoverEditor } from "./TaskCover";
+import { TaskComments } from "./TaskComments";
+import { attachmentKey, readTaskCover, writeTaskCover, TASK_FILES_BUCKET, type TaskCover } from "@/lib/marketing/taskPresentation";
 
 interface MarketingTaskDialogProps {
   open: boolean;
@@ -83,6 +86,9 @@ export function MarketingTaskDialog({
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [priority, setPriority] = useState<MarketingTaskPriority>("medium");
   const [mediaAttachments, setMediaAttachments] = useState<MediaAttachment[]>([]);
+  const [cover, setCover] = useState<TaskCover>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const draftUploads = useRef<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -108,6 +114,7 @@ export function MarketingTaskDialog({
       setLabels(details.labels);
       setPriority(draft.priority);
       setMediaAttachments(draft.media_attachments || []);
+      setCover(readTaskCover(source));
     } else {
       setTitle(""); setDescription("");
       setSectionId(defaultSectionId || undefined);
@@ -116,11 +123,25 @@ export function MarketingTaskDialog({
       setDueDate(undefined); setDueTime("");
       setRequesterId(teamMembers.some((member) => member.id === currentUser?.id) ? currentUser?.id : undefined);
       setLabels([]); setPriority("medium"); setMediaAttachments([]);
+      setCover(null);
     }
   }, [open, existingTask, copySource, defaultSectionId, defaultColumnId, defaultAssigneeId, columns]);
 
+  const cleanupUploads = async (kept: MediaAttachment[] = []) => {
+    const keptPaths = new Set(kept.filter((a) => a.bucket === TASK_FILES_BUCKET).map((a) => a.path));
+    const unused = draftUploads.current.filter((path) => !keptPaths.has(path));
+    draftUploads.current = [];
+    if (unused.length) await supabase.storage.from(TASK_FILES_BUCKET).remove(unused);
+  };
+  const closeDraft = async () => {
+    if (isSubmitting || isUploading) return;
+    setIsSubmitting(true);
+    try { await cleanupUploads(); onOpenChange(false); }
+    finally { setIsSubmitting(false); }
+  };
+
   const handleDuplicate = async () => {
-    if (!existingTask || isSubmitting) return;
+    if (!existingTask || isSubmitting || isUploading) return;
     setIsSubmitting(true);
     try {
       const { data, error } = await fetchAllRows<TaskCopySubtask>((from, to) => supabase
@@ -136,7 +157,7 @@ export function MarketingTaskDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting || !title.trim() || (dueTime && (!dueDate || !validDeliveryTime(dueTime)))) return;
+    if (isSubmitting || isUploading || !title.trim() || (dueTime && (!dueDate || !validDeliveryTime(dueTime)))) return;
 
     setIsSubmitting(true);
     try {
@@ -162,11 +183,12 @@ export function MarketingTaskDialog({
         status: finalColumn?.is_done ? "done" as const : "pending" as const,
         is_completed: !!finalColumn?.is_done,
         tags: labels.map((label) => label.name),
-        custom_fields: customFields,
+        custom_fields: writeTaskCover(customFields, cover),
         media_attachments: mediaAttachments,
       };
       if (isEditing && taskId) await updateTask.mutateAsync({ id: taskId, ...input });
       else await createTask.mutateAsync({ ...input, ...(copySource ? { copy_subtasks: copySubtasks } : {}) });
+      await cleanupUploads(mediaAttachments);
       onOpenChange(false);
     } catch {
       // Mutation owns the error toast; keep the draft open for correction.
@@ -178,13 +200,14 @@ export function MarketingTaskDialog({
   const handleDelete = async () => {
     if (!taskId) return;
     await deleteTask.mutateAsync(taskId);
+    await cleanupUploads();
     setShowDeleteDialog(false);
     onOpenChange(false);
   };
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(next) => { if (!isSubmitting) onOpenChange(next); }}>
+      <Dialog open={open} onOpenChange={(next) => { if (!next) void closeDraft(); else onOpenChange(true); }}>
         <DialogContent ref={setPortalContainer} aria-describedby={undefined} className="flex max-w-2xl max-h-[90dvh] w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0">
           <DialogHeader className="shrink-0 border-b px-4 py-5 sm:px-6">
             <DialogTitle className="pr-10 tracking-normal">{copySource ? "Duplicar Tarefa" : isEditing ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
@@ -343,21 +366,31 @@ export function MarketingTaskDialog({
               <Separator className="my-4" />
               <MarketingTaskMediaUpload
                 attachments={mediaAttachments}
-                onAttachmentsChange={setMediaAttachments}
+                onAttachmentsChange={(next) => {
+                  setMediaAttachments(next);
+                  if (cover?.kind === "image" && !next.some((a) => attachmentKey(a) === cover.attachment)) setCover(null);
+                }}
                 accountId={currentUser?.account_id || ""}
+                disabled={isSubmitting}
+                onUploadingChange={setIsUploading}
+                onUploaded={(path) => draftUploads.current.push(path)}
               />
+              <Separator className="my-4" />
+              <TaskCoverEditor value={cover} onChange={setCover} attachments={mediaAttachments} disabled={isSubmitting || isUploading} />
+              <Separator className="my-4" />
+              <TaskComments key={copySource ? "copy" : taskId || "new"} taskId={isEditing ? taskId : null} />
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t px-4 py-3 sm:px-6">
             <div className="flex gap-1">
               {isEditing && <>
-                <Button type="button" variant="outline" className="h-11" onClick={handleDuplicate} disabled={isSubmitting}><Copy />Duplicar tarefa</Button>
-                <Button type="button" variant="ghost" size="icon" className="h-11 w-11 text-destructive" aria-label="Excluir tarefa" title="Excluir tarefa" onClick={() => setShowDeleteDialog(true)} disabled={isSubmitting}><Trash2 /></Button>
+                <Button type="button" variant="outline" className="h-11" onClick={handleDuplicate} disabled={isSubmitting || isUploading}><Copy />Duplicar tarefa</Button>
+                <Button type="button" variant="ghost" size="icon" className="h-11 w-11 text-destructive" aria-label="Excluir tarefa" title="Excluir tarefa" onClick={() => setShowDeleteDialog(true)} disabled={isSubmitting || isUploading}><Trash2 /></Button>
               </>}
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Button type="button" variant="outline" className="h-11" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancelar</Button>
-              <Button type="submit" form={formId} className="h-11" disabled={isSubmitting || !title.trim() || (!!dueTime && (!dueDate || !validDeliveryTime(dueTime)))}>
+              <Button type="button" variant="outline" className="h-11" onClick={closeDraft} disabled={isSubmitting || isUploading}>Cancelar</Button>
+              <Button type="submit" form={formId} className="h-11" disabled={isSubmitting || isUploading || !title.trim() || (!!dueTime && (!dueDate || !validDeliveryTime(dueTime)))}>
                 {isSubmitting && <Loader2 className="motion-safe:animate-spin" />}{copySource ? "Criar cópia" : isEditing ? "Salvar" : "Criar"}
               </Button>
             </div>

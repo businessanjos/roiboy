@@ -2,84 +2,83 @@ import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { ImagePlus, X, Loader2, Play, Image as ImageIcon } from "lucide-react";
+import { Paperclip, X, Loader2, Play, FileText, Music, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ImageGalleryLightbox } from "@/components/ui/image-gallery-lightbox";
-
-export interface MediaAttachment {
-  url: string;
-  type: "image" | "video";
-  name: string;
-  size: number;
-  uploaded_at: string;
-}
+import type { MediaAttachment } from "@/hooks/useMarketingTasks";
+import { useMarketingTaskAttachment, taskAttachmentUrl } from "@/hooks/useMarketingTaskAttachments";
+import { attachmentKey, TASK_FILES_BUCKET, TASK_FILE_TYPES, taskFileError, taskFileType } from "@/lib/marketing/taskPresentation";
 
 interface MarketingTaskMediaUploadProps {
   attachments: MediaAttachment[];
   onAttachmentsChange: (attachments: MediaAttachment[]) => void;
   accountId: string;
   disabled?: boolean;
+  onUploaded?: (path: string) => void;
+  onUploadingChange?: (uploading: boolean) => void;
 }
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const ACCEPTED_TYPES = ["image/*", "video/*"];
+function AttachmentItem({ attachment, onRemove, disabled }: { attachment: MediaAttachment; onRemove: () => void; disabled: boolean }) {
+  const { data: url } = useMarketingTaskAttachment(attachment.type === "image" ? attachment : undefined);
+  const open = async () => {
+    const tab = window.open("about:blank", "_blank");
+    if (tab) tab.opener = null;
+    try { const resolved = await taskAttachmentUrl(attachment); if (tab) tab.location.href = resolved; }
+    catch { tab?.close(); toast.error("Não foi possível abrir o anexo. Tente novamente."); }
+  };
+  return <div className="flex min-w-0 items-center gap-3 border-b py-2 last:border-0">
+    <Button type="button" variant="ghost" className="h-11 w-11 shrink-0 overflow-hidden p-0" aria-label={`Abrir ${attachment.name}`} title={`Abrir ${attachment.name}`} onClick={open}>
+      {attachment.type === "image" && url ? <img src={url} alt={attachment.name} className="h-full w-full rounded object-cover" draggable={false} />
+        : attachment.type === "video" ? <Play className="h-5 w-5 text-primary" /> : attachment.type === "audio" ? <Music className="h-5 w-5 text-primary" /> : <FileText className="h-5 w-5 text-muted-foreground" />}
+    </Button>
+    <div className="min-w-0 flex-1"><p className="truncate text-sm" title={attachment.name}>{attachment.name}</p><p className="text-xs text-muted-foreground">{(attachment.size / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} KB</p></div>
+    <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" title={`Abrir ${attachment.name}`} aria-label={`Abrir anexo ${attachment.name}`} onClick={open}><ExternalLink className="h-4 w-4" /></Button>
+    <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" title={`Remover ${attachment.name}`} aria-label={`Remover anexo ${attachment.name}`} disabled={disabled} onClick={onRemove}><X className="h-4 w-4" /></Button>
+  </div>;
+}
 
 export function MarketingTaskMediaUpload({
   attachments,
   onAttachmentsChange,
   accountId,
   disabled = false,
+  onUploaded,
+  onUploadingChange,
 }: MarketingTaskMediaUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const imageAttachments = attachments.filter((a) => a.type === "image");
-
-  const validateFile = (file: File): string | null => {
-    if (file.size > MAX_FILE_SIZE) {
-      return `Arquivo "${file.name}" excede o limite de 50MB`;
-    }
-
-    const isImage = file.type.startsWith("image/");
-    const isVideo = file.type.startsWith("video/");
-
-    if (!isImage && !isVideo) {
-      return `Tipo de arquivo "${file.name}" não suportado. Use imagens ou vídeos.`;
-    }
-
-    return null;
-  };
-
   const uploadFile = async (file: File): Promise<MediaAttachment | null> => {
-    const error = validateFile(file);
+    const error = taskFileError(file);
     if (error) {
       toast.error(error);
       return null;
     }
 
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${accountId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    if (!accountId) return null;
+    const mimeType = taskFileType(file.name);
+    if (!mimeType) return null;
+    const fileExt = file.name.split(".").pop()?.toLowerCase();
+    const fileName = `${accountId}/${crypto.randomUUID()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("marketing-task-media")
-      .upload(fileName, file);
+      .from(TASK_FILES_BUCKET)
+      .upload(fileName, file, { contentType: mimeType });
 
     if (uploadError) {
-      toast.error(`Erro ao enviar ${file.name}: ${uploadError.message}`);
+      toast.error(`Não foi possível enviar “${file.name}”. Tente novamente.`);
       return null;
     }
 
-    const { data: urlData } = supabase.storage
-      .from("marketing-task-media")
-      .getPublicUrl(fileName);
+    onUploaded?.(fileName);
 
     return {
-      url: urlData.publicUrl,
-      type: file.type.startsWith("image/") ? "image" : "video",
+      url: "",
+      bucket: TASK_FILES_BUCKET,
+      path: fileName,
+      mime_type: mimeType,
+      type: mimeType.startsWith("image/") ? "image" : mimeType.startsWith("video/") ? "video" : mimeType.startsWith("audio/") ? "audio" : "file",
       name: file.name,
       size: file.size,
       uploaded_at: new Date().toISOString(),
@@ -87,11 +86,13 @@ export function MarketingTaskMediaUpload({
   };
 
   const handleFiles = async (files: FileList | File[]) => {
+    if (disabled || isUploading || !accountId) return;
     const fileArray = Array.from(files);
     setIsUploading(true);
+    onUploadingChange?.(true);
     const newAttachments: MediaAttachment[] = [];
 
-    for (const file of fileArray) {
+    try { for (const file of fileArray) {
       const attachment = await uploadFile(file);
       if (attachment) {
         newAttachments.push(attachment);
@@ -103,26 +104,19 @@ export function MarketingTaskMediaUpload({
       toast.success(`${newAttachments.length} arquivo(s) anexado(s)`);
     }
 
-    setIsUploading(false);
+    } catch { toast.error("Não foi possível concluir o envio. Tente novamente."); }
+    finally { setIsUploading(false); onUploadingChange?.(false); if (fileInputRef.current) fileInputRef.current.value = ""; }
   };
 
-  const handleRemove = async (index: number) => {
-    const attachment = attachments[index];
-
-    // Extract path from URL
-    const urlParts = attachment.url.split("/marketing-task-media/");
-    if (urlParts.length === 2) {
-      const filePath = urlParts[1];
-      await supabase.storage.from("marketing-task-media").remove([filePath]);
-    }
-
+  const handleRemove = (index: number) => {
+    // Detach only: saved files may also belong to duplicated tasks.
     const newAttachments = attachments.filter((_, i) => i !== index);
     onAttachmentsChange(newAttachments);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(true);
+    if (!disabled && !isUploading) setIsDragging(true);
   };
 
   const handleDragLeave = () => {
@@ -137,113 +131,42 @@ export function MarketingTaskMediaUpload({
     }
   };
 
-  const openLightbox = (attachment: MediaAttachment) => {
-    const imageIndex = imageAttachments.findIndex((a) => a.url === attachment.url);
-    if (imageIndex >= 0) {
-      setLightboxIndex(imageIndex);
-      setLightboxOpen(true);
-    }
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   return (
     <div className="space-y-3">
       <Label className="flex items-center gap-2">
-        <ImageIcon className="h-4 w-4" />
+        <Paperclip className="h-4 w-4" />
         Anexos ({attachments.length})
       </Label>
 
-      <div className="flex flex-wrap gap-2">
-        {/* Existing attachments */}
-        {attachments.map((attachment, index) => (
-          <div
-            key={attachment.url}
-            className="relative group w-20 h-20 rounded-lg border overflow-hidden bg-muted"
-          >
-            {attachment.type === "image" ? (
-              <img
-                src={attachment.url}
-                alt={attachment.name}
-                className="w-full h-full object-cover cursor-pointer"
-                onClick={() => openLightbox(attachment)}
-              />
-            ) : (
-              <div
-                className="w-full h-full flex flex-col items-center justify-center cursor-pointer"
-                onClick={() => window.open(attachment.url, "_blank")}
-              >
-                <Play className="h-6 w-6 text-primary" />
-                <span className="text-[10px] text-muted-foreground mt-1 text-center px-1 truncate max-w-full">
-                  {attachment.name}
-                </span>
-              </div>
-            )}
-
-            {/* Remove button */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRemove(index);
-              }}
-              className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-              disabled={disabled}
-            >
-              <X className="h-3 w-3" />
-            </button>
-
-            {/* File size indicator */}
-            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] text-center py-0.5">
-              {formatFileSize(attachment.size)}
-            </div>
-          </div>
-        ))}
-
-        {/* Upload zone */}
-        <div
+      <div className="max-h-60 overflow-y-auto">
+        {attachments.map((attachment, index) => <AttachmentItem key={attachmentKey(attachment)} attachment={attachment} onRemove={() => handleRemove(index)} disabled={disabled || isUploading} />)}
+      </div>
+      <div
           className={cn(
-            "w-20 h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors",
+            "rounded-md border border-dashed p-3 transition-colors",
             isDragging ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-primary/50",
             disabled && "opacity-50 cursor-not-allowed"
           )}
-          onClick={() => !disabled && fileInputRef.current?.click()}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          {isUploading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          ) : (
-            <>
-              <ImagePlus className="h-5 w-5 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground mt-1">Adicionar</span>
-            </>
-          )}
+          <Button type="button" variant="outline" disabled={disabled || isUploading || !accountId} onClick={() => fileInputRef.current?.click()}>
+            {isUploading ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" /> : <Paperclip className="h-4 w-4" />}{isUploading ? "Enviando..." : "Adicionar anexos"}
+          </Button>
         </div>
-      </div>
 
       <input
         ref={fileInputRef}
         type="file"
-        accept={ACCEPTED_TYPES.join(",")}
+        aria-label="Arquivos da tarefa"
+        accept={Object.keys(TASK_FILE_TYPES).map((ext) => `.${ext}`).join(",")}
         multiple
         className="hidden"
         onChange={(e) => e.target.files && handleFiles(e.target.files)}
-        disabled={disabled}
+        disabled={disabled || isUploading}
       />
 
-      {/* Lightbox for images */}
-      <ImageGalleryLightbox
-        images={imageAttachments.map((a) => ({ url: a.url, alt: a.name }))}
-        initialIndex={lightboxIndex}
-        open={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
-      />
     </div>
   );
 }

@@ -36,7 +36,10 @@ export type MarketingTaskStatus = "pending" | "in_progress" | "done";
 
 export interface MediaAttachment {
   url: string;
-  type: "image" | "video";
+  type: "image" | "video" | "audio" | "file";
+  bucket?: string;
+  path?: string;
+  mime_type?: string;
   name: string;
   size: number;
   uploaded_at: string;

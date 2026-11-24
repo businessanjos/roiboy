@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { GripVertical, AlertCircle } from "lucide-react";
 import { readTaskDetails } from "@/lib/marketing/taskDetails";
 import { TaskPeopleAndLabels } from "./TaskPeopleAndLabels";
+import { TaskCardCover } from "./TaskCover";
 
 interface MarketingTaskRowProps {
   task: MarketingTask;
@@ -81,6 +82,7 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
       {/* Task Title */}
       <div className="min-w-0">
         <div className="flex items-center gap-2">
+        <TaskCardCover task={task} compact />
         <span
           className={cn(
             "text-sm truncate block",

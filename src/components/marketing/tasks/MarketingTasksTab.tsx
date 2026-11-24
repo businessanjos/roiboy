@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp } from "lucide-react";
+import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp, ListMinus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -26,6 +26,9 @@ import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { isPast, isToday, parseISO, startOfDay } from "date-fns";
 import { taskLabelCatalog, matchesTaskLabels, deliverySortKey } from "@/lib/marketing/taskDetails";
 import { TaskLabelFilter } from "./TaskLabels";
+import { useMarketingTaskSeparators } from "@/hooks/useMarketingTaskSeparators";
+import { TaskSeparatorDialog } from "./TaskSeparator";
+import type { TaskSeparator } from "@/lib/marketing/taskPresentation";
 
 type ViewMode = "list" | "board";
 
@@ -65,6 +68,10 @@ export function MarketingTasksTab() {
   const [addingToSection, setAddingToSection] = useState<string | null>(null);
   const [defaultColumnId, setDefaultColumnId] = useState<string | undefined>(undefined);
   const [defaultAssigneeId, setDefaultAssigneeId] = useState<string | undefined>(undefined);
+  const [separatorDialogOpen, setSeparatorDialogOpen] = useState(false);
+  const [editingSeparator, setEditingSeparator] = useState<TaskSeparator | null>(null);
+  const [separatorColumn, setSeparatorColumn] = useState<string | undefined>();
+  const { separators, error: separatorsError, save: saveSeparator } = useMarketingTaskSeparators();
 
   const { tasks, error: tasksError, isLoading: tasksLoading, updateTask, toggleComplete, reorderTasks } = useMarketingTasks();
   const labelCatalog = useMemo(() => taskLabelCatalog(tasks), [tasks]);
@@ -191,6 +198,9 @@ export function MarketingTasksTab() {
   const handleAddSection = async () => {
     await createSection.mutateAsync({ name: "Nova Seção" });
   };
+  const openSeparator = (columnId?: string, separator?: TaskSeparator) => {
+    setEditingSeparator(separator || null); setSeparatorColumn(columnId); setSeparatorDialogOpen(true);
+  };
 
   const handleColumnChange = async (taskId: string, column: MarketingTaskColumn) => {
     await updateTask.mutateAsync({
@@ -231,11 +241,12 @@ export function MarketingTasksTab() {
   return (
     <div className="min-w-0 space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Button onClick={() => handleAddTask()} className="gap-2">
             <Plus className="h-4 w-4" />
             Nova tarefa
           </Button>
+          {viewMode === "board" && <Button variant="outline" onClick={() => openSeparator()}><ListMinus className="h-4 w-4" />Separador</Button>}
           {selectedAssignee && (
             <Button
               variant="secondary"
@@ -343,6 +354,7 @@ export function MarketingTasksTab() {
       </div>
 
       {tasksError && <p role="alert" className="text-sm text-destructive">Não foi possível atualizar as tarefas. Tente novamente.</p>}
+      {separatorsError && viewMode === "board" && <p role="alert" className="text-sm text-destructive">Não foi possível carregar os separadores.</p>}
       {!tasksError && tasks.length > 0 && filteredTasks.length === 0 && <div className="flex flex-wrap items-center gap-3 py-3 text-sm text-muted-foreground">
         <span>Nenhuma tarefa encontrada com estes filtros.</span>
         <Button variant="ghost" onClick={() => { setSearchQuery(""); setAssigneeFilter("all"); setStatusFilter("all"); setLabelFilter([]); }}>Limpar filtros</Button>
@@ -358,6 +370,10 @@ export function MarketingTasksTab() {
           onAddTask={(columnId) => handleAddTask(undefined, columnId)}
           subtaskCounts={subtaskCounts}
           onReorderTasks={isSortManual ? (updates) => reorderTasks.mutate(updates) : undefined}
+          separators={separators}
+          onAddSeparator={(columnId) => openSeparator(columnId)}
+          onEditSeparator={(separator) => openSeparator(separator.column_id, separator)}
+          onMoveSeparator={(input) => saveSeparator.mutate(input)}
         />
       )}
 
@@ -414,6 +430,7 @@ export function MarketingTasksTab() {
       />
 
       <MarketingColumnsManagerDialog open={isColumnsManagerOpen} onOpenChange={setIsColumnsManagerOpen} />
+      <TaskSeparatorDialog open={separatorDialogOpen} onOpenChange={setSeparatorDialogOpen} separator={editingSeparator} defaultColumnId={separatorColumn} columns={columns} tasks={tasks} />
     </div>
   );
 }

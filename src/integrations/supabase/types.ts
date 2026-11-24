@@ -19967,6 +19967,62 @@ export type Database = {
           },
         ]
       }
+      marketing_task_comments: {
+        Row: {
+          account_id: string
+          body: string
+          created_at: string
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          body: string
+          created_at?: string
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_task_comments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_task_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_task_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_task_sections: {
         Row: {
           account_id: string
@@ -20001,6 +20057,58 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_task_separators: {
+        Row: {
+          account_id: string
+          before_task_id: string | null
+          column_id: string
+          created_at: string
+          display_order: number
+          id: string
+          title: string
+        }
+        Insert: {
+          account_id: string
+          before_task_id?: string | null
+          column_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          title: string
+        }
+        Update: {
+          account_id?: string
+          before_task_id?: string | null
+          column_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_task_separators_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_task_separators_before_task_id_fkey"
+            columns: ["before_task_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_task_separators_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_task_columns"
             referencedColumns: ["id"]
           },
         ]

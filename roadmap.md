@@ -1,5 +1,12 @@
 # Roadmap — Processos do CS
 
+## Tarefas de Marketing: anexos, comentários, capas e separadores
+- [ ] Ampliar anexos para documentos e mídias, com abertura e remoção segura sem afetar cópias.
+- [ ] Comentários com autoria individual e data, sem misturar histórico na duplicação.
+- [ ] Capas escolhidas entre imagens anexadas ou cores, visíveis nos cartões.
+- [ ] Separadores nomeados e reordenáveis entre cartões, sem prazo/conclusão/responsável.
+- [ ] Testes e conferência autenticada com registros QA, celular/desktop; não publicar.
+
 ## Tarefas de Marketing: duplicação e identificação
 - [x] Duplicar tarefa como uma nova cópia editável, preservando a original e reiniciando conclusão das subtarefas.
 - [x] Data e horário de entrega (24h), solicitante separado do responsável e etiquetas coloridas persistidas nos campos existentes; sem migração ou alteração de permissões.

@@ -17,6 +17,7 @@ import { MarketingKanbanColumn } from "./MarketingKanbanColumn";
 import { MarketingKanbanCard } from "./MarketingKanbanCard";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
 import { MarketingTaskColumn } from "@/hooks/useMarketingTaskColumns";
+import type { TaskSeparator } from "@/lib/marketing/taskPresentation";
 
 interface MarketingTaskKanbanProps {
   tasks: MarketingTask[];
@@ -27,6 +28,10 @@ interface MarketingTaskKanbanProps {
   onAddTask: (columnId?: string) => void;
   subtaskCounts: Record<string, { total: number; completed: number }>;
   onReorderTasks?: (updates: { id: string; display_order: number }[]) => void;
+  separators: TaskSeparator[];
+  onAddSeparator: (columnId: string) => void;
+  onEditSeparator: (separator: TaskSeparator) => void;
+  onMoveSeparator: (input: { id: string; column_id: string; before_task_id: string | null; display_order?: number }) => void;
 }
 
 export function MarketingTaskKanban({
@@ -38,6 +43,10 @@ export function MarketingTaskKanban({
   onAddTask,
   subtaskCounts,
   onReorderTasks,
+  separators,
+  onAddSeparator,
+  onEditSeparator,
+  onMoveSeparator,
 }: MarketingTaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<MarketingTask | null>(null);
 
@@ -48,6 +57,8 @@ export function MarketingTaskKanban({
     (args) => {
       const pointerCollisions = pointerWithin(args);
       const intersections = pointerCollisions.length > 0 ? pointerCollisions : rectIntersection(args);
+      const itemHit = intersections.find((c) => !columnIds.has(String(c.id)));
+      if (itemHit) return [itemHit];
       const columnHit = intersections.find((c) => columnIds.has(String(c.id)));
       if (columnHit) return [columnHit];
       const first = getFirstCollision(intersections);
@@ -85,6 +96,19 @@ export function MarketingTaskKanban({
 
     const taskId = active.id as string;
     const overId = over.id as string;
+    if (taskId === overId) return;
+    const movingSeparator = separators.find((s) => `separator:${s.id}` === taskId);
+    const overSeparator = separators.find((s) => `separator:${s.id}` === overId);
+    if (movingSeparator) {
+      if (columnIds.has(overId)) onMoveSeparator({ id: movingSeparator.id, column_id: overId, before_task_id: null });
+      else if (overSeparator) onMoveSeparator({ id: movingSeparator.id, column_id: overSeparator.column_id, before_task_id: overSeparator.before_task_id, display_order: overSeparator.display_order - 0.5 });
+      else {
+        const target = tasks.find((task) => task.id === overId);
+        const columnId = target?.column_id || firstColumnId;
+        if (target && columnId) onMoveSeparator({ id: movingSeparator.id, column_id: columnId, before_task_id: target.id });
+      }
+      return;
+    }
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
@@ -96,12 +120,20 @@ export function MarketingTaskKanban({
     }
 
     // Dropped on another task
-    const overTask = tasks.find((t) => t.id === overId);
+    const overTask = tasks.find((t) => t.id === (overSeparator?.before_task_id ?? overId));
+    if (overSeparator && !overTask) {
+      const target = columns.find((column) => column.id === overSeparator.column_id);
+      if (target && target.id !== task.column_id) onColumnChange(task.id, target);
+      return;
+    }
     if (!overTask) return;
 
     if (task.column_id === overTask.column_id) {
       if (!onReorderTasks) return;
-      const list = tasksByColumn[task.column_id || firstColumnId];
+      const key = task.column_id || firstColumnId;
+      if (!key) return;
+      const list = tasksByColumn[key];
+      if (!list) return;
       const oldIdx = list.findIndex((t) => t.id === taskId);
       const newIdx = list.findIndex((t) => t.id === overId);
       if (oldIdx !== -1 && newIdx !== -1 && oldIdx !== newIdx) {
@@ -131,6 +163,9 @@ export function MarketingTaskKanban({
             onToggleComplete={onToggleComplete}
             onAddTask={() => onAddTask(column.id)}
             subtaskCounts={subtaskCounts}
+            separators={separators.filter((separator) => separator.column_id === column.id)}
+            onAddSeparator={() => onAddSeparator(column.id)}
+            onEditSeparator={onEditSeparator}
           />
         ))}
       </div>
