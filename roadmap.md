@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Quadro de Marketing em tela cheia
+- [x] Botão de ampliar junto ao seletor de lista/quadro; reduzir sempre visível no topo, filtros e ações preservados, quadro ocupando a tela com rolagem local; Escape fecha a edição antes do quadro.
+- [x] 19 testes passaram e compilação sem erros; ampliação, retorno por botão/Escape, filtros e abrir/fechar edição conferidos com exemplos em 390/794/1440 px, sem rolagem lateral da página nem escritas. Sem publicação.
+- [ ] Conferência na página autenticada: sessão própria indisponível e conta temporária falhou; /marketing/projetos?tab=tarefas retorna ao login. Exemplos isolados não substituem dados reais.
+
 ## Responsável obrigatório nas tarefas de Marketing
 - [x] Exigir responsável pela execução na criação, edição e cópia pelo formulário, com aviso junto ao campo; solicitante independente e tarefas existentes preservadas.
 - [x] 21 testes passaram: formulário bloqueia criação/edição/cópia sem executor, escolha permite envio com identidade separada do solicitante; cópia não altera original, TV não satisfaz o campo obrigatório. Sem mudanças no backend ou em dados reais; conferência autenticada segue indisponível (sessão própria não encontrada e usuário temporário falhou na solicitação anterior).

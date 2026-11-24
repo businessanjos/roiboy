@@ -10,6 +10,7 @@ import { taskBoardItems, type TaskSeparator } from "@/lib/marketing/taskPresenta
 import { TaskSeparatorItem } from "./TaskSeparator";
 
 interface MarketingKanbanColumnProps {
+  fullHeight?: boolean;
   column: MarketingTaskColumn;
   tasks: MarketingTask[];
   onEditTask: (taskId: string) => void;
@@ -22,6 +23,7 @@ interface MarketingKanbanColumnProps {
 }
 
 export function MarketingKanbanColumn({
+  fullHeight = false,
   column,
   tasks,
   onEditTask,
@@ -41,10 +43,11 @@ export function MarketingKanbanColumn({
       style={{ borderTopColor: column.color }}
       className={cn(
         "flex flex-col min-w-[300px] max-w-[350px] bg-muted/30 rounded-lg border border-t-4",
+        fullHeight && "min-h-0 shrink-0",
         isOver && "bg-muted/50 ring-2 ring-primary/20"
       )}
     >
-      <div className="flex items-center justify-between px-3 py-3 border-b">
+      <div className="flex shrink-0 items-center justify-between px-3 py-3 border-b">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-sm">{column.title}</h3>
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
@@ -59,7 +62,7 @@ export function MarketingKanbanColumn({
         </div>
       </div>
 
-      <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-280px)]">
+      <div className={cn("flex-1 p-2 space-y-2 overflow-y-auto", fullHeight ? "min-h-0" : "max-h-[calc(100vh-280px)]")}>
         <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
           {items.map((item) => item.kind === "separator" ? <TaskSeparatorItem key={item.id} separator={item.separator} onEdit={() => onEditSeparator(item.separator)} /> : (
             <MarketingKanbanCard

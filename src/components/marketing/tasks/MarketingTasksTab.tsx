@@ -1,8 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { isHiddenTechnicalPerson } from "@/lib/peopleVisibility";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp, ListMinus } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp, ListMinus, Maximize2, Minimize2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -63,6 +65,9 @@ export function MarketingTasksTab() {
   const [statusFilter, setStatusFilter] = usePersistedFilter<StatusFilter>("marketing-tasks", "status", "all");
   const [sortFilter, setSortFilter] = usePersistedFilter<SortFilter>("marketing-tasks", "sort", "manual");
   const [labelFilter, setLabelFilter] = usePersistedFilter<string[]>("marketing-tasks", "labels", []);
+  const [isBoardExpanded, setIsBoardExpanded] = useState(false);
+  const expandButtonRef = useRef<HTMLButtonElement>(null);
+  const isFullscreen = isBoardExpanded && viewMode === "board";
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isColumnsManagerOpen, setIsColumnsManagerOpen] = useState(false);
@@ -79,6 +84,24 @@ export function MarketingTasksTab() {
   const labelCatalog = useMemo(() => taskLabelCatalog(tasks), [tasks]);
   const { sections, isLoading: sectionsLoading, createSection } = useMarketingTaskSections();
   const { columns, isLoading: columnsLoading } = useMarketingTaskColumns();
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented || isDialogOpen || isColumnsManagerOpen || separatorDialogOpen) return;
+      setIsBoardExpanded(false);
+      expandButtonRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isFullscreen, isDialogOpen, isColumnsManagerOpen, separatorDialogOpen]);
 
   const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
 
@@ -240,9 +263,38 @@ export function MarketingTasksTab() {
     );
   }
 
+  const expandControl = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          ref={expandButtonRef}
+          variant={isFullscreen ? "secondary" : "outline"}
+          size="icon"
+          className="h-11 w-11 shrink-0"
+          aria-label={isFullscreen ? "Reduzir quadro" : "Expandir quadro em tela cheia"}
+          aria-pressed={isFullscreen}
+          onClick={() => setIsBoardExpanded((expanded) => !expanded)}
+        >
+          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{isFullscreen ? "Reduzir quadro" : "Expandir quadro em tela cheia"}</TooltipContent>
+    </Tooltip>
+  );
+
   return (
-    <div className="min-w-0 space-y-4">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div
+      role="region"
+      aria-label="Quadro de tarefas de Marketing"
+      className={cn("min-w-0 space-y-4", isFullscreen && "fixed inset-0 z-50 flex h-dvh flex-col overflow-hidden bg-background p-3 sm:p-5")}
+    >
+      {isFullscreen && (
+        <div className="flex shrink-0 items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Tarefas de Marketing</h2>
+          {expandControl}
+        </div>
+      )}
+      <div className={cn("flex items-center justify-between gap-4 flex-wrap", isFullscreen && "max-h-[40dvh] shrink-0 overflow-y-auto border-b pb-3")}>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Button onClick={() => handleAddTask()} className="gap-2">
             <Plus className="h-4 w-4" />
@@ -334,24 +386,25 @@ export function MarketingTasksTab() {
             </SelectContent>
           </Select>
 
-          <div className="relative">
+          <div className="relative max-w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar tarefas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-64"
+              className="pl-9 w-64 max-w-full"
             />
           </div>
 
           <div className="flex items-center border rounded-lg overflow-hidden">
-            <Button aria-label="Visualizar lista" title="Visualizar lista" variant={viewMode === "list" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("list")} className="h-11 w-11 rounded-none">
+            <Button aria-label="Visualizar lista" title="Visualizar lista" variant={viewMode === "list" ? "secondary" : "ghost"} size="sm" onClick={() => { setIsBoardExpanded(false); setViewMode("list"); }} className="h-11 w-11 rounded-none">
               <List className="h-4 w-4" />
             </Button>
             <Button aria-label="Visualizar quadro" title="Visualizar quadro" variant={viewMode === "board" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("board")} className="h-11 w-11 rounded-none">
               <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
+          {viewMode === "board" && !isFullscreen && expandControl}
         </div>
       </div>
 
@@ -364,6 +417,7 @@ export function MarketingTasksTab() {
 
       {viewMode === "board" && (
         <MarketingTaskKanban
+          fullHeight={isFullscreen}
           tasks={filteredTasks}
           columns={columns}
           onEditTask={handleEditTask}

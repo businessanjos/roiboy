@@ -13,6 +13,7 @@ import {
   CollisionDetection,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import { cn } from "@/lib/utils";
 import { MarketingKanbanColumn } from "./MarketingKanbanColumn";
 import { MarketingKanbanCard } from "./MarketingKanbanCard";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
@@ -20,6 +21,7 @@ import { MarketingTaskColumn } from "@/hooks/useMarketingTaskColumns";
 import type { TaskSeparator } from "@/lib/marketing/taskPresentation";
 
 interface MarketingTaskKanbanProps {
+  fullHeight?: boolean;
   tasks: MarketingTask[];
   columns: MarketingTaskColumn[];
   onEditTask: (taskId: string) => void;
@@ -35,6 +37,7 @@ interface MarketingTaskKanbanProps {
 }
 
 export function MarketingTaskKanban({
+  fullHeight = false,
   tasks,
   columns,
   onEditTask,
@@ -153,10 +156,11 @@ export function MarketingTaskKanban({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className={cn("flex gap-4 overflow-x-auto pb-4", fullHeight && "min-h-0 flex-1 items-stretch overflow-y-hidden")}>
         {columns.map((column) => (
           <MarketingKanbanColumn
             key={column.id}
+            fullHeight={fullHeight}
             column={column}
             tasks={tasksByColumn[column.id] || []}
             onEditTask={onEditTask}
