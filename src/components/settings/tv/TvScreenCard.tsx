@@ -1,6 +1,6 @@
 import { formatDistanceToNowStrict } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Cast, Camera, Power, PowerOff, RefreshCw, Tv, Unlock } from "lucide-react";
+import { Cable, Cast, Camera, Power, PowerOff, RefreshCw, Tv, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,6 +14,7 @@ import { isReleased } from "@/lib/tv/tvConn";
 import { monthStartActive, toAnnualUrl } from "../../../../supabase/functions/_shared/tvMonthStart";
 import { TvVideoOverlay } from "./TvMiniPlayer";
 import { showMiniPlayer } from "@/lib/tv/nowPlaying";
+import { CASTING_WAIT, castingForContent } from "@/lib/tv/tvCasting";
 import { TvVideoCover } from "./TvVideoCover";
 import { Hint, ReleaseMenu, ReturnButton, SignalWithTip, TV_HINTS, hhmm } from "./TvConnRelease";
 
@@ -37,8 +38,7 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
   const caps = tvCapabilities(screen.slot);
   const isOn = state === "on" || state === "saver";
   const released = isReleased(screen);
-  const casting = status?.casting && tvContentKind(screen.url) !== "playlist" ? String(status.casting) : null;
-  const castApp = casting && /chrome/i.test(casting) ? "Chrome" : casting;
+  const casting = castingForContent(status?.casting, tvContentKind(screen.url) === "playlist");
   const annual = monthStartActive(settings, screen) && toAnnualUrl(screen.url) !== screen.url;
   const ytCover = showMiniPlayer(status?.now_playing, isOn, !!status?.casting) && !!status?.now_playing?.video_id;
   const cmd = (c: string) => runTv(() => sendTvCommand(screen.slot, c));
@@ -48,7 +48,13 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
       className={cn("group flex h-full flex-col rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden cursor-pointer transition hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         !screen.enabled && "opacity-50")}>
       <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
-        {ytCover ? (
+        {casting ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-muted px-3 text-center text-muted-foreground">
+            {casting.icon === "cable" ? <Cable className="h-6 w-6 text-primary" /> : <Cast className="h-6 w-6 text-primary" />}
+            <span className="text-xs font-medium">{casting.name}</span>
+            <span className="text-[10px] leading-tight">{CASTING_WAIT}</span>
+          </div>
+        ) : ytCover ? (
           <><TvVideoCover np={status!.now_playing!} name={screen.name} /><TvVideoOverlay slot={screen.slot} np={status!.now_playing!} /></>
         ) : caps.screenshot && status?.screenshot_url ? (
           <img src={status.screenshot_url} alt={`Tela da ${screen.name}`} className="absolute inset-0 h-full w-full scale-[1.04] object-cover select-none" loading="lazy" draggable={false} />
@@ -61,8 +67,11 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
         )}
         {released && <Badge variant="outline" className="absolute top-1.5 left-1.5 text-[10px] px-1.5 py-0 h-5 bg-background/90 text-foreground border-border">Liberada até {hhmm(screen.released_until)}</Badge>}
         {casting && (
-          <Hint text={`Recebendo transmissão do ${castApp}${castSince ? ` desde ${hhmm(castSince)}` : ""}`} side="bottom" className={cn("absolute left-1.5", released ? "top-8" : "top-1.5")}>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-1 bg-background/90 text-foreground border-primary/50"><Cast className="h-3 w-3 text-primary" />Transmitindo</Badge>
+          <Hint text={`${casting.hint}${castSince ? ` desde ${hhmm(castSince)}` : ""}`} side="bottom" className={cn("absolute left-1.5 max-w-[calc(100%-58px)]", released ? "top-8" : "top-1.5")}>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-1 min-w-0 max-w-full overflow-hidden bg-background/90 text-foreground border-primary/50">
+              {casting.icon === "cable" ? <Cable className="h-3 w-3 shrink-0 text-primary" /> : <Cast className="h-3 w-3 shrink-0 text-primary" />}
+              <span className="truncate">{casting.badge}</span>
+            </Badge>
           </Hint>
         )}
         {STATE_HINT[state]
@@ -78,7 +87,7 @@ export function TvScreenCard({ screen, status, dashboards, settings, castSince, 
         {annual && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/50 text-foreground">Visão anual até dia {settings?.month_start_days ?? 5}</Badge>}
         <div className="mt-auto flex items-center justify-between pt-0.5">
           <span className="text-[11px] text-muted-foreground truncate">
-            {ytCover ? "tocando agora" : caps.screenshot && status?.screenshot_at ? <><span className="hidden sm:inline">captura </span>{formatDistanceToNowStrict(new Date(status.screenshot_at), { locale: ptBR, addSuffix: true })}</> : "\u00a0"}
+            {casting ? "\u00a0" : ytCover ? "tocando agora" : caps.screenshot && status?.screenshot_at ? <><span className="hidden sm:inline">captura </span>{formatDistanceToNowStrict(new Date(status.screenshot_at), { locale: ptBR, addSuffix: true })}</> : "\u00a0"}
           </span>
           <div className="flex shrink-0 -mr-1">
             {!released && (
