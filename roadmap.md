@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Alterações em massa no Pipeline
+- [x] Selecionar cards ou todos os negócios do resultado filtrado, no quadro e na lista.
+- [x] Confirmar alteração de funil/etapa, produto, valor ou campo personalizado, preservando permissões, contratos e regras existentes; negócios encerrados exigem reabertura individual para mover.
+- [x] Progresso, resultado por negócio e interrupção dos próximos; 40 testes passaram, valor/produto/campo/transferência salvos e relidos pela interface em dois negócios fictícios, depois removidos; 390/794/1440 px e Escape conferidos, sem publicar.
+
 ## Cliques em links no Marketing
 - [x] Exibir duas abas no topo de Conteúdo: Clique no link - Story e Clique no link - Feed.
 - [x] Manter os lançamentos e totais de Story separados dos de Feed, preservando os stories existentes; 9 testes de separação, formato e acesso passaram.

@@ -88,17 +88,17 @@ export function InlineFieldInput({ field, value, onChange }: InlineFieldInputPro
         {field.options.map((opt) => {
           const selected = value === opt.value;
           return (
-            <button
+            <Button
               key={opt.value}
               type="button"
               onClick={() => onChange(opt.value)}
               className={cn(
-                "px-3 py-1.5 rounded-md text-sm border transition-colors",
+                "min-h-11 h-auto px-3 py-1.5 rounded-md text-sm border transition-colors whitespace-normal",
                 selected ? colorSelected[opt.color] || colorSelected.gray : colorClasses[opt.color] || colorClasses.gray
               )}
             >
               {opt.label}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -116,17 +116,17 @@ export function InlineFieldInput({ field, value, onChange }: InlineFieldInputPro
         {field.options.map((opt) => {
           const isSel = selected.includes(opt.value);
           return (
-            <button
+            <Button
               key={opt.value}
               type="button"
               onClick={() => toggle(opt.value)}
               className={cn(
-                "px-3 py-1.5 rounded-md text-sm border transition-colors",
+                "min-h-11 h-auto px-3 py-1.5 rounded-md text-sm border transition-colors whitespace-normal",
                 isSel ? colorSelected[opt.color] || colorSelected.gray : colorClasses[opt.color] || colorClasses.gray
               )}
             >
               {opt.label}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -142,7 +142,7 @@ export function InlineFieldInput({ field, value, onChange }: InlineFieldInputPro
     return (
       <div className="flex flex-col gap-1 max-h-48 overflow-y-auto border rounded-xl p-2">
         {teamUsers.map((u) => (
-          <label key={u.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer">
+          <label key={u.id} className="flex min-h-11 items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer">
             <Checkbox checked={selected.includes(u.id)} onCheckedChange={() => toggle(u.id)} />
             <User className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm">{u.name}</span>
@@ -223,7 +223,7 @@ export function InlineFieldInput({ field, value, onChange }: InlineFieldInputPro
             {list.map((ig, i) => (
               <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-pink-500/10 text-pink-600 dark:text-pink-400 text-xs border border-pink-500/20">
                 <Instagram className="h-3 w-3" />@{ig}
-                <button type="button" onClick={() => remove(i)} className="ml-1 hover:text-danger">×</button>
+                <Button type="button" variant="ghost" size="icon" aria-label={`Remover @${ig}`} onClick={() => remove(i)} className="ml-1 h-11 w-11 hover:text-danger">×</Button>
               </span>
             ))}
           </div>

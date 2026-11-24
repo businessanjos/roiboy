@@ -4,6 +4,11 @@ import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
+import { useBulkDeals } from "@/hooks/useBulkDeals";
+import { selectedFilteredDeals } from "@/lib/sales/bulkDeals";
+import { BulkDealToolbar } from "@/components/sales/BulkDealToolbar";
+import { BulkDealDialog } from "@/components/sales/BulkDealDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { usePipelines } from "@/hooks/usePipelines";
 import { useLeads } from "@/hooks/useLeads";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
@@ -212,6 +217,20 @@ export default function SalesPipeline() {
   const [activeTab, setActiveTab] = useState('open');
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
   const [isPipelineFullscreen, setIsPipelineFullscreen] = useState(false);
+  const [bulkSelectionMode, setBulkSelectionMode] = useState(false);
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkRefreshTick, setBulkRefreshTick] = useState(0);
+  const bulk = useBulkDeals({ moveDeal, updateDeal, refresh: async () => {
+    await fetchDeals(true);
+    setBulkRefreshTick(tick => tick + 1);
+  } });
+
+  useEffect(() => {
+    if (bulk.running) return;
+    setBulkSelectedIds(new Set());
+    setBulkSelectionMode(false);
+  }, [activePipelineId, activeTab, mainTab]);
 
   // Esc sai da tela cheia do funil
   useEffect(() => {
@@ -438,7 +457,7 @@ export default function SalesPipeline() {
       console.error('[SalesPipeline] Error fetching won deal product map:', error);
       setDealProductMap({});
     });
-  }, [currentUser?.account_id, outcomeDealIds]);
+  }, [currentUser?.account_id, outcomeDealIds, bulkRefreshTick]);
 
   // Fetch MQL custom field value (qualification) for won/lost deals
   const MQL_FIELD_ID = '448404cd-0344-4892-a574-2387b1c17578';
@@ -491,7 +510,7 @@ export default function SalesPipeline() {
     })();
 
     return () => { cancelled = true; };
-  }, [currentUser?.account_id, outcomeDealIds]);
+  }, [currentUser?.account_id, outcomeDealIds, bulkRefreshTick]);
 
   // Fetch structured negotiation fields for WON deals to flag incomplete records.
   const [negotiationStatusMap, setNegotiationStatusMap] = useState<Record<string, string[]>>({});
@@ -568,7 +587,7 @@ export default function SalesPipeline() {
         setNegotiationStatusMap({});
       }
     })();
-  }, [wonDealIdsKey]);
+  }, [wonDealIdsKey, bulkRefreshTick]);
 
   // Realtime: refresh badge when Parcelas / Forma de Pagamento are edited inline
   useEffect(() => {
@@ -763,7 +782,7 @@ export default function SalesPipeline() {
 
     fetchProducts();
     fetchDealProducts();
-  }, [currentUser?.account_id, allDealIds]);
+  }, [currentUser?.account_id, allDealIds, bulkRefreshTick]);
 
   // Fetch custom field values for fields referenced by the active filter
   const customFieldIdsInFilter = useMemo(() => {
@@ -816,7 +835,7 @@ export default function SalesPipeline() {
       }
       setDealCustomFieldValues(result);
     })();
-  }, [customFieldIdsInFilter, allDealIds]);
+  }, [customFieldIdsInFilter, allDealIds, bulkRefreshTick]);
 
   // Fetch ALL searchable secondary data for the current deals when the user is
   // actively searching — enables the search box to match what appears in the
@@ -852,7 +871,7 @@ export default function SalesPipeline() {
       setDealSearchCustomBlobs({});
       return;
     }
-    const cacheKey = `${currentUser.account_id}::${dealSearchRelationKey}`;
+    const cacheKey = `${currentUser.account_id}::${dealSearchRelationKey}::${bulkRefreshTick}`;
     const cached = searchBlobCacheRef.current.get(cacheKey);
     if (cached) {
       setDealSearchCustomBlobs(cached);
@@ -1065,7 +1084,7 @@ export default function SalesPipeline() {
       setDealSearchCustomBlobs(combined);
     })();
     return () => { cancelled = true; };
-  }, [isSearchingActive, dealSearchRelationKey, currentUser?.account_id, customFieldOptionLabels]);
+  }, [isSearchingActive, dealSearchRelationKey, currentUser?.account_id, customFieldOptionLabels, bulkRefreshTick]);
 
 
   // Base search blob (in-memory, no DB): title, notes, contact/client/lead,
@@ -1618,7 +1637,30 @@ export default function SalesPipeline() {
     }).format(value);
   };
 
+  const bulkVisibleDeals = activeTab === 'open' ? sortedOpenDeals : activeTab === 'won' ? filteredWonDealsByMonth : filteredLostDealsByMonth;
+  const bulkVisibleIdsKey = bulkVisibleDeals.map(deal => deal.id).sort().join(',');
+  const bulkSelectedDeals = selectedFilteredDeals(bulkVisibleDeals, bulkSelectedIds);
+
+  useEffect(() => {
+    if (bulk.running) return;
+    const visibleIds = new Set(bulkVisibleIdsKey.split(','));
+    setBulkSelectedIds(previous => {
+      const next = new Set([...previous].filter(id => visibleIds.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [bulkVisibleIdsKey, bulk.running]);
+
+  const toggleBulkDeal = (id: string) => {
+    if (bulk.running) return;
+    setBulkSelectedIds(previous => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   const handleDealClick = (deal: Deal) => {
+    if (bulkSelectionMode) { toggleBulkDeal(deal.id); return; }
     setSelectedDeal(deal);
     setIsDetailOpen(true);
   };
@@ -3052,6 +3094,15 @@ export default function SalesPipeline() {
                   </Badge>
                 </TabsTrigger>
               </TabsList>
+              <BulkDealToolbar
+                enabled={bulkSelectionMode}
+                count={bulkSelectedDeals.length}
+                total={bulkVisibleDeals.length}
+                running={bulk.running}
+                onToggle={() => { setBulkSelectionMode(enabled => !enabled); setBulkSelectedIds(new Set()); }}
+                onSelectAll={checked => setBulkSelectedIds(new Set(checked ? bulkVisibleDeals.map(deal => deal.id) : []))}
+                onEdit={() => setBulkDialogOpen(true)}
+              />
               <TabsContent
                 value="open"
                 className={cn("mt-0", isPipelineFullscreen && "flex-1 min-h-0 flex flex-col")}
@@ -3076,6 +3127,11 @@ export default function SalesPipeline() {
                     onDealMove={handleDealMove}
                     showActivityCounts={activeFilterNeedsActivityCounts}
                     fullHeight={isPipelineFullscreen}
+                    selectionMode={bulkSelectionMode}
+                    selectedIds={bulkSelectedIds}
+                    onSelectDeal={toggleBulkDeal}
+                    selectionDisabled={bulk.running}
+                    fieldRefreshKey={bulkRefreshTick}
                   />
 
                 ) : (
@@ -3083,6 +3139,10 @@ export default function SalesPipeline() {
                     deals={sortedOpenDeals} 
                     stages={stages}
                     onDealClick={handleDealClick} 
+                    selectionMode={bulkSelectionMode}
+                    selectedIds={bulkSelectedIds}
+                    onSelectDeal={toggleBulkDeal}
+                    selectionDisabled={bulk.running}
                   />
                 )}
               </TabsContent>
@@ -3161,6 +3221,10 @@ export default function SalesPipeline() {
                   dealProductMap={dealProductMap}
                   negotiationStatusMap={negotiationStatusMap}
                   dealMqlMap={dealMqlMap}
+                  selectionMode={bulkSelectionMode}
+                  selectedIds={bulkSelectedIds}
+                  onSelectDeal={toggleBulkDeal}
+                  selectionDisabled={bulk.running}
                 />
 
               </TabsContent>
@@ -3189,12 +3253,35 @@ export default function SalesPipeline() {
                   onDealClick={handleDealClick} 
                   showStatus
                   dealMqlMap={dealMqlMap}
+                  selectionMode={bulkSelectionMode}
+                  selectedIds={bulkSelectedIds}
+                  onSelectDeal={toggleBulkDeal}
+                  selectionDisabled={bulk.running}
                 />
               </TabsContent>
             </Tabs>
           </TabsContent>
         </Tabs>
       </div>
+
+      <BulkDealDialog
+        open={bulkDialogOpen}
+        onOpenChange={setBulkDialogOpen}
+        deals={bulkSelectedDeals}
+        pipelines={pipelines}
+        activePipelineId={activePipelineId}
+        running={bulk.running}
+        results={bulk.results}
+        total={bulk.total}
+        onRun={async (snapshot, action) => {
+          const result = await bulk.run(snapshot, action);
+          const succeededIds = new Set(result.filter(row => row.success).map(row => row.id));
+          setBulkSelectedIds(previous => new Set([...previous].filter(id => !succeededIds.has(id))));
+          return result;
+        }}
+        onCancel={bulk.cancel}
+        onReset={bulk.reset}
+      />
 
       {/* New Deal Dialog */}
       <DealDialog
@@ -3312,6 +3399,10 @@ function DealListView({
   dealProductMap,
   negotiationStatusMap,
   dealMqlMap,
+  selectionMode = false,
+  selectedIds,
+  onSelectDeal,
+  selectionDisabled = false,
 }: { 
   deals: Deal[];
   stages: DealStage[];
@@ -3320,6 +3411,10 @@ function DealListView({
   dealProductMap?: Record<string, { productId: string; productName: string; isUpsell?: boolean }>;
   negotiationStatusMap?: Record<string, string[]>;
   dealMqlMap?: Record<string, { label: string; color?: string }>;
+  selectionMode?: boolean;
+  selectedIds?: ReadonlySet<string>;
+  onSelectDeal?: (id: string) => void;
+  selectionDisabled?: boolean;
 }) {
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
   const dealIdsKey = useMemo(() => deals.map(d => d.id).join(','), [deals]);
@@ -3368,11 +3463,14 @@ function DealListView({
             return (
               <div
                 key={deal.id}
-                className="p-3 sm:p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                className={cn("p-3 sm:p-4 hover:bg-muted/50 cursor-pointer transition-colors", selectionMode && selectedIds?.has(deal.id) && "bg-primary/10")}
                 onClick={() => onDealClick(deal)}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    {selectionMode && <div className="flex min-h-11 items-center" onClick={event => event.stopPropagation()}>
+                      <Checkbox aria-label={`Selecionar ${deal.title}`} checked={selectedIds?.has(deal.id) || false} onCheckedChange={() => onSelectDeal?.(deal.id)} disabled={selectionDisabled} />
+                    </div>}
                     <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
                       <AvatarImage src={deal.responsible_user?.avatar_url || undefined} />
                       <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm">

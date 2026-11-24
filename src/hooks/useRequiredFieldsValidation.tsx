@@ -29,17 +29,19 @@ export function useRequiredFieldsValidation() {
   const validateDealMove = async (
     dealId: string,
     targetStageId: string,
-    accountId: string
+    accountId: string,
+    failClosed = false
   ): Promise<RequiredFieldValidation> => {
     
     // 1. Fetch required custom fields for deals
-    const { data: fields } = await supabase
+    const { data: fields, error: fieldsError } = await supabase
       .from("custom_fields")
       .select("*")
       .eq("account_id", accountId)
       .eq("show_in_deals", true)
       .eq("is_active", true)
       .eq("is_required", true);
+    if (fieldsError && failClosed) throw new Error("Não foi possível conferir os campos obrigatórios. Tente novamente.");
     
     if (!fields || fields.length === 0) {
       return { canMoveToStage: true, missingFields: [] };
@@ -58,10 +60,11 @@ export function useRequiredFieldsValidation() {
     }
     
     // 3. Fetch existing values for this deal
-    const { data: values } = await supabase
+    const { data: values, error: valuesError } = await supabase
       .from("deal_field_values")
       .select("field_id, value_text, value_number, value_boolean, value_date, value_json")
       .eq("deal_id", dealId);
+    if (valuesError && failClosed) throw new Error("Não foi possível conferir os valores deste negócio. Tente novamente.");
     
     // Build set of field IDs that have been filled
     const filledFieldIds = new Set(

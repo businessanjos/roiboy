@@ -142,6 +142,12 @@ interface UpdateDealData extends Partial<CreateDealData> {
   lost_at?: string | null;
 }
 
+export interface DealMutationOptions {
+  quiet?: boolean;
+  deferRefresh?: boolean;
+  throwOnError?: boolean;
+}
+
 const DEFAULT_STAGES: Omit<DealStage, 'id' | 'account_id' | 'created_at' | 'updated_at'>[] = [
   { name: 'Novo Lead', color: '#6b7280', display_order: 0, is_active: true, probability: 10 },
   { name: 'Qualificação', color: '#3b82f6', display_order: 1, is_active: true, probability: 25 },
@@ -237,12 +243,12 @@ export function useDeals(pipelineId?: string | null) {
     }
   }, [currentUser?.account_id, pipelineId, toast]);
 
-  const fetchDeals = useCallback(async () => {
+  const fetchDeals = useCallback(async (silent = false) => {
     if (!currentUser?.account_id) return;
 
     const fetchId = ++dealsFetchIdRef.current;
     const requestedPipelineId = pipelineId;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const selectQuery = `
           id, account_id, title, client_id, lead_id, pipeline_id, company_id, contact_name, contact_phone, contact_email,
@@ -536,7 +542,7 @@ export function useDeals(pipelineId?: string | null) {
     }
   };
 
-  const updateDeal = async (dealId: string, data: UpdateDealData): Promise<boolean> => {
+  const updateDeal = async (dealId: string, data: UpdateDealData, options: DealMutationOptions = {}): Promise<boolean> => {
     if (!currentUser?.account_id) return false;
 
     try {
@@ -580,7 +586,10 @@ export function useDeals(pipelineId?: string | null) {
         .from('deals')
         .update(updateData)
         .eq('id', dealId)
-        .eq('account_id', currentUser.account_id);
+        .eq('account_id', currentUser.account_id)
+        .is('deleted_at', null)
+        .select('id')
+        .single();
 
       if (error) throw error;
 
@@ -608,30 +617,34 @@ export function useDeals(pipelineId?: string | null) {
       // Save product_id (Item da Venda) to deal_field_values if provided
       if (productId !== undefined) {
         if (productId && productId !== '') {
-          await supabase
+          const { error: productError } = await supabase
             .from('deal_field_values')
             .upsert({
               account_id: currentUser.account_id,
               deal_id: dealId,
               field_id: DEAL_FIELD_IDS.ITEM_VENDA,
               value_text: productId,
-            }, { onConflict: 'deal_id,field_id' });
+            }, { onConflict: 'deal_id,field_id' })
+            .select('deal_id').single();
+          if (productError) throw productError;
         } else {
-          await supabase
+          const { error: productError } = await supabase
             .from('deal_field_values')
             .delete()
             .eq('deal_id', dealId)
             .eq('field_id', DEAL_FIELD_IDS.ITEM_VENDA);
+          if (productError) throw productError;
         }
       }
 
       // Refresh deals
-      await fetchDeals();
+      if (!options.deferRefresh) await fetchDeals();
 
       return true;
     } catch (error: any) {
       console.error('Error updating deal:', error);
-      toast({
+      if (options.throwOnError) throw error;
+      if (!options.quiet) toast({
         title: "Erro ao atualizar negociação",
         description: error.message,
         variant: "destructive",
@@ -640,7 +653,7 @@ export function useDeals(pipelineId?: string | null) {
     }
   };
 
-  const moveDeal = async (dealId: string, newStageId: string, newPipelineId?: string): Promise<boolean> => {
+  const moveDeal = async (dealId: string, newStageId: string, newPipelineId?: string, options: DealMutationOptions = {}): Promise<boolean> => {
     if (!currentUser?.account_id) return false;
 
     const deal = deals.find(d => d.id === dealId);
@@ -713,7 +726,9 @@ export function useDeals(pipelineId?: string | null) {
                   probability: closerStage.probability || 0,
                 })
                 .eq('id', dealId)
-                .eq('account_id', currentUser.account_id);
+                .eq('account_id', currentUser.account_id)
+                .is('deleted_at', null)
+                .select('id').single();
 
               if (error) throw error;
 
@@ -732,7 +747,7 @@ export function useDeals(pipelineId?: string | null) {
               // Remove from local state (it's now in another pipeline)
               setDeals(prev => prev.filter(d => d.id !== dealId));
 
-              toast({
+              if (!options.quiet) toast({
                 title: "Deal transferido para o Closer",
                 description: `"${deal?.title}" foi movido para Reunião Agendada no pipeline Closer.`,
               });
@@ -758,7 +773,9 @@ export function useDeals(pipelineId?: string | null) {
         .from('deals')
         .update(updatePayload)
         .eq('id', dealId)
-        .eq('account_id', currentUser.account_id);
+        .eq('account_id', currentUser.account_id)
+        .is('deleted_at', null)
+        .select('id').single();
 
       if (error) throw error;
 
@@ -801,7 +818,8 @@ export function useDeals(pipelineId?: string | null) {
       return true;
     } catch (error: any) {
       console.error('Error moving deal:', error);
-      toast({
+      if (options.throwOnError) throw error;
+      if (!options.quiet) toast({
         title: "Erro ao mover negociação",
         description: error.message,
         variant: "destructive",

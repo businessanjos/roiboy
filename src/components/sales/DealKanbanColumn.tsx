@@ -19,6 +19,10 @@ interface DealKanbanColumnProps {
   activityStatusGetter?: (dealId: string) => ActivityStatus | undefined;
   showActivityCounts?: boolean;
   fullWidth?: boolean;
+  selectionMode?: boolean;
+  selectedIds?: ReadonlySet<string>;
+  onSelectDeal?: (id: string) => void;
+  selectionDisabled?: boolean;
 }
 
 const getStageIcon = (stageName: string, color: string) => {
@@ -43,7 +47,7 @@ const getStageIcon = (stageName: string, color: string) => {
   return <Users className={iconClass} style={{ color }} />;
 };
 
-export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap, isDragActive = false, activityStatusGetter, showActivityCounts = false, fullWidth = false }: DealKanbanColumnProps) {
+export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap, isDragActive = false, activityStatusGetter, showActivityCounts = false, fullWidth = false, selectionMode, selectedIds, onSelectDeal, selectionDisabled }: DealKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
   });
@@ -170,6 +174,10 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
                   itemVendaColor={itemVendaMap?.[deal.id]?.color}
                   activityStatus={activityStatusGetter?.(deal.id)}
                   showActivityCounts={showActivityCounts}
+                  selectionMode={selectionMode}
+                  selected={selectedIds?.has(deal.id)}
+                  onSelect={() => onSelectDeal?.(deal.id)}
+                  selectionDisabled={selectionDisabled}
                 />
               ))}
               {hasMore && (

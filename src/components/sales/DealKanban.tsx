@@ -34,6 +34,11 @@ interface DealKanbanProps {
   showActivityCounts?: boolean;
   /** Em tela cheia: o quadro ocupa toda a altura disponível do contêiner pai. */
   fullHeight?: boolean;
+  selectionMode?: boolean;
+  selectedIds?: ReadonlySet<string>;
+  onSelectDeal?: (id: string) => void;
+  selectionDisabled?: boolean;
+  fieldRefreshKey?: number;
 }
 
 
@@ -47,7 +52,7 @@ interface RequiredFieldsModalState {
   accountId: string;
 }
 
-export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivityCounts = false, fullHeight = false }: DealKanbanProps) {
+export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivityCounts = false, fullHeight = false, selectionMode, selectedIds, onSelectDeal, selectionDisabled, fieldRefreshKey = 0 }: DealKanbanProps) {
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
   const { validateDealMove } = useRequiredFieldsValidation();
   const [requiredFieldsModal, setRequiredFieldsModal] = useState<RequiredFieldsModalState | null>(null);
@@ -146,7 +151,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
     }).catch(err => {
       console.error('[DealKanban] Failed to fetch field maps:', err);
     });
-  }, [dealIdsKey]);
+  }, [dealIdsKey, fieldRefreshKey]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -384,6 +389,10 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
                   isDragActive={isDragActive}
                   activityStatusGetter={getActivityStatus}
                   showActivityCounts={showActivityCounts}
+                  selectionMode={selectionMode}
+                  selectedIds={selectedIds}
+                  onSelectDeal={onSelectDeal}
+                  selectionDisabled={selectionDisabled}
                 />
               )}
             </div>
@@ -417,6 +426,10 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
                   isDragActive={isDragActive}
                   activityStatusGetter={getActivityStatus}
                   showActivityCounts={showActivityCounts}
+                  selectionMode={selectionMode}
+                  selectedIds={selectedIds}
+                  onSelectDeal={onSelectDeal}
+                  selectionDisabled={selectionDisabled}
                 />
               ))}
             </div>

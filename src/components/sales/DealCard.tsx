@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { Mail, Phone, Calendar, RefreshCw, AlertTriangle, ListTodo, MessageCircle } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
@@ -27,11 +28,15 @@ interface DealCardProps {
   itemVendaColor?: string | null;
   activityStatus?: ActivityStatus;
   showActivityCounts?: boolean;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
+  selectionDisabled?: boolean;
 }
 
 const DEFAULT_ACTIVITY_STATUS: ActivityStatus = { pendingCount: 0, hasOverdue: false, totalActivities: 0, nextDueDate: null };
 
-export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel, itemVendaColor, activityStatus: activityStatusProp, showActivityCounts = false }: DealCardProps) {
+export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel, itemVendaColor, activityStatus: activityStatusProp, showActivityCounts = false, selectionMode = false, selected = false, onSelect, selectionDisabled = false }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
   
   const { openZappConversation, loading: zappLoading } = useZappNavigationContext();
@@ -42,7 +47,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
     transform,
     transition,
     isDragging: isSortableDragging,
-  } = useSortable({ id: deal.id });
+  } = useSortable({ id: deal.id, disabled: selectionMode });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -140,15 +145,23 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
     <Card
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
+      {...(selectionMode ? { role: "button", tabIndex: 0 } : attributes)}
+      {...(selectionMode ? {} : listeners)}
+      aria-pressed={selectionMode ? selected : undefined}
       className={cn(
         "relative cursor-pointer hover:shadow-md transition-all duration-200 bg-card border-border/40 overflow-hidden group",
         isRenewal && "ring-1 ring-warning/40 bg-warning/5",
         (deal.typeform_reapplication_count ?? 0) > 0 && "ring-1 ring-info/50 bg-info/5",
+        selectionMode && selected && "ring-2 ring-primary border-primary bg-primary/5",
         (isDragging || isSortableDragging) && "opacity-30 shadow-none scale-95 border-dashed border-primary/40"
       )}
-      onClick={onClick}
+      onClick={() => selectionMode ? !selectionDisabled && onSelect?.() : onClick()}
+      onKeyDown={selectionMode ? event => {
+        if (event.target === event.currentTarget && (event.key === " " || event.key === "Enter")) {
+          event.preventDefault();
+          if (!selectionDisabled) onSelect?.();
+        }
+      } : undefined}
     >
       {/* Left color accent bar */}
       <div 
@@ -162,6 +175,9 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
       <CardContent className="pl-4 pr-3 py-2.5 space-y-1.5">
         {/* Row 1: Avatar + Name/Title + Value */}
         <div className="flex items-start gap-2">
+          {selectionMode && <div className="flex min-h-11 items-center" onClick={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()}>
+            <Checkbox aria-label={`Selecionar ${deal.title}`} checked={selected} onCheckedChange={() => onSelect?.()} disabled={selectionDisabled} />
+          </div>}
           <div className="relative flex-shrink-0">
             <Avatar className="h-7 w-7 border border-border/50">
               <AvatarImage src={avatarUrl || undefined} />
@@ -251,7 +267,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
 
         {/* Row 4: Actions + Tags */}
         <div className="flex items-center justify-between gap-2 min-w-0 overflow-hidden">
-          <div className="flex items-center gap-0.5">
+          <div className={cn("flex items-center gap-0.5", selectionMode && "invisible")}>
             {/* WhatsApp */}
             {contactPhone && (
               <Button
