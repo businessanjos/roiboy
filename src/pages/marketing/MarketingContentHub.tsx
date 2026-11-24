@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { Crown, Share2, ListChecks, ClipboardEdit } from "lucide-react";
+import { Crown, Share2, ListChecks, ClipboardEdit, MousePointerClick } from "lucide-react";
 import { MarketingTabsHub, type MarketingHubTab } from "@/components/marketing/_shared/MarketingTabsHub";
 
 const ContentHQ = lazy(() => import("@/pages/marketing/ContentHQ"));
@@ -25,11 +25,22 @@ const MetricsView = lazy(async () => {
   return { default: View };
 });
 
+const StoriesView = lazy(async () => {
+  const { StoryLinkClicksTab } = await import("@/components/marketing/StoryLinkClicksTab");
+  const View = () => (
+    <div className="container mx-auto py-6">
+      <StoryLinkClicksTab />
+    </div>
+  );
+  return { default: View };
+});
+
 const TABS: MarketingHubTab[] = [
   { value: "producao", label: "Produção", icon: Crown, Component: ContentHQ },
   { value: "redes", label: "Redes", icon: Share2, Component: SocialNetworksTab },
   { value: "checklist", label: "Checklist", icon: ListChecks, Component: ChecklistView },
   { value: "metricas", label: "Eternum RECORDES", icon: ClipboardEdit, Component: MetricsView },
+  { value: "stories", label: "Clique no link - stories", icon: MousePointerClick, Component: StoriesView },
 ];
 
 export default function MarketingContentHub() {

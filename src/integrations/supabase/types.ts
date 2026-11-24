@@ -16517,6 +16517,45 @@ export type Database = {
           },
         ]
       }
+      instagram_story_link_clicks: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          link_clicks: number
+          link_url: string | null
+          profile_id: string
+          story_date: string
+          views: number
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          link_clicks?: number
+          link_url?: string | null
+          profile_id: string
+          story_date: string
+          views?: number
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          link_clicks?: number
+          link_url?: string | null
+          profile_id?: string
+          story_date?: string
+          views?: number
+        }
+        Relationships: []
+      }
       installment_events: {
         Row: {
           account_id: string

@@ -687,6 +687,13 @@
       "when": 1795466914294,
       "tag": "0097_tv_command_doorbell",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1795522912608,
+      "tag": "0098_instagram_story_link_clicks",
+      "breakpoints": true
     }
   ]
 }
