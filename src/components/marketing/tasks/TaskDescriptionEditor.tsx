@@ -17,9 +17,10 @@ const SafeHighlight = Highlight.extend({
     return ["mark", { "data-color": color, style: `background-color: ${color}; color: ${markerInk(color)};` }, 0];
   },
 });
-export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colors, onColorsChange, disabled, portalContainer }: {
+export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colors, onColorsChange, disabled, portalContainer, label = "Descrição", compact = false }: {
   initialContent: JSONContent; valueKey: string; onChange: (text: string, document: JSONContent) => void;
   colors: string[]; onColorsChange: (colors: string[]) => void; disabled?: boolean; portalContainer: HTMLElement | null;
+  label?: string; compact?: boolean;
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [customColor, setCustomColor] = useState<string>();
@@ -29,7 +30,7 @@ export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colo
     extensions: [StarterKit.configure({ heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, link: false, underline: false, strike: false }), SafeHighlight.configure({ multicolor: true })],
     content: initialContent,
     editable: !disabled,
-    editorProps: { attributes: { role: "textbox", "aria-label": "Descrição", "aria-multiline": "true", spellcheck: "true" } },
+    editorProps: { attributes: { role: "textbox", "aria-label": label, "aria-multiline": "true", spellcheck: "true" } },
     onUpdate: ({ editor: updated }) => onChange(updated.getText({ blockSeparator: "\n" }), updated.getJSON()),
     onSelectionUpdate: () => redraw((value) => value + 1),
     onTransaction: () => redraw((value) => value + 1),
@@ -41,8 +42,8 @@ export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colo
     <TooltipTrigger asChild><Button type="button" variant={active ? "secondary" : "ghost"} size="icon" aria-label={name} className="h-9 w-9" disabled={disabled || unavailable || !editor}
       onMouseDown={(e) => e.preventDefault()} onClick={action}>{icon}</Button></TooltipTrigger><TooltipContent>{name}</TooltipContent>
   </Tooltip>;
-  return <div className={cn("task-description-editor overflow-hidden rounded-md border bg-background focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/10", expanded && "expanded")}>
-    <div role="toolbar" aria-label="Formatação da descrição" className="flex flex-wrap items-center gap-0.5 border-b bg-muted/25 px-2 py-1.5">
+  return <div className={cn("task-description-editor overflow-hidden rounded-md border bg-background focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/10", expanded && "expanded", compact && "compact")}>
+    <div role="toolbar" aria-label={`Formatação ${compact ? "do comentário" : "da descrição"}`} className="flex flex-wrap items-center gap-0.5 border-b bg-muted/25 px-2 py-1.5">
       {tool("Negrito", <Bold className="h-4 w-4" />, () => editor?.chain().focus().toggleBold().run(), editor?.isActive("bold"))}
       {tool("Itálico", <Italic className="h-4 w-4" />, () => editor?.chain().focus().toggleItalic().run(), editor?.isActive("italic"))}
       <span className="mx-1 h-5 w-px bg-border" />
@@ -73,7 +74,7 @@ export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colo
       {tool("Desfazer", <Undo2 className="h-4 w-4" />, () => editor?.chain().focus().undo().run(), false, !editor?.can().undo())}
       {tool("Refazer", <Redo2 className="h-4 w-4" />, () => editor?.chain().focus().redo().run(), false, !editor?.can().redo())}
       <span className="flex-1" />
-      {tool(expanded ? "Recolher descrição" : "Ampliar descrição", expanded ? <Shrink className="h-4 w-4" /> : <Expand className="h-4 w-4" />, () => setExpanded(!expanded))}
+      {!compact && tool(expanded ? "Recolher descrição" : "Ampliar descrição", expanded ? <Shrink className="h-4 w-4" /> : <Expand className="h-4 w-4" />, () => setExpanded(!expanded))}
     </div>
     <EditorContent editor={editor} />
   </div>;

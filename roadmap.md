@@ -1,5 +1,11 @@
 # Roadmap — Processos do CS
 
+## Comentários das tarefas em conversa
+- [x] Barra compartilhada com a descrição: negrito, itálico, listas, marca-texto com cores próprias e segundo clique para desligar, desfazer/refazer; comentários antigos e autoria preservados, sem mudar backend ou permissões.
+- [x] Foto e primeiro nome, mensagens próprias à direita e dos colegas à esquerda, data agrupada e horário individual; exclusão existente apenas do próprio comentário.
+- [x] 19 testes passaram; envio/releitura e reabertura com formatação, falha mantendo rascunho, fotos e identificação conferidos com respostas fictícias em 390/798/1440 px e claro/escuro, sem erros de execução ou escritas reais. Compilação sem erros; não publicado.
+- [ ] Conferência autenticada em /marketing/projetos?tab=tarefas: sessão própria indisponível, criação de conta temporária falhou e a página real retorna ao login. Testes com exemplos não validam persistência/RLS no servidor.
+
 ## Janela de tarefa: espaço e marca-texto
 - [x] Descrição, anexos e capa agrupados na coluna principal; detalhes compactos e rolagem independente no desktop, uma rolagem no celular; cabeçalho e rodapé fixos, sem cauda vazia acompanhando a lateral.
 - [x] Marca-texto ativo remove o destaque no segundo clique sem abrir a paleta; no cursor, interrompe a escrita destacada sem apagar a marcação anterior. Texto/negrito preservados; 12 testes passaram, compilação sem erros.
