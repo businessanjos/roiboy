@@ -16256,6 +16256,53 @@ export type Database = {
           },
         ]
       }
+      instagram_feed_link_clicks: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          link_clicks: number
+          link_url: string | null
+          post_date: string
+          profile_id: string
+          views: number
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          link_clicks?: number
+          link_url?: string | null
+          post_date: string
+          profile_id: string
+          views?: number
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          link_clicks?: number
+          link_url?: string | null
+          post_date?: string
+          profile_id?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_feed_link_clicks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instagram_insights: {
         Row: {
           account_id: string

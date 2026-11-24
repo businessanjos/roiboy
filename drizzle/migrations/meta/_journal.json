@@ -701,6 +701,13 @@
       "when": 1795530835691,
       "tag": "0099_sale_item_company_link",
       "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1795534230570,
+      "tag": "0100_instagram_feed_link_clicks",
+      "breakpoints": true
     }
   ]
 }

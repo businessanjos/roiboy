@@ -35,12 +35,23 @@ const StoriesView = lazy(async () => {
   return { default: View };
 });
 
+const FeedView = lazy(async () => {
+  const { LinkClicksTab } = await import("@/components/marketing/LinkClicksTab");
+  const View = () => (
+    <div className="container mx-auto py-6">
+      <LinkClicksTab placement="feed" />
+    </div>
+  );
+  return { default: View };
+});
+
 const TABS: MarketingHubTab[] = [
   { value: "producao", label: "Produção", icon: Crown, Component: ContentHQ },
   { value: "redes", label: "Redes", icon: Share2, Component: SocialNetworksTab },
   { value: "checklist", label: "Checklist", icon: ListChecks, Component: ChecklistView },
   { value: "metricas", label: "Eternum RECORDES", icon: ClipboardEdit, Component: MetricsView },
-  { value: "stories", label: "Clique no link - stories", icon: MousePointerClick, Component: StoriesView },
+  { value: "stories", label: "Clique no link - Story", icon: MousePointerClick, Component: StoriesView },
+  { value: "feed", label: "Clique no link - Feed", icon: MousePointerClick, Component: FeedView },
 ];
 
 export default function MarketingContentHub() {
