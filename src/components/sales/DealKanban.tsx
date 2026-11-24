@@ -24,7 +24,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, ChevronRight, Check } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DealKanbanProps {
@@ -273,16 +273,23 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
   // (mobile e desktop), evitando altura fixa que sobra ou corta o final da lista.
   const mobileBoardRef = useRef<HTMLDivElement | null>(null);
   const [mobileBoardHeight, setMobileBoardHeight] = useState<number | null>(null);
-  const [hasMoreStagesRight, setHasMoreStagesRight] = useState(false);
+  const [stageScrollDirection, setStageScrollDirection] = useState<"right" | "left" | null>(null);
 
   useLayoutEffect(() => {
     const board = mobileBoardRef.current;
     if (isMobile || !board || stages.length === 0) {
-      setHasMoreStagesRight(false);
+      setStageScrollDirection(null);
       return;
     }
     const measureOverflow = () => {
-      setHasMoreStagesRight(board.scrollWidth - board.clientWidth - board.scrollLeft > 2);
+      const remainingRight = board.scrollWidth - board.clientWidth - board.scrollLeft;
+      if (remainingRight > 2) {
+        setStageScrollDirection("right");
+      } else if (board.scrollLeft > 2) {
+        setStageScrollDirection("left");
+      } else {
+        setStageScrollDirection(null);
+      }
     };
     measureOverflow();
     board.addEventListener("scroll", measureOverflow, { passive: true });
@@ -295,14 +302,15 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
     };
   }, [isMobile, stages.length, fullHeight]);
 
-  const scrollToNextStage = () => {
+  const scrollOneStage = (direction: "right" | "left") => {
     const board = mobileBoardRef.current;
     const content = board?.firstElementChild;
     const column = content?.firstElementChild;
     if (!board || !content || !column) return;
     const gap = parseFloat(getComputedStyle(content).columnGap) || 0;
+    const step = column.getBoundingClientRect().width + gap;
     board.scrollBy({
-      left: column.getBoundingClientRect().width + gap,
+      left: direction === "right" ? step : -step,
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
     });
   };
@@ -476,8 +484,14 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
               ))}
             </div>
           </div>
-          {hasMoreStagesRight && !isDragActive && (
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 flex w-14 items-center justify-end bg-gradient-pipeline-edge pr-1">
+          {stageScrollDirection && !isDragActive && (
+            <div
+              className={
+                stageScrollDirection === "right"
+                  ? "pointer-events-none absolute inset-y-0 right-0 z-10 flex w-14 items-center justify-end bg-gradient-pipeline-edge pr-1"
+                  : "pointer-events-none absolute inset-y-0 left-0 z-10 flex w-14 items-center justify-start bg-gradient-pipeline-edge-left pl-1"
+              }
+            >
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -485,14 +499,20 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
                       type="button"
                       variant="outline"
                       size="icon"
-                      aria-label="Ver etapas à direita"
-                      onClick={scrollToNextStage}
-                      className="pointer-events-none h-9 w-9 rounded-full border-border/80 bg-background text-muted-foreground shadow-elevated opacity-0 transition-opacity group-hover/kanban:pointer-events-auto group-hover/kanban:opacity-100 hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 motion-reduce:transition-none"
+                      aria-label={stageScrollDirection === "right" ? "Ver etapas à direita" : "Voltar às etapas anteriores"}
+                      onClick={() => scrollOneStage(stageScrollDirection)}
+                      className="pointer-events-none h-9 w-9 rounded-full border-border/80 bg-background text-muted-foreground shadow-elevated opacity-60 transition-opacity group-hover/kanban:pointer-events-auto group-hover/kanban:opacity-100 hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 motion-reduce:transition-none"
                     >
-                      <ChevronRight className="h-4 w-4" />
+                      {stageScrollDirection === "right" ? (
+                        <ChevronRight className="h-4 w-4" />
+                      ) : (
+                        <ChevronLeft className="h-4 w-4" />
+                      )}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="left">Ver próximas etapas</TooltipContent>
+                  <TooltipContent side={stageScrollDirection === "right" ? "left" : "right"}>
+                    {stageScrollDirection === "right" ? "Ver próximas etapas" : "Voltar às etapas anteriores"}
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>

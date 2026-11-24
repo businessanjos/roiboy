@@ -94,6 +94,7 @@
 
     /* Gradients */
     --gradient-pipeline-edge: linear-gradient(to right, hsl(var(--background) / 0), hsl(var(--background) / 0.8) 65%, hsl(var(--background)));
+    --gradient-pipeline-edge-left: linear-gradient(to left, hsl(var(--background) / 0), hsl(var(--background) / 0.8) 65%, hsl(var(--background)));
     --gradient-primary: linear-gradient(135deg, hsl(39, 55%, 55%) 0%, hsl(39, 60%, 70%) 100%);
     --gradient-hero: linear-gradient(135deg, hsl(20, 10%, 11%) 0%, hsl(60, 4%, 25%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(47, 30%, 92%) 0%, hsl(48, 26%, 88%) 100%);
@@ -311,6 +312,10 @@
 @layer utilities {
   .bg-gradient-pipeline-edge {
     background: var(--gradient-pipeline-edge);
+  }
+
+  .bg-gradient-pipeline-edge-left {
+    background: var(--gradient-pipeline-edge-left);
   }
 
   .text-gradient-primary {
