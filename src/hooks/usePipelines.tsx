@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { toast } from "sonner";
+import { buildPipelineOrderChanges } from "@/lib/sales/pipelineOrder";
 
 export interface Pipeline {
   id: string;
@@ -32,7 +33,9 @@ export function usePipelines() {
         .select('*')
         .eq('account_id', currentUser.account_id)
         .eq('is_active', true)
-        .order('display_order', { ascending: true });
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true });
 
       if (error) throw error;
 
@@ -169,6 +172,43 @@ export function usePipelines() {
     }
   };
 
+  const reorderPipelines = async (orderedIds: string[]): Promise<boolean> => {
+    if (!currentUser?.account_id) return false;
+    try {
+      const changes = buildPipelineOrderChanges(pipelines, orderedIds);
+      const updatedAt = new Date().toISOString();
+      // Existing authenticated UPDATE/RLS path; compare saved order to avoid overwriting a concurrent edit.
+      const results = await Promise.allSettled(changes.map(async change => {
+        const { data, error } = await supabase.from('pipelines')
+          .update({ display_order: change.display_order, updated_at: updatedAt })
+          .eq('account_id', currentUser.account_id)
+          .eq('id', change.id)
+          .eq('is_active', true)
+          .eq('display_order', change.previous_order)
+          .select('id, display_order')
+          .single();
+        if (error) throw error;
+        if (!data || data.display_order !== change.display_order) throw new Error('A ordem do funil mudou ou não pode ser alterada.');
+      }));
+      if (results.some(result => result.status === 'rejected')) {
+        await fetchPipelines();
+        toast.error('A ordem não foi salva por completo. Confira a lista e tente novamente.');
+        return false;
+      }
+      const savedOrder = new Map(changes.map(change => [change.id, change.display_order]));
+      setPipelines(previous => orderedIds.flatMap(id => {
+        const pipeline = previous.find(item => item.id === id);
+        return pipeline ? [{ ...pipeline, display_order: savedOrder.get(id) ?? pipeline.display_order }] : [];
+      }));
+      toast.success('Ordem dos funis salva');
+      return true;
+    } catch (error) {
+      console.error('Error reordering pipelines:', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar a ordem dos funis.');
+      return false;
+    }
+  };
+
   const activePipeline = pipelines.find(p => p.id === activePipelineId) || null;
 
   return {
@@ -180,6 +220,7 @@ export function usePipelines() {
     createPipeline,
     updatePipeline,
     deletePipeline,
+    reorderPipelines,
     fetchPipelines,
   };
 }

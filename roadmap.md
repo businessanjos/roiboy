@@ -1,5 +1,11 @@
 # Roadmap — Processos do CS
 
+## Ordem dos funis
+- [x] Adicionar “Reorganizar funis” ao seletor, com arraste e setas para definir a ordem.
+- [x] Salvar na ordem já existente dos funis, preservando acessos, funil selecionado, etapas e negócios; sem migrações ou mudanças de permissões.
+- [x] 28 testes passaram: ordem/persistência, cancelamento, rejeição por acesso/concorrência e filtros existentes; conferência com funis fictícios em 390/794/1440 px nos dois temas, incluindo arraste, teclado, salvar/recarregar e cancelar; não publicado.
+- [ ] Conferir na sessão real: sessão própria indisponível, acesso explícito não autorizado para este usuário do workspace; /pipeline retorna ao login. Nenhum negócio ou funil real alterado nos testes.
+
 ## Borda e filtros do funil
 - [x] Degradê à direita enquanto há mais etapas, seta central ao passar o mouse e avanço por etapa; desaparecem no fim e durante arraste, com movimento reduzido respeitado.
 - [x] Filtros agrupados, campos alinhados, cabeçalho/rodapé fixos e contagem dos negócios; opções, persistência e permissões preservadas.

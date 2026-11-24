@@ -24,7 +24,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Pipeline } from "@/hooks/usePipelines";
-import { Plus, ChevronDown, Pencil, Trash2, GitBranch } from "lucide-react";
+import { PipelineOrderDialog } from "./PipelineOrderDialog";
+import { Plus, ChevronDown, Pencil, Trash2, GitBranch, ArrowDownUp } from "lucide-react";
 
 interface PipelineSelectorProps {
   pipelines: Pipeline[];
@@ -33,6 +34,7 @@ interface PipelineSelectorProps {
   onCreate: (name: string, description?: string, color?: string) => Promise<Pipeline | null>;
   onUpdate: (id: string, updates: { name?: string; description?: string; color?: string }) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
+  onReorder: (ids: string[]) => Promise<boolean>;
 }
 
 const PIPELINE_COLORS = [
@@ -47,9 +49,11 @@ export function PipelineSelector({
   onCreate,
   onUpdate,
   onDelete,
+  onReorder,
 }: PipelineSelectorProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isOrderOpen, setIsOrderOpen] = useState(false);
   const [editingPipeline, setEditingPipeline] = useState<Pipeline | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -192,6 +196,10 @@ export function PipelineSelector({
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
+          <DropdownMenuItem disabled={pipelines.length < 2} onClick={() => setIsOrderOpen(true)}>
+            <ArrowDownUp className="h-4 w-4 mr-2" />
+            Reorganizar funis
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
               resetForm();
@@ -203,6 +211,8 @@ export function PipelineSelector({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {isOrderOpen && <PipelineOrderDialog pipelines={pipelines} activePipelineId={activePipelineId} onClose={() => setIsOrderOpen(false)} onSave={onReorder} />}
 
       <PipelineFormDialog
         open={isCreateOpen}

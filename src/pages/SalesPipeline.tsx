@@ -140,6 +140,7 @@ export default function SalesPipeline() {
     createPipeline,
     updatePipeline,
     deletePipeline,
+    reorderPipelines,
   } = usePipelines();
 
   const {
@@ -2996,7 +2997,7 @@ export default function SalesPipeline() {
             <div className="space-y-2">
               <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[minmax(140px,auto)_minmax(160px,1fr)_auto]">
                 <div className="min-w-0">
-                  <PipelineSelector pipelines={pipelines} activePipelineId={activePipelineId} onSelect={setActivePipelineId} onCreate={createPipeline} onUpdate={updatePipeline} onDelete={deletePipeline} />
+                  <PipelineSelector pipelines={pipelines} activePipelineId={activePipelineId} onSelect={setActivePipelineId} onCreate={createPipeline} onUpdate={updatePipeline} onDelete={deletePipeline} onReorder={reorderPipelines} />
                 </div>
                 <div className="col-span-2 row-start-2 min-w-0 sm:col-span-1 sm:row-start-auto">{searchControl}</div>
                 <Button variant="outline" size="sm" aria-label="Filtros" className="col-start-2 row-start-1 h-11 gap-2 sm:col-start-3 sm:h-9" onClick={() => setFiltersOpen(true)} aria-expanded={filtersOpen}>
