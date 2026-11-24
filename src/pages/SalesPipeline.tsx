@@ -2878,7 +2878,7 @@ export default function SalesPipeline() {
 
             </TabsList>
 
-            <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-auto shrink-0">
+            <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-auto shrink-0 mr-1 sm:mr-2">
 
               {mainTab === 'pipeline' && (
                 <>
@@ -3028,6 +3028,7 @@ export default function SalesPipeline() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="hidden sm:block sm:flex-1" aria-hidden="true" />
               <TabsList className="hidden sm:inline-flex w-auto shrink-0 h-9 rounded-md">
                 <TabsTrigger value="open" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-10 sm:h-7 rounded-lg sm:rounded-sm">
                   <TrendingUp className="h-3.5 w-3.5" />
@@ -3049,9 +3050,9 @@ export default function SalesPipeline() {
                   </Badge>
                 </TabsTrigger>
               </TabsList>
-              <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground sm:ml-auto">
+              <div className="flex min-w-0 shrink-0 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground sm:flex-1 sm:justify-end">
                 {activeTab === "open" && <>
-                  <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="cursor-default tabular-nums">{filteredOpenDeals.length.toLocaleString("pt-BR")} {hiddenOpenCount > 0 ? `de ${openDeals.length.toLocaleString("pt-BR")}` : "negócios"}</span></TooltipTrigger><TooltipContent>{hiddenOpenCount > 0 ? `${hiddenOpenCount} negócios ocultos pelos filtros ativos` : "Negócios em aberto"}</TooltipContent></Tooltip></TooltipProvider>
+                  <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="hidden xl:inline cursor-default tabular-nums">{filteredOpenDeals.length.toLocaleString("pt-BR")} {hiddenOpenCount > 0 ? `de ${openDeals.length.toLocaleString("pt-BR")}` : "negócios"}</span></TooltipTrigger><TooltipContent>{hiddenOpenCount > 0 ? `${hiddenOpenCount} negócios ocultos pelos filtros ativos` : "Negócios em aberto"}</TooltipContent></Tooltip></TooltipProvider>
                   <span className="font-semibold text-foreground tabular-nums">{formatCurrency(filteredOpenTotalValue)}</span>
                   <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="hidden xl:inline tabular-nums">Pond. {formatCurrency(filteredOpenWeightedValue)}</span></TooltipTrigger><TooltipContent>Valor ponderado pela probabilidade de cada negócio</TooltipContent></Tooltip></TooltipProvider>
                   {hiddenOpenCount > 0 && <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Limpar todos os filtros" onClick={clearAllPipelineFilters}><X className="h-3.5 w-3.5" /></Button></TooltipTrigger><TooltipContent>Limpar todos os filtros</TooltipContent></Tooltip></TooltipProvider>}
