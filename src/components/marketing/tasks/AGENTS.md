@@ -1,0 +1,5 @@
+# Marketing task details
+
+- Delivery time, requester identity and label color metadata live in `marketing_tasks.custom_fields.delivery_details`; label names remain in `tags`, and execution ownership remains in `assignee_id`. Why: add task identification without schema, permission or audit-identity changes, retaining legacy fields.
+- Duplication opens an editable unsaved draft, resets completion and copies child tasks only after creating a new parent through the current user's client; compensate a failed child insert by deleting only that new parent. Why: never modify the source or leave a silent partial copy.
+- `taskDetails.ts` is shared by editing, duplication, filtering and date/time sorting; `TaskPeopleAndLabels` renders both views. Why: labels and delivery metadata must agree without duplicate interpretations.

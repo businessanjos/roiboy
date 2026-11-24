@@ -41,6 +41,7 @@ vi.mock("@/hooks/useCurrentUser", () => ({
 function makeSelectQuery() {
   const query: any = {
     select: () => query,
+    eq: () => query,
     order: () => query,
     range: (from: number, to: number) => {
       const data = fixture.slice(from, to + 1);

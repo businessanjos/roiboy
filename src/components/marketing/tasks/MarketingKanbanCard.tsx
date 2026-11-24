@@ -8,6 +8,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
+import { Button } from "@/components/ui/button";
+import { readTaskDetails } from "@/lib/marketing/taskDetails";
+import { TaskPeopleAndLabels } from "./TaskPeopleAndLabels";
 
 function isTaskOverdue(task: MarketingTask): boolean {
   if (!task.due_date || task.is_completed || task.status === "done") return false;
@@ -49,6 +52,7 @@ export function MarketingKanbanCard({
   };
 
   const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
+  const details = readTaskDetails(task);
   const isPastDue = dueDate && isPast(dueDate) && !isToday(dueDate) && !task.is_completed;
   const isDueToday = dueDate && isToday(dueDate);
   const isDueTomorrow = dueDate && isTomorrow(dueDate);
@@ -87,19 +91,23 @@ export function MarketingKanbanCard({
         </div>
 
         {/* Checkbox */}
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={task.is_completed ? "Reabrir tarefa" : "Concluir tarefa"}
           onClick={(e) => {
             e.stopPropagation();
             onToggleComplete(!task.is_completed);
           }}
-          className="mt-0.5 shrink-0"
+          className="-ml-2 -mt-2 h-11 w-11 shrink-0 p-0"
         >
           {task.is_completed ? (
             <CheckCircle2 className="h-5 w-5 text-primary" />
           ) : (
             <Circle className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
           )}
-        </button>
+        </Button>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
@@ -119,6 +127,8 @@ export function MarketingKanbanCard({
               </Badge>
             )}
           </div>
+
+          <TaskPeopleAndLabels task={task} />
 
           {/* Meta info */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -157,6 +167,7 @@ export function MarketingKanbanCard({
                   : isDueTomorrow
                   ? "Amanhã"
                   : format(dueDate, "dd MMM", { locale: ptBR })}
+                {details.dueTime && <span>· {details.dueTime}</span>}
               </div>
             )}
 
@@ -174,7 +185,7 @@ export function MarketingKanbanCard({
 
         {/* Assignee */}
         {task.assignee && (
-          <Avatar className="h-6 w-6">
+          <Avatar className="h-6 w-6" title={`Responsável: ${task.assignee.name}`}>
             <AvatarImage src={task.assignee.avatar_url || undefined} />
             <AvatarFallback className="text-xs">
               {getInitials(task.assignee.name)}

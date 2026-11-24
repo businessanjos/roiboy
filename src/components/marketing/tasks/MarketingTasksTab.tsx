@@ -24,6 +24,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { isPast, isToday, parseISO, startOfDay } from "date-fns";
+import { taskLabelCatalog, matchesTaskLabels, deliverySortKey } from "@/lib/marketing/taskDetails";
+import { TaskLabelFilter } from "./TaskLabels";
 
 type ViewMode = "list" | "board";
 
@@ -55,6 +57,7 @@ export function MarketingTasksTab() {
   const [assigneeFilter, setAssigneeFilter] = usePersistedFilter<string>("marketing-tasks", "assignee", "all");
   const [statusFilter, setStatusFilter] = usePersistedFilter<StatusFilter>("marketing-tasks", "status", "all");
   const [sortFilter, setSortFilter] = usePersistedFilter<SortFilter>("marketing-tasks", "sort", "manual");
+  const [labelFilter, setLabelFilter] = usePersistedFilter<string[]>("marketing-tasks", "labels", []);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isColumnsManagerOpen, setIsColumnsManagerOpen] = useState(false);
@@ -63,7 +66,8 @@ export function MarketingTasksTab() {
   const [defaultColumnId, setDefaultColumnId] = useState<string | undefined>(undefined);
   const [defaultAssigneeId, setDefaultAssigneeId] = useState<string | undefined>(undefined);
 
-  const { tasks, isLoading: tasksLoading, updateTask, toggleComplete, reorderTasks } = useMarketingTasks();
+  const { tasks, error: tasksError, isLoading: tasksLoading, updateTask, toggleComplete, reorderTasks } = useMarketingTasks();
+  const labelCatalog = useMemo(() => taskLabelCatalog(tasks), [tasks]);
   const { sections, isLoading: sectionsLoading, createSection } = useMarketingTaskSections();
   const { columns, isLoading: columnsLoading } = useMarketingTaskColumns();
 
@@ -112,9 +116,9 @@ export function MarketingTasksTab() {
     return tasks.filter((t) => {
       const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && matchesTaskLabels(t, labelFilter);
     });
-  }, [tasks, searchQuery, statusFilter]);
+  }, [tasks, searchQuery, statusFilter, labelFilter]);
 
   const assigneeCounts = useMemo(() => {
     const counts: Record<string, number> = { all: baseFilteredForCounts.length, none: 0 };
@@ -138,7 +142,7 @@ export function MarketingTasksTab() {
         assigneeFilter === "all" ||
         (assigneeFilter === "none" ? !t.assignee_id : t.assignee_id === assigneeFilter);
       const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-      return matchesSearch && matchesAssignee && matchesStatus;
+      return matchesSearch && matchesAssignee && matchesStatus && matchesTaskLabels(t, labelFilter);
     });
 
     if (sortFilter === "manual") {
@@ -146,18 +150,14 @@ export function MarketingTasksTab() {
     }
 
     return filtered.sort((a, b) => {
-      const aNull = !a.due_date;
-      const bNull = !b.due_date;
-      if (aNull && bNull) return a.display_order - b.display_order;
-      if (aNull) return 1; // nulls last
-      if (bNull) return -1;
-
-      const aDue = startOfDay(parseISO(a.due_date!)).getTime();
-      const bDue = startOfDay(parseISO(b.due_date!)).getTime();
+      const aDue = deliverySortKey(a);
+      const bDue = deliverySortKey(b);
       if (aDue === bDue) return a.display_order - b.display_order;
-      return sortFilter === "due_date_asc" ? aDue - bDue : bDue - aDue;
+      if (!aDue) return 1;
+      if (!bDue) return -1;
+      return sortFilter === "due_date_asc" ? aDue.localeCompare(bDue) : bDue.localeCompare(aDue);
     });
-  }, [tasks, searchQuery, assigneeFilter, statusFilter, sortFilter]);
+  }, [tasks, searchQuery, assigneeFilter, statusFilter, sortFilter, labelFilter]);
 
 
   const isSortManual = sortFilter === "manual";
@@ -170,7 +170,7 @@ export function MarketingTasksTab() {
   const uncategorizedTasks = filteredTasks.filter((t) => !t.section_id);
 
   // Critérios de busca/filtro/ordenação do modo lista — ao mudar, cada seção volta à página 1.
-  const listFiltersKey = [searchQuery, assigneeFilter, statusFilter, sortFilter];
+  const listFiltersKey = [searchQuery, assigneeFilter, statusFilter, sortFilter, labelFilter];
 
   const handleAddTask = (sectionId?: string, columnId?: string, assigneeId?: string) => {
     setAddingToSection(sectionId || null);
@@ -229,12 +229,12 @@ export function MarketingTasksTab() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2">
           <Button onClick={() => handleAddTask()} className="gap-2">
             <Plus className="h-4 w-4" />
-            Add task
+            Nova tarefa
           </Button>
           {selectedAssignee && (
             <Button
@@ -252,7 +252,8 @@ export function MarketingTasksTab() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex min-w-0 max-w-full items-center gap-2 flex-wrap">
+          <TaskLabelFilter catalog={labelCatalog} selected={labelFilter} onChange={setLabelFilter} />
           <Select value={sortFilter} onValueChange={(value) => setSortFilter(value as SortFilter)}>
             <SelectTrigger className="w-44">
               <SelectValue placeholder="Ordenar por" />
@@ -331,15 +332,21 @@ export function MarketingTasksTab() {
           </div>
 
           <div className="flex items-center border rounded-lg overflow-hidden">
-            <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("list")} className="rounded-none">
+            <Button aria-label="Visualizar lista" title="Visualizar lista" variant={viewMode === "list" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("list")} className="h-11 w-11 rounded-none">
               <List className="h-4 w-4" />
             </Button>
-            <Button variant={viewMode === "board" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("board")} className="rounded-none">
+            <Button aria-label="Visualizar quadro" title="Visualizar quadro" variant={viewMode === "board" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("board")} className="h-11 w-11 rounded-none">
               <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
+
+      {tasksError && <p role="alert" className="text-sm text-destructive">Não foi possível atualizar as tarefas. Tente novamente.</p>}
+      {!tasksError && tasks.length > 0 && filteredTasks.length === 0 && <div className="flex flex-wrap items-center gap-3 py-3 text-sm text-muted-foreground">
+        <span>Nenhuma tarefa encontrada com estes filtros.</span>
+        <Button variant="ghost" onClick={() => { setSearchQuery(""); setAssigneeFilter("all"); setStatusFilter("all"); setLabelFilter([]); }}>Limpar filtros</Button>
+      </div>}
 
       {viewMode === "board" && (
         <MarketingTaskKanban
@@ -355,14 +362,15 @@ export function MarketingTasksTab() {
       )}
 
       {viewMode === "list" && (
-        <div className="border rounded-lg bg-card">
+        <div className="max-w-full overflow-x-auto border rounded-lg bg-card">
+          <div className="min-w-[800px]">
           <div className="grid grid-cols-[auto,1fr,140px,120px,100px,100px] gap-2 px-4 py-3 border-b bg-muted/30 text-sm font-medium text-muted-foreground">
             <div className="w-6" />
-            <div>Task name</div>
-            <div>Assignee</div>
-            <div>Due date</div>
+            <div>Tarefa</div>
+            <div>Responsável</div>
+            <div>Entrega</div>
             <div>Status</div>
-            <div>Priority</div>
+            <div>Prioridade</div>
           </div>
 
           {sections.map((section) => (
@@ -389,8 +397,9 @@ export function MarketingTasksTab() {
           <div className="p-4 border-t">
             <Button variant="ghost" size="sm" onClick={handleAddSection} className="text-muted-foreground hover:text-foreground gap-2">
               <Plus className="h-4 w-4" />
-              Add section
+              Nova seção
             </Button>
+          </div>
           </div>
         </div>
       )}

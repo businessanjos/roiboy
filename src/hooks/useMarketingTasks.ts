@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import type { Json } from "@/integrations/supabase/types";
+import { taskCopySubtasks, type TaskCopySubtask } from "@/lib/marketing/taskDetails";
 
 // Sanitiza valores que deveriam ser UUID mas podem vir como strings inválidas
 function sanitizeUuid(value: string | undefined | null): string | null {
@@ -69,15 +71,18 @@ export interface MarketingTask {
 
 export interface CreateMarketingTaskInput {
   title: string;
-  description?: string;
-  section_id?: string;
-  column_id?: string;
-  assignee_id?: string;
-  due_date?: string;
+  description?: string | null;
+  section_id?: string | null;
+  column_id?: string | null;
+  assignee_id?: string | null;
+  due_date?: string | null;
   priority?: MarketingTaskPriority;
   status?: MarketingTaskStatus;
   tags?: string[];
   media_attachments?: MediaAttachment[];
+  custom_fields?: Record<string, unknown>;
+  is_completed?: boolean;
+  copy_subtasks?: TaskCopySubtask[];
 }
 
 export interface UpdateMarketingTaskInput extends Partial<CreateMarketingTaskInput> {
@@ -90,10 +95,12 @@ export interface UpdateMarketingTaskInput extends Partial<CreateMarketingTaskInp
 export function useMarketingTasks() {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
+  const queryKey = ["marketing-tasks", currentUser?.account_id, currentUser?.id];
 
   const { data: tasks = [], isLoading, error } = useQuery({
-    queryKey: ["marketing-tasks"],
+    queryKey,
     queryFn: async () => {
+      if (!currentUser?.account_id) return [];
       const { data, error } = await fetchAllRows<any>((from, to) =>
         supabase
           .from("marketing_tasks")
@@ -101,6 +108,7 @@ export function useMarketingTasks() {
             *,
             assignee:users!marketing_tasks_assignee_id_fkey(id, name, avatar_url)
           `)
+          .eq("account_id", currentUser.account_id)
           .order("display_order", { ascending: true })
           .order("id", { ascending: true })
           .range(from, to) as any
@@ -120,13 +128,18 @@ export function useMarketingTasks() {
       if (!currentUser?.account_id) throw new Error("Usuário não autenticado");
 
       // Get max display_order for the section
-      const { data: maxOrderData } = await supabase
+      const sectionId = sanitizeUuid(input.section_id);
+      let orderQuery = supabase
         .from("marketing_tasks")
         .select("display_order")
-        .eq("section_id", input.section_id || null)
+        .eq("account_id", currentUser.account_id);
+      orderQuery = sectionId ? orderQuery.eq("section_id", sectionId) : orderQuery.is("section_id", null);
+      const { data: maxOrderData, error: orderError } = await orderQuery
         .order("display_order", { ascending: false })
         .limit(1)
         .maybeSingle();
+
+      if (orderError) throw orderError;
 
       const nextOrder = (maxOrderData?.display_order ?? -1) + 1;
 
@@ -143,6 +156,10 @@ export function useMarketingTasks() {
           priority: input.priority || "medium",
           status: input.status || "pending",
           tags: input.tags || [],
+          custom_fields: (input.custom_fields ?? {}) as Json,
+          media_attachments: (input.media_attachments ?? []) as unknown as Json,
+          is_completed: input.is_completed ?? false,
+          completed_at: input.is_completed ? new Date().toISOString() : null,
           display_order: nextOrder,
           created_by: currentUser.id,
         })
@@ -153,14 +170,26 @@ export function useMarketingTasks() {
         .single();
 
       if (error) throw error;
+      if (input.copy_subtasks?.length) {
+        const { error: childError } = await supabase.from("marketing_task_subtasks")
+          .insert(taskCopySubtasks(input.copy_subtasks, data.id, currentUser.account_id));
+        if (childError) {
+          // Compensate only this freshly-created copy, never the original task.
+          const { error: cleanupError } = await supabase.from("marketing_tasks").delete()
+            .eq("id", data.id).eq("account_id", currentUser.account_id);
+          if (cleanupError) throw new Error("A cópia foi criada, mas as subtarefas não foram copiadas. Confira a nova tarefa antes de tentar novamente.");
+          throw new Error("Não foi possível copiar as subtarefas. Nenhuma cópia foi mantida; tente novamente.");
+        }
+      }
       return {
         ...data,
         media_attachments: data.media_attachments as unknown as MediaAttachment[] | null,
       } as MarketingTask;
     },
-    onSuccess: () => {
+    onSuccess: (_, input) => {
       queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });
-      toast.success("Tarefa criada com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["marketing-subtask-counts"] });
+      toast.success(input.copy_subtasks ? "Tarefa duplicada com sucesso" : "Tarefa criada com sucesso");
     },
     onError: (error: Error) => {
       toast.error(translateError(error));
@@ -169,7 +198,7 @@ export function useMarketingTasks() {
 
   const updateTask = useMutation({
     mutationFn: async (input: UpdateMarketingTaskInput) => {
-      const { id, ...rawData } = input;
+      const { id, copy_subtasks: _copySubtasks, ...rawData } = input;
 
       // Sanitizar campos UUID antes de enviar
       const updateData: Record<string, unknown> = { ...rawData };
@@ -263,9 +292,9 @@ export function useMarketingTasks() {
     },
     onMutate: async (updates) => {
       await queryClient.cancelQueries({ queryKey: ["marketing-tasks"] });
-      const previousTasks = queryClient.getQueryData<MarketingTask[]>(["marketing-tasks"]);
+      const previousTasks = queryClient.getQueryData<MarketingTask[]>(queryKey);
 
-      queryClient.setQueryData<MarketingTask[]>(["marketing-tasks"], (old) => {
+      queryClient.setQueryData<MarketingTask[]>(queryKey, (old) => {
         if (!old) return old;
         return old.map((task) => {
           const update = updates.find((u) => u.id === task.id);
@@ -277,7 +306,7 @@ export function useMarketingTasks() {
     },
     onError: (error, _, context) => {
       if (context?.previousTasks) {
-        queryClient.setQueryData(["marketing-tasks"], context.previousTasks);
+        queryClient.setQueryData(queryKey, context.previousTasks);
       }
       toast.error("Erro ao reordenar tarefas: " + error.message);
     },

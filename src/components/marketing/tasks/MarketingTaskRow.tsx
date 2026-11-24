@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
 import { cn } from "@/lib/utils";
 import { GripVertical, AlertCircle } from "lucide-react";
+import { readTaskDetails } from "@/lib/marketing/taskDetails";
+import { TaskPeopleAndLabels } from "./TaskPeopleAndLabels";
 
 interface MarketingTaskRowProps {
   task: MarketingTask;
@@ -34,6 +36,7 @@ function isTaskOverdue(task: MarketingTask): boolean {
 
 export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTaskRowProps) {
   const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
+  const details = readTaskDetails(task);
   
   const getDueDateDisplay = () => {
     if (!dueDate) return null;
@@ -76,7 +79,8 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
       </div>
 
       {/* Task Title */}
-      <div className="min-w-0 flex items-center gap-2">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
         <span
           className={cn(
             "text-sm truncate block",
@@ -91,6 +95,8 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
             Atrasada
           </Badge>
         )}
+        </div>
+        <TaskPeopleAndLabels task={task} showAssignee={false} />
       </div>
 
       {/* Assignee */}
@@ -117,6 +123,7 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
         {dueDateDisplay ? (
           <span className={cn("text-sm", dueDateDisplay.className)}>
             {dueDateDisplay.text}
+            {details.dueTime && <span className="block text-xs">{details.dueTime}</span>}
           </span>
         ) : (
           <span className="text-sm text-muted-foreground/50">—</span>

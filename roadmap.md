@@ -1,5 +1,11 @@
 # Roadmap — Processos do CS
 
+## Tarefas de Marketing: duplicação e identificação
+- [x] Duplicar tarefa como uma nova cópia editável, preservando a original e reiniciando conclusão das subtarefas.
+- [x] Data e horário de entrega (24h), solicitante separado do responsável e etiquetas coloridas persistidas nos campos existentes; sem migração ou alteração de permissões.
+- [x] Mostrar identificação no quadro/lista e filtrar cartões por etiquetas, combinando com filtros existentes.
+- [x] 17 testes passaram; sessão autenticada: criar/reabrir, duplicar/cancelar, copiar subtarefa, filtrar e editar/limpar campos conferidos por tarefas fictícias. Originais preservadas, somente as 3 tarefas QA removidas (inclui a cópia), sem sobras; diálogo/rodapé/etiquetas em 390/794/1440 px, claro/escuro e Escape conferidos, sem publicação.
+
 ## Funil MQL no Insights
 - [x] Reproduzir na sessão atual: nomes salvos “Closer” e “Repescagem / Cadencia” não correspondem aos funis atuais; fallback trazia 19 linhas de todos os funis, com valores zero.
 - [x] Corrigir somente a apresentação/leitura: filtro sem correspondência não inclui outros funis; etapas com largura legível e rolagem local quando necessário, sem alterar filtros salvos ou dados.
