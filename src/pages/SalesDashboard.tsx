@@ -1015,8 +1015,8 @@ export default function SalesDashboard() {
         title="Dashboard Comercial"
         description="Visão executiva de receita, funil, equipe e origem dos ganhos."
         actions={
-          <div className="flex w-full min-w-0 flex-wrap items-end gap-2">
-            <CompanyFilter companies={companies} value={companyFilter} onChange={setCompanyFilter} loading={companiesLoading} />
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+            <CompanyFilter companies={companies} value={companyFilter} onChange={setCompanyFilter} loading={companiesLoading} className="sm:w-full md:w-[220px]" triggerClassName="min-h-0 h-11 md:h-9 rounded-xl bg-card ring-1 ring-hairline" />
             <Filter className="hidden md:block w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
               <SelectTrigger aria-label="Período" className="w-full md:w-[190px] h-11 md:h-9 rounded-xl bg-card ring-1 ring-hairline">
