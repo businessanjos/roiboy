@@ -31,6 +31,9 @@ import { DealStagesManager } from "@/components/sales/DealStagesManager";
 import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { PipelineFilterButton } from "@/components/sales/PipelineFilterButton";
+import { PipelineCompanyFilter } from "@/components/sales/PipelineCompanyFilter";
+import { useCompany } from "@/contexts/CompanyContext";
+import { filterDealsByCompany } from "@/lib/sales/companyFilter";
 import { PipelineDebugDialog } from "@/components/sales/PipelineDebugDialog";
 import { ActiveFilterChips } from "@/components/sales/ActiveFilterChips";
 import type { CustomFieldOption } from "@/components/sales/PipelineFilterDialog";
@@ -92,6 +95,7 @@ import {
   ChevronDown,
   Check,
   AlertTriangle,
+  Building2,
 } from "lucide-react";
 import { RefreshCw as ReapplyIcon, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -115,6 +119,9 @@ import { isRenewalDeal } from "@/lib/sales/renewalBriefing";
 export default function SalesPipeline() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser } = useCurrentUser();
+  const { companies, loading: companiesLoading } = useCompany();
+  const [companyFilter, setCompanyFilter] = usePersistedFilter<string>("salesPipeline", "companyFilter", "all");
+  const selectedFilterCompany = companies.find((company) => company.id === companyFilter);
   
   const {
     pipelines,
@@ -1246,14 +1253,14 @@ export default function SalesPipeline() {
   // Usado como base para as opções do filtro de origem e como base do filtro final.
   const dealsBeforeTagFilter = useMemo(() => {
     if (activityStatusLoading && activeFilterNeedsActivityCounts) return [];
-    const base = applyFilterToDeals(openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap);
+    const base = applyFilterToDeals(filterDealsByCompany(openDeals, companyFilter), activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap);
     if (!openDateRange) return base;
     return base.filter(d => {
       if (!d.created_at) return false;
       const created = new Date(d.created_at);
       return isWithinInterval(created, { start: openDateRange.start, end: openDateRange.end });
     });
-  }, [activityStatusLoading, activeFilterNeedsActivityCounts, openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap, openDateRange, searchOptions]);
+  }, [activityStatusLoading, activeFilterNeedsActivityCounts, openDeals, companyFilter, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap, openDateRange, searchOptions]);
 
 
   // Opções do filtro de origem — respeitam os demais filtros ativos.
@@ -1304,13 +1311,14 @@ export default function SalesPipeline() {
 
   const clearAllPipelineFilters = useCallback(() => {
     setActiveFilter(null);
+    setCompanyFilter("all");
     setSearchTerm("");
     setTitleTagFilter([]);
     setActivitySort('none');
     setOpenDatePreset('all');
     setOpenDateStart('');
     setOpenDateEnd('');
-  }, [setActiveFilter, setSearchTerm, setTitleTagFilter, setActivitySort, setOpenDatePreset, setOpenDateStart, setOpenDateEnd]);
+  }, [setActiveFilter, setCompanyFilter, setSearchTerm, setTitleTagFilter, setActivitySort, setOpenDatePreset, setOpenDateStart, setOpenDateEnd]);
 
 
   const filteredOpenWeightedValue = useMemo(
@@ -1324,12 +1332,12 @@ export default function SalesPipeline() {
 
   // Ganhas/Perdidas: busca primeiro (base das opções de Origem), depois Formulário e Origem.
   const wonBeforeTagFilter = useMemo(() =>
-    applyFilterToDeals(wonDeals, null, debouncedSearchTerm, openDealProductMap, undefined, undefined, searchOptions),
-    [wonDeals, debouncedSearchTerm, openDealProductMap, searchOptions]
+    applyFilterToDeals(filterDealsByCompany(wonDeals, companyFilter), null, debouncedSearchTerm, openDealProductMap, undefined, undefined, searchOptions),
+    [wonDeals, companyFilter, debouncedSearchTerm, openDealProductMap, searchOptions]
   );
   const lostBeforeTagFilter = useMemo(() =>
-    applyFilterToDeals(lostDeals, null, debouncedSearchTerm, openDealProductMap, undefined, undefined, searchOptions),
-    [lostDeals, debouncedSearchTerm, openDealProductMap, searchOptions]
+    applyFilterToDeals(filterDealsByCompany(lostDeals, companyFilter), null, debouncedSearchTerm, openDealProductMap, undefined, undefined, searchOptions),
+    [lostDeals, companyFilter, debouncedSearchTerm, openDealProductMap, searchOptions]
   );
   const applyTagAndReapply = useCallback((list: Deal[]) => {
     let out = list;
@@ -2359,6 +2367,12 @@ export default function SalesPipeline() {
 
   const filtersPanel = (
                   <div className="flex flex-wrap items-end gap-3 bg-card border border-border rounded-xl p-3 shadow-sm w-full mt-2">
+                    <PipelineCompanyFilter
+                      companies={companies}
+                      value={companyFilter}
+                      onChange={setCompanyFilter}
+                      loading={companiesLoading}
+                    />
                     {activeTab === 'open' && (
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Avançado</label>
@@ -2370,7 +2384,7 @@ export default function SalesPipeline() {
                             onFilterChange={setActiveFilter}
                             availableTags={availableTags}
                             products={pipelineProducts}
-                            previewDeals={openDeals}
+                            previewDeals={filterDealsByCompany(openDeals, companyFilter)}
                             previewProductMap={openDealProductMap}
                             previewCustomFieldValues={dealCustomFieldValues}
                             previewNextActivityMap={dealNextActivityMap}
@@ -2758,6 +2772,22 @@ export default function SalesPipeline() {
                   ) : (!filtersCollapsed && filtersPanel)}
                   </div>
                 </div>
+
+                {companyFilter !== "all" && (
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="min-h-11 max-w-full gap-2 border-primary/40 text-primary"
+                      onClick={() => setCompanyFilter("all")}
+                      aria-label="Limpar filtro de empresa"
+                      title="Limpar filtro de empresa"
+                    >
+                      <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="min-w-0 truncate">{selectedFilterCompany?.trade_name || selectedFilterCompany?.legal_name || "Empresa selecionada"}</span>
+                      <X className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    </Button>
+                  </div>
+                )}
 
                 {/* Active filter chips (only for open pipeline view) */}
                 {activeTab === 'open' && (

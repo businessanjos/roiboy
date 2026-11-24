@@ -38,6 +38,7 @@ export interface Deal {
   client_id: string | null;
   lead_id: string | null;
   pipeline_id: string | null;
+  company_id?: string | null;
   contact_name: string | null;
   contact_phone: string | null;
   contact_email: string | null;
@@ -244,7 +245,7 @@ export function useDeals(pipelineId?: string | null) {
     setLoading(true);
     try {
       const selectQuery = `
-          id, account_id, title, client_id, lead_id, pipeline_id, contact_name, contact_phone, contact_email,
+          id, account_id, title, client_id, lead_id, pipeline_id, company_id, contact_name, contact_phone, contact_email,
           stage_id, value, entry_value, received_value, currency, expected_close_date, probability, source,
           responsible_user_id, sdr_user_id, notes, status, won_at, lost_at, lost_reason,
           loss_reason_id, loss_sub_reason_id, loss_notes, tags, is_renewal, renewal_responsible_user_id, created_at, updated_at,
