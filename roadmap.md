@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Tarefas abrem em Abertas
+- [x] Cada montagem começa em Abertas sem restaurar a situação anterior; troca manual, demais filtros, permissões e registros mantidos.
+- [x] 16 testes passaram; abertura com situação antiga salva, troca para Concluídas e reabertura em Abertas conferidas com tarefas fictícias em 390/958 px, sem erros ou escritas reais. Compilação sem erros; não publicado.
+- [ ] Conferência na conta real: sessão própria indisponível; teste com respostas fictícias não valida persistência real.
+
 ## Topo compacto das tarefas de Marketing
 - [x] Reduzir título e espaçamento; concentrar filtros num menu e ações secundárias em mais opções, preservando busca, filtros, telas e callbacks.
 - [x] 20 testes passaram; busca, filtros combinados, limpar, ordenação, nova tarefa, separadores, etapas, lista/quadro e tela cheia conferidos com tarefas fictícias em 390/958/1440 px, claro/escuro, sem overflow ou alterações reais; compilação sem erros.
