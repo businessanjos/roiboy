@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Avisos de tarefas recebidas
+- [x] Notificar o responsável no servidor quando a tarefa é criada para ele ou transferida para ele, sem repetição em edições comuns, autoatribuição ou pessoas técnicas/inativas/de outra conta; acesso e identidade preservados.
+- [x] Aviso compacto no canto superior com foto, primeiro nome e abertura direta; quadro atualizado e push sem duplicação. 32 testes passaram; criação, transferência, abertura mesmo com filtros, fechar, sino e formatos 390/798/1440 px em claro/escuro conferidos com pessoas fictícias, sem erros ou escritas reais. Migração aplicada e compilação sem erros; não publicado.
+- [ ] Entrega entre sessões reais em /marketing/projetos?tab=tarefas: sessão própria indisponível e criação de usuário temporário falhou. Testes isolados não substituem a verificação autenticada.
+
 ## Avisos de comentários e menções nas tarefas
 - [x] Avisos criados no servidor após comentar: responsável e pessoas mencionadas do Marketing, na mesma conta; sem notificar o próprio autor ou duplicar destinatários. @primeiro-nome digitado só resolve se único; seleção mantém o ID individual.
 - [x] Seleção por @ com foto/primeiro nome, barra de formatação preservada; aviso compacto no canto superior direito com fechar e Abrir tarefa, chegando ao comentário mesmo com filtros no quadro. Assinatura de notificações filtrada pelo usuário, sem reenviar push já gerado no servidor; permissões e silêncio dos painéis preservados.

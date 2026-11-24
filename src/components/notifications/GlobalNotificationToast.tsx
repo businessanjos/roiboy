@@ -25,10 +25,10 @@ const initials = (n: string) => n.split(" ").map((p) => p[0]).join("").slice(0, 
 
 export function GlobalNotificationToast({ title, content, type, sourceType, actorName, actorAvatar, hasLink, onOpen, onDismiss }: Props) {
   const Icon = iconFor(type, sourceType);
-  if (sourceType === "marketing_task_comment") {
+  if (sourceType === "marketing_task_comment" || sourceType === "marketing_task_assignment") {
     const [taskTitle, ...preview] = (content ?? "").split("\n");
     const firstName = actorName?.trim().split(/\s+/)[0];
-    const TaskIcon = type === "mention" ? AtSign : MessageSquare;
+    const TaskIcon = type === "mention" ? AtSign : type === "task_assigned" ? CheckSquare : MessageSquare;
     return <div className="relative w-full min-w-0 pointer-events-auto py-1 text-foreground">
       <Button type="button" variant="ghost" size="icon" className="absolute -right-1 -top-1 h-7 w-7 text-muted-foreground" aria-label="Fechar aviso" title="Fechar aviso" onClick={onDismiss}><X className="h-3.5 w-3.5" /></Button>
       <div className="flex items-start gap-2.5 pr-5">

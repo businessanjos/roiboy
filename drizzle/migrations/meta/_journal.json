@@ -750,6 +750,13 @@
       "when": 1795556165219,
       "tag": "0106_marketing_task_comment_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1795556845753,
+      "tag": "0107_marketing_task_assignment_notifications",
+      "breakpoints": true
     }
   ]
 }

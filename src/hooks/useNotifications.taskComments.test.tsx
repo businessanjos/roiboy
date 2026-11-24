@@ -38,11 +38,12 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
 const row = (overrides:Partial<Row>={}):Row => ({ id:"comment-notification",user_id:"owner",source_type:"marketing_task_comment",created_at:new Date().toISOString(),is_read:false,type:"mention",title:"Menção",content:"TESTE QA\nRevisar",link:"/marketing/projetos?tab=tarefas&task=task&comment=comment",...overrides });
 function Harness() { const {unreadCount}=useNotifications();return <span data-testid="unread">{unreadCount}</span>; }
 async function setup() {
-  const view=render(<QueryClientProvider client={new QueryClient()}><NotificationsProvider><Harness /></NotificationsProvider></QueryClientProvider>);
+  const queryClient=new QueryClient();
+  const view=render(<QueryClientProvider client={queryClient}><NotificationsProvider><Harness /></NotificationsProvider></QueryClientProvider>);
   await waitFor(()=>expect(state.handlers.some(handler=>handler.event==="INSERT")).toBe(true));
   const handler=state.handlers.find(item=>item.event==="INSERT");
   if (!handler) throw new Error("Subscription unavailable");
-  return {view,handler};
+  return {view,handler,queryClient};
 }
 beforeEach(()=>{cleanup();state.rows=[];state.handlers=[];state.single=0;state.custom.mockClear();vi.stubGlobal("fetch",vi.fn());});
 describe("Entrega individual dos avisos de tarefas",()=>{
@@ -66,5 +67,19 @@ describe("Entrega individual dos avisos de tarefas",()=>{
     expect(view.getByTestId("unread").textContent).toBe("0");
     expect(state.single).toBe(0);
     expect(state.custom).not.toHaveBeenCalled();
+  });
+  it("tarefa atribuída chega uma vez, atualiza o quadro e não duplica push",async()=>{
+    const {view,handler,queryClient}=await setup();
+    const invalidate=vi.spyOn(queryClient,"invalidateQueries");
+    const notification=row({id:"assignment",source_type:"marketing_task_assignment",type:"task_assigned",link:"/marketing/projetos?tab=tarefas&task=task"});
+    state.rows=[notification];
+    await act(()=>handler.callback({new:notification}));
+    await waitFor(()=>expect(view.getByTestId("unread").textContent).toBe("1"));
+    await act(()=>handler.callback({new:notification}));
+    expect(state.custom).toHaveBeenCalledTimes(1);
+    expect(state.custom.mock.calls[0]?.[1]).toMatchObject({position:"top-right"});
+    expect(state.single).toBe(1);
+    expect(invalidate).toHaveBeenCalledWith({queryKey:["marketing-tasks"]});
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

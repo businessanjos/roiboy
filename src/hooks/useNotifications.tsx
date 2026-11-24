@@ -329,10 +329,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           const newNotification = payload.new as Notification;
 
           if (newNotification.user_id === currentUserId) {
-            if (newNotification.source_type === "marketing_task_comment") {
+            const isMarketingTaskNotification = newNotification.source_type === "marketing_task_comment" || newNotification.source_type === "marketing_task_assignment";
+            if (isMarketingTaskNotification) {
               if (taskNotificationsSeen.current.has(newNotification.id)) return;
               taskNotificationsSeen.current.add(newNotification.id);
-              void queryClient.invalidateQueries({ queryKey: ["marketing-task-comments"] });
+              void queryClient.invalidateQueries({ queryKey: [newNotification.source_type === "marketing_task_assignment" ? "marketing-tasks" : "marketing-task-comments"] });
             }
             const now = Date.now();
             const { stale, quiet } = notifyDecision(
@@ -394,8 +395,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
                   { duration: 10000, position: "top-right" }
                 );
 
-                // Marketing comment pushes already originate from the notification INSERT trigger.
-                if (data.source_type !== "marketing_task_comment") {
+                // Marketing task pushes already originate from the notification INSERT trigger.
+                if (!isMarketingTaskNotification) {
                 // Send push notification via edge function (server-side)
                 // This ensures it works even when the app is in the background
                 try {
