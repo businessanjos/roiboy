@@ -1,5 +1,11 @@
 # Roadmap — Processos do CS
 
+## Funil MQL no Insights
+- [x] Reproduzir na sessão atual: nomes salvos “Closer” e “Repescagem / Cadencia” não correspondem aos funis atuais; fallback trazia 19 linhas de todos os funis, com valores zero.
+- [x] Corrigir somente a apresentação/leitura: filtro sem correspondência não inclui outros funis; etapas com largura legível e rolagem local quando necessário, sem alterar filtros salvos ou dados.
+- [x] 32 testes passaram; conferência autenticada confirma ausência das etapas indevidas. Nomes atuais simulados apenas na resposta de leitura, sem salvar: CR mostra 7 etapas + Ganhos/Perdidos e total 61 em novembro; 390/794/1440 px sem overflow das barras ou erros. Painel normal mostra todas as etapas; modo TV mantém rolagem local. A lista de Chegou Lead abriu vazia (a barra é cumulativa, não a contagem da etapa). Não publicado.
+- Filtros salvos ainda apontam a nomes inexistentes: precisam ser atualizados pelo responsável pelo painel; não foram remapeados automaticamente nem regravados neste ajuste.
+
 ## Filtros por Item da Venda e campos preenchidos
 - [x] Reproduzir o filtro “Leads CR”: o cartão usa UUID de produto e a condição usa código da opção; antes mostrava zero para 16 cartões válidos, inclusive Fabienne. RLS consultada e preservada.
 - [x] Corrigir comparação do Pipeline, seletor de produto e exportação com o mesmo comparador de identidade; leitura completa por lote/página, campos da prévia independentes do filtro aplicado e estados de carregamento/erro; nenhum filtro salvo, negócio ou contrato regravado.

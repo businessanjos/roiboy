@@ -15,6 +15,7 @@ import { withQueryTimeout } from "@/lib/queryTimeout";
 import { scheduleVisualQuery } from "@/lib/queryScheduler";
 import { isCustomFieldKey, enrichRecordsWithCustomField, getSelectedValuesForKey } from "@/lib/insights/customFieldValues";
 import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
+import { resolveFunnelPipelineIds } from "@/lib/insights/funnelPipelineScope";
 
 
 
@@ -161,19 +162,19 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
       if (chartType === 'funnel' && dimension.field === 'stage_name') {
         // Respect an active "Funil" (pipeline) filter: only stages of the
         // selected pipeline(s) should compose the funnel skeleton.
-        const pipelineFilter = (config.filters || []).find(
-          (f: any) => f.field === 'pipeline_name' && (f.operator === 'is' || f.operator === 'is_any') && (f.values?.length || 0) > 0
-        );
+        const hasPipelineScope = (config.filters || []).some(
+          (f) => f.source === 'native' && f.field === 'pipeline_name'
+        ) || (!!filters.pipelineId && filters.pipelineId !== 'all');
         let allowedPipelineIds: string[] | null = null;
-        if (pipelineFilter) {
+        if (hasPipelineScope) {
           const { data: pipelineRows } = await supabase
             .from('pipelines')
             .select('id, name')
             .eq('account_id', accountId);
-          const wanted = new Set(pipelineFilter.values.map((v: string) => v.toLowerCase()));
-          allowedPipelineIds = (pipelineRows || [])
-            .filter((p: any) => wanted.has(String(p.name).toLowerCase()))
-            .map((p: any) => p.id);
+          allowedPipelineIds = resolveFunnelPipelineIds(pipelineRows || [], config.filters, filters.pipelineId);
+          // A stale/renamed pipeline filter is empty, never permission to
+          // assemble a skeleton from every other pipeline in the account.
+          if (allowedPipelineIds?.length === 0) return [];
         }
 
         let stagesQuery = supabase
@@ -191,6 +192,8 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
         const { data: stages, error: stagesError } = await stagesQuery;
 
         if (stagesError) console.error('Error fetching stages order:', stagesError);
+
+        if (allowedPipelineIds && !stages?.length) return [];
 
 
         if (stages && stages.length > 0) {
