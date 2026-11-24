@@ -37,6 +37,7 @@ interface DealKanbanProps {
   selectionMode?: boolean;
   selectedIds?: ReadonlySet<string>;
   onSelectDeal?: (id: string) => void;
+  onSelectStage?: (stageId: string) => void;
   selectionDisabled?: boolean;
   fieldRefreshKey?: number;
 }
@@ -52,7 +53,7 @@ interface RequiredFieldsModalState {
   accountId: string;
 }
 
-export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivityCounts = false, fullHeight = false, selectionMode, selectedIds, onSelectDeal, selectionDisabled, fieldRefreshKey = 0 }: DealKanbanProps) {
+export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivityCounts = false, fullHeight = false, selectionMode, selectedIds, onSelectDeal, onSelectStage, selectionDisabled, fieldRefreshKey = 0 }: DealKanbanProps) {
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
   const { validateDealMove } = useRequiredFieldsValidation();
   const [requiredFieldsModal, setRequiredFieldsModal] = useState<RequiredFieldsModalState | null>(null);
@@ -392,6 +393,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
                   selectionMode={selectionMode}
                   selectedIds={selectedIds}
                   onSelectDeal={onSelectDeal}
+                  onSelectStage={onSelectStage}
                   selectionDisabled={selectionDisabled}
                 />
               )}
@@ -429,6 +431,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
                   selectionMode={selectionMode}
                   selectedIds={selectedIds}
                   onSelectDeal={onSelectDeal}
+                  onSelectStage={onSelectStage}
                   selectionDisabled={selectionDisabled}
                 />
               ))}

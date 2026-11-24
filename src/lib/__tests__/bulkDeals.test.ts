@@ -1,10 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
-import { bulkDestinationPipelines, bulkFieldColumns, mqlFromRevenue, parseBulkNumber, runBulkDeals, selectedFilteredDeals } from "@/lib/sales/bulkDeals";
+import { bulkDestinationPipelines, bulkFieldColumns, mqlFromRevenue, parseBulkNumber, runBulkDeals, selectedFilteredDeals, toggleBulkStageSelection } from "@/lib/sales/bulkDeals";
 import type { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 
 const field = (field_type: CustomField["field_type"]): CustomField => ({ id: "field", name: "Campo", field_type, options: [], is_required: false, display_order: 0, is_active: true });
 
 describe("Alterações em massa de negócios", () => {
+  it("selecionar todos por etapa respeita os filtros e preserva outras etapas", () => {
+    const filtered = [{ id: "A", stage_id: "chegou" }, { id: "B", stage_id: "chegou" }, { id: "C", stage_id: "contato" }];
+    const previous = new Set(["A", "C"]);
+    expect([...toggleBulkStageSelection(filtered, previous, "chegou")].sort()).toEqual(["A", "B", "C"]);
+    expect(previous.has("B")).toBe(false);
+  });
+  it("clicar novamente desmarca só a etapa que estava toda selecionada", () => {
+    expect([...toggleBulkStageSelection([{ id: "A", stage_id: "chegou" }, { id: "B", stage_id: "chegou" }, { id: "C", stage_id: "contato" }], new Set(["A", "B", "C"]), "chegou")]).toEqual(["C"]);
+  });
+  it("seleciona todos os 61 negócios filtrados da etapa, não apenas os 30 renderizados", () => {
+    const filtered = Array.from({ length: 61 }, (_, i) => ({ id: String(i), stage_id: "chegou" }));
+    expect([...toggleBulkStageSelection(filtered, new Set(), "chegou")]).toEqual(filtered.map(d => d.id));
+  });
+  it("etapa vazia não modifica as seleções existentes", () => {
+    expect([...toggleBulkStageSelection([{ id: "A", stage_id: "chegou" }], new Set(["A"]), "vazia")]).toEqual(["A"]);
+  });
   it("nunca oferece o funil Repescagem como destino em massa", () => {
     expect(bulkDestinationPipelines([{ name: "Funil Mentoria" }, { name: "Funil de Repescagem" }, { name: "Funil Aceleração CR" }])).toEqual([{ name: "Funil Mentoria" }, { name: "Funil Aceleração CR" }]);
   });

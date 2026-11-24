@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useBulkDeals } from "@/hooks/useBulkDeals";
-import { selectedFilteredDeals } from "@/lib/sales/bulkDeals";
+import { selectedFilteredDeals, toggleBulkStageSelection } from "@/lib/sales/bulkDeals";
 import { BulkDealToolbar } from "@/components/sales/BulkDealToolbar";
 import { BulkDealDialog } from "@/components/sales/BulkDealDialog";
 import { BulkDealHistoryDialog } from "@/components/sales/BulkDealHistoryDialog";
@@ -1671,6 +1671,11 @@ export default function SalesPipeline() {
     });
   };
 
+  const toggleBulkStage = (stageId: string) => {
+    if (!canBulkEdit || !bulkSelectionMode || bulk.running) return;
+    setBulkSelectedIds(previous => toggleBulkStageSelection(sortedOpenDeals, previous, stageId));
+  };
+
   const handleDealClick = (deal: Deal) => {
     if (bulkSelectionMode) { toggleBulkDeal(deal.id); return; }
     setSelectedDeal(deal);
@@ -3151,6 +3156,7 @@ export default function SalesPipeline() {
                     selectionMode={bulkSelectionMode}
                     selectedIds={bulkSelectedIds}
                     onSelectDeal={toggleBulkDeal}
+                    onSelectStage={toggleBulkStage}
                     selectionDisabled={bulk.running}
                     fieldRefreshKey={bulkRefreshTick}
                   />

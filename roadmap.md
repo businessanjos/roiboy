@@ -19,6 +19,8 @@
 - [ ] Conferência completa das três telas com dados reais: sessão indisponível ao teste, mesmo após confirmação de entrada na prévia; abertura de /setores retornou ao login e a criação/seleção de sessão não foi autorizada/disponibilizada.
 
 ## Alterações em massa no Pipeline
+- [x] “Selecionar todos” por etapa, com contagem, estado parcial, desmarcação independente e filtros preservados; 16 testes passaram e controles conferidos com exemplos em 390/794/1440 px, sem alterar negócios.
+- [ ] Conferir seleção por etapa com cards reais: a sessão própria não foi disponibilizada (`auth-session --self` sem conta correspondente); aguarda entrada na prévia.
 - [x] Reorganizar janela e mover “Selecionar cards” para o menu discreto do funil.
 - [x] Restringir alterações em massa a adm/gestor no servidor e na interface, preservando as permissões individuais existentes.
 - [x] Registrar autor, data, ação e resultados em histórico persistente; desfazer a última movimentação própria com verificação contra alterações posteriores.

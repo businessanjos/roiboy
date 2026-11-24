@@ -4,6 +4,7 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Deal, DealStage } from "@/hooks/useDeals";
 import { DealCard } from "./DealCard";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { ActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 import { Users, Clock, MessageSquare, CheckCircle, XCircle, ArrowDown, ChevronDown } from "lucide-react";
@@ -22,6 +23,7 @@ interface DealKanbanColumnProps {
   selectionMode?: boolean;
   selectedIds?: ReadonlySet<string>;
   onSelectDeal?: (id: string) => void;
+  onSelectStage?: (stageId: string) => void;
   selectionDisabled?: boolean;
 }
 
@@ -47,7 +49,7 @@ const getStageIcon = (stageName: string, color: string) => {
   return <Users className={iconClass} style={{ color }} />;
 };
 
-export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap, isDragActive = false, activityStatusGetter, showActivityCounts = false, fullWidth = false, selectionMode, selectedIds, onSelectDeal, selectionDisabled }: DealKanbanColumnProps) {
+export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap, isDragActive = false, activityStatusGetter, showActivityCounts = false, fullWidth = false, selectionMode, selectedIds, onSelectDeal, onSelectStage, selectionDisabled }: DealKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
   });
@@ -58,6 +60,8 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
   
   const visibleDeals = useMemo(() => deals.slice(0, visibleCount), [deals, visibleCount]);
   const hasMore = deals.length > visibleCount;
+  const selectedCount = deals.filter(deal => selectedIds?.has(deal.id)).length;
+  const stageChecked = selectedCount === 0 ? false : selectedCount === deals.length ? true : "indeterminate";
 
   const totalValue = deals.reduce((sum, deal) => sum + (deal.value || 0), 0);
 
@@ -72,6 +76,8 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
   return (
     <div
       ref={setNodeRef}
+      role="region"
+      aria-label={`Etapa ${stage.name}`}
       className={cn(
         fullWidth
           ? "w-full min-w-0 max-w-none h-full min-h-0 flex flex-col transition-all duration-200"
@@ -131,6 +137,17 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
           <span className="w-6 flex-shrink-0" />
         )}
       </div>
+
+      {selectionMode && onSelectStage && <label className="mb-1 flex min-h-11 cursor-pointer items-center gap-2 px-2 text-xs text-muted-foreground">
+        <Checkbox
+          aria-label={`Selecionar todos da etapa ${stage.name}`}
+          checked={stageChecked}
+          disabled={selectionDisabled || deals.length === 0}
+          onCheckedChange={() => onSelectStage(stage.id)}
+        />
+        <span className="min-w-0 flex-1">Selecionar todos</span>
+        <span className="shrink-0 tabular-nums">{selectedCount.toLocaleString("pt-BR")} / {deals.length.toLocaleString("pt-BR")}</span>
+      </label>}
 
       {/* Cards Container */}
       <div 

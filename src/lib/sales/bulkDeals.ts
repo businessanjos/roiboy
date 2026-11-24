@@ -24,6 +24,17 @@ export function selectedFilteredDeals<T extends { id: string }>(deals: T[], sele
   return deals.filter(deal => selected.has(deal.id));
 }
 
+/** Stage selection includes every filtered card, not just the first rendered page. */
+export function toggleBulkStageSelection<T extends { id: string; stage_id: string | null }>(deals: T[], selected: ReadonlySet<string>, stageId: string): Set<string> {
+  const stageDeals = deals.filter(deal => deal.stage_id === stageId);
+  const allSelected = stageDeals.length > 0 && stageDeals.every(deal => selected.has(deal.id));
+  const next = new Set(selected);
+  for (const deal of stageDeals) {
+    if (allSelected) next.delete(deal.id); else next.add(deal.id);
+  }
+  return next;
+}
+
 export function bulkDestinationPipelines<T extends { name: string }>(pipelines: T[]): T[] {
   return pipelines.filter(pipeline => !pipeline.name.toLowerCase().includes("repescagem"));
 }
