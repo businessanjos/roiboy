@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSONContent } from "@tiptap/react";
 import { MessageSquare, Send, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useMarketingTaskComments } from "@/hooks/useMarketingTaskComments";
+import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { plainTaskDocument } from "@/lib/marketing/taskDescription";
 import { writeTaskComment } from "@/lib/marketing/taskCommentContent";
 import { cn } from "@/lib/utils";
@@ -15,8 +16,9 @@ import { TaskCommentBody } from "./TaskCommentBody";
 const commentDate = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeZone: "America/Sao_Paulo" });
 const commentTime = new Intl.DateTimeFormat("pt-BR", { timeStyle: "short", timeZone: "America/Sao_Paulo" });
 const fullCommentDate = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
-export function TaskComments({ taskId }: { taskId?: string | null }) {
+export function TaskComments({ taskId, focusCommentId }: { taskId?: string | null; focusCommentId?: string | null }) {
   const { comments, isLoading, error, add, remove, currentUser } = useMarketingTaskComments(taskId);
+  const { data: mentionPeople = [] } = useMarketingTeamUsers();
   const [body, setBody] = useState("");
   const [document, setDocument] = useState<JSONContent>(() => plainTaskDocument(""));
   const [colors, setColors] = useState<string[]>([]);
@@ -26,10 +28,17 @@ export function TaskComments({ taskId }: { taskId?: string | null }) {
   const conversation = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
   const lastCommentId = comments.at(-1)?.id;
+  const focusedComment = useRef<string | null>(null);
+  const rootRef = useCallback((element: HTMLDivElement | null) => setPortalContainer(element?.closest<HTMLElement>('[role="dialog"]') ?? null), []);
   useEffect(() => {
     const element = conversation.current;
     if (element && stickToBottom.current) element.scrollTop = element.scrollHeight;
   }, [lastCommentId]);
+  useEffect(() => {
+    if (!focusCommentId || focusedComment.current === focusCommentId) return;
+    const element = conversation.current?.querySelector<HTMLElement>(`[data-comment-id="${CSS.escape(focusCommentId)}"]`);
+    if (element) { focusedComment.current = focusCommentId; element.scrollIntoView({ block: "center" }); }
+  }, [focusCommentId, comments]);
   const submit = async () => {
     if (!taskId || !body.trim() || add.isPending) return;
     try {
@@ -38,10 +47,7 @@ export function TaskComments({ taskId }: { taskId?: string | null }) {
       setBody(""); setDocument(plainTaskDocument("")); setEditorKey((key) => key + 1);
     } catch { /* Keep text and formatting on failure. */ }
   };
-  return <div className="min-w-0 space-y-3" ref={(element) => {
-    const dialog = element?.closest<HTMLElement>('[role="dialog"]');
-    setPortalContainer(dialog ?? null);
-  }}>
+  return <div className="min-w-0 space-y-3" ref={rootRef}>
     <Label className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-muted-foreground" />Comentários {comments.length > 0 && <span className="text-xs text-muted-foreground">({comments.length})</span>}</Label>
     {error && <p role="alert" className="text-sm text-destructive">Não foi possível carregar os comentários.</p>}
     <div ref={conversation} role="log" aria-label="Conversa da tarefa" aria-live="polite" className="max-h-80 min-w-0 space-y-3 overflow-y-auto overscroll-contain rounded-md border bg-muted/40 p-3 sm:p-4"
@@ -56,14 +62,14 @@ export function TaskComments({ taskId }: { taskId?: string | null }) {
         const day = commentDate.format(date);
         const previous = comments[index - 1];
         const showDay = !previous || commentDate.format(new Date(previous.created_at)) !== day;
-        return <div key={comment.id} className="space-y-3">
+        return <div key={comment.id} data-comment-id={comment.id} className="space-y-3">
           {showDay && <div className="flex justify-center"><span className="rounded px-2 py-1 text-[11px] text-muted-foreground">{day}</span></div>}
           <div className={cn("flex items-end gap-2", own && "flex-row-reverse")}>
             <Avatar className="h-8 w-8 shrink-0 border border-background" title={fullName}>
               <AvatarImage src={comment.author?.avatar_url || undefined} alt={name} />
               <AvatarFallback className="bg-secondary text-xs font-medium text-secondary-foreground">{name.slice(0, 1).toUpperCase()}</AvatarFallback>
             </Avatar>
-            <div className={cn("min-w-0 max-w-[85%] rounded-lg border px-3 py-2 text-foreground", own ? "rounded-br-none border-primary/15 bg-zapp-message-out" : "rounded-bl-none border-border/60 bg-background")}>
+            <div className={cn("min-w-0 max-w-[85%] rounded-lg border px-3 py-2 text-foreground", own ? "rounded-br-none border-primary/15 bg-zapp-message-out" : "rounded-bl-none border-border/60 bg-background", comment.id === focusCommentId && "ring-1 ring-primary/40")}>
               <p className="mb-1 truncate text-xs font-semibold text-foreground/80" title={fullName}>{name}</p>
               <TaskCommentBody body={comment.body} />
               <div className="mt-1 flex items-center justify-end gap-1.5">
@@ -77,7 +83,7 @@ export function TaskComments({ taskId }: { taskId?: string | null }) {
     </div>
     <TaskDescriptionEditor initialContent={document} valueKey={String(editorKey)} label="Novo comentário" compact
       onChange={(text, next) => { setBody(text); setDocument(next); }} colors={colors} onColorsChange={setColors}
-      disabled={!taskId || add.isPending} portalContainer={portalContainer} />
+      disabled={!taskId || add.isPending} portalContainer={portalContainer} mentionPeople={mentionPeople} />
     <div className="flex justify-end"><Button type="button" variant="default" size="sm" onClick={submit} disabled={!taskId || !body.trim() || add.isPending}>{add.isPending ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" /> : <Send className="h-4 w-4" />}Comentar</Button></div>
     <AlertDialog open={!!deleting} onOpenChange={(open) => { if (!open && !remove.isPending) setDeleting(null); }}>
       <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir seu comentário?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter>

@@ -16,6 +16,7 @@ vi.mock("@/hooks/useMarketingTaskComments", () => ({ useMarketingTaskComments: (
   comments: [], isLoading: false, error: null, currentUser: { id: "person" },
   add: { mutateAsync: state.send, isPending: false }, remove: { mutateAsync: state.remove, isPending: false },
 }) }));
+vi.mock("@/hooks/useMarketingTeamUsers", () => ({ useMarketingTeamUsers: () => ({ data: [] }) }));
 beforeEach(() => { cleanup(); state.editor = null; state.send.mockReset(); state.remove.mockReset(); });
 async function setup(taskId: string | null = "task") {
   const view = render(<TooltipProvider><TaskComments taskId={taskId} /></TooltipProvider>);

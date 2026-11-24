@@ -18,13 +18,16 @@ export function markerInk(color: string): string {
   return luminance > 0.179 ? "var(--task-marker-ink)" : "var(--task-marker-light-ink)";
 }
 const allowedNodes = new Set(["doc", "paragraph", "text", "hardBreak", "bulletList", "orderedList", "listItem"]);
-export function cleanTaskDocument(value: unknown, depth = 0): JSONContent | null {
+export function cleanTaskDocument(value: unknown, depth = 0, allowMentions = false): JSONContent | null {
   if (depth > 15 || !value || typeof value !== "object") return null;
   const raw = value as JSONContent;
+  if (allowMentions && raw.type === "mention" && typeof raw.attrs?.id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw.attrs.id) && typeof raw.attrs?.label === "string") {
+    return { type: "mention", attrs: { id: raw.attrs.id, label: raw.attrs.label.trim().split(/\s+/)[0].slice(0, 80) } };
+  }
   if (!raw.type || !allowedNodes.has(raw.type)) return null;
   const node: JSONContent = { type: raw.type };
   if (raw.type === "text" && typeof raw.text === "string") node.text = raw.text;
-  if (Array.isArray(raw.content)) node.content = raw.content.map((child) => cleanTaskDocument(child, depth + 1)).filter((child): child is JSONContent => !!child);
+  if (Array.isArray(raw.content)) node.content = raw.content.map((child) => cleanTaskDocument(child, depth + 1, allowMentions)).filter((child): child is JSONContent => !!child);
   if (Array.isArray(raw.marks)) node.marks = raw.marks.flatMap((mark) => {
     if (mark.type === "bold" || mark.type === "italic") return [{ type: mark.type }];
     if (mark.type === "highlight" && validMarkerColor(mark.attrs?.color)) return [{ type: "highlight", attrs: { color: mark.attrs?.color } }];

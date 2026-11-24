@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
@@ -9,6 +9,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { markerInk, TASK_MARKER_COLORS, validMarkerColor } from "@/lib/marketing/taskDescription";
+import { createTaskMentionExtension, type TaskMentionPerson } from "./TaskMentions";
 import "./task-editor.css";
 
 const SafeHighlight = Highlight.extend({
@@ -17,17 +18,23 @@ const SafeHighlight = Highlight.extend({
     return ["mark", { "data-color": color, style: `background-color: ${color}; color: ${markerInk(color)};` }, 0];
   },
 });
-export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colors, onColorsChange, disabled, portalContainer, label = "Descrição", compact = false }: {
+export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colors, onColorsChange, disabled, portalContainer, label = "Descrição", compact = false, mentionPeople }: {
   initialContent: JSONContent; valueKey: string; onChange: (text: string, document: JSONContent) => void;
   colors: string[]; onColorsChange: (colors: string[]) => void; disabled?: boolean; portalContainer: HTMLElement | null;
   label?: string; compact?: boolean;
+  mentionPeople?: TaskMentionPerson[];
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [customColor, setCustomColor] = useState<string>();
   const [expanded, setExpanded] = useState(false);
   const [, redraw] = useState(0);
+  const peopleRef = useRef(mentionPeople ?? []);
+  peopleRef.current = mentionPeople ?? [];
+  const contentRef = useRef(initialContent);
+  contentRef.current = initialContent;
+  const mentions = useMemo(() => createTaskMentionExtension(() => peopleRef.current), []);
   const editor = useEditor({
-    extensions: [StarterKit.configure({ heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, link: false, underline: false, strike: false }), SafeHighlight.configure({ multicolor: true })],
+    extensions: [StarterKit.configure({ heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, link: false, underline: false, strike: false }), SafeHighlight.configure({ multicolor: true }), ...(mentionPeople ? [mentions] : [])],
     content: initialContent,
     editable: !disabled,
     editorProps: { attributes: { role: "textbox", "aria-label": label, "aria-multiline": "true", spellcheck: "true" } },
@@ -35,7 +42,7 @@ export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colo
     onSelectionUpdate: () => redraw((value) => value + 1),
     onTransaction: () => redraw((value) => value + 1),
   });
-  useEffect(() => { if (editor) editor.commands.setContent(initialContent, { emitUpdate: false }); }, [valueKey, editor]);
+  useEffect(() => { if (editor) editor.commands.setContent(contentRef.current, { emitUpdate: false }); }, [valueKey, editor]);
   useEffect(() => { editor?.setEditable(!disabled, false); }, [disabled, editor]);
   const apply = (color: string) => { if (!editor || !validMarkerColor(color)) return; editor.chain().focus().setHighlight({ color }).run(); setPaletteOpen(false); };
   const tool = (name: string, icon: React.ReactNode, action: () => void, active = false, unavailable = false) => <Tooltip key={name}>

@@ -1,4 +1,4 @@
-import { Bell, Briefcase, CheckSquare, MessageSquare, X } from "lucide-react";
+import { AtSign, ArrowUpRight, Bell, Briefcase, CheckSquare, MessageSquare, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -25,8 +25,28 @@ const initials = (n: string) => n.split(" ").map((p) => p[0]).join("").slice(0, 
 
 export function GlobalNotificationToast({ title, content, type, sourceType, actorName, actorAvatar, hasLink, onOpen, onDismiss }: Props) {
   const Icon = iconFor(type, sourceType);
+  if (sourceType === "marketing_task_comment") {
+    const [taskTitle, ...preview] = (content ?? "").split("\n");
+    const firstName = actorName?.trim().split(/\s+/)[0];
+    const TaskIcon = type === "mention" ? AtSign : MessageSquare;
+    return <div className="relative w-full min-w-0 pointer-events-auto py-1 text-foreground">
+      <Button type="button" variant="ghost" size="icon" className="absolute -right-1 -top-1 h-7 w-7 text-muted-foreground" aria-label="Fechar aviso" title="Fechar aviso" onClick={onDismiss}><X className="h-3.5 w-3.5" /></Button>
+      <div className="flex items-start gap-2.5 pr-5">
+        <div className="relative shrink-0">
+          <Avatar className="h-9 w-9"><AvatarImage src={actorAvatar ?? undefined} alt={firstName ?? ""} /><AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">{firstName?.slice(0, 1).toUpperCase() || <TaskIcon className="h-4 w-4" />}</AvatarFallback></Avatar>
+          <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-background bg-primary text-primary-foreground"><TaskIcon className="h-2.5 w-2.5" /></span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium leading-relaxed [overflow-wrap:anywhere]">{title}</p>
+          <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug [overflow-wrap:anywhere]">{taskTitle}</p>
+          {preview.length > 0 && <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{preview.join(" ")}</p>}
+          <Button type="button" variant="ghost" size="sm" className="mt-2 h-7 gap-1 px-0 text-xs text-primary hover:bg-transparent" onClick={onOpen}>Abrir tarefa<ArrowUpRight className="h-3.5 w-3.5" /></Button>
+        </div>
+      </div>
+    </div>;
+  }
   return (
-    <div className="w-[min(360px,calc(100vw-2rem))] rounded-lg border border-border bg-card text-card-foreground shadow-lg overflow-hidden">
+    <div className="pointer-events-auto w-[min(360px,calc(100vw-2rem))] rounded-lg border border-border bg-card text-card-foreground shadow-lg overflow-hidden">
       <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border bg-muted/50">
         <div className="flex items-center gap-2 min-w-0">
           <Icon className="h-4 w-4 text-primary shrink-0" />
@@ -58,7 +78,7 @@ export function GlobalNotificationToast({ title, content, type, sourceType, acto
 let audioCtx: AudioContext | null = null;
 export function playNotificationChime() {
   try {
-    const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+    const Ctor = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctor) return;
     audioCtx = audioCtx || new Ctor();
     const ctx = audioCtx;

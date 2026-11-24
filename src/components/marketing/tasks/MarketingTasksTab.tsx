@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { isHiddenTechnicalPerson } from "@/lib/peopleVisibility";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,9 @@ export function isTaskOverdue(task: MarketingTask): boolean {
 }
 
 export function MarketingTasksTab() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTask = searchParams.get("task");
+  const requestedComment = searchParams.get("comment");
   const [viewMode, setViewMode] = usePersistedFilter<ViewMode>("marketing-tasks", "viewMode", "board");
   const [searchQuery, setSearchQuery] = usePersistedFilter<string>("marketing-tasks", "search", "");
   const [savedAssigneeFilter, setAssigneeFilter] = usePersistedFilter<string>("marketing-tasks", "assignee", "all");
@@ -81,6 +85,21 @@ export function MarketingTasksTab() {
   const { separators, error: separatorsError, save: saveSeparator } = useMarketingTaskSeparators();
 
   const { tasks, error: tasksError, isLoading: tasksLoading, updateTask, toggleComplete, reorderTasks } = useMarketingTasks();
+  const openedLink = useRef<string | null>(null);
+  useEffect(() => {
+    if (!requestedTask || tasksLoading || openedLink.current === `${requestedTask}:${requestedComment}`) return;
+    if (!tasks.some((task) => task.id === requestedTask)) return;
+    openedLink.current = `${requestedTask}:${requestedComment}`;
+    setEditingTask(requestedTask); setIsDialogOpen(true);
+  }, [requestedTask, requestedComment, tasks, tasksLoading]);
+  const onTaskDialogChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open && requestedTask) {
+      openedLink.current = null;
+      const next = new URLSearchParams(searchParams); next.delete("task"); next.delete("comment");
+      setSearchParams(next, { replace: true });
+    }
+  };
   const labelCatalog = useMemo(() => taskLabelCatalog(tasks), [tasks]);
   const { sections, isLoading: sectionsLoading, createSection } = useMarketingTaskSections();
   const { columns, isLoading: columnsLoading } = useMarketingTaskColumns();
@@ -478,8 +497,9 @@ export function MarketingTasksTab() {
 
       <MarketingTaskDialog
         open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        onOpenChange={onTaskDialogChange}
         taskId={editingTask}
+        focusCommentId={requestedTask === editingTask ? requestedComment : null}
         defaultSectionId={addingToSection}
         defaultColumnId={defaultColumnId}
         defaultAssigneeId={defaultAssigneeId}

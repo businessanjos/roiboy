@@ -743,6 +743,13 @@
       "when": 1795553468450,
       "tag": "0105_marketing_task_comment_author_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1795556165219,
+      "tag": "0106_marketing_task_comment_notifications",
+      "breakpoints": true
     }
   ]
 }

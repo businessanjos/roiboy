@@ -12,6 +12,7 @@ function renderNode(node: JSONContent): ReactNode {
     case "orderedList": return <ol className="my-1 list-decimal pl-5">{children}</ol>;
     case "listItem": return <li>{children}</li>;
     case "hardBreak": return <br />;
+    case "mention": return <span className="rounded bg-primary/10 px-0.5 font-medium text-primary">@{node.attrs?.label}</span>;
     case "text": {
       let text: ReactNode = node.text;
       for (const mark of node.marks ?? []) {

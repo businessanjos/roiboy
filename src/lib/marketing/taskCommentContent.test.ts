@@ -20,4 +20,14 @@ describe("Formatação dos comentários de tarefas", () => {
     expect(readTaskComment("ROY_TASK_COMMENT_V1:{broken").text).toBe("ROY_TASK_COMMENT_V1:{broken");
     expect(readTaskComment('ROY_TASK_COMMENT_V1:{"text":"Texto mantido","document":{"type":"image"}}')).toEqual({ text: "Texto mantido", document: null });
   });
+  it("preserva a identidade da pessoa mencionada, não apenas o primeiro nome", () => {
+    const id = "00000000-0000-4000-8000-000000000002";
+    const document = { type: "doc", content: [{ type: "paragraph", content: [{ type: "mention", attrs: { id, label: "Fernanda Ramos", onclick: "alert(1)" } }] }] };
+    expect(readTaskComment(writeTaskComment("@Fernanda", document)).document?.content?.[0].content?.[0]).toEqual({ type: "mention", attrs: { id, label: "Fernanda" } });
+  });
+  it("remover a menção do documento também remove a identidade do envio", () => {
+    expect(writeTaskComment("Revisar", plainTaskDocument("Revisar"))).toBe("Revisar");
+    const unsafe = { type: "doc", content: [{ type: "paragraph", content: [{ type: "mention", attrs: { id: "not-a-person", label: "Fernanda" } }] }] };
+    expect(readTaskComment(writeTaskComment("Texto", unsafe)).document).toBeNull();
+  });
 });

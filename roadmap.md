@@ -1,5 +1,11 @@
 # Roadmap — Processos do CS
 
+## Avisos de comentários e menções nas tarefas
+- [x] Avisos criados no servidor após comentar: responsável e pessoas mencionadas do Marketing, na mesma conta; sem notificar o próprio autor ou duplicar destinatários. @primeiro-nome digitado só resolve se único; seleção mantém o ID individual.
+- [x] Seleção por @ com foto/primeiro nome, barra de formatação preservada; aviso compacto no canto superior direito com fechar e Abrir tarefa, chegando ao comentário mesmo com filtros no quadro. Assinatura de notificações filtrada pelo usuário, sem reenviar push já gerado no servidor; permissões e silêncio dos painéis preservados.
+- [x] 45 testes passaram (incluindo SQL com RLS, destinatários, ambiguidade, conta técnica e deduplicação); três pessoas fictícias conferidas no navegador em 390/798/1440 px e claro/escuro: comentar, reler, aviso, abrir comentário, preservar filtros e fechar. Sem erros de execução, compilação sem erros e nenhuma escrita real de teste; migração aplicada, não publicado.
+- [ ] Conferir entrega na conta real em /marketing/projetos?tab=tarefas: sessão própria indisponível e criação de usuário temporário falhou. Testes isolados e respostas fictícias não verificam a entrega Realtime entre sessões reais.
+
 ## Comentários das tarefas em conversa
 - [x] Barra compartilhada com a descrição: negrito, itálico, listas, marca-texto com cores próprias e segundo clique para desligar, desfazer/refazer; comentários antigos e autoria preservados, sem mudar backend ou permissões.
 - [x] Foto e primeiro nome, mensagens próprias à direita e dos colegas à esquerda, data agrupada e horário individual; exclusão existente apenas do próprio comentário.

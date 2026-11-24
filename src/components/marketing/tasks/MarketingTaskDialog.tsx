@@ -56,6 +56,7 @@ interface MarketingTaskDialogProps {
   defaultSectionId?: string | null;
   defaultColumnId?: string | null;
   defaultAssigneeId?: string | null;
+  focusCommentId?: string | null;
 }
 
 export function MarketingTaskDialog({
@@ -65,6 +66,7 @@ export function MarketingTaskDialog({
   defaultSectionId,
   defaultColumnId,
   defaultAssigneeId,
+  focusCommentId,
 }: MarketingTaskDialogProps) {
   const { tasks, createTask, updateTask, deleteTask } = useMarketingTasks();
   const { sections } = useMarketingTaskSections();
@@ -275,7 +277,7 @@ export function MarketingTaskDialog({
                 {copySource ? <div className="space-y-2"><Label>Subtarefas ({copySubtasks.length})</Label>{copySubtasks.map((subtask, index) => <p key={index} className="border-b py-2 text-sm">{subtask.title}</p>)}</div>
                   : <SubtaskList taskId={isEditing ? taskId : null} />}
               </div>
-              <div className="border-t pt-4"><TaskComments key={copySource ? "copy" : taskId || "new"} taskId={isEditing ? taskId : null} /></div>
+              <div className="border-t pt-4"><TaskComments key={copySource ? "copy" : taskId || "new"} taskId={isEditing ? taskId : null} focusCommentId={isEditing ? focusCommentId : null} /></div>
             </div>
             <aside aria-label="Detalhes da tarefa" className="min-h-0 min-w-0 space-y-4 border-t bg-muted/15 p-4 sm:p-5 md:overflow-y-auto md:border-l md:border-t-0">
               <div className="space-y-3"><h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><Users className="h-4 w-4" />Pessoas</h3>{selectPeople("requester")}{selectPeople("assignee")}</div>

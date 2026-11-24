@@ -83,7 +83,7 @@ async function subscribeToPush(): Promise<boolean> {
     const applicationServerKey = Uint8Array.from(raw, (c) => c.charCodeAt(0));
 
     // Subscribe to push
-    const pm = (registration as any).pushManager;
+    const pm = registration.pushManager;
     let subscription = await pm.getSubscription();
 
     if (!subscription) {
@@ -184,6 +184,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const lastNotifyAtRef = useRef(0);
   // Refresco único e adiado para o sino quando chega um lote atrasado.
   const staleRefreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const taskNotificationsSeen = useRef(new Set<string>());
 
   const requestNotificationPermission = useCallback(async () => {
     if (!supportsNotifications()) {
@@ -276,15 +277,17 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchNotifications();
+    if (!currentUserId) return;
 
     const channel = supabase
-      .channel("notifications-realtime")
+      .channel(`notifications-${currentUserId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
           table: "notifications",
+          filter: `user_id=eq.${currentUserId}`,
         },
         (payload) => {
           const updated = payload.new as Notification;
@@ -320,11 +323,17 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           event: "INSERT",
           schema: "public",
           table: "notifications",
+          filter: `user_id=eq.${currentUserId}`,
         },
         async (payload) => {
           const newNotification = payload.new as Notification;
 
           if (newNotification.user_id === currentUserId) {
+            if (newNotification.source_type === "marketing_task_comment") {
+              if (taskNotificationsSeen.current.has(newNotification.id)) return;
+              taskNotificationsSeen.current.add(newNotification.id);
+              void queryClient.invalidateQueries({ queryKey: ["marketing-task-comments"] });
+            }
             const now = Date.now();
             const { stale, quiet } = notifyDecision(
               newNotification.created_at as string,
@@ -372,8 +381,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
                       content={data.content}
                       type={data.type}
                       sourceType={data.source_type}
-                      actorName={(data as any).triggered_by_user?.name ?? null}
-                      actorAvatar={(data as any).triggered_by_user?.avatar_url ?? null}
+                      actorName={(data as Notification).triggered_by_user?.name ?? null}
+                      actorAvatar={(data as Notification).triggered_by_user?.avatar_url ?? null}
                       hasLink={!!data.link}
                       onOpen={() => {
                         toast.dismiss(t);
@@ -385,6 +394,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
                   { duration: 10000, position: "top-right" }
                 );
 
+                // Marketing comment pushes already originate from the notification INSERT trigger.
+                if (data.source_type !== "marketing_task_comment") {
                 // Send push notification via edge function (server-side)
                 // This ensures it works even when the app is in the background
                 try {
@@ -418,6 +429,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
                   data.content || "Nova notificação",
                   data.link
                 );
+                }
               }
 
               invalidateNotificationsQueries(queryClient, currentUserId);

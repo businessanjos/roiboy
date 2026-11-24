@@ -31970,6 +31970,7 @@ export type Database = {
           name: string
         }[]
       }
+      marketing_task_mention_key: { Args: { value: string }; Returns: string }
       merge_deals_reversible: {
         Args: { p_data: Json; p_source: string; p_target: string }
         Returns: string
