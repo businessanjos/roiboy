@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { formatMetricInput, parseMetricInput } from '@/lib/marketing/metricInput';
 import { OptionSelectWithAdd } from './OptionSelectWithAdd';
 import { useInstagramPostOptions } from '@/hooks/useInstagramPostOptions';
 import { useCompositionTemplates } from '@/hooks/useCompositionTemplates';
@@ -169,16 +170,16 @@ export function AddPostDialog({
       return;
     }
 
-    const reachNum = parseInt(reach) || 0;
-    const likesNum = parseInt(likes) || 0;
-    const commentsNum = parseInt(comments) || 0;
-    const sharesNum = parseInt(shares) || 0;
-    const savesNum = parseInt(saves) || 0;
-    const linkClicksNum = parseInt(linkClicks) || 0;
-    const viewsNum = parseInt(views) || 0;
-    const followersGainedNum = parseInt(followersGained) || 0;
-    const repostsNum = parseInt(reposts) || 0;
-    const profileVisitsNum = parseInt(profileVisits) || 0;
+    const reachNum = parseMetricInput(reach) || 0;
+    const likesNum = parseMetricInput(likes) || 0;
+    const commentsNum = parseMetricInput(comments) || 0;
+    const sharesNum = parseMetricInput(shares) || 0;
+    const savesNum = parseMetricInput(saves) || 0;
+    const linkClicksNum = parseMetricInput(linkClicks) || 0;
+    const viewsNum = parseMetricInput(views) || 0;
+    const followersGainedNum = parseMetricInput(followersGained) || 0;
+    const repostsNum = parseMetricInput(reposts) || 0;
+    const profileVisitsNum = parseMetricInput(profileVisits) || 0;
 
     onSubmit({
       permalink,
@@ -232,7 +233,7 @@ export function AddPostDialog({
     isValidInstagramUrl(permalink) &&
     postedAt &&
     postedAt <= new Date() &&
-    (parseInt(reach) || 0) > 0;
+    (parseMetricInput(reach) || 0) > 0;
 
   return (
     <>
@@ -484,11 +485,11 @@ export function AddPostDialog({
                     </Label>
                     <Input
                       id="reach"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       placeholder="0"
                       value={reach}
-                      onChange={(e) => setReach(e.target.value)}
+                      onChange={(e) => setReach(formatMetricInput(e.target.value))}
                       className="h-8"
                     />
                   </div>
@@ -498,11 +499,11 @@ export function AddPostDialog({
                     </Label>
                     <Input
                       id="likes"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       placeholder="0"
                       value={likes}
-                      onChange={(e) => setLikes(e.target.value)}
+                      onChange={(e) => setLikes(formatMetricInput(e.target.value))}
                       className="h-8"
                     />
                   </div>
@@ -512,11 +513,11 @@ export function AddPostDialog({
                     </Label>
                     <Input
                       id="comments"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       placeholder="0"
                       value={comments}
-                      onChange={(e) => setComments(e.target.value)}
+                      onChange={(e) => setComments(formatMetricInput(e.target.value))}
                       className="h-8"
                     />
                   </div>
@@ -526,11 +527,11 @@ export function AddPostDialog({
                     </Label>
                     <Input
                       id="shares"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       placeholder="0"
                       value={shares}
-                      onChange={(e) => setShares(e.target.value)}
+                      onChange={(e) => setShares(formatMetricInput(e.target.value))}
                       className="h-8"
                     />
                   </div>
@@ -540,11 +541,11 @@ export function AddPostDialog({
                     </Label>
                     <Input
                       id="saves"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       placeholder="0"
                       value={saves}
-                      onChange={(e) => setSaves(e.target.value)}
+                      onChange={(e) => setSaves(formatMetricInput(e.target.value))}
                       className="h-8"
                     />
                   </div>
@@ -554,11 +555,11 @@ export function AddPostDialog({
                     </Label>
                     <Input
                       id="linkClicks"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       placeholder="0"
                       value={linkClicks}
-                      onChange={(e) => setLinkClicks(e.target.value)}
+                      onChange={(e) => setLinkClicks(formatMetricInput(e.target.value))}
                       className="h-8"
                     />
                   </div>
@@ -568,11 +569,11 @@ export function AddPostDialog({
                     </Label>
                     <Input
                       id="views"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       placeholder="0"
                       value={views}
-                      onChange={(e) => setViews(e.target.value)}
+                      onChange={(e) => setViews(formatMetricInput(e.target.value))}
                       className="h-8"
                     />
                   </div>
@@ -582,11 +583,11 @@ export function AddPostDialog({
                     </Label>
                     <Input
                       id="reposts"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       placeholder="0"
                       value={reposts}
-                      onChange={(e) => setReposts(e.target.value)}
+                      onChange={(e) => setReposts(formatMetricInput(e.target.value))}
                       className="h-8"
                     />
                   </div>
@@ -596,11 +597,11 @@ export function AddPostDialog({
                     </Label>
                     <Input
                       id="followersGained"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       placeholder="0"
                       value={followersGained}
-                      onChange={(e) => setFollowersGained(e.target.value)}
+                      onChange={(e) => setFollowersGained(formatMetricInput(e.target.value))}
                       className="h-8"
                     />
                   </div>
@@ -610,11 +611,11 @@ export function AddPostDialog({
                     </Label>
                     <Input
                       id="profileVisits"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       placeholder="0"
                       value={profileVisits}
-                      onChange={(e) => setProfileVisits(e.target.value)}
+                      onChange={(e) => setProfileVisits(formatMetricInput(e.target.value))}
                       className="h-8"
                     />
                   </div>
