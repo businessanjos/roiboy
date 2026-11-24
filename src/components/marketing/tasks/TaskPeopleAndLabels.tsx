@@ -9,10 +9,10 @@ export function TaskPeopleAndLabels({ task, showAssignee = true }: { task: Marke
       {details.labels.map((label) => <TaskLabelBadge key={labelKey(label.name)} label={label} />)}
     </div>}
     {details.requesterId && <p className="truncate text-xs text-muted-foreground" title={details.requesterName || "Solicitante não disponível"}>
-      Solicitante: <span className="text-foreground">{details.requesterName || "Não disponível"}</span>
+      Solicitante: <span className="text-foreground">{details.requesterName?.trim().split(/\s+/)[0] || "Não disponível"}</span>
     </p>}
     {showAssignee && task.assignee && <p className="truncate text-xs text-muted-foreground" title={task.assignee.name}>
-      Responsável: <span className="text-foreground">{task.assignee.name}</span>
+      Responsável: <span className="text-foreground">{task.assignee.name.trim().split(/\s+/)[0]}</span>
     </p>}
   </div>;
 }
