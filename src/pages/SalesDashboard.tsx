@@ -95,6 +95,12 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCompany } from "@/contexts/CompanyContext";
+import { CompanyFilter } from "@/components/companies/CompanyFilter";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
+import { useSalesCompanyScope } from "@/hooks/useSalesCompanyScope";
+import { activityMatchesCompany, contractMatchesCompany } from "@/lib/sales/companyActivityScope";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useCompanyGoals } from "@/hooks/useCompanyGoals";
 import { useSalesTeamMetrics } from "@/hooks/useSalesTeamMetrics";
@@ -214,6 +220,8 @@ const COLORS = [
 
 export default function SalesDashboard() {
   const { currentUser, loading: userLoading } = useCurrentUser();
+  const { companies, loading: companiesLoading } = useCompany();
+  const [companyFilter, setCompanyFilter] = usePersistedFilter<string>("sales-dashboard", "company", "all");
   const { isSuperAdmin } = useSuperAdmin();
   // ---------- Filtros (período + vendedor), persistidos no navegador ----------
   const storedFilters = (() => {
@@ -289,6 +297,8 @@ export default function SalesDashboard() {
     () => isManagementUser(currentUser, isSuperAdmin),
     [currentUser, isSuperAdmin]
   );
+  const { scope: companyScope, dataUpdatedAt: companyScopeUpdatedAt, isLoading: companyScopeLoading, error: companyScopeError } = useSalesCompanyScope(companyFilter, allowed);
+  useEffect(() => { setChurnDetailRep(null); }, [companyFilter, repFilter, period, customRange]);
 
   const { start, end } = useMemo(
     () => getRange(period, customRange?.from ?? null, customRange?.to ?? null),
@@ -300,7 +310,7 @@ export default function SalesDashboard() {
 
   // ---------------------- DATA ----------------------
   const { data: deals, isLoading: dealsLoading } = useQuery({
-    queryKey: ["sales-dashboard-deals", accountId, rangeKey, repId],
+    queryKey: ["sales-dashboard-deals", accountId, rangeKey, repId, companyFilter],
     enabled: !!accountId && allowed,
     queryFn: async () => {
       let q = supabase
@@ -308,11 +318,13 @@ export default function SalesDashboard() {
         .select(
           "id, title, status, value, received_value, source, won_at, lost_at, created_at, lost_reason, loss_reason_id, responsible_user_id, sdr_user_id"
         )
-        .eq("account_id", accountId!)
+        .eq("account_id", accountId ?? "")
+        .is("deleted_at", null)
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString());
       if (repId) q = q.eq("responsible_user_id", repId);
-      const { data, error } = await q;
+      if (companyFilter !== "all") q = q.eq("company_id", companyFilter);
+      const { data, error } = await fetchAllRows<any>((from, to) => q.order("id").range(from, to));
       if (error) throw error;
       return data || [];
     },
@@ -320,38 +332,42 @@ export default function SalesDashboard() {
 
   // Won deals in window — accept either won_at or created_at fall back
   const { data: wonDeals, isLoading: wonLoading } = useQuery({
-    queryKey: ["sales-dashboard-won", accountId, rangeKey, repId],
+    queryKey: ["sales-dashboard-won", accountId, rangeKey, repId, companyFilter],
     enabled: !!accountId && allowed,
     queryFn: async () => {
       let q = supabase
         .from("deals")
         .select(
-          "id, title, value, received_value, source, won_at, responsible_user_id, sdr_user_id"
+          "id, title, value, received_value, source, won_at, created_at, responsible_user_id, sdr_user_id"
         )
-        .eq("account_id", accountId!)
+        .eq("account_id", accountId ?? "")
+        .is("deleted_at", null)
         .eq("status", "won")
         .gte("won_at", start.toISOString())
         .lte("won_at", end.toISOString());
       if (repId) q = q.eq("responsible_user_id", repId);
-      const { data, error } = await q;
+      if (companyFilter !== "all") q = q.eq("company_id", companyFilter);
+      const { data, error } = await fetchAllRows<any>((from, to) => q.order("id").range(from, to));
       if (error) throw error;
       return data || [];
     },
   });
 
   const { data: lostDeals, isLoading: lostLoading } = useQuery({
-    queryKey: ["sales-dashboard-lost", accountId, rangeKey, repId],
+    queryKey: ["sales-dashboard-lost", accountId, rangeKey, repId, companyFilter],
     enabled: !!accountId && allowed,
     queryFn: async () => {
       let q = supabase
         .from("deals")
-        .select("id, lost_at, lost_reason, loss_reason_id, value, responsible_user_id")
-        .eq("account_id", accountId!)
+        .select("id, title, lost_at, lost_reason, loss_reason_id, value, responsible_user_id")
+        .eq("account_id", accountId ?? "")
+        .is("deleted_at", null)
         .eq("status", "lost")
         .gte("lost_at", start.toISOString())
         .lte("lost_at", end.toISOString());
       if (repId) q = q.eq("responsible_user_id", repId);
-      const { data, error } = await q;
+      if (companyFilter !== "all") q = q.eq("company_id", companyFilter);
+      const { data, error } = await fetchAllRows<any>((from, to) => q.order("id").range(from, to));
       if (error) throw error;
       return data || [];
     },
@@ -376,6 +392,7 @@ export default function SalesDashboard() {
   const { metrics: allTeamMetrics, loading: teamLoading } = useSalesTeamMetrics({
     startDate: start,
     endDate: end,
+    companyId: companyFilter,
   });
   // Filtro de vendedor: toda a tela passa a olhar apenas o vendedor escolhido
   const teamMetrics = useMemo(
@@ -427,16 +444,18 @@ export default function SalesDashboard() {
 
   // Pipeline (open deals)
   const { data: openDeals, isLoading: openLoading } = useQuery({
-    queryKey: ["sales-dashboard-open", accountId, repId],
+    queryKey: ["sales-dashboard-open", accountId, repId, companyFilter],
     enabled: !!accountId && allowed,
     queryFn: async () => {
       let q = supabase
         .from("deals")
         .select("id, value, stage_id, stage_changed_at, responsible_user_id")
-        .eq("account_id", accountId!)
+        .eq("account_id", accountId ?? "")
+        .is("deleted_at", null)
         .eq("status", "open");
       if (repId) q = q.eq("responsible_user_id", repId);
-      const { data, error } = await q;
+      if (companyFilter !== "all") q = q.eq("company_id", companyFilter);
+      const { data, error } = await fetchAllRows<any>((from, to) => q.order("id").range(from, to));
       if (error) throw error;
       return data || [];
     },
@@ -507,9 +526,10 @@ export default function SalesDashboard() {
   // ---------------------- NEW KPIs ----------------------
   // Reuniões realizadas no período (internal_tasks completadas com agendamento)
   const { data: heldMeetingsRows } = useQuery({
-    queryKey: ["sales-dashboard-held", accountId, rangeKey, repId],
-    enabled: !!accountId && allowed,
+    queryKey: ["sales-dashboard-held", accountId, rangeKey, repId, companyFilter, companyScopeUpdatedAt],
+    enabled: !!accountId && allowed && !companyScopeLoading,
     queryFn: async () => {
+      if (companyFilter !== "all" && companyScopeError) throw companyScopeError;
       // Paginar para evitar o limite default de 1000 linhas do PostgREST.
       // Sem isso, períodos longos (ex.: trimestre) ficam capados em 1000 internal_tasks
       // e o filtro JS por "reunião/agendamento" devolve menos do que existe de verdade.
@@ -535,7 +555,7 @@ export default function SalesDashboard() {
       }
       const filtered = all.filter((t: any) => {
         const kind = classifyMeetingTask(t.activity_types?.name, t.title);
-        return kind === "held";
+        return kind === "held" && activityMatchesCompany(t, companyFilter, companyScope);
       });
       // Dedupe: múltiplas reuniões com o mesmo cliente (por vendedor) contam como 1.
       const seen = new Set<string>();
@@ -552,19 +572,21 @@ export default function SalesDashboard() {
 
   // Cancelamentos no período (Churn) — inclui dados do cliente p/ fallback de vendedor
   const { data: churnContracts } = useQuery({
-    queryKey: ["sales-dashboard-churn", accountId, rangeKey],
-    enabled: !!accountId && allowed,
+    queryKey: ["sales-dashboard-churn", accountId, rangeKey, companyFilter, companyScopeUpdatedAt],
+    enabled: !!accountId && allowed && !companyScopeLoading,
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (companyFilter !== "all" && companyScopeError) throw companyScopeError;
+      const q = supabase
         .from("client_contracts")
-        .select("id, deal_id, client_id, cancelled_at, value, payment_method, payment_option, installments_count, cancellation_reason, cancellation_justification, product_id, products(name, color), clients(full_name, phone_e164, emails)")
-        .eq("account_id", accountId!)
+        .select("id, deal_id, client_id, cancelled_at, value, payment_method, payment_option, installments_count, cancellation_reason, cancellation_justification, product_id, products(name, color, company_id), clients(full_name, phone_e164, emails)")
+        .eq("account_id", accountId ?? "")
         .eq("status", "cancelled")
         .not("cancelled_at", "is", null)
         .gte("cancelled_at", start.toISOString())
         .lte("cancelled_at", end.toISOString());
+      const { data, error } = await fetchAllRows<any>((from, to) => q.order("id").range(from, to));
       if (error) throw error;
-      return data || [];
+      return (data || []).filter((contract) => contractMatchesCompany(contract, companyFilter, companyScope));
     },
   });
 
@@ -593,7 +615,7 @@ export default function SalesDashboard() {
     [churnContracts]
   );
   const { data: wonDealsForChurnMatch } = useQuery({
-    queryKey: ["sales-dashboard-churn-fallback-wondeals", accountId],
+    queryKey: ["sales-dashboard-churn-fallback-wondeals", accountId, companyFilter],
     enabled: !!accountId && allowed && hasUnlinkedChurn,
     queryFn: async () => {
       const since = new Date("2025-01-01T00:00:00Z").toISOString();
@@ -603,15 +625,18 @@ export default function SalesDashboard() {
       let from = 0;
       // hard cap defensivo
       while (all.length < 20000) {
-        const { data, error } = await supabase
+        let q = supabase
           .from("deals")
           .select("id, client_id, contact_email, contact_phone, responsible_user_id, won_at")
-          .eq("account_id", accountId!)
+          .eq("account_id", accountId ?? "")
+          .is("deleted_at", null)
           .eq("status", "won")
           .not("responsible_user_id", "is", null)
           .gte("won_at", since)
           .order("won_at", { ascending: false })
           .range(from, from + PAGE - 1);
+        if (companyFilter !== "all") q = q.eq("company_id", companyFilter);
+        const { data, error } = await q;
         if (error) throw error;
         const arr = data || [];
         all.push(...arr);
@@ -639,7 +664,7 @@ export default function SalesDashboard() {
       .map((d: any) => {
         if (!d.won_at) return null;
         // created_at não está no payload de wonDeals; buscar via deals (que tem created_at)
-        const matched = (deals || []).find((x: any) => x.id === d.id);
+        const matched = d.created_at ? d : (deals || []).find((x: any) => x.id === d.id);
         if (!matched?.created_at || !d.won_at) return null;
         const ms = new Date(d.won_at).getTime() - new Date(matched.created_at).getTime();
         return ms > 0 ? ms / (1000 * 60 * 60 * 24) : null;
@@ -975,7 +1000,7 @@ export default function SalesDashboard() {
   }
 
   const isLoading =
-    dealsLoading || wonLoading || lostLoading || openLoading || teamLoading;
+    dealsLoading || wonLoading || lostLoading || openLoading || teamLoading || companyScopeLoading;
 
   const headerKpis = (kpiSel.header || []).map((id) => KPI_CATALOG[id]).filter(Boolean);
   const activeKpi =
@@ -985,11 +1010,13 @@ export default function SalesDashboard() {
     <RykaScope>
       <RykaPage className="space-y-5 pb-24 md:space-y-7 md:pb-6">
       <RykaPageHeader
+        className="md:flex-col md:items-stretch xl:flex-row xl:items-end"
         eyebrow="Comercial · Painel"
         title="Dashboard Comercial"
         description="Visão executiva de receita, funil, equipe e origem dos ganhos."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full min-w-0 flex-wrap items-end gap-2">
+            <CompanyFilter companies={companies} value={companyFilter} onChange={setCompanyFilter} loading={companiesLoading} />
             <Filter className="hidden md:block w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
               <SelectTrigger aria-label="Período" className="w-full md:w-[190px] h-11 md:h-9 rounded-xl bg-card ring-1 ring-hairline">
@@ -1057,6 +1084,7 @@ export default function SalesDashboard() {
       />
 
       {/* KPIs fixados via IA */}
+      {companyFilter !== "all" && <p className="text-xs text-muted-foreground">Metas e indicadores fixados por AION: todas as empresas.</p>}
       <PinnedKpisStrip />
 
       {/* Snapshot: indicadores selecionáveis + detalhe */}
@@ -1143,14 +1171,14 @@ export default function SalesDashboard() {
 
       <Tabs defaultValue="goals" className="w-full">
         <div className="-mx-3 px-3 md:mx-0 md:px-0 overflow-x-auto scrollbar-none">
-          <TabsList className="inline-flex w-max h-[52px] md:h-10 md:grid md:grid-cols-6 md:w-fit gap-1 [&>button]:h-11 md:[&>button]:h-auto">
+          <TabsList className="inline-flex w-max h-[52px] md:h-10 md:flex md:w-fit gap-1 [&>button]:h-11 md:[&>button]:h-auto">
             <TabsTrigger value="goals" className="rounded-full md:rounded-xl">Metas</TabsTrigger>
             <TabsTrigger value="funnel" className="rounded-full md:rounded-xl">Funil</TabsTrigger>
             <TabsTrigger value="performance" className="rounded-full md:rounded-xl">Performance</TabsTrigger>
             <TabsTrigger value="team" className="rounded-full md:rounded-xl">Equipe</TabsTrigger>
             <TabsTrigger value="origin" className="rounded-full md:rounded-xl">Origem & Perdas</TabsTrigger>
             <TabsTrigger value="ask" className="gap-1.5 rounded-full md:rounded-xl">
-              <span className="inline-flex items-center gap-1">✨ AION</span>
+              <span className="inline-flex items-center gap-1">✨ {companyFilter === "all" ? "AION" : "AION · Todas as empresas"}</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1167,7 +1195,7 @@ export default function SalesDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="w-5 h-5 text-primary" />
-                  Meta do mês ({format(new Date(), "MMMM", { locale: ptBR })})
+                  {companyFilter === "all" ? "Meta do mês" : "Meta geral do mês"} ({format(new Date(), "MMMM", { locale: ptBR })})
                 </CardTitle>
                 <CardDescription>
                   {annualGoal === 0
@@ -1212,7 +1240,7 @@ export default function SalesDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-primary" />
-                  Meta anual {year}
+                  {companyFilter === "all" ? "Meta anual" : "Meta geral anual"} {year}
                 </CardTitle>
                 <CardDescription>
                   Acumulado do ano vs. meta anual da empresa
@@ -1223,6 +1251,8 @@ export default function SalesDashboard() {
                   accountId={accountId}
                   enabled={!!accountId && allowed}
                   annualGoal={annualGoal}
+                  companyFilter={companyFilter}
+                  repId={repId}
                 />
               </CardContent>
             </Card>
@@ -1232,7 +1262,7 @@ export default function SalesDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="w-5 h-5 text-primary" />
-                Meta do trimestre (Q{Math.floor(new Date().getMonth() / 3) + 1} {year})
+                {companyFilter === "all" ? "Meta do trimestre" : "Meta geral do trimestre"} (Q{Math.floor(new Date().getMonth() / 3) + 1} {year})
               </CardTitle>
               <CardDescription>
                 Faturamento acumulado do trimestre atual vs. soma das metas mensais do trimestre
@@ -1244,6 +1274,8 @@ export default function SalesDashboard() {
                 enabled={!!accountId && allowed}
                 monthlyGoals={(goal?.monthly_goals as Record<string, number> | undefined) || {}}
                 annualGoal={annualGoal}
+                companyFilter={companyFilter}
+                repId={repId}
               />
             </CardContent>
           </Card>
@@ -1856,25 +1888,33 @@ function YearlyGoalCard({
   accountId,
   enabled,
   annualGoal,
+  companyFilter,
+  repId,
 }: {
   accountId?: string;
   enabled: boolean;
   annualGoal: number;
+  companyFilter: string;
+  repId: string | null;
 }) {
   const year = new Date().getFullYear();
   const yearStart = new Date(year, 0, 1).toISOString();
   const yearEnd = new Date().toISOString();
   const { data, isLoading } = useQuery({
-    queryKey: ["sales-dashboard-yearly", accountId, year],
+    queryKey: ["sales-dashboard-yearly", accountId, year, companyFilter, repId],
     enabled,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("deals")
         .select("value, received_value, won_at")
-        .eq("account_id", accountId!)
+        .eq("account_id", accountId ?? "")
+        .is("deleted_at", null)
         .eq("status", "won")
         .gte("won_at", yearStart)
         .lte("won_at", yearEnd);
+      if (companyFilter !== "all") q = q.eq("company_id", companyFilter);
+      if (repId) q = q.eq("responsible_user_id", repId);
+      const { data, error } = await fetchAllRows<any>((from, to) => q.order("id").range(from, to));
       if (error) throw error;
       return (data || []).reduce(
         (acc, d) => acc + Number(d.value ?? d.received_value ?? 0),
@@ -1928,11 +1968,15 @@ function QuarterlyGoalCard({
   enabled,
   monthlyGoals,
   annualGoal,
+  companyFilter,
+  repId,
 }: {
   accountId?: string;
   enabled: boolean;
   monthlyGoals: Record<string, number>;
   annualGoal: number;
+  companyFilter: string;
+  repId: string | null;
 }) {
   const now = new Date();
   const year = now.getFullYear();
@@ -1942,16 +1986,20 @@ function QuarterlyGoalCard({
   const qEnd = new Date(year, startMonth + 3, 0, 23, 59, 59);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["sales-dashboard-quarter", accountId, year, quarter],
+    queryKey: ["sales-dashboard-quarter", accountId, year, quarter, companyFilter, repId],
     enabled,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("deals")
         .select("value, received_value, won_at")
-        .eq("account_id", accountId!)
+        .eq("account_id", accountId ?? "")
+        .is("deleted_at", null)
         .eq("status", "won")
         .gte("won_at", qStart.toISOString())
         .lte("won_at", qEnd.toISOString());
+      if (companyFilter !== "all") q = q.eq("company_id", companyFilter);
+      if (repId) q = q.eq("responsible_user_id", repId);
+      const { data, error } = await fetchAllRows<any>((from, to) => q.order("id").range(from, to));
       if (error) throw error;
       return (data || []).reduce(
         (acc, d) => acc + Number(d.value ?? d.received_value ?? 0),

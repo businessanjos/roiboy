@@ -1,0 +1,5 @@
+# Company filters
+
+- `CompanyFilter` is a controlled, page-local selector; never mount it in the global header or mutate the global company context. Why: each area keeps independent user-persisted filters without changing product/sale ownership.
+- Products filter by their stored company; client membership uses product links/history (a client can appear in both companies), and `useCompanyClientList` completes the existing ordered, permission-scoped list before counting and paginating. Why: no duplicate clients, partial-page filtering, new backend rules or reclassification of historical sales.
+- Sales metrics filter the sale's stored company, including yearly/quarterly reads; activity uses explicit deal or unambiguous entity via `useSalesCompanyScope`. Existing account goals, pinned AI KPIs and AION remain clearly labeled as global. Why: filter actual business data without fabricating per-company targets or attributing shared-client activities twice.

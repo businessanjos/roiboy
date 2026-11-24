@@ -1,6 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { classifyMeetingTask, meetingDedupeKey } from "@/lib/sales/meetingMetrics";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useSalesCompanyScope } from "@/hooks/useSalesCompanyScope";
+import { activityMatchesCompany } from "@/lib/sales/companyActivityScope";
+import { filterDealsByCompany } from "@/lib/sales/companyFilter";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export interface SalesRepMetrics {
   user_id: string;
@@ -49,39 +54,38 @@ export interface SalesRepMetrics {
 interface UseSalesTeamMetricsOptions {
   startDate?: Date;
   endDate?: Date;
+  companyId?: string;
 }
 
 export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
+  const { currentUser } = useCurrentUser();
+  const requestRef = useRef(0);
   const [metrics, setMetrics] = useState<SalesRepMetrics[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { startDate, endDate } = options;
+  const { startDate, endDate, companyId = "all" } = options;
+  const { scope, isLoading: scopeLoading, error: scopeError } = useSalesCompanyScope(companyId);
 
   // Serialize dates to avoid infinite re-renders
   const startDateStr = startDate?.toISOString() ?? "";
   const endDateStr = endDate?.toISOString() ?? "";
 
   useEffect(() => {
+    requestRef.current += 1;
+    if (companyId !== "all" && scopeLoading) { setLoading(true); return; }
     fetchMetrics();
-  }, [startDateStr, endDateStr]);
+    return () => { requestRef.current += 1; };
+  }, [startDateStr, endDateStr, companyId, currentUser?.account_id, scope, scopeLoading, scopeError]);
 
   const fetchMetrics = async () => {
+    const requestId = ++requestRef.current;
     try {
       setLoading(true);
       setError(null);
 
-      // Get current user's account
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: currentUser } = await supabase
-        .from("users")
-        .select("account_id")
-        .eq("auth_user_id", user.id)
-        .single();
-
-      if (!currentUser) return;
+      if (!currentUser?.account_id) return;
+      if (companyId !== "all" && scopeError) throw scopeError;
 
       // Build date filters
       const dateFilter = startDate && endDate ? {
@@ -114,6 +118,15 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       }
 
       // Fetch all metrics in parallel
+      let dealQuery = supabase.from("deals")
+        .select("id, company_id, responsible_user_id, status, value, received_value, won_at, lost_at")
+        .eq("account_id", currentUser.account_id).is("deleted_at", null)
+        .or(
+          `and(status.eq.open,created_at.gte.${dateFilter.start},created_at.lte.${dateFilter.end}),` +
+          `and(status.eq.won,won_at.gte.${dateFilter.start},won_at.lte.${dateFilter.end}),` +
+          `and(status.eq.lost,lost_at.gte.${dateFilter.start},lost_at.lte.${dateFilter.end})`
+        );
+      if (companyId !== "all") dealQuery = dealQuery.eq("company_id", companyId);
       const [callsData, dealsData, tasksData, leadsData, schedulingData, heldData] = await Promise.all([
         // Calls - from threecplus_call_logs (3C Plus telephony)
         supabase
@@ -124,63 +137,48 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           .lte("created_at", dateFilter.end),
         
         // Deals abertos criados no período
-        supabase
-          .from("deals")
-          .select("id, responsible_user_id, status, value, received_value, won_at, lost_at")
-          .eq("account_id", currentUser.account_id)
-          .or(
-            `and(status.eq.open,created_at.gte.${dateFilter.start},created_at.lte.${dateFilter.end}),` +
-            `and(status.eq.won,won_at.gte.${dateFilter.start},won_at.lte.${dateFilter.end}),` +
-            `and(status.eq.lost,lost_at.gte.${dateFilter.start},lost_at.lte.${dateFilter.end})`
-          ),
+        fetchAllRows<any>((from, to) => dealQuery.order("id").range(from, to)),
         
         // Tasks
-        supabase
+        fetchAllRows<any>((from, to) => supabase
           .from("internal_tasks")
-          .select("assigned_to, completed_at")
+          .select("assigned_to, completed_at, deal_id, client_id, lead_id")
           .eq("account_id", currentUser.account_id)
           .gte("created_at", dateFilter.start)
-          .lte("created_at", dateFilter.end),
+          .lte("created_at", dateFilter.end).order("id").range(from, to)),
         
         // Leads
         supabase
           .from("leads")
-          .select("responsible_user_id, status")
+          .select("id, responsible_user_id, status")
           .eq("account_id", currentUser.account_id)
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
 
         // Scheduling/no-show tasks (criadas no período) via activity_types AND title
-        supabase
+        fetchAllRows<any>((from, to) => supabase
           .from("internal_tasks")
           .select("id, assigned_to, title, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
           .eq("account_id", currentUser.account_id)
           .gte("created_at", dateFilter.start)
-          .lte("created_at", dateFilter.end),
+          .lte("created_at", dateFilter.end).order("id").range(from, to)),
 
         // Reuniões realizadas (concluídas no período) — paginado para evitar limite de 1000
-        (async () => {
-          const PAGE = 1000;
-          let from = 0;
-          const all: any[] = [];
-          while (from < 50000) {
-            const { data, error } = await supabase
-              .from("internal_tasks")
-              .select("id, assigned_to, title, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
-              .eq("account_id", currentUser.account_id)
-              .not("completed_at", "is", null)
-              .gte("completed_at", dateFilter.start)
-              .lte("completed_at", dateFilter.end)
-              .range(from, from + PAGE - 1);
-            if (error) return { data: all, error };
-            const batch = data || [];
-            all.push(...batch);
-            if (batch.length < PAGE) break;
-            from += PAGE;
-          }
-          return { data: all, error: null };
-        })(),
+        fetchAllRows<any>((from, to) => supabase
+          .from("internal_tasks")
+          .select("id, assigned_to, title, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
+          .eq("account_id", currentUser.account_id).not("completed_at", "is", null)
+          .gte("completed_at", dateFilter.start).lte("completed_at", dateFilter.end).order("id").range(from, to)),
       ]);
+
+      if (requestId !== requestRef.current) return;
+      for (const result of [dealsData, tasksData, schedulingData, heldData]) {
+        if (result.error) throw result.error;
+      }
+      const scopedDeals = filterDealsByCompany(dealsData.data || [], companyId);
+      const scopedTasks = (tasksData.data || []).filter((task) => activityMatchesCompany(task, companyId, scope));
+      const scopedScheduling = (schedulingData.data || []).filter((task) => activityMatchesCompany(task, companyId, scope));
+      const scopedHeld = (heldData.data || []).filter((task) => activityMatchesCompany(task, companyId, scope));
 
       // Process metrics for each user
       const metricsMap: Record<string, SalesRepMetrics> = {};
@@ -239,11 +237,11 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
 
       // "Valor Recebido" — prefer native column; fallback to legacy custom field
       const VALOR_RECEBIDO_FIELD_ID = '924c04a5-9824-443b-8122-8fc8c2ad727e';
-      const dealIds = (dealsData.data || []).map((d: any) => d.id).filter(Boolean);
+      const dealIds = scopedDeals.map((d: any) => d.id).filter(Boolean);
       let receivedValueMap = new Map<string, number>();
 
       // Pre-fill from native column
-      for (const d of (dealsData.data || []) as any[]) {
+      for (const d of scopedDeals as any[]) {
         if (d.received_value != null) {
           receivedValueMap.set(d.id, Number(d.received_value));
         }
@@ -273,8 +271,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       }
 
       // Aggregate deals
-      if (dealsData.data) {
-        for (const deal of dealsData.data as any[]) {
+      if (scopedDeals.length) {
+        for (const deal of scopedDeals as any[]) {
           if (deal.responsible_user_id && metricsMap[deal.responsible_user_id]) {
             metricsMap[deal.responsible_user_id].total_deals++;
             const value = deal.value || 0;
@@ -302,8 +300,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       }
 
       // Aggregate tasks
-      if (tasksData.data) {
-        for (const task of tasksData.data) {
+      if (scopedTasks.length) {
+        for (const task of scopedTasks) {
           if (task.assigned_to && metricsMap[task.assigned_to]) {
             metricsMap[task.assigned_to].total_tasks++;
             if (task.completed_at) {
@@ -318,6 +316,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       // Aggregate leads
       if (leadsData.data) {
         for (const lead of leadsData.data) {
+          if (!activityMatchesCompany({ lead_id: lead.id }, companyId, scope)) continue;
           if (lead.responsible_user_id && metricsMap[lead.responsible_user_id]) {
             metricsMap[lead.responsible_user_id].assigned_leads++;
             if (lead.status === "converted") {
@@ -331,8 +330,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       // (vendedor + entidade) — duas tasks no mesmo cliente contam como uma.
       const seenScheduled = new Set<string>();
       const seenNoshow = new Set<string>();
-      if (schedulingData.data) {
-        for (const task of schedulingData.data as any[]) {
+      if (scopedScheduling.length) {
+        for (const task of scopedScheduling as any[]) {
           if (!task.assigned_to || !metricsMap[task.assigned_to]) continue;
           const kind = classifyMeetingTask(
             (task.activity_types as any)?.name,
@@ -357,8 +356,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
 
       // Aggregate "reuniões realizadas" (completed_at no período) com dedupe
       const seenHeld = new Set<string>();
-      if ((heldData as any)?.data) {
-        for (const task of (heldData as any).data as any[]) {
+      if (scopedHeld.length) {
+        for (const task of scopedHeld as any[]) {
           if (!task.assigned_to || !metricsMap[task.assigned_to]) continue;
           const kind = classifyMeetingTask(
             (task.activity_types as any)?.name,
@@ -380,19 +379,21 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
 
 
       const metricsArray = Object.values(metricsMap)
-        .filter(m => m.total_deals > 0 || m.total_calls > 0 || m.total_tasks > 0 || m.assigned_leads > 0)
+        .filter(m => m.total_deals > 0 || (companyId === "all" && m.total_calls > 0) || m.total_tasks > 0 || m.assigned_leads > 0 || m.meetings_held > 0 || m.scheduled_calls > 0 || m.noshow_calls > 0)
         .sort((a, b) => {
           const diff = b.won_value - a.won_value;
           if (diff !== 0) return diff;
           return b.entry_value_total - a.entry_value_total;
         });
 
-      setMetrics(metricsArray);
+      if (requestId === requestRef.current) setMetrics(metricsArray);
     } catch (err) {
+      if (requestId !== requestRef.current) return;
       console.error("Error fetching sales team metrics:", err);
       setError("Erro ao carregar métricas");
+      setMetrics([]);
     } finally {
-      setLoading(false);
+      if (requestId === requestRef.current) setLoading(false);
     }
   };
 

@@ -1,5 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
+import { useCompany } from "@/contexts/CompanyContext";
+import { CompanyFilter } from "@/components/companies/CompanyFilter";
+import { useCompanyClientList } from "@/hooks/useCompanyClientList";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAllRows";
@@ -258,6 +261,11 @@ const parseCSV = (content: string): CsvRow[] => {
 
 export default function Clients() {
   const { currentUser } = useCurrentUser();
+  const { companies, loading: companiesLoading } = useCompany();
+  const [filterCompany, setFilterCompany] = usePersistedFilter<string>("clients", "company", "all");
+  const readClientList = useCompanyClientList(filterCompany);
+  const clientRequestId = useRef(0);
+  const countsRequestId = useRef(0);
   const { canCreate, isNearLimit, data: planData } = usePlanLimits();
   const { logAudit } = useAuditLog();
   const { currentSector } = useSector();
@@ -458,7 +466,6 @@ export default function Clients() {
     toast.info("Preparando exportação...");
 
     try {
-      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
       const accId = currentUser?.account_id;
       const userId = currentUser?.id;
       if (!accId || !userId) {
@@ -473,8 +480,8 @@ export default function Clients() {
       if (filterResponsible !== "all") baseParams["responsible_user_id"] = filterResponsible;
       if (filterProduct !== "all") baseParams["product_id"] = filterProduct;
       
-      if (filterContract !== "all") baseParams["contract_filter"] = filterContract;
-      if (filterClientStatus !== "all") baseParams["client_status"] = filterClientStatus;
+      if (effectiveContractFilter) baseParams["contract_filter"] = effectiveContractFilter;
+      if (filterClientStatus !== "all" && activeTab === "all") baseParams["client_status"] = filterClientStatus;
       if (filterLinks === "with") baseParams["with_links"] = "true";
       if (filterCountry !== "all") baseParams["country"] = filterCountry;
       if (filterEducation !== "all") baseParams["education"] = filterEducation;
@@ -496,25 +503,7 @@ export default function Clients() {
           offset: String(offset),
         });
 
-        const response = await fetch(
-          `${SUPABASE_URL}/functions/v1/list-clients?${params.toString()}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              "x-account-id": accId,
-              "x-session-token": userId,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          toast.error("Erro ao buscar clientes para exportação");
-          setExporting(false);
-          return;
-        }
-
-        const result = await response.json();
+        const result = await readClientList(params, offset === 0);
         const batch = result.clients || [];
         allClients = [...allClients, ...batch];
 
@@ -600,7 +589,8 @@ export default function Clients() {
     }
   };
 
-  const fetchClients = async () => {
+  const fetchClients = async (page = currentPage) => {
+    const requestId = ++clientRequestId.current;
     // Use accountId from currentUser hook
     if (currentUser?.account_id) {
       setAccountId(currentUser.account_id);
@@ -617,8 +607,7 @@ export default function Clients() {
     
     try {
       // Use optimized edge function for faster loading with server-side filters
-      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-      const offset = (currentPage - 1) * pageSize;
+      const offset = (page - 1) * pageSize;
       const params = new URLSearchParams({
         limit: String(pageSize),
         offset: String(offset),
@@ -640,25 +629,8 @@ export default function Clients() {
       params.set("sort", sortOrder);
       applyPeriodParams(params);
       
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/list-clients?${params.toString()}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "x-account-id": accId,
-            "x-session-token": userId,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        console.error("Error fetching clients from edge function");
-        setLoading(false);
-        return;
-      }
-
-      const result = await response.json();
+      const result = await readClientList(params, page === 1);
+      if (requestId !== clientRequestId.current) return;
       
       // Transform enriched clients to match expected format
       const transformedClients = result.clients.map((c: any) => ({
@@ -738,16 +710,20 @@ export default function Clients() {
             (lm[r.related_client_id] ||= []).push({ id: r.primary_client.id, full_name: r.primary_client.full_name });
           }
         });
-        setLinksMap(lm);
+        if (requestId === clientRequestId.current) setLinksMap(lm);
       } else {
         setLinksMap({});
       }
 
     } catch (error) {
+      if (requestId !== clientRequestId.current) return;
       console.error("Error fetching clients:", error);
+      setClients([]);
+      setTotalClients(0);
+      toast.error("Erro ao carregar clientes. Tente atualizar a lista.");
     }
     
-    setLoading(false);
+    if (requestId === clientRequestId.current) setLoading(false);
   };
 
   const fetchProducts = async () => {
@@ -892,10 +868,10 @@ export default function Clients() {
   
   // Fetch counts for each status tab respecting current filters (excluding tab/contract)
   const fetchTabCounts = async () => {
+    const requestId = ++countsRequestId.current;
     const accId = currentUser?.account_id;
     const userId = currentUser?.id;
     if (!accId || !userId) return;
-    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
     const tabs: Array<{ key: string; contract: string }> = [
       { key: "active", contract: "active" },
       { key: "awaiting", contract: "none" },
@@ -916,40 +892,42 @@ export default function Clients() {
       if (filterArea !== "all") p.set("area", filterArea);
       if (filterSpecialty !== "all") p.set("specialty", filterSpecialty);
       if (filterRevenueMissing !== "all") p.set("revenue_missing", filterRevenueMissing);
+      p.set("sort", sortOrder);
       applyPeriodParams(p);
       return p;
     };
     try {
       const results = await Promise.all(
-        tabs.map(t =>
-          fetch(`${SUPABASE_URL}/functions/v1/list-clients?${buildParams(t.contract).toString()}`, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              "x-account-id": accId,
-              "x-session-token": userId,
-            },
-          }).then(r => r.ok ? r.json() : { total: 0 }).then(j => ({ key: t.key, total: j.total || 0 }))
-        )
+        tabs.map(async (t) => {
+          const result = await readClientList(buildParams(t.contract));
+          return { key: t.key, total: result.total || 0 };
+        })
       );
+      if (requestId !== countsRequestId.current) return;
       const next: Record<string, number> = {};
       results.forEach(r => { next[r.key] = r.total; });
       setTabCounts(next);
     } catch (e) {
+      if (requestId !== countsRequestId.current) return;
       console.error("Error fetching tab counts:", e);
+      setTabCounts({ active: 0, awaiting: 0, hold: 0, cancelled: 0 });
     }
   };
 
   // Refetch clients when filters change (server-side filtering) - 800ms debounce to reduce API calls
   // Reset to page 1 when filters change
   useEffect(() => {
+    clientRequestId.current += 1;
+    countsRequestId.current += 1;
+    setLoading(true);
+    setTabCounts({ active: 0, awaiting: 0, hold: 0, cancelled: 0 });
     setCurrentPage(1);
     const timer = setTimeout(() => {
-      fetchClients();
+      fetchClients(1);
       fetchTabCounts();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, filterArea, filterSpecialty, filterRevenueMissing, sortOrder, activeTab, filterPeriod, filterPeriodStart, filterPeriodEnd]);
+  }, [searchQuery, filterCompany, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, filterArea, filterSpecialty, filterRevenueMissing, sortOrder, activeTab, filterPeriod, filterPeriodStart, filterPeriodEnd]);
 
   // Fetch client stages when account is available
   useEffect(() => {
@@ -1493,6 +1471,7 @@ export default function Clients() {
 
   // Calculate active filter count
   const activeFilterCount = [
+    filterCompany !== "all",
     filterClientStatus !== "all",
     filterProduct !== "all",
     filterContract !== "all",
@@ -1508,6 +1487,7 @@ export default function Clients() {
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
+    setFilterCompany("all");
     setFilterClientStatus("all");
     setFilterProduct("all");
     setFilterContract("all");
@@ -1638,6 +1618,7 @@ export default function Clients() {
   };
 
   const filterFields = (<>
+              <CompanyFilter companies={companies} value={filterCompany} onChange={setFilterCompany} loading={companiesLoading} />
               {/* Client Status Filter */}
               <div className="space-y-1.5 min-w-[160px]">
                 <Label className="text-xs text-muted-foreground">Status do Cliente</Label>
@@ -1863,6 +1844,7 @@ export default function Clients() {
     const statusLabel = STATUS_OPTIONS.find((s) => s.value === activeTab)?.label ?? "Ativos";
     const totalPages = Math.max(1, Math.ceil(totalClients / pageSize));
     const chips: { key: string; label: string; clear: () => void }[] = [];
+    if (filterCompany !== "all") chips.push({ key: "company", label: companies.find((c) => c.id === filterCompany)?.trade_name || companies.find((c) => c.id === filterCompany)?.legal_name || "Empresa", clear: () => setFilterCompany("all") });
     if (sortOrder !== "recent") chips.push({ key: "sort", label: SORT_OPTIONS.find((o) => o.value === sortOrder)?.label ?? sortOrder, clear: () => setSortOrder("recent") });
     if (filterRevenueMissing !== "all") chips.push({ key: "rev", label: filterRevenueMissing === "initial" ? "Sem fat. inicial" : filterRevenueMissing === "current" ? "Sem fat. atual" : "Sem faturamento", clear: () => setFilterRevenueMissing("all") });
     if (periodRange) chips.push({ key: "period", label: `Período: ${periodLabel}`, clear: () => { setFilterPeriod("all"); setFilterPeriodStart(""); setFilterPeriodEnd(""); } });
@@ -2970,6 +2952,12 @@ export default function Clients() {
                     <button onClick={() => setFilterClientStatus("all")} className="hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>
+                  </Badge>
+                )}
+                {filterCompany !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5 max-w-full">
+                    <span className="truncate">Empresa: {companies.find((company) => company.id === filterCompany)?.trade_name || companies.find((company) => company.id === filterCompany)?.legal_name || "..."}</span>
+                    <Button variant="ghost" size="icon" onClick={() => setFilterCompany("all")} className="h-5 w-5 shrink-0" aria-label="Remover filtro de empresa"><X className="h-3 w-3" /></Button>
                   </Badge>
                 )}
                 {filterProduct !== "all" && (

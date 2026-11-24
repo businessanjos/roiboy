@@ -1,8 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCompany } from "@/contexts/CompanyContext";
+import { CompanyFilter } from "@/components/companies/CompanyFilter";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
+import { filterProductsByCompany } from "@/lib/companyAreaFilters";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -191,7 +194,8 @@ const billingPeriodLabels = {
 
 export default function Products() {
   const { currentUser } = useCurrentUser();
-  const { companies } = useCompany();
+  const { companies, loading: companiesLoading } = useCompany();
+  const [companyFilter, setCompanyFilter] = usePersistedFilter<string>("products", "company", "all");
   const defaultCompanyId = companies.find((c) => c.is_default)?.id ?? companies[0]?.id ?? null;
   const { canCreate } = usePlanLimits();
   const [products, setProducts] = useState<Product[]>([]);
@@ -460,7 +464,8 @@ export default function Products() {
     }).format(amount);
   };
 
-  const pg = usePagedList(products, { isLoading: loading });
+  const visibleProducts = useMemo(() => filterProductsByCompany(products, companyFilter), [products, companyFilter]);
+  const pg = usePagedList(visibleProducts, { isLoading: loading, resetKey: companyFilter });
 
   if (loading) {
     return <LoadingScreen message="Carregando produtos..." fullScreen={false} />;
@@ -1135,13 +1140,18 @@ export default function Products() {
         </Dialog>
       </div>
 
-      {products.length === 0 ? (
+      <div className="flex flex-wrap items-end gap-3">
+        <CompanyFilter companies={companies} value={companyFilter} onChange={setCompanyFilter} loading={companiesLoading} />
+        <span className="pb-3 text-sm tabular-nums text-muted-foreground">{visibleProducts.length} de {products.length} produtos</span>
+      </div>
+
+      {visibleProducts.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="h-12 w-12 text-muted-foreground/30 mb-3" />
-            <p className="text-muted-foreground">Nenhum produto cadastrado</p>
+            <p className="text-muted-foreground">{companyFilter === "all" ? "Nenhum produto cadastrado" : "Nenhum produto nesta empresa"}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Crie produtos para vincular aos seus clientes
+              {companyFilter === "all" ? "Crie produtos para vincular aos seus clientes" : ""}
             </p>
           </CardContent>
         </Card>
@@ -1258,7 +1268,7 @@ export default function Products() {
           ))}
         </div>
       )}
-      {!loading && products.length > 0 && <PagerFor state={pg} itemLabel="produtos" />}
+      {!loading && visibleProducts.length > 0 && <PagerFor state={pg} itemLabel="produtos" />}
     </div>
   );
 }
