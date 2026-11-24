@@ -299,19 +299,23 @@ export function ManualMetricsTab() {
           </Popover>
         )}
 
-        <MonthPicker
-          year={Number(year)}
-          month={Number(month)}
-          onMonthChange={(m) => setMonth(String(m))}
-          onYearChange={(y) => setYear(String(y))}
-        />
+        {mode === 'edit' && (
+          <>
+            <MonthPicker
+              year={Number(year)}
+              month={Number(month)}
+              onMonthChange={(m) => setMonth(String(m))}
+              onYearChange={(y) => setYear(String(y))}
+            />
 
-        <Select value={year} onValueChange={setYear}>
-          <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-          </SelectContent>
-        </Select>
+            <Select value={year} onValueChange={setYear}>
+              <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </>
+        )}
 
         {mode === 'edit' && (
           <Button className="ml-auto gap-2" onClick={handleSave} disabled={saving}>

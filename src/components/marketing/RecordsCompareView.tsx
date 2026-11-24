@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { supabase } from '@/integrations/supabase/client';
 import { METRICS, type MetricKey } from './RecordsGoalsCharts';
+import { MonthPicker } from './MonthPicker';
 import { calculateCompareAnalytics } from './recordsCompareAnalytics';
 
 const MONTHS_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -117,9 +118,11 @@ function CompareTooltip({ active, payload, label: periodLabel, metricLabel, scop
   );
 }
 
-export function RecordsCompareView({ profiles, year, month }: Props) {
+export function RecordsCompareView({ profiles, year: initialYear, month: initialMonth }: Props) {
   const [metric, setMetric] = useState<MetricKey>('views');
   const [scope, setScope] = useState<Scope>('month');
+  const [year, setYear] = useState(initialYear);
+  const [month, setMonth] = useState(initialMonth);
   const chartId = useId().replace(/:/g, '');
 
   const ids = profiles.map((p) => p.id);
@@ -248,6 +251,13 @@ export function RecordsCompareView({ profiles, year, month }: Props) {
             ))}
           </SelectContent>
         </Select>
+
+        <MonthPicker
+          year={year}
+          month={month}
+          onMonthChange={setMonth}
+          onYearChange={setYear}
+        />
       </div>
 
       {/* Cards resumo por perfil */}
