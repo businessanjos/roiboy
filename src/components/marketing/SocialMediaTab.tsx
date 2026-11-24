@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -28,6 +28,8 @@ import {
   GitCompare,
   CheckSquare,
   ChevronDown,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -103,6 +105,23 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
   const [insightsPeriod, setInsightsPeriod] = useState<string>('28');
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [visibleMetric, setVisibleMetric] = useState('reach');
+  const [isTableFullscreen, setIsTableFullscreen] = useState(false);
+  const tableAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onFullscreenChange = () => setIsTableFullscreen(document.fullscreenElement === tableAreaRef.current);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  const toggleTableFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      tableAreaRef.current?.requestFullscreen();
+    }
+  };
+
   const metricColumns: Record<string, string> = {
     reach: '[&_tr>*:nth-child(7)]:!table-cell', likes: '[&_tr>*:nth-child(8)]:!table-cell',
     comments: '[&_tr>*:nth-child(9)]:!table-cell', shares: '[&_tr>*:nth-child(10)]:!table-cell',
@@ -477,6 +496,20 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                     {Object.entries({ all: 'Todas as métricas', reach: 'Alcance', likes: 'Curtidas', comments: 'Comentários', shares: 'Compartilhamentos', saves: 'Salvamentos', link_clicks: 'Cliques no link', views: 'Visualizações', engagement_rate: 'Engajamento', virality_rate: 'Viralidade' }).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-9 w-9 bg-card"
+                      aria-label="Ver métricas em tela cheia"
+                      onClick={toggleTableFullscreen}
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Ver métricas em tela cheia</TooltipContent>
+                </Tooltip>
                 <SocialPostsDateFilter
                   dateFrom={dateFrom}
                   dateTo={dateTo}
@@ -541,7 +574,22 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
           
           <TabsContent value="list" className="mt-0">
             <CardContent className="p-0">
-              <div className={cn("w-full min-w-0 [&_th]:h-12 [&_th]:px-3 [&_th]:align-middle [&_th]:whitespace-nowrap [&_th]:text-xs [&_th]:font-medium [&_td]:px-3 [&_td]:py-3 [&_td]:align-middle [&_tr>*:nth-child(1)]:w-10 [&_tr>*:nth-child(1)]:text-center [&_tr>*:nth-child(2)]:w-20 [&_tr>*:nth-child(3)]:hidden sm:[&_tr>*:nth-child(3)]:table-cell sm:[&_tr>*:nth-child(3)]:w-28 [&_tr>*:nth-child(4)]:hidden xl:[&_tr>*:nth-child(4)]:table-cell xl:[&_tr>*:nth-child(4)]:w-36 [&_tr>*:nth-child(5)]:hidden xl:[&_tr>*:nth-child(5)]:table-cell xl:[&_tr>*:nth-child(5)]:w-40 [&_tr>*:nth-child(6)]:min-w-0 [&_tr>*:nth-child(n+7):nth-child(-n+15)]:hidden [&_tr>*:nth-child(n+7):nth-child(-n+15)]:w-24 [&_tr>*:nth-child(n+7):nth-child(-n+15)]:tabular-nums [&_tr>*:nth-child(16)]:w-10", metricColumns[visibleMetric])}>
+              <div
+                ref={tableAreaRef}
+                className={cn(isTableFullscreen && "relative flex flex-col bg-background p-4")}
+              >
+              {isTableFullscreen && (
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="absolute right-6 top-6 z-10 h-9 w-9 shadow-md"
+                  aria-label="Sair da tela cheia"
+                  onClick={toggleTableFullscreen}
+                >
+                  <Minimize2 className="h-4 w-4" />
+                </Button>
+              )}
+              <div className={cn("w-full min-w-0 flex-1 overflow-y-auto [&_th]:h-12 [&_th]:px-3 [&_th]:align-middle [&_th]:whitespace-nowrap [&_th]:text-xs [&_th]:font-medium [&_td]:px-3 [&_td]:py-3 [&_td]:align-middle [&_tr>*:nth-child(1)]:w-10 [&_tr>*:nth-child(1)]:text-center [&_tr>*:nth-child(2)]:w-20 [&_tr>*:nth-child(3)]:hidden sm:[&_tr>*:nth-child(3)]:table-cell sm:[&_tr>*:nth-child(3)]:w-28 [&_tr>*:nth-child(4)]:hidden xl:[&_tr>*:nth-child(4)]:table-cell xl:[&_tr>*:nth-child(4)]:w-36 [&_tr>*:nth-child(5)]:hidden xl:[&_tr>*:nth-child(5)]:table-cell xl:[&_tr>*:nth-child(5)]:w-40 [&_tr>*:nth-child(6)]:min-w-0 [&_tr>*:nth-child(n+7):nth-child(-n+15)]:hidden [&_tr>*:nth-child(n+7):nth-child(-n+15)]:w-24 [&_tr>*:nth-child(n+7):nth-child(-n+15)]:tabular-nums [&_tr>*:nth-child(16)]:w-10", metricColumns[isTableFullscreen ? 'all' : visibleMetric])}>
                 <Table className="table-fixed">
                   <TableHeader>
                     <TableRow className="bg-muted/30">
@@ -917,6 +965,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                 </Table>
               </div>
               <PagerFor state={pg} itemLabel="posts" />
+              </div>
             </CardContent>
           </TabsContent>
           
