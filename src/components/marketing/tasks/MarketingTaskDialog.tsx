@@ -38,7 +38,7 @@ import { MarketingTaskMediaUpload } from "./MarketingTaskMediaUpload";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { toast } from "sonner";
-import { readTaskDetails, writeTaskDetails, taskCopyDraft, taskLabelCatalog, validDeliveryTime, deliveryTimeInput, type TaskLabel, type TaskCopySubtask } from "@/lib/marketing/taskDetails";
+import { readTaskDetails, writeTaskDetails, taskCopyDraft, taskLabelCatalog, validDeliveryTime, deliveryTimeInput, hasTaskResponsible, type TaskLabel, type TaskCopySubtask } from "@/lib/marketing/taskDetails";
 import { TaskLabelEditor } from "./TaskLabels";
 import { TaskCoverEditor } from "./TaskCover";
 import { TaskComments } from "./TaskComments";
@@ -169,6 +169,11 @@ export function MarketingTaskDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || isUploading || !dateValid || !title.trim() || (dueTime && (!dueDate || !validDeliveryTime(dueTime)))) return;
+    if (!hasTaskResponsible(assigneeId)) {
+      toast.error("Selecione um responsável pela execução.");
+      document.getElementById("task-assignee")?.focus();
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -188,7 +193,7 @@ export function MarketingTaskDialog({
         description: description.trim() || null,
         section_id: sectionId && sectionId !== "none" ? sectionId : null,
         column_id: finalColumn?.id ?? null,
-        assignee_id: assigneeId && assigneeId !== "none" ? assigneeId : null,
+        assignee_id: assigneeId,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
         priority,
         status: finalColumn?.is_done ? "done" as const : "pending" as const,
@@ -218,21 +223,24 @@ export function MarketingTaskDialog({
 
   const source = copySource ?? existingTask;
   const blocked = isSubmitting || isUploading;
+  const hasResponsible = hasTaskResponsible(assigneeId);
   const selectPeople = (kind: "assignee" | "requester") => {
-    const personId = kind === "assignee" ? assigneeId : requesterId;
+    const required = kind === "assignee";
+    const personId = required ? (hasResponsible ? assigneeId : undefined) : requesterId;
     const label = kind === "assignee" ? "Responsável pela execução" : "Solicitante da demanda";
     const none = kind === "assignee" ? "Sem responsável" : "Sem solicitante";
     const fallbackName = kind === "assignee" ? source?.assignee?.name : source ? readTaskDetails(source).requesterName : null;
     return <div className="space-y-1.5">
-      <Label htmlFor={`task-${kind}`} className="text-xs text-muted-foreground">{label}</Label>
-      <Select value={personId || "none"} onValueChange={kind === "assignee" ? setAssigneeId : setRequesterId} disabled={blocked}>
-        <SelectTrigger id={`task-${kind}`} className="h-11"><SelectValue /></SelectTrigger>
+      <Label htmlFor={`task-${kind}`} className="text-xs text-muted-foreground">{label}{required ? " *" : ""}</Label>
+      <Select value={personId || (required ? "" : "none")} onValueChange={required ? setAssigneeId : setRequesterId} disabled={blocked}>
+        <SelectTrigger id={`task-${kind}`} className="h-11" aria-required={required} aria-invalid={required && !hasResponsible && !!title.trim()} aria-describedby={required && !hasResponsible && title.trim() ? "task-assignee-error" : undefined}><SelectValue placeholder={required ? "Selecione o responsável" : undefined} /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">{none}</SelectItem>
+          {!required && <SelectItem value="none">{none}</SelectItem>}
           {personId && personId !== "none" && !teamMembers.some((member) => member.id === personId) && <SelectItem value={personId}>{fallbackName || "Pessoa atual"}</SelectItem>}
           {teamMembers.map((member) => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}
         </SelectContent>
       </Select>
+      {required && !hasResponsible && title.trim() && <p id="task-assignee-error" className="text-xs text-destructive">Selecione um responsável pela execução.</p>}
     </div>;
   };
 
@@ -294,7 +302,7 @@ export function MarketingTaskDialog({
             <Button type="button" variant="ghost" size="sm" className="h-10" onClick={handleDuplicate} disabled={blocked} aria-label="Duplicar tarefa"><Copy className="h-4 w-4" /><span className="hidden sm:inline">Duplicar tarefa</span></Button>
             <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-destructive" aria-label="Excluir tarefa" title="Excluir tarefa" onClick={() => setShowDeleteDialog(true)} disabled={blocked}><Trash2 className="h-4 w-4" /></Button>
           </>}</div>
-          <div className="ml-auto flex items-center gap-2"><Button type="button" variant="outline" className="h-10" onClick={closeDraft} disabled={blocked}>Cancelar</Button><Button type="submit" form={formId} className="h-10" disabled={blocked || !dateValid || !title.trim() || (!!dueTime && (!dueDate || !validDeliveryTime(dueTime)))}>{isSubmitting && <Loader2 className="h-4 w-4 motion-safe:animate-spin" />}{copySource ? "Criar cópia" : isEditing ? "Salvar" : "Criar"}</Button></div>
+          <div className="ml-auto flex items-center gap-2"><Button type="button" variant="outline" className="h-10" onClick={closeDraft} disabled={blocked}>Cancelar</Button><Button type="submit" form={formId} className="h-10" disabled={blocked || !dateValid || !title.trim() || !hasResponsible || (!!dueTime && (!dueDate || !validDeliveryTime(dueTime)))}>{isSubmitting && <Loader2 className="h-4 w-4 motion-safe:animate-spin" />}{copySource ? "Criar cópia" : isEditing ? "Salvar" : "Criar"}</Button></div>
         </div>
       </DialogContent>
     </Dialog>

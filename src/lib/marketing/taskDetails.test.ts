@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarketingTask } from "@/hooks/useMarketingTasks";
-import { deliverySortKey, deliveryTimeInput, matchesTaskLabels, readTaskDetails, taskCopyDraft, taskCopySubtasks, taskLabelCatalog, validDeliveryTime, writeTaskDetails } from "./taskDetails";
+import { deliverySortKey, deliveryTimeInput, hasTaskResponsible, matchesTaskLabels, readTaskDetails, taskCopyDraft, taskCopySubtasks, taskLabelCatalog, validDeliveryTime, writeTaskDetails } from "./taskDetails";
 
 const task = {
   id: "original", account_id: "account", title: "Criar post", description: "Briefing",
@@ -13,6 +13,26 @@ const task = {
 } as MarketingTask;
 
 describe("Detalhes das tarefas de Marketing", () => {
+  it("exige responsável pela execução ao salvar, mesmo quando já há solicitante", () => {
+    expect(hasTaskResponsible(null)).toBe(false);
+    expect(hasTaskResponsible(undefined)).toBe(false);
+    expect(hasTaskResponsible("")).toBe(false);
+    expect(hasTaskResponsible("   ")).toBe(false);
+    expect(hasTaskResponsible("none")).toBe(false);
+    expect(hasTaskResponsible(task.assignee_id)).toBe(true);
+    expect(hasTaskResponsible({ ...task, assignee_id: null }.assignee_id)).toBe(false);
+  });
+  it("a conta técnica de TV não pode preencher o responsável obrigatório", () => {
+    expect(hasTaskResponsible("4cd93864-3689-4835-bddf-91e2960e7860")).toBe(false);
+    expect(hasTaskResponsible("4e6afeac-2c22-4e20-805f-dba140036027")).toBe(false);
+  });
+  it("uma cópia sem responsável exige escolha sem atribuir ninguém ou alterar a original", () => {
+    const unassigned = { ...task, assignee_id: null };
+    const copy = taskCopyDraft(unassigned);
+    expect(hasTaskResponsible(copy.assignee_id)).toBe(false);
+    expect(unassigned.assignee_id).toBeNull();
+    expect(readTaskDetails(copy).requesterId).toBe("requester");
+  });
   it("persiste o horário da entrega sem trocar a data", () => {
     const details = readTaskDetails(task);
     expect(details.dueTime).toBe("17:30");

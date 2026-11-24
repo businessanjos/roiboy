@@ -1,4 +1,10 @@
 import type { MarketingTask } from "@/hooks/useMarketingTasks";
+import { isHiddenTechnicalPerson } from "@/lib/peopleVisibility";
+
+/** Form validation only: legacy tasks remain untouched until explicitly saved. */
+export function hasTaskResponsible(assigneeId: string | null | undefined): assigneeId is string {
+  return !!assigneeId?.trim() && assigneeId !== "none" && !isHiddenTechnicalPerson({ id: assigneeId });
+}
 
 export const TASK_LABEL_COLORS = [
   { value: "blue", name: "Azul", swatch: "bg-info", badge: "bg-info-soft text-info-strong border-info/25" },

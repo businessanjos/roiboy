@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Responsável obrigatório nas tarefas de Marketing
+- [x] Exigir responsável pela execução na criação, edição e cópia pelo formulário, com aviso junto ao campo; solicitante independente e tarefas existentes preservadas.
+- [x] 21 testes passaram: formulário bloqueia criação/edição/cópia sem executor, escolha permite envio com identidade separada do solicitante; cópia não altera original, TV não satisfaz o campo obrigatório. Sem mudanças no backend ou em dados reais; conferência autenticada segue indisponível (sessão própria não encontrada e usuário temporário falhou na solicitação anterior).
+
 ## Conta técnica de TV invisível
 - [x] Ocultar a conta técnica das fontes de listas/seletores, busca global, equipe/admin/RH, filtros e rankings; excluir antes da paginação/contagem de pessoas e ignorar seleção antiga no Marketing. Autenticação, permissões, billing e autoria histórica preservadas, nenhum backend/dado real alterado.
 - [x] 37 testes passaram, incluindo listas por equipe/setor/Marketing, pessoas reais mantidas, conta identificada por UUID/e-mail/nome, filtro antes da contagem e boot dos painéis preservado; seletor original + hook real conferidos isoladamente em 794 px com respostas fictícias, sem erros ou escritas.
