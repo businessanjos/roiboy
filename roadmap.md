@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Topo compacto das tarefas de Marketing
+- [x] Reduzir título e espaçamento; concentrar filtros num menu e ações secundárias em mais opções, preservando busca, filtros, telas e callbacks.
+- [x] 20 testes passaram; busca, filtros combinados, limpar, ordenação, nova tarefa, separadores, etapas, lista/quadro e tela cheia conferidos com tarefas fictícias em 390/958/1440 px, claro/escuro, sem overflow ou alterações reais; compilação sem erros.
+- [ ] Conferência autenticada em /marketing/projetos: sessão própria indisponível e criação de pessoa temporária falhou; teste visual com respostas fictícias não valida persistência real.
+
 ## Links no texto das tarefas
 - [x] Reconhecer links da descrição ao digitar, colar e abrir, com destaque e abertura segura em outra aba; preservar texto, formatação e dados existentes.
 - [x] Editor compartilhado e comentários preservam links HTTP(S) seguros; 48 testes passaram, incluindo endereço completo, protocolos rejeitados, atributos descartados, digitação e ausência de autosave.

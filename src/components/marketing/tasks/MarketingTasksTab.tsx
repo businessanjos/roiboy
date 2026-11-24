@@ -4,8 +4,10 @@ import { isHiddenTechnicalPerson } from "@/lib/peopleVisibility";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp, ListMinus, Maximize2, Minimize2 } from "lucide-react";
+import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp, ListMinus, Maximize2, Minimize2, MoreHorizontal, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -282,6 +284,8 @@ export function MarketingTasksTab() {
     );
   }
 
+  const activeFilterCount = Number(assigneeFilter !== "all") + Number(statusFilter !== "all") + labelFilter.length;
+
   const expandControl = (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -289,7 +293,7 @@ export function MarketingTasksTab() {
           ref={expandButtonRef}
           variant={isFullscreen ? "secondary" : "outline"}
           size="icon"
-          className="h-11 w-11 shrink-0"
+          className="h-9 w-9 shrink-0"
           aria-label={isFullscreen ? "Reduzir quadro" : "Expandir quadro em tela cheia"}
           aria-pressed={isFullscreen}
           onClick={() => setIsBoardExpanded((expanded) => !expanded)}
@@ -305,7 +309,7 @@ export function MarketingTasksTab() {
     <div
       role="region"
       aria-label="Quadro de tarefas de Marketing"
-      className={cn("min-w-0 space-y-4", isFullscreen && "fixed inset-0 z-50 flex h-dvh flex-col overflow-hidden bg-background p-3 sm:p-5")}
+      className={cn("min-w-0 space-y-3", isFullscreen && "fixed inset-0 z-50 flex h-dvh flex-col overflow-hidden bg-background p-3 sm:p-5")}
     >
       {isFullscreen && (
         <div className="flex shrink-0 items-center justify-between gap-3">
@@ -313,33 +317,38 @@ export function MarketingTasksTab() {
           {expandControl}
         </div>
       )}
-      <div className={cn("flex items-center justify-between gap-4 flex-wrap", isFullscreen && "max-h-[40dvh] shrink-0 overflow-y-auto border-b pb-3")}>
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <Button onClick={() => handleAddTask()} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nova tarefa
+      <div className={cn("flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap", isFullscreen && "shrink-0 border-b pb-3")}>
+        <Tooltip><TooltipTrigger asChild>
+          <Button aria-label="Nova tarefa" onClick={() => handleAddTask()} size="sm" className="h-9 w-9 shrink-0 gap-1.5 px-0 sm:w-auto sm:px-3">
+            <Plus className="h-4 w-4" /><span className="hidden sm:inline">Nova tarefa</span>
           </Button>
-          {viewMode === "board" && <Button variant="outline" onClick={() => openSeparator()}><ListMinus className="h-4 w-4" />Separador</Button>}
-          {selectedAssignee && (
-            <Button
-              variant="secondary"
-              onClick={() => handleAddTask(undefined, undefined, selectedAssignee.id)}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Nova tarefa para {selectedAssignee.name}
-            </Button>
-          )}
-          <Button variant="outline" onClick={() => setIsColumnsManagerOpen(true)} className="gap-2">
-            <Settings2 className="h-4 w-4" />
-            Etapas
-          </Button>
+        </TooltipTrigger><TooltipContent>Nova tarefa</TooltipContent></Tooltip>
+        <div className="relative order-first w-full min-w-0 sm:order-none sm:flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            aria-label="Buscar tarefas" placeholder="Buscar tarefas..." value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className={cn("h-9 w-full pl-9", searchQuery && "pr-9")}
+          />
+          {searchQuery && <Button variant="ghost" size="icon" aria-label="Limpar busca" className="absolute right-0 top-0 h-9 w-9" onClick={() => setSearchQuery("")}><X className="h-3.5 w-3.5" /></Button>}
         </div>
-
-        <div className="flex min-w-0 max-w-full items-center gap-2 flex-wrap">
-          <TaskLabelFilter catalog={labelCatalog} selected={labelFilter} onChange={setLabelFilter} />
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button aria-label="Filtrar tarefas" variant={activeFilterCount ? "secondary" : "outline"} size="sm" className="h-9 gap-1.5 px-2 sm:px-3">
+                <Filter className="h-4 w-4" /><span className="hidden sm:inline">Filtros</span>
+                {activeFilterCount > 0 && <span className="flex h-4 min-w-4 items-center justify-center rounded bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{activeFilterCount}</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" collisionPadding={12} className="w-80 max-w-[calc(100vw-1.5rem)] p-0">
+              <div className="flex items-center justify-between border-b px-4 py-3">
+                <h3 className="text-sm font-semibold">Filtros e ordenação</h3>
+                <span className="text-xs tabular-nums text-muted-foreground">{filteredTasks.length} de {tasks.length}</span>
+              </div>
+              <div className="max-h-[55dvh] space-y-4 overflow-y-auto p-4">
+          <div className="space-y-1.5"><p className="text-xs font-medium text-muted-foreground">Ordenação</p>
           <Select value={sortFilter} onValueChange={(value) => setSortFilter(value as SortFilter)}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger aria-label="Ordenar tarefas" className="w-full">
               <SelectValue placeholder="Ordenar por" />
             </SelectTrigger>
             <SelectContent>
@@ -354,8 +363,10 @@ export function MarketingTasksTab() {
             </SelectContent>
           </Select>
 
+          </div>
+          <div className="space-y-1.5"><p className="text-xs font-medium text-muted-foreground">Etapa</p>
           <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger aria-label="Filtrar por etapa" className="w-full">
               <SelectValue placeholder="Todas as etapas" />
             </SelectTrigger>
             <SelectContent>
@@ -370,8 +381,10 @@ export function MarketingTasksTab() {
             </SelectContent>
           </Select>
 
+          </div>
+          <div className="space-y-1.5"><p className="text-xs font-medium text-muted-foreground">Responsável</p>
           <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-            <SelectTrigger className="w-60">
+            <SelectTrigger aria-label="Filtrar por responsável" className="w-full">
               <User className="h-4 w-4 mr-2 text-muted-foreground" />
               <SelectValue placeholder="Todas as pessoas" />
             </SelectTrigger>
@@ -405,25 +418,36 @@ export function MarketingTasksTab() {
             </SelectContent>
           </Select>
 
-          <div className="relative max-w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar tarefas..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-64 max-w-full"
-            />
           </div>
-
-          <div className="flex items-center border rounded-lg overflow-hidden">
-            <Button aria-label="Visualizar lista" title="Visualizar lista" variant={viewMode === "list" ? "secondary" : "ghost"} size="sm" onClick={() => { setIsBoardExpanded(false); setViewMode("list"); }} className="h-11 w-11 rounded-none">
-              <List className="h-4 w-4" />
-            </Button>
-            <Button aria-label="Visualizar quadro" title="Visualizar quadro" variant={viewMode === "board" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("board")} className="h-11 w-11 rounded-none">
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
+                <div className="flex items-center justify-between border-t pt-3">
+                  <span className="text-xs font-medium text-muted-foreground">Etiquetas</span>
+                  <TaskLabelFilter catalog={labelCatalog} selected={labelFilter} onChange={setLabelFilter} />
+                </div>
+              </div>
+              <div className="border-t px-3 py-2">
+                <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground" disabled={!activeFilterCount && !searchQuery} onClick={() => { setSearchQuery(""); setAssigneeFilter("all"); setStatusFilter("all"); setLabelFilter([]); }}><X className="h-3.5 w-3.5" />Limpar filtros</Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <div className="flex shrink-0 items-center overflow-hidden rounded-md border">
+            <Tooltip><TooltipTrigger asChild>
+              <Button aria-label="Visualizar lista" aria-pressed={viewMode === "list"} variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" onClick={() => { setIsBoardExpanded(false); setViewMode("list"); }} className="h-9 w-9 rounded-none"><List className="h-4 w-4" /></Button>
+            </TooltipTrigger><TooltipContent>Lista</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild>
+              <Button aria-label="Visualizar quadro" aria-pressed={viewMode === "board"} variant={viewMode === "board" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("board")} className="h-9 w-9 rounded-none"><LayoutGrid className="h-4 w-4" /></Button>
+            </TooltipTrigger><TooltipContent>Quadro</TooltipContent></Tooltip>
           </div>
           {viewMode === "board" && !isFullscreen && expandControl}
+          <DropdownMenu>
+            <Tooltip><TooltipTrigger asChild><DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Mais opções do quadro"><MoreHorizontal className="h-4 w-4" /></Button>
+            </DropdownMenuTrigger></TooltipTrigger><TooltipContent>Mais opções</TooltipContent></Tooltip>
+            <DropdownMenuContent align="end" className="max-w-[calc(100vw-1.5rem)]">
+              {viewMode === "board" && <DropdownMenuItem onSelect={() => openSeparator()} className="min-h-10 gap-2"><ListMinus className="h-4 w-4" />Adicionar separador</DropdownMenuItem>}
+              <DropdownMenuItem onSelect={() => setIsColumnsManagerOpen(true)} className="min-h-10 gap-2"><Settings2 className="h-4 w-4" />Gerenciar etapas</DropdownMenuItem>
+              {selectedAssignee && <DropdownMenuItem onSelect={() => handleAddTask(undefined, undefined, selectedAssignee.id)} className="min-h-10 max-w-72 gap-2"><Plus className="h-4 w-4 shrink-0" /><span className="break-words">Nova tarefa para {selectedAssignee.name}</span></DropdownMenuItem>}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
