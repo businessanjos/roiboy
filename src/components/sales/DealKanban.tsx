@@ -24,7 +24,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, ChevronRight, Check } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DealKanbanProps {
   stages: DealStage[];
@@ -272,6 +273,39 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
   // (mobile e desktop), evitando altura fixa que sobra ou corta o final da lista.
   const mobileBoardRef = useRef<HTMLDivElement | null>(null);
   const [mobileBoardHeight, setMobileBoardHeight] = useState<number | null>(null);
+  const [hasMoreStagesRight, setHasMoreStagesRight] = useState(false);
+
+  useLayoutEffect(() => {
+    const board = mobileBoardRef.current;
+    if (isMobile || !board || stages.length === 0) {
+      setHasMoreStagesRight(false);
+      return;
+    }
+    const measureOverflow = () => {
+      setHasMoreStagesRight(board.scrollWidth - board.clientWidth - board.scrollLeft > 2);
+    };
+    measureOverflow();
+    board.addEventListener("scroll", measureOverflow, { passive: true });
+    const observer = new ResizeObserver(measureOverflow);
+    observer.observe(board);
+    if (board.firstElementChild) observer.observe(board.firstElementChild);
+    return () => {
+      board.removeEventListener("scroll", measureOverflow);
+      observer.disconnect();
+    };
+  }, [isMobile, stages.length, fullHeight]);
+
+  const scrollToNextStage = () => {
+    const board = mobileBoardRef.current;
+    const content = board?.firstElementChild;
+    const column = content?.firstElementChild;
+    if (!board || !content || !column) return;
+    const gap = parseFloat(getComputedStyle(content).columnGap) || 0;
+    board.scrollBy({
+      left: column.getBoundingClientRect().width + gap,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  };
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -401,9 +435,14 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
           </div>
         ) : (
           <div
-            ref={mobileBoardRef}
-            className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain -mx-1 px-1"
+            className="group/kanban relative w-full min-w-0"
             style={{ height: mobileBoardHeight ? `${mobileBoardHeight}px` : "calc(100vh - 220px)" }}
+          >
+          <div
+            ref={mobileBoardRef}
+            role="region"
+            aria-label="Etapas do funil"
+            className="h-full w-full overflow-x-auto overflow-y-hidden overscroll-x-contain px-1"
             onWheel={(e) => {
               const el = e.currentTarget;
               // Horizontal trackpad gesture or shift+wheel anywhere over the board
@@ -436,6 +475,28 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
                 />
               ))}
             </div>
+          </div>
+          {hasMoreStagesRight && !isDragActive && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 flex w-14 items-center justify-end bg-gradient-pipeline-edge pr-1">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label="Ver etapas à direita"
+                      onClick={scrollToNextStage}
+                      className="pointer-events-none h-9 w-9 rounded-full border-border/80 bg-background text-muted-foreground shadow-elevated opacity-0 transition-opacity group-hover/kanban:pointer-events-auto group-hover/kanban:opacity-100 hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 motion-reduce:transition-none"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">Ver próximas etapas</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
           </div>
         )}
 

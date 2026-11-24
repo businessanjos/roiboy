@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Borda e filtros do funil
+- [x] Degradê à direita enquanto há mais etapas, seta central ao passar o mouse e avanço por etapa; desaparecem no fim e durante arraste, com movimento reduzido respeitado.
+- [x] Filtros agrupados, campos alinhados, cabeçalho/rodapé fixos e contagem dos negócios; opções, persistência e permissões preservadas.
+- [x] 55 testes passaram; sessão autenticada conferida em 390/794/1440 px nos dois temas, filtro de empresa aplicado e restaurado, calendário, filtros avançados, Ganhas/Perdidas e avanço/fim do funil, sem erros nem alteração de negócios; não publicado.
+
 ## Topo compacto do Pipeline
 - [x] Busca e funil em linha compacta, resumo ao lado das situações e filtros em painel sob demanda; sem alterar dados ou regras.
 - [x] 55 testes passaram; página completa com exemplos conferida em 390/794/1440 px nos dois temas, filtros de empresa/vendedor/origem/data, ganhas/perdidas, seleção por etapa e tela expandida, sem erros ou rolagem lateral da página; não publicado.
