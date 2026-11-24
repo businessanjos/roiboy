@@ -20,7 +20,6 @@ import { Clock, Copy, Loader2, Trash2, AlignLeft, Users, CalendarDays, Settings2
 import { format } from "date-fns";
 import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { useMarketingTasks, MarketingTask, MarketingTaskPriority, MediaAttachment } from "@/hooks/useMarketingTasks";
-import { useMarketingTaskSections } from "@/hooks/useMarketingTaskSections";
 import { useMarketingTaskColumns } from "@/hooks/useMarketingTaskColumns";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -69,7 +68,6 @@ export function MarketingTaskDialog({
   focusCommentId,
 }: MarketingTaskDialogProps) {
   const { tasks, createTask, updateTask, deleteTask } = useMarketingTasks();
-  const { sections } = useMarketingTaskSections();
   const { columns } = useMarketingTaskColumns();
   const { currentUser } = useCurrentUser();
 
@@ -299,7 +297,6 @@ export function MarketingTaskDialog({
                 <div className="space-y-1.5"><Label htmlFor="task-stage" className="text-xs text-muted-foreground">Etapa</Label><Select value={columnId} onValueChange={setColumnId} disabled={blocked}><SelectTrigger id="task-stage"><SelectValue placeholder="Selecione a etapa" /></SelectTrigger><SelectContent>{columns.map((column) => <SelectItem key={column.id} value={column.id}>{column.title}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-1.5"><Label htmlFor="task-priority" className="text-xs text-muted-foreground">Prioridade</Label><Select value={priority} onValueChange={(value) => setPriority(value as MarketingTaskPriority)} disabled={blocked}><SelectTrigger id="task-priority"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">Baixa</SelectItem><SelectItem value="medium">Média</SelectItem><SelectItem value="high">Alta</SelectItem></SelectContent></Select></div>
                 </div>
-                <div className="space-y-1.5"><Label htmlFor="task-section" className="text-xs text-muted-foreground">Seção</Label><Select value={sectionId || "none"} onValueChange={setSectionId} disabled={blocked}><SelectTrigger id="task-section"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sem seção</SelectItem>{sections.map((section) => <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>)}</SelectContent></Select></div>
                 <TaskLabelEditor value={labels} onChange={setLabels} catalog={labelCatalog} portalContainer={portalContainer} />
               </div>
             </aside>

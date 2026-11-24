@@ -5,7 +5,6 @@ import { MarketingTaskDialog } from "./MarketingTaskDialog";
 
 const mocks = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn(), close: vi.fn(), tasks: [] as any[], columns: [{ id: "stage", title: "A Fazer", is_done: false }] }));
 vi.mock("@/hooks/useMarketingTasks", () => ({ useMarketingTasks: () => ({ tasks: mocks.tasks, createTask: { mutateAsync: mocks.create }, updateTask: { mutateAsync: mocks.update }, deleteTask: { mutateAsync: vi.fn() } }) }));
-vi.mock("@/hooks/useMarketingTaskSections", () => ({ useMarketingTaskSections: () => ({ sections: [] }) }));
 vi.mock("@/hooks/useMarketingTaskColumns", () => ({ useMarketingTaskColumns: () => ({ columns: mocks.columns }) }));
 vi.mock("@/hooks/useCurrentUser", () => ({ useCurrentUser: () => ({ currentUser: { id: "creator", account_id: "account" } }) }));
 vi.mock("@/hooks/useMarketingTeamUsers", () => ({ useMarketingTeamUsers: () => ({ data: [{ id: "executor", name: "TESTE QA" }] }) }));
@@ -33,18 +32,18 @@ beforeEach(() => {
 });
 function responsible() { return screen.getAllByRole("combobox")[1]; }
 function forceSubmit() { const form = document.querySelector("form"); if (!form) throw new Error("Form missing"); fireEvent.submit(form); }
-const oldTask = { id: "old-task", account_id: "account", title: "TESTE QA — Revisar arte", assignee_id: null, custom_fields: {}, tags: [], media_attachments: [], priority: "medium", status: "pending", is_completed: false };
+const oldTask = { id: "old-task", account_id: "account", title: "TESTE QA — Revisar arte", assignee_id: null, section_id: "existing-section", custom_fields: {}, tags: [], media_attachments: [], priority: "medium", status: "pending", is_completed: false };
 
 describe("Responsável obrigatório no formulário de tarefa", () => {
   it("não cria sem responsável; após escolher envia o executor separado do solicitante", async () => {
-    render(<MarketingTaskDialog open onOpenChange={mocks.close} />);
+    render(<MarketingTaskDialog open defaultSectionId="origin-section" onOpenChange={mocks.close} />);
     fireEvent.change(screen.getByLabelText("Título *"), { target: { value: "TESTE QA — Revisar arte" } });
     forceSubmit();
     expect(mocks.create).not.toHaveBeenCalled();
     fireEvent.change(responsible(), { target: { value: "executor" } });
     fireEvent.click(screen.getByRole("button", { name: /^Criar$/ }));
     await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
-    expect(mocks.create.mock.calls[0][0]).toMatchObject({ assignee_id: "executor", custom_fields: { delivery_details: { requester_id: null } } });
+    expect(mocks.create.mock.calls[0][0]).toMatchObject({ assignee_id: "executor", section_id: "origin-section", custom_fields: { delivery_details: { requester_id: null } } });
     await waitFor(() => expect(mocks.close).toHaveBeenCalledWith(false));
   });
   it("não salva tarefa antiga sem responsável nem atribui alguém automaticamente", async () => {
@@ -55,7 +54,7 @@ describe("Responsável obrigatório no formulário de tarefa", () => {
     expect(oldTask.assignee_id).toBeNull();
     fireEvent.change(responsible(), { target: { value: "executor" } });
     fireEvent.click(screen.getByRole("button", { name: /^Salvar$/ }));
-    await waitFor(() => expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ id: "old-task", assignee_id: "executor" })));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ id: "old-task", assignee_id: "executor", section_id: "existing-section" })));
   });
   it("não salva cópia sem responsável; permite criar após escolha e mantém a original", async () => {
     mocks.tasks = [oldTask];
@@ -66,7 +65,7 @@ describe("Responsável obrigatório no formulário de tarefa", () => {
     expect(mocks.create).not.toHaveBeenCalled();
     fireEvent.change(responsible(), { target: { value: "executor" } });
     fireEvent.click(screen.getByRole("button", { name: "Criar cópia" }));
-    await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ assignee_id: "executor", title: "TESTE QA — Revisar arte (cópia)" })));
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ assignee_id: "executor", title: "TESTE QA — Revisar arte (cópia)", section_id: "existing-section" })));
     expect(mocks.update).not.toHaveBeenCalled();
     expect(oldTask.assignee_id).toBeNull();
   });

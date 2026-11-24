@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Campo Seção na janela de tarefa
+- [x] Regra: a janela da tarefa não deve oferecer um campo que só permite “Sem seção”. Retirado da criação, edição e cópia compartilhadas pelo quadro, lista, tela cheia e links dos avisos; seções existentes e organização da lista preservadas.
+- [x] Código conferido: MarketingTasks/MarketingProjectsHub usam a mesma janela; quadro usa etapas, lista mantém criar/renomear seções com ações úteis; tarefas vinculadas ao projeto, Copilot, MCP e gatilhos de comentários/atribuição não oferecem esse seletor. Sem mudanças em serviços, permissões ou registros.
+- [x] 14 testes passaram, incluindo seção de origem na criação e manutenção na edição/cópia; janela e salvar/reabrir conferidos com respostas fictícias em 390/798/1440 px, claro/escuro, sem erros ou escritas reais. Compilação sem erros; não publicado. Sessão real segue indisponível, sem nova tentativa nesta alteração exclusivamente visual.
+
 ## Avisos de tarefas recebidas
 - [x] Notificar o responsável no servidor quando a tarefa é criada para ele ou transferida para ele, sem repetição em edições comuns, autoatribuição ou pessoas técnicas/inativas/de outra conta; acesso e identidade preservados.
 - [x] Aviso compacto no canto superior com foto, primeiro nome e abertura direta; quadro atualizado e push sem duplicação. 32 testes passaram; criação, transferência, abertura mesmo com filtros, fechar, sino e formatos 390/798/1440 px em claro/escuro conferidos com pessoas fictícias, sem erros ou escritas reais. Migração aplicada e compilação sem erros; não publicado.
