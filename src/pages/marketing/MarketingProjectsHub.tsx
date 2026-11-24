@@ -7,8 +7,8 @@ const MarketingTasks = lazy(() => import("@/pages/MarketingTasks"));
 const Rebranding = lazy(() => import("@/pages/marketing/Rebranding"));
 
 const TABS: MarketingHubTab[] = [
-  { value: "projetos", label: "Projetos", icon: FolderKanban, Component: MarketingProjects },
   { value: "tarefas", label: "Tarefas", icon: ClipboardList, Component: MarketingTasks },
+  { value: "projetos", label: "Projetos", icon: FolderKanban, Component: MarketingProjects },
   { value: "rebranding", label: "Rebranding", icon: Sparkles, Component: Rebranding },
 ];
 
