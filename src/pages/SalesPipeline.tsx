@@ -8,6 +8,8 @@ import { useBulkDeals } from "@/hooks/useBulkDeals";
 import { selectedFilteredDeals } from "@/lib/sales/bulkDeals";
 import { BulkDealToolbar } from "@/components/sales/BulkDealToolbar";
 import { BulkDealDialog } from "@/components/sales/BulkDealDialog";
+import { BulkDealHistoryDialog } from "@/components/sales/BulkDealHistoryDialog";
+import { useBulkDealAccess } from "@/hooks/useBulkDealAccess";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePipelines } from "@/hooks/usePipelines";
 import { useLeads } from "@/hooks/useLeads";
@@ -88,6 +90,7 @@ import {
   Calendar,
   Download,
   MoreVertical,
+  Clock,
   Maximize2,
   Minimize2,
 
@@ -220,11 +223,20 @@ export default function SalesPipeline() {
   const [bulkSelectionMode, setBulkSelectionMode] = useState(false);
   const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkHistoryOpen, setBulkHistoryOpen] = useState(false);
+  const { canBulkEdit } = useBulkDealAccess();
   const [bulkRefreshTick, setBulkRefreshTick] = useState(0);
-  const bulk = useBulkDeals({ moveDeal, updateDeal, refresh: async () => {
+  const refreshBulkDeals = async () => {
     await fetchDeals(true);
     setBulkRefreshTick(tick => tick + 1);
-  } });
+  };
+  const bulk = useBulkDeals({ refresh: refreshBulkDeals });
+
+  useEffect(() => {
+    if (!canBulkEdit && !bulk.running) {
+      setBulkSelectionMode(false); setBulkSelectedIds(new Set()); setBulkDialogOpen(false); setBulkHistoryOpen(false);
+    }
+  }, [canBulkEdit, bulk.running]);
 
   useEffect(() => {
     if (bulk.running) return;
@@ -2705,6 +2717,15 @@ export default function SalesPipeline() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
+                      {canBulkEdit && <>
+                        <DropdownMenuItem disabled={bulk.running} onClick={() => { setBulkSelectionMode(enabled => !enabled); setBulkSelectedIds(new Set()); }}>
+                          <List className="mr-2 h-4 w-4" />{bulkSelectionMode ? "Sair da seleção" : "Selecionar cards"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem disabled={bulk.running} onClick={() => setBulkHistoryOpen(true)}>
+                          <Clock className="mr-2 h-4 w-4" />Histórico em massa
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>}
                       <DropdownMenuItem onClick={() => setIsStagesManagerOpen(true)}>
                         <Columns3 className="h-4 w-4 mr-2" />
                         Gerenciar Etapas
@@ -3094,7 +3115,7 @@ export default function SalesPipeline() {
                   </Badge>
                 </TabsTrigger>
               </TabsList>
-              <BulkDealToolbar
+              {canBulkEdit && <BulkDealToolbar
                 enabled={bulkSelectionMode}
                 count={bulkSelectedDeals.length}
                 total={bulkVisibleDeals.length}
@@ -3102,7 +3123,7 @@ export default function SalesPipeline() {
                 onToggle={() => { setBulkSelectionMode(enabled => !enabled); setBulkSelectedIds(new Set()); }}
                 onSelectAll={checked => setBulkSelectedIds(new Set(checked ? bulkVisibleDeals.map(deal => deal.id) : []))}
                 onEdit={() => setBulkDialogOpen(true)}
-              />
+              />}
               <TabsContent
                 value="open"
                 className={cn("mt-0", isPipelineFullscreen && "flex-1 min-h-0 flex flex-col")}
@@ -3265,7 +3286,7 @@ export default function SalesPipeline() {
       </div>
 
       <BulkDealDialog
-        open={bulkDialogOpen}
+        open={bulkDialogOpen && canBulkEdit}
         onOpenChange={setBulkDialogOpen}
         deals={bulkSelectedDeals}
         pipelines={pipelines}
@@ -3282,6 +3303,8 @@ export default function SalesPipeline() {
         onCancel={bulk.cancel}
         onReset={bulk.reset}
       />
+
+      {canBulkEdit && <BulkDealHistoryDialog open={bulkHistoryOpen} onOpenChange={setBulkHistoryOpen} onRefresh={refreshBulkDeals} />}
 
       {/* New Deal Dialog */}
       <DealDialog

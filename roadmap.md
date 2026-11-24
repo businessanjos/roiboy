@@ -19,10 +19,10 @@
 - [ ] Conferência completa das três telas com dados reais: sessão indisponível ao teste, mesmo após confirmação de entrada na prévia; abertura de /setores retornou ao login e a criação/seleção de sessão não foi autorizada/disponibilizada.
 
 ## Alterações em massa no Pipeline
-- [ ] Reorganizar janela e mover “Selecionar cards” para o menu discreto do funil.
-- [ ] Restringir alterações em massa a adm/gestor no servidor e na interface, preservando as permissões individuais existentes.
-- [ ] Registrar autor, data, ação e resultados em histórico persistente; desfazer a última movimentação própria com verificação contra alterações posteriores.
-- [ ] Testar permissões, histórico e movimentação/reversão com negócios fictícios, além do enquadramento em computador/celular; aguarda aprovação do plano por envolver novas gravações e reversão de negócios.
+- [x] Reorganizar janela e mover “Selecionar cards” para o menu discreto do funil.
+- [x] Restringir alterações em massa a adm/gestor no servidor e na interface, preservando as permissões individuais existentes.
+- [x] Registrar autor, data, ação e resultados em histórico persistente; desfazer a última movimentação própria com verificação contra alterações posteriores.
+- [x] 38 testes passaram; movimentação/reversão e autoria conferidas pela sessão atual, pedidos anônimos e autoria forjada rejeitados. Janela e histórico conferidos em 390/794/1440 px, claro/escuro, sem erros. Dois negócios fictícios retirados ao final, sem excluir registros reais; não publicado.
 - [x] Selecionar cards ou todos os negócios do resultado filtrado, no quadro e na lista.
 - [x] Confirmar alteração de funil/etapa, produto, valor ou campo personalizado, preservando permissões, contratos e regras existentes; negócios encerrados exigem reabertura individual para mover.
 - [x] Progresso, resultado por negócio e interrupção dos próximos; 40 testes passaram, valor/produto/campo/transferência salvos e relidos pela interface em dois negócios fictícios, depois removidos; 390/794/1440 px e Escape conferidos, sem publicar.

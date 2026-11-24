@@ -708,6 +708,27 @@
       "when": 1795534230570,
       "tag": "0100_instagram_feed_link_clicks",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1795540095704,
+      "tag": "0101_bulk_deal_history_and_undo",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1795540152781,
+      "tag": "0102_bulk_deal_execution_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1795540463829,
+      "tag": "0103_bulk_deal_descriptions_and_concurrency",
+      "breakpoints": true
     }
   ]
 }

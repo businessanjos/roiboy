@@ -2003,6 +2003,101 @@ export type Database = {
           },
         ]
       }
+      bulk_deal_operation_items: {
+        Row: {
+          account_id: string
+          after_state: Json | null
+          before_state: Json | null
+          changed: boolean
+          created_at: string
+          deal_id: string
+          error: string | null
+          id: string
+          operation_id: string
+          success: boolean
+          title: string
+          undone_at: string | null
+        }
+        Insert: {
+          account_id: string
+          after_state?: Json | null
+          before_state?: Json | null
+          changed?: boolean
+          created_at?: string
+          deal_id: string
+          error?: string | null
+          id?: string
+          operation_id: string
+          success?: boolean
+          title?: string
+          undone_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          after_state?: Json | null
+          before_state?: Json | null
+          changed?: boolean
+          created_at?: string
+          deal_id?: string
+          error?: string | null
+          id?: string
+          operation_id?: string
+          success?: boolean
+          title?: string
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_deal_operation_items_operation_id_account_id_fkey"
+            columns: ["operation_id", "account_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_deal_operations"
+            referencedColumns: ["id", "account_id"]
+          },
+        ]
+      }
+      bulk_deal_operations: {
+        Row: {
+          account_id: string
+          action: Json
+          actor_id: string
+          actor_name: string
+          created_at: string
+          deal_ids: string[]
+          finished_at: string | null
+          id: string
+          status: string
+          undone_at: string | null
+          undone_by: string | null
+        }
+        Insert: {
+          account_id: string
+          action: Json
+          actor_id: string
+          actor_name: string
+          created_at?: string
+          deal_ids: string[]
+          finished_at?: string | null
+          id?: string
+          status?: string
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          action?: Json
+          actor_id?: string
+          actor_name?: string
+          created_at?: string
+          deal_ids?: string[]
+          finished_at?: string | null
+          id?: string
+          status?: string
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Relationships: []
+      }
       call_links: {
         Row: {
           account_id: string
@@ -31167,6 +31262,10 @@ export type Database = {
         }[]
       }
       apply_agency_rules: { Args: { p_account_id: string }; Returns: number }
+      apply_bulk_deal_operation_item: {
+        Args: { p_deal: string; p_operation: string }
+        Returns: Json
+      }
       attach_typeform_ficha_to_deal: {
         Args: { _deal_id: string }
         Returns: boolean
@@ -31230,12 +31329,21 @@ export type Database = {
       }
       auto_heal_inactive_assignments: { Args: never; Returns: Json }
       autocomplete_past_events: { Args: never; Returns: number }
+      begin_bulk_deal_operation: {
+        Args: { p_action: Json; p_deal_ids: string[] }
+        Returns: string
+      }
       build_typeform_ficha_text: {
         Args: { _answers: Json; _form_title: string; _submitted_at: string }
         Returns: string
       }
+      bulk_deal_validate_stage: {
+        Args: { p_account: string; p_deal: string; p_stage: string }
+        Returns: undefined
+      }
       can_access_consultant_bonus: { Args: never; Returns: boolean }
       can_access_pda: { Args: { _person_id: string }; Returns: boolean }
+      can_bulk_edit_deals: { Args: never; Returns: boolean }
       can_manage_spiff_payments: {
         Args: { _auth_user_id: string }
         Returns: boolean
@@ -31417,6 +31525,10 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: string
       }
+      finish_bulk_deal_operation: {
+        Args: { p_operation: string }
+        Returns: undefined
+      }
       format_call_duration: { Args: { seconds: number }; Returns: string }
       generate_checkin_code: { Args: never; Returns: string }
       generate_contract_installments: {
@@ -31559,6 +31671,7 @@ export type Database = {
         }[]
       }
       get_job_offer_by_token: { Args: { _token: string }; Returns: Json }
+      get_last_bulk_deal_move: { Args: never; Returns: Json }
       get_latest_recommendations_for_clients: {
         Args: { p_client_ids: string[] }
         Returns: {
@@ -32171,6 +32284,10 @@ export type Database = {
       unaccent: { Args: { "": string }; Returns: string }
       unaccent_immutable: { Args: { p_text: string }; Returns: string }
       undo_deal_merge: { Args: { p_action: string }; Returns: string }
+      undo_last_bulk_deal_move: {
+        Args: { p_operation: string }
+        Returns: number
+      }
       use_coupon: {
         Args: {
           p_account_id: string

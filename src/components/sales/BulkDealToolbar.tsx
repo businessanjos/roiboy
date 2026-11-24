@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckSquare, Pencil, X } from "lucide-react";
+import { Pencil, X } from "lucide-react";
 
 interface Props {
   enabled: boolean;
@@ -13,11 +13,11 @@ interface Props {
 }
 
 export function BulkDealToolbar({ enabled, count, total, running, onToggle, onSelectAll, onEdit }: Props) {
+  if (!enabled) return null;
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2 py-2">
-      <Button variant={enabled ? "secondary" : "outline"} size="sm" className="h-11 gap-2" onClick={onToggle} disabled={running} aria-pressed={enabled}>
-        {enabled ? <X className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
-        {enabled ? "Sair da seleção" : "Selecionar cards"}
+    <div className="flex min-w-0 flex-wrap items-center gap-2 border-y border-border bg-muted/30 px-2 py-2">
+      <Button variant="ghost" size="sm" className="h-9 gap-2 text-muted-foreground" onClick={onToggle} disabled={running} aria-pressed={enabled}>
+        <X className="h-4 w-4" /> Sair da seleção
       </Button>
       {enabled && <>
         <label className="flex min-h-11 cursor-pointer items-center gap-2 px-2 text-sm">

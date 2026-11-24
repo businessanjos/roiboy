@@ -10,7 +10,14 @@ export interface BulkDealResult {
   id: string;
   title: string;
   success: boolean;
+  changed?: boolean;
   error?: string;
+}
+
+/** Only the requested change is sent; identity and snapshots are always server-derived. */
+export function serializeBulkAction(action: BulkDealAction) {
+  if (action.type !== "field") return { ...action };
+  return { type: action.type, fieldId: action.field.id, fieldType: action.field.field_type, columns: bulkFieldColumns(action.field, action.value) };
 }
 
 export function selectedFilteredDeals<T extends { id: string }>(deals: T[], selected: ReadonlySet<string>): T[] {
