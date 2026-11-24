@@ -4,6 +4,16 @@ export function filterProductsByCompany<T extends CompanyProduct>(products: T[],
   return companyId === "all" ? products : products.filter((product) => product.company_id === companyId);
 }
 
+export type ProductCatalogStatus = "active" | "inactive";
+
+/** Presentation only: hide inactive products by default without archiving records. */
+export function filterProductsByStatus<T extends { is_active: boolean }>(
+  products: T[],
+  status: ProductCatalogStatus = "active",
+): T[] {
+  return products.filter((product) => product.is_active === (status === "active"));
+}
+
 export interface CompanyClient {
   id: string;
   products?: { id: string }[];

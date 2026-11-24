@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { filterProductsByCompany, filterClientsByCompany, loadCompanyClients } from "@/lib/companyAreaFilters";
+import { filterProductsByCompany, filterProductsByStatus, filterClientsByCompany, loadCompanyClients } from "@/lib/companyAreaFilters";
 import { activityMatchesCompany, buildCompanyActivityScope, contractMatchesCompany } from "@/lib/sales/companyActivityScope";
 
 const products = [
@@ -15,6 +15,31 @@ const clients = [
   { id: "contract-cr", contract: { product_id: "cr" } },
   { id: "unassigned", company_name: "Anjos", products: [] },
 ];
+
+describe("Visualizações de produtos ativos e inativos", () => {
+  const catalog = [
+    { id: "EM", company_id: "eternum", is_active: true },
+    { id: "CR", company_id: "anjos", is_active: true },
+    { id: "RMI", company_id: "eternum", is_active: false },
+    { id: "REN-RMI", company_id: "eternum", is_active: false },
+  ];
+
+  it("mostra somente produtos ativos por padrão", () => {
+    expect(filterProductsByStatus(catalog).map((product) => product.id)).toEqual(["EM", "CR"]);
+  });
+
+  it("separa os inativos sem alterar nem excluir os produtos", () => {
+    const before = structuredClone(catalog);
+    expect(filterProductsByStatus(catalog, "inactive").map((product) => product.id)).toEqual(["RMI", "REN-RMI"]);
+    expect(catalog).toEqual(before);
+  });
+
+  it("mantém o filtro de empresa independente nas duas visualizações", () => {
+    expect(filterProductsByCompany(filterProductsByStatus(catalog), "anjos").map((product) => product.id)).toEqual(["CR"]);
+    expect(filterProductsByCompany(filterProductsByStatus(catalog, "inactive"), "anjos")).toEqual([]);
+    expect(filterProductsByCompany(filterProductsByStatus(catalog, "inactive"), "eternum").map((product) => product.id)).toEqual(["RMI", "REN-RMI"]);
+  });
+});
 
 describe("Filtros de empresa em produtos e clientes", () => {
   it("Anjos mostra CR e Eternum mostra EM, EC, EP e Conselho", () => {

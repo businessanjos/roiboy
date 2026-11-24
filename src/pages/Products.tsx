@@ -5,7 +5,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCompany } from "@/contexts/CompanyContext";
 import { CompanyFilter } from "@/components/companies/CompanyFilter";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
-import { filterProductsByCompany } from "@/lib/companyAreaFilters";
+import { filterProductsByCompany, filterProductsByStatus, type ProductCatalogStatus } from "@/lib/companyAreaFilters";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -196,6 +196,7 @@ export default function Products() {
   const { currentUser } = useCurrentUser();
   const { companies, loading: companiesLoading } = useCompany();
   const [companyFilter, setCompanyFilter] = usePersistedFilter<string>("products", "company", "all");
+  const [productStatus, setProductStatus] = useState<ProductCatalogStatus>("active");
   const defaultCompanyId = companies.find((c) => c.is_default)?.id ?? companies[0]?.id ?? null;
   const { canCreate } = usePlanLimits();
   const [products, setProducts] = useState<Product[]>([]);
@@ -464,8 +465,9 @@ export default function Products() {
     }).format(amount);
   };
 
-  const visibleProducts = useMemo(() => filterProductsByCompany(products, companyFilter), [products, companyFilter]);
-  const pg = usePagedList(visibleProducts, { isLoading: loading, resetKey: companyFilter });
+  const statusProducts = useMemo(() => filterProductsByStatus(products, productStatus), [products, productStatus]);
+  const visibleProducts = useMemo(() => filterProductsByCompany(statusProducts, companyFilter), [statusProducts, companyFilter]);
+  const pg = usePagedList(visibleProducts, { isLoading: loading, resetKey: [companyFilter, productStatus] });
 
   if (loading) {
     return <LoadingScreen message="Carregando produtos..." fullScreen={false} />;
@@ -1142,16 +1144,30 @@ export default function Products() {
 
       <div className="flex flex-wrap items-end gap-3">
         <CompanyFilter companies={companies} value={companyFilter} onChange={setCompanyFilter} loading={companiesLoading} />
-        <span className="pb-3 text-sm tabular-nums text-muted-foreground">{visibleProducts.length} de {products.length} produtos</span>
+        <div className="space-y-1.5">
+          <Label htmlFor="product-status" className="text-xs text-muted-foreground">Status</Label>
+          <Select value={productStatus} onValueChange={(value) => {
+            if (value === "active" || value === "inactive") setProductStatus(value);
+          }}>
+            <SelectTrigger id="product-status" className="min-h-11 w-40" aria-label="Status dos produtos">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Ativos</SelectItem>
+              <SelectItem value="inactive">Inativos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <span className="pb-3 text-sm tabular-nums text-muted-foreground">{visibleProducts.length} de {statusProducts.length} produtos {productStatus === "active" ? "ativos" : "inativos"}</span>
       </div>
 
       {visibleProducts.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="h-12 w-12 text-muted-foreground/30 mb-3" />
-            <p className="text-muted-foreground">{companyFilter === "all" ? "Nenhum produto cadastrado" : "Nenhum produto nesta empresa"}</p>
+            <p className="text-muted-foreground">Nenhum produto {productStatus === "active" ? "ativo" : "inativo"}{companyFilter !== "all" ? " nesta empresa" : ""}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              {companyFilter === "all" ? "Crie produtos para vincular aos seus clientes" : ""}
+              {productStatus === "active" && companyFilter === "all" ? "Crie produtos para vincular aos seus clientes" : ""}
             </p>
           </CardContent>
         </Card>
