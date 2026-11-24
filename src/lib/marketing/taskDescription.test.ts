@@ -34,4 +34,13 @@ describe("Descrição com destaque, mantendo o texto simples", () => {
     expect(markerInk("#111111")).toBe("var(--task-marker-light-ink)");
     expect(markerInk("#eeeeee")).toBe("var(--task-marker-ink)");
   });
+  it("salva e reabre um link do Drive completo sem perder metadados ou formatação", () => {
+    const url = "https://drive.google.com/drive/folders/creative-assets?usp=sharing";
+    const document = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: url, marks: [{ type: "bold" }, { type: "link", attrs: { href: url, onclick: "attack()", target: "_self" } }] }] }] };
+    const result = writeTaskDescription({ delivery_details: { due_time: "17:30" } }, url, document, []);
+    expect(result.delivery_details).toEqual({ due_time: "17:30" });
+    const reopened = taskDescriptionContent(url, result.description_editor);
+    expect(reopened.content?.[0].content?.[0]).toEqual({ type: "text", text: url, marks: [{ type: "bold" }, { type: "link", attrs: { href: url } }] });
+    expect(taskDescriptionContent(url, undefined).content?.[0].content?.[0].marks).toEqual([{ type: "link", attrs: { href: url } }]);
+  });
 });

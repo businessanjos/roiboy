@@ -1,6 +1,7 @@
 import type { JSONContent } from "@tiptap/react";
 import { format, isValid, parse } from "date-fns";
 import { boldTaskTimestamps } from "./taskTimestamps";
+import { linkTaskDocument, safeTaskLinkHref } from "./taskLinks";
 
 export const TASK_MARKER_COLORS = [
   { name: "Amarelo", color: "var(--task-marker-yellow)", className: "task-marker-yellow" },
@@ -31,6 +32,10 @@ export function cleanTaskDocument(value: unknown, depth = 0, allowMentions = fal
   if (Array.isArray(raw.content)) node.content = raw.content.map((child) => cleanTaskDocument(child, depth + 1, allowMentions)).filter((child): child is JSONContent => !!child);
   if (Array.isArray(raw.marks)) node.marks = raw.marks.flatMap((mark) => {
     if (mark.type === "bold" || mark.type === "italic") return [{ type: mark.type }];
+    if (mark.type === "link") {
+      const href = safeTaskLinkHref(mark.attrs?.href);
+      return href ? [{ type: "link", attrs: { href } }] : [];
+    }
     if (mark.type === "highlight" && validMarkerColor(mark.attrs?.color)) return [{ type: "highlight", attrs: { color: mark.attrs?.color } }];
     return [];
   });
@@ -43,12 +48,12 @@ export function taskDescriptionContent(text: string, stored: unknown): JSONConte
   if (stored && typeof stored === "object") {
     const snapshot = stored as { text?: unknown; document?: unknown };
     const document = cleanTaskDocument(snapshot.document);
-    if (snapshot.text === text && document?.type === "doc") return boldTaskTimestamps(document);
+    if (snapshot.text === text && document?.type === "doc") return linkTaskDocument(boldTaskTimestamps(document));
   }
-  return boldTaskTimestamps(plainTaskDocument(text));
+  return linkTaskDocument(boldTaskTimestamps(plainTaskDocument(text)));
 }
 export function writeTaskDescription(base: Record<string, unknown>, text: string, document: JSONContent, colors: string[]): Record<string, unknown> {
-  return { ...base, description_editor: { text, document: boldTaskTimestamps(cleanTaskDocument(document) ?? plainTaskDocument(text)), colors: [...new Set(colors.filter((color) => /^#[0-9a-f]{6}$/i.test(color)))] } };
+  return { ...base, description_editor: { text, document: linkTaskDocument(boldTaskTimestamps(cleanTaskDocument(document) ?? plainTaskDocument(text))), colors: [...new Set(colors.filter((color) => /^#[0-9a-f]{6}$/i.test(color)))] } };
 }
 export function readTaskMarkerColors(base?: Record<string, unknown>): string[] {
   const values = (base?.description_editor as { colors?: unknown } | undefined)?.colors;

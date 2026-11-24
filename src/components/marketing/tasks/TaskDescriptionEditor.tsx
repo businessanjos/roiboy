@@ -9,6 +9,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { markerInk, TASK_MARKER_COLORS, validMarkerColor } from "@/lib/marketing/taskDescription";
+import { linkTaskDocument, safeTaskLinkHref } from "@/lib/marketing/taskLinks";
 import { createTaskMentionExtension, type TaskMentionPerson } from "./TaskMentions";
 import { TaskTimestampExtension } from "./TaskTimestampExtension";
 import "./task-editor.css";
@@ -32,14 +33,30 @@ export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colo
   const [, redraw] = useState(0);
   const peopleRef = useRef(mentionPeople ?? []);
   peopleRef.current = mentionPeople ?? [];
-  const contentRef = useRef(initialContent);
-  contentRef.current = initialContent;
+  const linkedContent = useMemo(() => linkTaskDocument(initialContent), [initialContent]);
+  const contentRef = useRef(linkedContent);
+  contentRef.current = linkedContent;
   const mentions = useMemo(() => createTaskMentionExtension(() => peopleRef.current), []);
   const editor = useEditor({
-    extensions: [StarterKit.configure({ heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, link: false, underline: false, strike: false }), SafeHighlight.configure({ multicolor: true }), ...(!compact ? [TaskTimestampExtension] : []), ...(mentionPeople ? [mentions] : [])],
-    content: initialContent,
+    extensions: [StarterKit.configure({ heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, link: {
+      autolink: true, linkOnPaste: true, defaultProtocol: "https", openOnClick: false,
+      isAllowedUri: (href) => !!safeTaskLinkHref(href), shouldAutoLink: (href) => !!safeTaskLinkHref(href),
+      HTMLAttributes: { target: "_blank", rel: "noopener noreferrer", class: "cursor-pointer text-info underline decoration-info/40 underline-offset-4 hover:decoration-info focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" },
+    }, underline: false, strike: false }), SafeHighlight.configure({ multicolor: true }), ...(!compact ? [TaskTimestampExtension] : []), ...(mentionPeople ? [mentions] : [])],
+    content: linkedContent,
     editable: !disabled,
-    editorProps: { attributes: { role: "textbox", "aria-label": label, "aria-multiline": "true", spellcheck: "true", ...(placeholder ? { "aria-placeholder": placeholder } : {}) } },
+    editorProps: {
+      attributes: { role: "textbox", "aria-label": label, "aria-multiline": "true", spellcheck: "true", ...(placeholder ? { "aria-placeholder": placeholder } : {}) },
+      handleClick: (view, _position, event) => {
+        if (event.button !== 0 || !(event.target instanceof Element)) return false;
+        const anchor = event.target.closest("a[href]");
+        if (!anchor || !view.dom.contains(anchor)) return false;
+        const href = safeTaskLinkHref(anchor.getAttribute("href"));
+        event.preventDefault();
+        if (href) window.open(href, "_blank", "noopener,noreferrer");
+        return true;
+      },
+    },
     onUpdate: ({ editor: updated }) => onChange(updated.getText({ blockSeparator: "\n" }), updated.getJSON()),
     onSelectionUpdate: () => redraw((value) => value + 1),
     onTransaction: () => redraw((value) => value + 1),

@@ -1,7 +1,8 @@
 import { Fragment, type ReactNode } from "react";
 import type { JSONContent } from "@tiptap/react";
 import { readTaskComment } from "@/lib/marketing/taskCommentContent";
-import { markerInk, validMarkerColor } from "@/lib/marketing/taskDescription";
+import { markerInk, plainTaskDocument, validMarkerColor } from "@/lib/marketing/taskDescription";
+import { linkTaskDocument, safeTaskLinkHref } from "@/lib/marketing/taskLinks";
 
 function renderNode(node: JSONContent): ReactNode {
   const children = node.content?.map((child, index) => <Fragment key={index}>{renderNode(child)}</Fragment>);
@@ -18,6 +19,8 @@ function renderNode(node: JSONContent): ReactNode {
       for (const mark of node.marks ?? []) {
         if (mark.type === "bold") text = <strong>{text}</strong>;
         if (mark.type === "italic") text = <em>{text}</em>;
+        const href = mark.type === "link" ? safeTaskLinkHref(mark.attrs?.href) : null;
+        if (href) text = <a href={href} target="_blank" rel="noopener noreferrer" className="text-info underline decoration-info/40 underline-offset-4 hover:decoration-info focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{text}</a>;
         const color = mark.attrs?.color;
         if (mark.type === "highlight" && validMarkerColor(color)) {
           text = <mark className="rounded-sm" style={{ backgroundColor: color, color: markerInk(color) }}>{text}</mark>;
@@ -32,6 +35,6 @@ function renderNode(node: JSONContent): ReactNode {
 export function TaskCommentBody({ body }: { body: string }) {
   const content = readTaskComment(body);
   return <div className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">
-    {content.document ? renderNode(content.document) : content.text}
+    {renderNode(linkTaskDocument(content.document ?? plainTaskDocument(content.text)))}
   </div>;
 }

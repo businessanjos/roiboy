@@ -101,4 +101,35 @@ describe("Abrir a descrição da tarefa", () => {
     act(()=>editor.commands.insertContent("26:49 — Tira"));
     expect(editor.getJSON().content?.[0].content).toEqual([{type:"text",text:"26:49 — Tira"}]);
   });
+  it("abre um link existente em outra aba sem modificar ou salvar a descrição", async () => {
+    const changed = vi.fn();
+    const url = "https://drive.google.com/drive/folders/creative-assets?usp=sharing";
+    render(<TooltipProvider><TaskDescriptionEditor initialContent={plainTaskDocument(url)} valueKey="link" onChange={changed} colors={[]} onColorsChange={vi.fn()} portalContainer={null} /></TooltipProvider>);
+    await waitFor(() => expect(captured.editor).not.toBeNull());
+    const editor = captured.editor;
+    if (!editor) throw new Error("Editor unavailable");
+    const anchor = editor.view.dom.querySelector("a");
+    if (!anchor) throw new Error("URL was not recognized");
+    const opened = vi.spyOn(window, "open").mockImplementation(() => null);
+    const event = new MouseEvent("click", { button: 0, cancelable: true });
+    Object.defineProperty(event, "target", { value: anchor });
+    editor.view.someProp("handleClick", (handler) => handler(editor.view, 1, event));
+    expect(opened).toHaveBeenCalledWith(url, "_blank", "noopener,noreferrer");
+    expect(editor.getText()).toBe(url);
+    expect(changed).not.toHaveBeenCalled();
+    opened.mockRestore();
+  });
+  it("reconhece endereço digitado e mantém a frase depois dele fora do link", async () => {
+    render(<TooltipProvider><TaskDescriptionEditor initialContent={plainTaskDocument("")} valueKey="typed-link" onChange={vi.fn()} colors={[]} onColorsChange={vi.fn()} portalContainer={null} /></TooltipProvider>);
+    await waitFor(() => expect(captured.editor).not.toBeNull());
+    const editor = captured.editor;
+    if (!editor) throw new Error("Editor unavailable");
+    const url = "https://drive.google.com/file?usp=sharing";
+    act(() => { for (const character of `${url} revisar`) editor.commands.insertContent(character); });
+    expect(editor.getText()).toBe(`${url} revisar`);
+    const document: JSONContent = editor.getJSON();
+    const nodes = document.content?.[0].content ?? [];
+    expect(nodes.filter((node) => node.marks?.some((mark) => mark.type === "link")).map((node) => node.text).join("")).toBe(url);
+    expect(nodes.at(-1)?.marks?.some((mark) => mark.type === "link") ?? false).toBe(false);
+  });
 });

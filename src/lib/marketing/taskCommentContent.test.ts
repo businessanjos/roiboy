@@ -30,4 +30,9 @@ describe("Formatação dos comentários de tarefas", () => {
     const unsafe = { type: "doc", content: [{ type: "paragraph", content: [{ type: "mention", attrs: { id: "not-a-person", label: "Fernanda" } }] }] };
     expect(readTaskComment(writeTaskComment("Texto", unsafe)).document).toBeNull();
   });
+  it("mantém o destino seguro do link ao enviar e reler sem aceitar atributos extras", () => {
+    const url = "https://drive.google.com/file?usp=sharing";
+    const document = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Pasta de arquivos", marks: [{ type: "link", attrs: { href: url, onclick: "attack()", rel: "opener" } }] }] }] };
+    expect(readTaskComment(writeTaskComment("Pasta de arquivos", document)).document?.content?.[0].content?.[0].marks).toEqual([{ type: "link", attrs: { href: url } }]);
+  });
 });

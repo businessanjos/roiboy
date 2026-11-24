@@ -1,5 +1,11 @@
 # Roadmap — Processos do CS
 
+## Links no texto das tarefas
+- [x] Reconhecer links da descrição ao digitar, colar e abrir, com destaque e abertura segura em outra aba; preservar texto, formatação e dados existentes.
+- [x] Editor compartilhado e comentários preservam links HTTP(S) seguros; 48 testes passaram, incluindo endereço completo, protocolos rejeitados, atributos descartados, digitação e ausência de autosave.
+- [x] Conferidos com respostas fictícias em 390/798/1440 px e claro/escuro: colar/digitar, abrir Drive com query sem opener/referrer, salvar/reabrir, descrição antiga sem escrita, link longo sem sobreposição, tempos em negrito e comentários novos/antigos. Sem erros de execução/compilação ou alterações reais; não publicado.
+- [ ] Conferência autenticada em /marketing/projetos: sessão própria indisponível e criação de pessoa temporária falhou; exemplos não validam persistência real.
+
 ## Títulos das etapas do quadro
 - [x] Refinar apenas os cabeçalhos: nomes mais destacados, contadores alinhados e ações discretas; manter cores, ordem, contagens e comportamento das etapas.
 - [x] 19 testes passaram; cabeçalhos/contadores, nome longo sem sobreposição, abrir nova tarefa na etapa, separador e tela cheia conferidos com respostas fictícias em 390/798/1440 px, claro/escuro. Sem erros de execução/compilação e sem alterações reais; não publicado.
