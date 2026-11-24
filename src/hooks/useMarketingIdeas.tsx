@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
@@ -81,9 +82,9 @@ export function useMarketingIdeas() {
         return rawIdeas;
       }
 
-      const { data: usersData, error: usersError } = await supabase
+      const { data: usersData, error: usersError } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, auth_user_id, name, avatar_url")
+        .select("id, auth_user_id, name, avatar_url"))
         .eq("account_id", accountId)
         .in("auth_user_id", assigneeIds);
 

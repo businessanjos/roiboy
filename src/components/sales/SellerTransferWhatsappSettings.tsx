@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellRing, CheckCircle2, Plus, Trash2 } from "lucide-react";
@@ -59,7 +60,7 @@ export function SellerTransferWhatsappSettings() {
       const [cfg, phones, users, groups] = await Promise.all([
         db.from("sales_transfer_whatsapp_settings").select("*").eq("account_id", accountId).maybeSingle(),
         db.from("sales_user_whatsapp_phones").select("user_id, phone_e164"),
-        db.from("users").select("id, name, user_team_roles(team_roles(name, area))").eq("account_id", accountId).eq("is_active", true).order("name"),
+        visiblePeopleQuery(db.from("users").select("id, name, user_team_roles(team_roles(name, area))")).eq("account_id", accountId).eq("is_active", true).order("name"),
         db.from("zapp_conversations").select("group_jid, contact_name").eq("sector_id", "vendas").eq("is_group", true)
           .not("group_jid", "is", null).order("last_message_at", { ascending: false }).limit(200),
       ]);

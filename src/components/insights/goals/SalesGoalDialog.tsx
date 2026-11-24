@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from "date-fns";
@@ -52,9 +53,9 @@ export function SalesGoalDialog({ open, onOpenChange, goal }: Props) {
     queryKey: ["users-for-goals", currentUser?.account_id],
     enabled: !!currentUser?.account_id && open,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, email, is_active")
+        .select("id, name, email, is_active"))
         .eq("account_id", currentUser!.account_id)
         .neq("is_active", false)
         .order("name");

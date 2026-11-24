@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -72,9 +73,9 @@ export function UserSectorAccessManager() {
     setLoading(true);
     try {
       const [usersRes, accessRes, settingsRes] = await Promise.all([
-        supabase
+        visiblePeopleQuery(supabase
           .from("users")
-          .select("id, name, email, avatar_url, role")
+          .select("id, name, email, avatar_url, role"))
           .eq("account_id", currentUser.account_id)
           .order("name"),
         supabase

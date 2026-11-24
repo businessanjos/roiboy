@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -137,7 +138,7 @@ export function MarketingLinksUtm() {
         fetchAllRows<any>((from, to) =>
           supabase.from('events').select('id, title').neq('status', 'cancelled').order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to),
         ),
-        supabase.from('users').select('id, name').eq('account_id', accountId).order('name'),
+        visiblePeopleQuery(supabase.from('users').select('id, name')).eq('account_id', accountId).order('name'),
       ]);
       if (linksRes.error) throw linksRes.error;
       if (campRes.error) throw campRes.error;

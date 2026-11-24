@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useEffect, useState, useRef } from "react";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
@@ -547,9 +548,9 @@ export default function ClientDetail() {
   };
 
   const fetchTeamUsers = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await visiblePeopleQuery(supabase
       .from("users")
-      .select("id, name, email")
+      .select("id, name, email"))
       .order("name");
     
     if (!error && data) {

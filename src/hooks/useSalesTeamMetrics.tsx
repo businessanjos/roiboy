@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { classifyMeetingTask, meetingDedupeKey } from "@/lib/sales/meetingMetrics";
@@ -99,9 +100,9 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       // Fetch all team users and filter to sales team only
       // Exclui usuários inativos (desligados) — não devem aparecer em relatórios do comercial.
       const SALES_TEAM_NAMES = ["everton", "jonathan", "darlan", "vanessa", "maikol"];
-      const { data: allUsers } = await supabase
+      const { data: allUsers } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, email, avatar_url, team_role:team_roles(name)")
+        .select("id, name, email, avatar_url, team_role:team_roles(name)"))
         .eq("account_id", currentUser.account_id)
         .eq("is_active", true);
 

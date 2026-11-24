@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { isHiddenTechnicalPerson, visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useThreeCPlusOpen } from "@/hooks/useThreeCPlusOpen";
 import {
   parseReceivedInput,
@@ -550,7 +551,7 @@ export function DealDetailSheet({
         .maybeSingle();
       if (!userData?.account_id) return;
       // Use RPC-style query to avoid deep type instantiation
-      const query = supabase.from("users").select("id, name, avatar_url");
+      const query = visiblePeopleQuery(supabase.from("users").select("id, name, avatar_url"));
       const { data } = await query.eq("account_id", userData.account_id);
       const members = (data as any[] || []).filter((u: any) => u.name);
       setTeamMembers(members);
@@ -986,7 +987,7 @@ export function DealDetailSheet({
         .eq("is_active", true);
 
       const members = (data as any[] || [])
-        .filter((a: any) => a.user?.name)
+        .filter((a: any) => a.user?.name && !isHiddenTechnicalPerson(a.user))
         .map((a: any) => ({ id: a.user.id, name: a.user.name, avatar_url: a.user.avatar_url }));
       members.sort((a: any, b: any) => a.name.localeCompare(b.name));
       setSalesMembers(members);

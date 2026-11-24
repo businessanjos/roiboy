@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -38,9 +39,9 @@ export default function InsightsGoals() {
     queryKey: ["sellers-for-goals", userIds],
     enabled: userIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, email")
+        .select("id, name, email"))
         .in("id", userIds);
       if (error) throw error;
       return data ?? [];

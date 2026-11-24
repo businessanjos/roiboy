@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect, useRef, useId } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -326,9 +327,9 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   }, [formData.lead_id, formData.deal_id, formData.client_id]);
 
   const fetchUsers = async () => {
-    const { data } = await supabase
+    const { data } = await visiblePeopleQuery(supabase
       .from("users")
-      .select("id, name, avatar_url")
+      .select("id, name, avatar_url"))
       .order("name");
     if (data) setUsers(data);
   };

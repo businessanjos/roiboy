@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -208,9 +209,9 @@ export function useClientsPage() {
   }, []);
 
   const fetchTeamUsers = useCallback(async () => {
-    const { data, error } = await supabase
+    const { data, error } = await visiblePeopleQuery(supabase
       .from("users")
-      .select("id, name, email")
+      .select("id, name, email"))
       .order("name");
     
     if (!error && data) {

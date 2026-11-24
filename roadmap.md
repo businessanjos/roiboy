@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Conta técnica de TV invisível
+- [x] Ocultar a conta técnica das fontes de listas/seletores, busca global, equipe/admin/RH, filtros e rankings; excluir antes da paginação/contagem de pessoas e ignorar seleção antiga no Marketing. Autenticação, permissões, billing e autoria histórica preservadas, nenhum backend/dado real alterado.
+- [x] 37 testes passaram, incluindo listas por equipe/setor/Marketing, pessoas reais mantidas, conta identificada por UUID/e-mail/nome, filtro antes da contagem e boot dos painéis preservado; seletor original + hook real conferidos isoladamente em 794 px com respostas fictícias, sem erros ou escritas.
+- [ ] Conferência autenticada do quadro de Marketing: sessão própria indisponível e criação de usuário de teste falhou; /marketing/projetos?tab=tarefas retorna ao login. Conferência isolada não valida a página completa nem os dados reais. Não publicado.
+
 ## Tarefas de Marketing: anexos, comentários, capas e separadores
 - [x] Ampliar anexos para documentos e mídias privados, com abertura e remoção segura sem afetar cópias; limpar só uploads novos descartados do próprio rascunho.
 - [x] Comentários com autoria individual e data do servidor, nome histórico preservado e exclusão só do próprio autor, sem copiar histórico na duplicação.

@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -36,9 +37,9 @@ export function useAccountSellers() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
+      const { data } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, email, avatar_url")
+        .select("id, name, email, avatar_url"))
         .in("id", SELLER_IDS)
         .order("name");
       if (!cancelled) {

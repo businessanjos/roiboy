@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,9 +65,9 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
     queryFn: async () => {
       const [usersRes, accessRes, zappRes] = await Promise.all([
         fetchAllRows<any>((from, to) =>
-          supabase
+          visiblePeopleQuery(supabase
             .from("users")
-            .select("id, name, email, role, is_active")
+            .select("id, name, email, role, is_active"))
             .eq("account_id", accountId)
             .order("name")
             .order("id")

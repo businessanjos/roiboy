@@ -1,3 +1,4 @@
+import { filterVisiblePeople, visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -52,9 +53,9 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
 
     const fetchAvatars = async () => {
       const names = data.map(d => d.name);
-      const { data: users } = await supabase
+      const { data: users } = await visiblePeopleQuery(supabase
         .from('users')
-        .select('name, avatar_url')
+        .select('name, avatar_url'))
         .eq('account_id', currentUser.account_id)
         .in('name', names);
 
@@ -70,9 +71,9 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
     fetchAvatars();
   }, [currentUser?.account_id, data]);
 
-  const filteredData = hiddenUsers?.length
+  const filteredData = filterVisiblePeople(hiddenUsers?.length
     ? data.filter(d => !hiddenUsers.includes(d.name))
-    : data;
+    : data);
 
   if (!filteredData || filteredData.length === 0) {
     return (

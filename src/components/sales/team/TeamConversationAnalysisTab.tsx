@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,9 +54,9 @@ export function TeamConversationAnalysisTab() {
   // Fetch team members
   useEffect(() => {
     const fetchMembers = async () => {
-      const { data: userData } = await supabase
+      const { data: userData } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name")
+        .select("id, name"))
         .eq("is_active", true)
         .not("name", "is", null);
 

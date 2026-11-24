@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -68,7 +69,7 @@ export function RykaUsageDashboard({ rows, accountId }: { rows: DashRow[]; accou
   });
   const teamQ = useQuery({
     queryKey: ["ryka-dash-team", accountId], enabled: !!accountId, staleTime: 300_000,
-    queryFn: async () => (await supabase.from("users").select("id, name").eq("account_id", accountId!)).data ?? [],
+    queryFn: async () => (await visiblePeopleQuery(supabase.from("users").select("id, name")).eq("account_id", accountId!)).data ?? [],
   });
   const teamName = useMemo(() => new Map((teamQ.data ?? []).map((u: any) => [u.id, u.name as string])), [teamQ.data]);
   const usageLatest = useMemo(() => {

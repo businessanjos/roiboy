@@ -1,3 +1,4 @@
+import { filterVisiblePeople, visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useEffect, useState, useRef } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -653,7 +654,7 @@ export default function Clients() {
       setTotalClients(result.total || 0);
       setInternalIds(Array.isArray(result.internal_ids) ? result.internal_ids : []);
       if (result.team_users) {
-        setTeamUsers(result.team_users);
+        setTeamUsers(filterVisiblePeople(result.team_users));
       }
       
       // Build maps from enriched data
@@ -759,9 +760,9 @@ export default function Clients() {
   };
 
   const fetchTeamUsers = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await visiblePeopleQuery(supabase
       .from("users")
-      .select("id, name, email")
+      .select("id, name, email"))
       .order("name");
     
     if (!error && data) {

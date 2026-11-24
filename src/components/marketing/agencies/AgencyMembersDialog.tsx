@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
+import { isHiddenTechnicalPerson } from "@/lib/peopleVisibility";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,7 +35,7 @@ export function AgencyMembersDialog({ open, onOpenChange, agencyId }: Props) {
         .from("traffic_agency_members")
         .select("id, user_id, user:users(name,email,avatar_url)")
         .eq("agency_id", agencyId);
-      return (data || []) as any[];
+      return (data || []).filter((member: any) => !isHiddenTechnicalPerson(member.user) && !isHiddenTechnicalPerson({ id: member.user_id })) as any[];
     },
   });
 

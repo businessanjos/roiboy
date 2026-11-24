@@ -13,7 +13,7 @@ export function TvAccountAlert() {
   return (
     <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
       <AlertTriangle className="h-4 w-4 shrink-0" />
-      <span><b>Conta de TV sem acesso</b> — as TVs com chave não abrem os painéis. A conta "TV Escritório" teve o login recusado (senha trocada ou conta bloqueada).</span>
+      <span><b>TVs sem acesso aos painéis</b> — a conexão de leitura foi recusada. Verifique a configuração de acesso das TVs.</span>
     </div>
   );
 }

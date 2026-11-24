@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,9 +67,9 @@ export function TeamCareerTab() {
     setLoading(true);
 
     const [usersRes, careersRes] = await Promise.all([
-      supabase
+      visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, email, avatar_url")
+        .select("id, name, email, avatar_url"))
         .eq("account_id", currentUser.account_id)
         .eq("is_active", true)
         .neq("id", currentUser.id)

@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -62,9 +63,9 @@ export function CloserRanking() {
 
       if (salesUserIdsSet.size === 0) return [];
 
-      const { data: users } = await supabase
+      const { data: users } = await visiblePeopleQuery(supabase
         .from('users')
-        .select('id, name')
+        .select('id, name'))
         .eq('account_id', accountId!)
         .in('id', Array.from(salesUserIdsSet));
 

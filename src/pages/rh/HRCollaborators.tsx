@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useCanAccessHR } from "@/lib/access/hrAccess";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
@@ -222,9 +223,9 @@ export default function HRCollaborators() {
     if (!currentUser?.account_id) return;
     setTeamLoading(true);
     try {
-      const { data: teamData } = await supabase
+      const { data: teamData } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, email, avatar_url, team_role_id, account_id")
+        .select("id, name, email, avatar_url, team_role_id, account_id"))
         .eq("account_id", currentUser.account_id)
         .order("name");
 

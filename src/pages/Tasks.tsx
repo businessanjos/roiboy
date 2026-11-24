@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { isManagementUser } from "@/lib/access/managementRoles";
@@ -659,9 +660,9 @@ export default function Tasks() {
   const { data: users = [] } = useQuery({
     queryKey: ["team-users-tasks", currentSector?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, avatar_url")
+        .select("id, name, avatar_url"))
         .eq("is_active", true)
         .order("name");
       const allUsers = (data || []) as User[];

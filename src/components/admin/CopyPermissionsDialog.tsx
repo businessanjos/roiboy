@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,8 +22,8 @@ export function CopyPermissionsButton({ userId, accountId }: { userId: string; a
     queryKey: ["copy-perm-users", accountId],
     enabled: open && !!accountId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("users").select("id, name, email").eq("account_id", accountId).eq("is_active", true).order("name");
+      const { data } = await visiblePeopleQuery(supabase
+        .from("users").select("id, name, email")).eq("account_id", accountId).eq("is_active", true).order("name");
       return (data ?? []) as { id: string; name: string | null; email: string | null }[];
     },
   });

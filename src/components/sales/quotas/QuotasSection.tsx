@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useActiveSalesClosers } from "@/lib/sales/salesClosers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,9 +75,9 @@ export function QuotasSection() {
     queryKey: ["sales-team-users", accountId, "v3-dynamic", closerIds.join(",")],
     queryFn: async () => {
       const ids = Array.from(new Set([...closerIds, ...EXTRA_SALES_USER_IDS]));
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, is_active")
+        .select("id, name, is_active"))
         .eq("account_id", accountId!)
         .in("id", ids)
         .order("name");

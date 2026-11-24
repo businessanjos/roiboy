@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -117,9 +118,9 @@ export function useAccountUsersForJobs() {
     queryKey: ["account-users-for-jobs", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, email")
+        .select("id, name, email"))
         .eq("account_id", currentUser!.account_id)
         .order("name");
       if (error) throw error;

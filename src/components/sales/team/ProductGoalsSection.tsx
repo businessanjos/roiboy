@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,7 +58,7 @@ export function ProductGoalsSection() {
 
     const [productsRes, usersRes, goalsRes] = await Promise.all([
       supabase.from("products").select("id, name").eq("account_id", currentUser.account_id).eq("is_active", true).order("name"),
-      supabase.from("users").select("id, name").eq("account_id", currentUser.account_id).order("name"),
+      visiblePeopleQuery(supabase.from("users").select("id, name")).eq("account_id", currentUser.account_id).order("name"),
       supabase.from("sales_product_goals").select("*").eq("account_id", currentUser.account_id).eq("year_month", yearMonth),
     ]);
 

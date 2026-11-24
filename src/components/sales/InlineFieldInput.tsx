@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -47,9 +48,9 @@ export function InlineFieldInput({ field, value, onChange }: InlineFieldInputPro
 
   useEffect(() => {
     if (field.field_type === "user") {
-      supabase
+      visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name")
+        .select("id, name"))
         .order("name")
         .then(({ data }) => {
           if (data) setTeamUsers(data as any);

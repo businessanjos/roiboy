@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Search,
@@ -559,9 +560,9 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
 
       if (canViewTeam) {
         tasks.push(
-          supabase
+          visiblePeopleQuery(supabase
             .from("users")
-            .select("id, name, email, role, is_active")
+            .select("id, name, email, role, is_active"))
             .or(`name.ilike.${like},email.ilike.${like}`)
             .eq("is_active", true)
             .limit(4)

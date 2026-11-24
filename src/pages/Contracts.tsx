@@ -1,4 +1,5 @@
 import { useContractCatalog } from "@/hooks/useContractCatalog";
+import { filterVisiblePeople } from "@/lib/peopleVisibility";
 import { useContractTypes } from "@/hooks/useContractTypes";
 import { ListPagination } from "@/components/ui/list-pagination";
 import type { PageSize } from "@/hooks/usePagedList";
@@ -596,7 +597,7 @@ export default function Contracts() {
       if (bankAccountsRes.data) setBankAccounts(bankAccountsRes.data);
       if (categoriesRes.data) setCategories(categoriesRes.data);
       if (costCentersRes.data) setCostCenters(costCentersRes.data);
-      if (usersRes.data) setTeamUsers(usersRes.data);
+      if (usersRes.data) setTeamUsers(filterVisiblePeople(usersRes.data));
     } catch (error) {
       console.error("Error fetching financial data:", error);
     }
@@ -861,7 +862,7 @@ export default function Contracts() {
         .select("id, name")
         .eq("account_id", userProfile.account_id);
       
-      setImportTeamUsers(teamUsers);
+      setImportTeamUsers(filterVisiblePeople(teamUsers));
 
       // Fetch all existing clients for duplicate detection
       const { data: existingClients } = await supabase

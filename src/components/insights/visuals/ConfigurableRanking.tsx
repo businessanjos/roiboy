@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { filterVisiblePeople, visiblePeopleQuery } from "@/lib/peopleVisibility";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { productShortName, isRenewalProduct } from "@/lib/insights/productShortName";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -171,7 +172,8 @@ function Podium({
   );
 }
 
-export function ConfigurableRanking({ data, formatting, appearance, dimensionLabel, measureLabel, hiddenProducts }: ConfigurableRankingProps) {
+export function ConfigurableRanking({ data: sourceData, formatting, appearance, dimensionLabel, measureLabel, hiddenProducts }: ConfigurableRankingProps) {
+  const data = useMemo(() => filterVisiblePeople(sourceData), [sourceData]);
   const tv = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'] * tv.scale;
   const { currentUser } = useCurrentUser();
@@ -199,9 +201,9 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
 
     const fetchAvatars = async () => {
       const names = data.map(d => d.name);
-      const { data: users } = await supabase
+      const { data: users } = await visiblePeopleQuery(supabase
         .from('users')
-        .select('name, avatar_url')
+        .select('name, avatar_url'))
         .eq('account_id', currentUser.account_id)
         .in('name', names);
 

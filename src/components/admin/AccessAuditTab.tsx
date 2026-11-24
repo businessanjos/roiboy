@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { filterVisiblePeople } from "@/lib/peopleVisibility";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { useQuery } from "@tanstack/react-query";
@@ -52,7 +53,7 @@ export function AccessAuditTab() {
         .select("id, email, name, role, is_also_admin, account_id, team_role_id")
         .order("name", { ascending: true });
       if (error) throw error;
-      return ((data || []) as unknown) as UserRow[];
+      return filterVisiblePeople(data) as unknown as UserRow[];
     },
   });
 

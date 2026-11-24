@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,9 +85,9 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
     queryFn: async (): Promise<AccountUser[]> => {
       if (!accountId) return [];
       const { data, error } = await fetchAllRows<AccountUser>((from, to) =>
-        supabase
+        visiblePeopleQuery(supabase
           .from("users")
-          .select("id, name, email, avatar_url, role, auth_user_id, is_active")
+          .select("id, name, email, avatar_url, role, auth_user_id, is_active"))
           .eq("account_id", accountId)
           .order("name")
           .order("id")

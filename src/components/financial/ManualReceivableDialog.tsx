@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect } from "react";
 import { Save, Search, Plus, User, Calendar, DollarSign, Building2, FileText, Repeat, Link2, CreditCard } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -146,9 +147,9 @@ export function ManualReceivableDialog({
     queryKey: ["team-users", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name")
+        .select("id, name"))
         .eq("account_id", accountId)
         .order("name");
       if (error) throw error;

@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -60,9 +61,9 @@ export function DailyPerformanceSection({ value, onChange }: Props) {
     queryKey: ["dp-users", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name")
+        .select("id, name"))
         .eq("account_id", accountId!)
         .order("name");
       return data || [];

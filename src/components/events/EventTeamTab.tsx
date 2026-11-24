@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -119,9 +120,9 @@ export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) 
   };
 
   const fetchUsers = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await visiblePeopleQuery(supabase
       .from("users")
-      .select("id, name, email, avatar_url")
+      .select("id, name, email, avatar_url"))
       .order("name");
 
     if (!error && data) {

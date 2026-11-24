@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { isHiddenTechnicalPerson } from "@/lib/peopleVisibility";
 
 export interface SectorUser {
   id: string;
@@ -70,6 +71,7 @@ export function useSectorUsers({ sectorId, activeOnly = true }: UseSectorUsersOp
       const sectorUsers: SectorUser[] = (data || [])
         .filter((access: any) => {
           if (!access.user) return false;
+          if (isHiddenTechnicalPerson(access.user)) return false;
           if (activeOnly) {
             if (!access.is_active) return false;
             if (access.user.is_active === false) return false;

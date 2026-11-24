@@ -8,6 +8,8 @@
  * A pessoa continua existindo no cadastro e em outras áreas do sistema.
  */
 
+import { isHiddenTechnicalPerson } from "@/lib/peopleVisibility";
+
 /** users.id do "Lucas Suporte" (anjosgroup.dados@anjosbusiness.com). */
 const HIDDEN_MARKETING_PERSON_IDS = new Set([
   "4385080f-e707-460f-b7ab-489fa3f73150",
@@ -33,6 +35,7 @@ interface MaybePerson {
 /** true quando a pessoa deve ficar fora dos seletores de Marketing. */
 export function isHiddenMarketingPerson(person: MaybePerson | null | undefined): boolean {
   if (!person) return false;
+  if (isHiddenTechnicalPerson(person)) return true;
   if (person.id && HIDDEN_MARKETING_PERSON_IDS.has(person.id)) return true;
   return HIDDEN_MARKETING_PERSON_NAMES.has(normalize(person.name));
 }

@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useMemo, useEffect } from "react";
 import { useActiveSalesClosers } from "@/lib/sales/salesClosers";
 import { computeRouletteBasis } from "./rouletteBasis";
@@ -68,9 +69,9 @@ export function CommissionSimulator({ presentationMode = false }: { presentation
     queryKey: ["sales-team-users", accountId, salesUserIds.join(",")],
     queryFn: async () => {
       if (salesUserIds.length === 0) return [];
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name")
+        .select("id, name"))
         .eq("account_id", accountId!)
         .in("id", salesUserIds)
         .order("name");

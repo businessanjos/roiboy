@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -71,9 +72,9 @@ export function ThreeCPlusLiveMonitor() {
     const userIds = usersWithIntegration.map((u) => u.user_id);
 
     // Get user names
-    const { data: usersData } = await supabase
+    const { data: usersData } = await visiblePeopleQuery(supabase
       .from("users")
-      .select("id, name")
+      .select("id, name"))
       .in("id", userIds);
 
     // Get latest active session per user

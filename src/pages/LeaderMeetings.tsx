@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
@@ -485,9 +486,9 @@ function ActionsList({
     queryKey: ["leader-meeting-users", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name")
+        .select("id, name"))
         .eq("account_id", accountId)
         .eq("is_active", true)
         .order("name");

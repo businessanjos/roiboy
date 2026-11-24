@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -57,9 +58,9 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
   }, [field.field_type, open]);
 
   const fetchTeamUsers = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await visiblePeopleQuery(supabase
       .from("users")
-      .select("id, name, email")
+      .select("id, name, email"))
       .order("name");
     
     if (!error && data) {

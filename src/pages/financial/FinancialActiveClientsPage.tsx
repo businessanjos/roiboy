@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -342,7 +343,7 @@ export default function FinancialActiveClientsPage() {
         if (c.sales_user_id) userIds.add(c.sales_user_id);
       });
       const usersRes = userIds.size
-        ? await supabase.from("users").select("id, name").in("id", [...userIds])
+        ? await visiblePeopleQuery(supabase.from("users").select("id, name")).in("id", [...userIds])
         : ({ data: [] } as any);
 
       const clientMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c]));

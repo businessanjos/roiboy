@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -26,7 +27,7 @@ export function ClientProcessDataDialog({ client, focus, open, onOpenChange }: {
   const refs = useRef<Record<string, HTMLInputElement | null>>({});
   const { data: team = [] } = useQuery({
     queryKey: ["cs-process-team", currentUser?.account_id], enabled: open && !!currentUser?.account_id,
-    queryFn: async () => (await supabase.from("users").select("id, name").eq("account_id", currentUser!.account_id).order("name")).data ?? [],
+    queryFn: async () => (await visiblePeopleQuery(supabase.from("users").select("id, name")).eq("account_id", currentUser!.account_id).order("name")).data ?? [],
   });
   useEffect(() => {
     if (!open || !client) return;

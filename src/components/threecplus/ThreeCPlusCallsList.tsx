@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -150,7 +151,7 @@ export function ThreeCPlusCallsList() {
           .order("id", { ascending: false })
           .range(from, to),
       ),
-      supabase.from("users").select("id, name").eq("account_id", currentUser.account_id),
+      visiblePeopleQuery(supabase.from("users").select("id, name")).eq("account_id", currentUser.account_id),
     ]);
     if (error) { console.error("[ThreeCPlusCallsList] erro ao carregar chamadas:", error); setLoading(false); return; }
     setCalls(dedupeCalls((data as unknown as CallRow[]) || []) as CallRow[]);

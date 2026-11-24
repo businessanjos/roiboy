@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState } from "react";
 
 const formatBRL = (value: number): string => {
@@ -80,9 +81,9 @@ export function OTESection({
     queryKey: ["sales-team-users-by-position", accountId, positionId, userIds.join(",")],
     queryFn: async () => {
       if (userIds.length === 0) return [];
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name")
+        .select("id, name"))
         .eq("account_id", accountId!)
         .in("id", userIds)
         .order("name");

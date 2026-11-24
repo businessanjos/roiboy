@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +24,7 @@ export function useCsInProgress() {
         supabase.from("events").select("id, title, modality, event_type, scheduled_at, status")
           .gte("scheduled_at", new Date(Date.now() - 8 * 86400000).toISOString())
           .lte("scheduled_at", new Date(Date.now() + 61 * 86400000).toISOString()),
-        supabase.from("users").select("id, name, avatar_url, user_team_roles(team_roles(name))").eq("account_id", accountId!).eq("is_active", true),
+        visiblePeopleQuery(supabase.from("users").select("id, name, avatar_url, user_team_roles(team_roles(name))")).eq("account_id", accountId!).eq("is_active", true),
       ]);
       return {
         waiting: new Set((waits.data ?? []).map((w) => w.client_id as string)),

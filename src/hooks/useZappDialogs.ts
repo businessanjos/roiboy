@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Agent, Department } from "@/components/royzapp";
 import { sectors, SectorId } from "@/config/sectors";
 import { withRetry } from "@/lib/retryFetch";
+import { filterVisiblePeople, isHiddenTechnicalPerson, visiblePeopleQuery } from "@/lib/peopleVisibility";
 
 interface TeamUser {
   id: string;
@@ -77,9 +78,9 @@ export function useZappDialogs(options: UseZappDialogsOptions) {
           .select(`*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id, role, is_also_admin), department:zapp_departments(*)`)
           .eq("account_id", accountId)
           .order("created_at"),
-        supabase
+        visiblePeopleQuery(supabase
           .from("users")
-          .select("id, name, email, avatar_url, role, team_role_id, is_also_admin, team_role:team_roles(id, name, color)")
+          .select("id, name, email, avatar_url, role, team_role_id, is_also_admin, team_role:team_roles(id, name, color)"))
           .eq("account_id", accountId)
           .order("name"),
         supabase
@@ -139,7 +140,7 @@ export function useZappDialogs(options: UseZappDialogsOptions) {
     }
 
     setDepartments(finalDepartments);
-    setTeamUsers((usersData || []) as TeamUser[]);
+    setTeamUsers(filterVisiblePeople(usersData) as TeamUser[]);
     setTeamRoles(rolesData || []);
 
     // Auto-register agent if needed
@@ -190,9 +191,9 @@ export function useZappDialogs(options: UseZappDialogsOptions) {
       });
     }
 
-    setAgents(filteredAgents);
+    setAgents(filteredAgents.filter((agent) => !isHiddenTechnicalPerson(agent.user) && !isHiddenTechnicalPerson({ id: agent.user_id })));
 
-    return { departments: finalDepartments, targetDepartmentId, usersData: usersData || [] };
+    return { departments: finalDepartments, targetDepartmentId, usersData: filterVisiblePeople(usersData) };
   }, [accountId, userId, sectorId, updateAgentHeartbeat]);
 
   // Cleanup heartbeat on unmount

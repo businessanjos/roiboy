@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,9 +114,9 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
     queryKey: ["spiffs-users-history", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, email")
+        .select("id, name, email"))
         .eq("account_id", accountId!);
       if (error) throw error;
       return data ?? [];

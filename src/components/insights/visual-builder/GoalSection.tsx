@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -105,7 +106,7 @@ export function GoalSection({ value, onChange }: Props) {
     queryKey: ["goal-users", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const { data } = await supabase.from("users").select("id, name").eq("account_id", accountId!).order("name");
+      const { data } = await visiblePeopleQuery(supabase.from("users").select("id, name")).eq("account_id", accountId!).order("name");
       return data || [];
     },
   });

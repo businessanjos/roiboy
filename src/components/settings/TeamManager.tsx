@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { UserPermissionsEditor } from "@/components/admin/PermissionProfilesManager";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -281,9 +282,9 @@ export function TeamManager() {
 
       setRoles(rolesWithPermissions);
 
-      const { data: usersData, error: usersError } = await supabase
+      const { data: usersData, error: usersError } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("*")
+        .select("*"))
         .eq("account_id", currentUser.account_id)
         .order("name");
 

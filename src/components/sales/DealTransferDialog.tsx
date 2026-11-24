@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Search, ArrowRightLeft, User } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { filterVisiblePeople, visiblePeopleQuery } from "@/lib/peopleVisibility";
 
 interface TeamMember {
   id: string;
@@ -80,9 +81,9 @@ export function DealTransferDialog({
             .eq("account_id", accountId)
             .eq("sector_id", sectorId || "vendas")
             .eq("is_active", true),
-          supabase
+          visiblePeopleQuery(supabase
             .from("users")
-            .select("id, name, email, avatar_url, role")
+            .select("id, name, email, avatar_url, role"))
             .eq("account_id", accountId)
             .eq("role", "admin")
         ]);
@@ -119,7 +120,7 @@ export function DealTransferDialog({
         });
 
         // Sort by name
-        const members = Array.from(membersMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+        const members = filterVisiblePeople(Array.from(membersMap.values())).sort((a, b) => a.name.localeCompare(b.name));
         setTeamMembers(members);
       } catch (error) {
         console.error("Error fetching team members:", error);

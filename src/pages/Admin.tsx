@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState, useEffect, memo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -136,9 +137,9 @@ export default function Admin() {
       if (accountsError) throw accountsError;
 
       // Get user counts per account
-      const { data: userCounts } = await supabase
+      const { data: userCounts } = await visiblePeopleQuery(supabase
         .from('users')
-        .select('account_id');
+        .select('account_id'));
 
       // Get client counts per account
       const { data: clientCounts } = await supabase
@@ -169,9 +170,9 @@ export default function Admin() {
   const { data: allUsers = [], isLoading: loadingUsers } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
-      const { data: usersData, error: usersError } = await supabase
+      const { data: usersData, error: usersError } = await visiblePeopleQuery(supabase
         .from('users')
-        .select('*')
+        .select('*'))
         .order('created_at', { ascending: false });
       
       if (usersError) throw usersError;

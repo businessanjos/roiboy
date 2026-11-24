@@ -29,7 +29,7 @@ beforeEach(() => {
         : table === "deals" ? deals : table === "internal_tasks" ? tasks : [];
       return rows.filter((row: any) => !filters.has("company_id") || row.company_id === filters.get("company_id"));
     };
-    for (const method of ["select", "is", "or", "gte", "lte", "not", "order", "in"]) builder[method] = vi.fn(() => builder);
+    for (const method of ["select", "is", "or", "gte", "lte", "not", "order", "in", "neq"]) builder[method] = vi.fn(() => builder);
     builder.eq = vi.fn((key: string, value: unknown) => { filters.set(key, value); return builder; });
     builder.range = vi.fn(async (from: number, to: number) => ({ data: data().slice(from, to + 1), error: null }));
     builder.then = (resolve: any) => Promise.resolve({ data: data(), error: null }).then(resolve);

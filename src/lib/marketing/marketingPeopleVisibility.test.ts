@@ -7,6 +7,9 @@ import {
 const LUCAS_SUPORTE_ID = "4385080f-e707-460f-b7ab-489fa3f73150";
 
 describe("marketingPeopleVisibility", () => {
+  it("esconde a conta de leitura TV Escritório em todo seletor de Marketing", () => {
+    expect(filterMarketingPeople([{ id: "tv", name: "TV Escritório" }, { id: "jessica", name: "Jessica Campos" }])).toEqual([{ id: "jessica", name: "Jessica Campos" }]);
+  });
   it("esconde o Lucas Suporte pelo id cadastrado", () => {
     expect(isHiddenMarketingPerson({ id: LUCAS_SUPORTE_ID, name: "Lucas Suporte" })).toBe(true);
   });

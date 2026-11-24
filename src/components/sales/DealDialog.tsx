@@ -6,6 +6,7 @@ import { Deal, DealStage } from "@/hooks/useDeals";
 import { supabase } from "@/integrations/supabase/client";
 import { DEAL_FIELD_IDS, mapItemVendaToProductId } from "@/utils/dealToClientContractMapping";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { filterVisiblePeople, visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MarkAsLostDialog } from "@/components/sales/MarkAsLostDialog";
@@ -237,9 +238,9 @@ export function DealDialog({
           `)
           .eq("account_id", currentUser.account_id)
           .eq("sector_id", "vendas"),
-        supabase
+        visiblePeopleQuery(supabase
           .from("users")
-          .select("id, name, avatar_url")
+          .select("id, name, avatar_url"))
           .eq("account_id", currentUser.account_id)
           .eq("role", "admin")
       ]);
@@ -277,7 +278,7 @@ export function DealDialog({
         }
       });
       
-      setTeamMembers(Array.from(usersMap.values()).sort((a, b) => a.name.localeCompare(b.name)));
+      setTeamMembers(filterVisiblePeople(Array.from(usersMap.values())).sort((a, b) => a.name.localeCompare(b.name)));
     };
 
     loadData();

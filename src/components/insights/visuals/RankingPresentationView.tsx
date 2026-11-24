@@ -1,3 +1,4 @@
+import { filterVisiblePeople, visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useEffect, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X, Trophy, TrendingUp, ShoppingCart, Target, DollarSign } from "lucide-react";
@@ -100,12 +101,13 @@ function LiveClock() {
 
 export function RankingPresentationView({
   title,
-  data,
+  data: sourceData,
   formatting,
   options,
   dashboardId,
   onClose,
 }: RankingPresentationViewProps) {
+  const data = useMemo(() => filterVisiblePeople(sourceData), [sourceData]);
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
   const [goalValue, setGoalValue] = useState<number | null>(null);
@@ -147,9 +149,9 @@ export function RankingPresentationView({
     if (!currentUser?.account_id || data.length === 0) return;
     const fetchAvatars = async () => {
       const names = data.map((d) => d.name);
-      const { data: users } = await supabase
+      const { data: users } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("name, avatar_url")
+        .select("name, avatar_url"))
         .eq("account_id", currentUser.account_id)
         .in("name", names);
       if (users) {

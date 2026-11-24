@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { CalendarDays, ChevronDown, Filter, GitBranch, RotateCcw, User, X } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -62,9 +63,9 @@ export function InsightsFilterBar() {
   const { data: users = [] } = useQuery({
     queryKey: ["insights-filter-users"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name")
+        .select("id, name"))
         .order("name");
       return data || [];
     },

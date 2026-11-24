@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { filterVisiblePeople, visiblePeopleQuery } from "@/lib/peopleVisibility";
 
 export interface TeamUser {
   id: string;
@@ -17,13 +18,13 @@ export function useTeamUsers() {
     queryKey: ["team-users", accountId],
     queryFn: async (): Promise<TeamUser[]> => {
       if (!accountId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, email, avatar_url, auth_user_id")
+        .select("id, name, email, avatar_url, auth_user_id"))
         .eq("account_id", accountId)
         .order("name");
       if (error) throw error;
-      return (data || []).map((u: any) => ({
+      return filterVisiblePeople(data).map((u: any) => ({
         id: u.auth_user_id || u.id,
         name: u.name,
         email: u.email,

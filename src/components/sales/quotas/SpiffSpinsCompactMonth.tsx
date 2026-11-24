@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,9 +49,9 @@ export function SpiffSpinsCompactMonth({ restrictToUserId }: { restrictToUserId?
     queryKey: ["spiffs-users-compact", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, email")
+        .select("id, name, email"))
         .eq("account_id", accountId!);
       if (error) throw error;
       return data ?? [];

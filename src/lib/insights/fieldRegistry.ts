@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -234,7 +235,7 @@ export async function fetchNativeFieldValues(
       return [...new Set((data || []).map((r: any) => r.name).filter(Boolean))];
     }
     if (field === 'responsible_name') {
-      const { data } = await supabase.from('users').select('name').eq('account_id', accountId);
+      const { data } = await visiblePeopleQuery(supabase.from('users').select('name')).eq('account_id', accountId);
       return [...new Set((data || []).map((r: any) => r.name).filter(Boolean))].sort();
     }
   }
@@ -250,7 +251,7 @@ export async function fetchNativeFieldValues(
       return [...new Set((data || []).map((r: any) => r.name).filter(Boolean))];
     }
     if (field === 'assigned_to' || field === 'created_by') {
-      const { data } = await supabase.from('users').select('name').eq('account_id', accountId);
+      const { data } = await visiblePeopleQuery(supabase.from('users').select('name')).eq('account_id', accountId);
       return [...new Set((data || []).map((r: any) => r.name).filter(Boolean))].sort();
     }
     if (field === 'status') return ['Pendente', 'Concluída'];

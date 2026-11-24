@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -46,9 +47,9 @@ export function useActiveSalesClosers(positionFilter?: string) {
       const userIds = collaborators.map((c: any) => c.user_id).filter(Boolean) as string[];
       if (userIds.length === 0) return [];
 
-      const { data: users, error: usersError } = await supabase
+      const { data: users, error: usersError } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name, is_active")
+        .select("id, name, is_active"))
         .eq("account_id", accountId!)
         .in("id", userIds);
       if (usersError) throw usersError;

@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,7 +55,7 @@ export function useCsTeamUsers() {
     queryKey: ["cs-team-users", ids],
     enabled: !!ids,
     queryFn: async (): Promise<CsUser[]> => {
-      const { data } = await supabase.from("users").select("id, name, is_active").in("id", ids!);
+      const { data } = await visiblePeopleQuery(supabase.from("users").select("id, name, is_active")).in("id", ids!);
       return normalize(data || []);
     },
   });
@@ -65,7 +66,7 @@ function useAllActiveUsers(enabled: boolean) {
     queryKey: ["renewal-all-users"],
     enabled,
     queryFn: async (): Promise<CsUser[]> => {
-      const { data } = await supabase.from("users").select("id, name, is_active").eq("is_active", true);
+      const { data } = await visiblePeopleQuery(supabase.from("users").select("id, name, is_active")).eq("is_active", true);
       return normalize(data || []);
     },
   });

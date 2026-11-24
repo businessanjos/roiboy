@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -285,9 +286,9 @@ export default function CloserDashboard() {
         (utr ?? []).forEach((r: any) => r.user_id && closerIds.add(r.user_id));
       }
       const ids = new Set<string>([currentUser!.id, ...closerIds, ...MANAGER_IDS]);
-      const { data: users } = await supabase
+      const { data: users } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name")
+        .select("id, name"))
         .in("id", Array.from(ids))
         .order("name");
       return (users ?? []) as { id: string; name: string }[];

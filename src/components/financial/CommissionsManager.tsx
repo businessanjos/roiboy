@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -186,9 +187,9 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
     queryKey: ["team-users", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await visiblePeopleQuery(supabase
         .from("users")
-        .select("id, name")
+        .select("id, name"))
         .eq("account_id", accountId)
         .order("name");
       if (error) throw error;

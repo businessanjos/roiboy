@@ -1,3 +1,4 @@
+import { visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { useState, useEffect, useMemo } from "react";
@@ -191,9 +192,9 @@ export function ThreeCPlusMetrics() {
           .gte("started_at", start.toISOString())
           .lte("started_at", end.toISOString())
           .order("started_at", { ascending: false }),
-        supabase
+        visiblePeopleQuery(supabase
           .from("users")
-          .select("id, name")
+          .select("id, name"))
           .eq("account_id", currentUser?.account_id || "")
           .order("name"),
       ]);
