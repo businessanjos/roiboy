@@ -250,9 +250,9 @@ export function MarketingTaskDialog({
         <DialogHeader className="shrink-0 border-b px-5 py-4 sm:px-6">
           <DialogTitle className="flex items-center gap-2.5 pr-10 text-base tracking-normal"><ClipboardList className="h-5 w-5 text-primary" />{copySource ? "Duplicar Tarefa" : isEditing ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
         </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="grid min-w-0 md:grid-cols-[minmax(0,1fr)_252px] lg:grid-cols-[minmax(0,1fr)_280px]">
-            <div className="min-w-0 space-y-6 p-5 sm:p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto md:overflow-hidden">
+          <div className="grid min-w-0 md:h-full md:grid-cols-[minmax(0,1fr)_300px] lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div role="region" aria-label="Conteúdo da tarefa" className="min-h-0 min-w-0 space-y-5 p-4 sm:p-5 md:overflow-y-auto">
               <form id={formId} onSubmit={handleSubmit} className="min-w-0 space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="title" className="text-xs text-muted-foreground">Título *</Label>
@@ -266,34 +266,40 @@ export function MarketingTaskDialog({
                     disabled={blocked} portalContainer={portalContainer} />
                 </div>
               </form>
-              <div className="border-t pt-5">
+              <div className="space-y-3 border-t pt-4">
+                <MarketingTaskMediaUpload attachments={mediaAttachments} onAttachmentsChange={(next) => { setMediaAttachments(next); if (cover?.kind === "image" && !next.some((attachment) => attachmentKey(attachment) === cover.attachment)) setCover(null); }}
+                  accountId={currentUser?.account_id || ""} disabled={isSubmitting} onUploadingChange={setIsUploading} onUploaded={(path) => draftUploads.current.push(path)} />
+                <Collapsible><CollapsibleTrigger asChild><Button type="button" variant="ghost" className="w-full justify-between px-0" disabled={blocked}><span className="flex items-center gap-2"><ImagePlus className="h-4 w-4" />Capa {cover && <Check className="h-3.5 w-3.5 text-primary" />}</span><ChevronDown className="h-4 w-4 text-muted-foreground" /></Button></CollapsibleTrigger><CollapsibleContent className="pt-3"><TaskCoverEditor value={cover} onChange={setCover} attachments={mediaAttachments} disabled={blocked} /></CollapsibleContent></Collapsible>
+              </div>
+              <div className="border-t pt-4">
                 {copySource ? <div className="space-y-2"><Label>Subtarefas ({copySubtasks.length})</Label>{copySubtasks.map((subtask, index) => <p key={index} className="border-b py-2 text-sm">{subtask.title}</p>)}</div>
                   : <SubtaskList taskId={isEditing ? taskId : null} />}
               </div>
-              <div className="border-t pt-5"><TaskComments key={copySource ? "copy" : taskId || "new"} taskId={isEditing ? taskId : null} /></div>
+              <div className="border-t pt-4"><TaskComments key={copySource ? "copy" : taskId || "new"} taskId={isEditing ? taskId : null} /></div>
             </div>
-            <aside className="min-w-0 space-y-5 border-t bg-muted/15 p-5 md:border-l md:border-t-0">
+            <aside aria-label="Detalhes da tarefa" className="min-h-0 min-w-0 space-y-4 border-t bg-muted/15 p-4 sm:p-5 md:overflow-y-auto md:border-l md:border-t-0">
               <div className="space-y-3"><h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><Users className="h-4 w-4" />Pessoas</h3>{selectPeople("requester")}{selectPeople("assignee")}</div>
-              <div className="space-y-3 border-t pt-5">
+              <div className="space-y-3 border-t pt-4">
                 <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><CalendarDays className="h-4 w-4" />Entrega</h3>
+                <div className="grid gap-3">
                 <div className="space-y-1.5"><Label htmlFor="task-delivery-date" className="text-xs text-muted-foreground">Data de entrega</Label>
                   <TaskDeliveryDate value={dueDate} onChange={(date) => { setDueDate(date); if (!date) setDueTime(""); }} onValidityChange={setDateValid} disabled={blocked} portalContainer={portalContainer} />
                 </div>
-                <div className="space-y-1.5"><Label htmlFor="task-delivery-time" className="text-xs text-muted-foreground">Horário de entrega</Label><div className="relative">
+                <div className="grid grid-cols-[minmax(0,1fr)_116px] items-center gap-3"><Label htmlFor="task-delivery-time" className="text-xs text-muted-foreground">Horário de entrega</Label><div className="relative">
                   <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input id="task-delivery-time" type="text" inputMode="numeric" placeholder="HH:mm" maxLength={5} className="h-11 pl-9" value={dueTime} onChange={(event) => setDueTime(deliveryTimeInput(event.target.value))} disabled={blocked || !dueDate} aria-invalid={!!dueTime && !validDeliveryTime(dueTime)} />
                 </div></div>
+                </div>
               </div>
-              <div className="space-y-3 border-t pt-5">
+              <div className="space-y-3 border-t pt-4">
                 <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><Settings2 className="h-4 w-4" />Organização</h3>
+                <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5"><Label htmlFor="task-stage" className="text-xs text-muted-foreground">Etapa</Label><Select value={columnId} onValueChange={setColumnId} disabled={blocked}><SelectTrigger id="task-stage"><SelectValue placeholder="Selecione a etapa" /></SelectTrigger><SelectContent>{columns.map((column) => <SelectItem key={column.id} value={column.id}>{column.title}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-1.5"><Label htmlFor="task-priority" className="text-xs text-muted-foreground">Prioridade</Label><Select value={priority} onValueChange={(value) => setPriority(value as MarketingTaskPriority)} disabled={blocked}><SelectTrigger id="task-priority"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">Baixa</SelectItem><SelectItem value="medium">Média</SelectItem><SelectItem value="high">Alta</SelectItem></SelectContent></Select></div>
+                </div>
                 <div className="space-y-1.5"><Label htmlFor="task-section" className="text-xs text-muted-foreground">Seção</Label><Select value={sectionId || "none"} onValueChange={setSectionId} disabled={blocked}><SelectTrigger id="task-section"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sem seção</SelectItem>{sections.map((section) => <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>)}</SelectContent></Select></div>
                 <TaskLabelEditor value={labels} onChange={setLabels} catalog={labelCatalog} portalContainer={portalContainer} />
               </div>
-              <div className="border-t pt-5"><MarketingTaskMediaUpload attachments={mediaAttachments} onAttachmentsChange={(next) => { setMediaAttachments(next); if (cover?.kind === "image" && !next.some((attachment) => attachmentKey(attachment) === cover.attachment)) setCover(null); }}
-                accountId={currentUser?.account_id || ""} disabled={isSubmitting} onUploadingChange={setIsUploading} onUploaded={(path) => draftUploads.current.push(path)} /></div>
-              <Collapsible className="border-t pt-3"><CollapsibleTrigger asChild><Button type="button" variant="ghost" className="w-full justify-between px-0" disabled={blocked}><span className="flex items-center gap-2"><ImagePlus className="h-4 w-4" />Capa {cover && <Check className="h-3.5 w-3.5 text-primary" />}</span><ChevronDown className="h-4 w-4 text-muted-foreground" /></Button></CollapsibleTrigger><CollapsibleContent className="pt-3"><TaskCoverEditor value={cover} onChange={setCover} attachments={mediaAttachments} disabled={blocked} /></CollapsibleContent></Collapsible>
             </aside>
           </div>
         </div>

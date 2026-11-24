@@ -1,5 +1,11 @@
 # Roadmap — Processos do CS
 
+## Janela de tarefa: espaço e marca-texto
+- [x] Descrição, anexos e capa agrupados na coluna principal; detalhes compactos e rolagem independente no desktop, uma rolagem no celular; cabeçalho e rodapé fixos, sem cauda vazia acompanhando a lateral.
+- [x] Marca-texto ativo remove o destaque no segundo clique sem abrir a paleta; no cursor, interrompe a escrita destacada sem apagar a marcação anterior. Texto/negrito preservados; 12 testes passaram, compilação sem erros.
+- [x] Exemplos em 390/958/1440 px: seleção, segundo clique, salvar/reabrir destaque, rolagem, campos completos, calendário e rodapé conferidos, sem erros ou escritas reais; não publicado.
+- [ ] Conferência autenticada: sessão própria indisponível e criação de conta temporária falhou; a página real retorna ao login. Exemplos isolados não validam dados reais.
+
 ## Quadro de Marketing em tela cheia
 - [x] Botão de ampliar junto ao seletor de lista/quadro; reduzir sempre visível no topo, filtros e ações preservados, quadro ocupando a tela com rolagem local; Escape fecha a edição antes do quadro.
 - [x] 19 testes passaram e compilação sem erros; ampliação, retorno por botão/Escape, filtros e abrir/fechar edição conferidos com exemplos em 390/794/1440 px, sem rolagem lateral da página nem escritas. Sem publicação.

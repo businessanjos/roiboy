@@ -50,7 +50,13 @@ export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colo
       {tool("Lista numerada", <ListOrdered className="h-4 w-4" />, () => editor?.chain().focus().toggleOrderedList().run(), editor?.isActive("orderedList"))}
       <span className="mx-1 h-5 w-px bg-border" />
       <Popover open={paletteOpen} onOpenChange={setPaletteOpen}>
-        <Tooltip><TooltipTrigger asChild><PopoverTrigger asChild><Button type="button" variant={editor?.isActive("highlight") ? "secondary" : "ghost"} size="icon" className="h-9 w-9" aria-label="Marca-texto" disabled={disabled} onMouseDown={(e) => e.preventDefault()}><Highlighter className="h-4 w-4" /></Button></PopoverTrigger></TooltipTrigger><TooltipContent>Marca-texto</TooltipContent></Tooltip>
+        <Tooltip><TooltipTrigger asChild><PopoverTrigger asChild><Button type="button" variant={editor?.isActive("highlight") ? "secondary" : "ghost"} size="icon" className="h-9 w-9" aria-label="Marca-texto" aria-pressed={editor?.isActive("highlight") ?? false} disabled={disabled || !editor} onMouseDown={(e) => e.preventDefault()}
+          onClick={(event) => {
+            if (!editor?.isActive("highlight")) return;
+            event.preventDefault();
+            editor.chain().focus().unsetHighlight().run();
+            setPaletteOpen(false);
+          }}><Highlighter className="h-4 w-4" /></Button></PopoverTrigger></TooltipTrigger><TooltipContent>Marca-texto</TooltipContent></Tooltip>
         <PopoverContent portalContainer={portalContainer} align="start" className="w-64 space-y-3" onOpenAutoFocus={(e) => e.preventDefault()}>
           <div className="flex flex-wrap gap-2">
             {TASK_MARKER_COLORS.map((color) => <Button key={color.name} type="button" variant="outline" size="icon" title={color.name} aria-label={`Destacar em ${color.name}`} className={cn("h-10 w-10", color.className)} onClick={() => apply(color.color)} />)}
