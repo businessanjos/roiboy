@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 export interface MarketingTaskComment {
   id: string; task_id: string; body: string; created_at: string; user_id: string;
+  author_name: string | null;
   author: { name: string; avatar_url: string | null } | null;
 }
 export function useMarketingTaskComments(taskId?: string | null) {
@@ -17,10 +18,18 @@ export function useMarketingTaskComments(taskId?: string | null) {
     queryFn: async () => {
       if (!taskId || !currentUser?.account_id) return [];
       const { data, error } = await fetchAllRows<MarketingTaskComment>((from, to) => supabase
-        .from("marketing_task_comments").select("*, author:users!marketing_task_comments_user_id_fkey(name, avatar_url)")
+        .from("marketing_task_comments").select("*")
         .eq("task_id", taskId).eq("account_id", currentUser.account_id).order("created_at").order("id").range(from, to));
       if (error) throw error;
-      return data ?? [];
+      const comments = data ?? [];
+      const ids = [...new Set(comments.map((comment) => comment.user_id))];
+      const authors = new Map<string, { name: string; avatar_url: string | null }>();
+      for (let offset = 0; offset < ids.length; offset += 200) {
+        const { data: users, error: userError } = await supabase.from("users").select("id, name, avatar_url").in("id", ids.slice(offset, offset + 200));
+        if (userError) throw userError;
+        for (const user of users ?? []) authors.set(user.id, user);
+      }
+      return comments.map((comment) => ({ ...comment, author: authors.get(comment.user_id) ?? (comment.author_name ? { name: comment.author_name, avatar_url: null } : null) }));
     },
   });
   const add = useMutation({

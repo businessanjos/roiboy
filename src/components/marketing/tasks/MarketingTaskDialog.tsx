@@ -9,7 +9,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -17,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock, Copy, Loader2, Trash2 } from "lucide-react";
+import { Clock, Copy, Loader2, Trash2, AlignLeft, Users, CalendarDays, Settings2, ImagePlus, ChevronDown, Check, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { useMarketingTasks, MarketingTask, MarketingTaskPriority, MediaAttachment } from "@/hooks/useMarketingTasks";
@@ -35,7 +34,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { SubtaskList } from "./SubtaskList";
-import { Separator } from "@/components/ui/separator";
 import { MarketingTaskMediaUpload } from "./MarketingTaskMediaUpload";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { fetchAllRows } from "@/lib/fetchAllRows";
@@ -44,6 +42,11 @@ import { readTaskDetails, writeTaskDetails, taskCopyDraft, taskLabelCatalog, val
 import { TaskLabelEditor } from "./TaskLabels";
 import { TaskCoverEditor } from "./TaskCover";
 import { TaskComments } from "./TaskComments";
+import { TaskDescriptionEditor } from "./TaskDescriptionEditor";
+import { TaskDeliveryDate } from "./TaskDeliveryDate";
+import { taskDescriptionContent, readTaskMarkerColors, writeTaskDescription } from "@/lib/marketing/taskDescription";
+import type { JSONContent } from "@tiptap/react";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { attachmentKey, readTaskCover, writeTaskCover, TASK_FILES_BUCKET, type TaskCover } from "@/lib/marketing/taskPresentation";
 
 interface MarketingTaskDialogProps {
@@ -80,6 +83,10 @@ export function MarketingTaskDialog({
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [descriptionDocument, setDescriptionDocument] = useState<JSONContent>({ type: "doc", content: [{ type: "paragraph" }] });
+  const [markerColors, setMarkerColors] = useState<string[]>([]);
+  const [editorKey, setEditorKey] = useState(0);
+  const [dateValid, setDateValid] = useState(true);
   const [sectionId, setSectionId] = useState<string | undefined>(undefined);
   const [columnId, setColumnId] = useState<string | undefined>(undefined);
   const [assigneeId, setAssigneeId] = useState<string | undefined>(undefined);
@@ -105,6 +112,8 @@ export function MarketingTaskDialog({
       const details = readTaskDetails(source);
       setTitle(draft.title);
       setDescription(draft.description || "");
+      setDescriptionDocument(taskDescriptionContent(draft.description || "", source.custom_fields?.description_editor));
+      setMarkerColors(readTaskMarkerColors(source.custom_fields));
       setSectionId(draft.section_id || undefined);
       setColumnId(draft.column_id || undefined);
       setAssigneeId(draft.assignee_id || undefined);
@@ -117,6 +126,7 @@ export function MarketingTaskDialog({
       setCover(readTaskCover(source));
     } else {
       setTitle(""); setDescription("");
+      setDescriptionDocument(taskDescriptionContent("", undefined)); setMarkerColors([]);
       setSectionId(defaultSectionId || undefined);
       setColumnId(defaultColumnId || columns[0]?.id);
       setAssigneeId(defaultAssigneeId || undefined);
@@ -125,6 +135,7 @@ export function MarketingTaskDialog({
       setLabels([]); setPriority("medium"); setMediaAttachments([]);
       setCover(null);
     }
+    setDateValid(true); setEditorKey((key) => key + 1);
   }, [open, existingTask, copySource, defaultSectionId, defaultColumnId, defaultAssigneeId, columns]);
 
   const cleanupUploads = async (kept: MediaAttachment[] = []) => {
@@ -157,7 +168,7 @@ export function MarketingTaskDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting || isUploading || !title.trim() || (dueTime && (!dueDate || !validDeliveryTime(dueTime)))) return;
+    if (isSubmitting || isUploading || !dateValid || !title.trim() || (dueTime && (!dueDate || !validDeliveryTime(dueTime)))) return;
 
     setIsSubmitting(true);
     try {
@@ -183,7 +194,7 @@ export function MarketingTaskDialog({
         status: finalColumn?.is_done ? "done" as const : "pending" as const,
         is_completed: !!finalColumn?.is_done,
         tags: labels.map((label) => label.name),
-        custom_fields: writeTaskCover(customFields, cover),
+        custom_fields: writeTaskDescription(writeTaskCover(customFields, cover), description.trim(), descriptionDocument, markerColors),
         media_attachments: mediaAttachments,
       };
       if (isEditing && taskId) await updateTask.mutateAsync({ id: taskId, ...input });
@@ -205,216 +216,88 @@ export function MarketingTaskDialog({
     onOpenChange(false);
   };
 
-  return (
-    <>
-      <Dialog open={open} onOpenChange={(next) => { if (!next) void closeDraft(); else onOpenChange(true); }}>
-        <DialogContent ref={setPortalContainer} aria-describedby={undefined} className="flex max-w-2xl max-h-[90dvh] w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0">
-          <DialogHeader className="shrink-0 border-b px-4 py-5 sm:px-6">
-            <DialogTitle className="pr-10 tracking-normal">{copySource ? "Duplicar Tarefa" : isEditing ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
-          </DialogHeader>
+  const source = copySource ?? existingTask;
+  const blocked = isSubmitting || isUploading;
+  const selectPeople = (kind: "assignee" | "requester") => {
+    const personId = kind === "assignee" ? assigneeId : requesterId;
+    const label = kind === "assignee" ? "Responsável pela execução" : "Solicitante da demanda";
+    const none = kind === "assignee" ? "Sem responsável" : "Sem solicitante";
+    const fallbackName = kind === "assignee" ? source?.assignee?.name : source ? readTaskDetails(source).requesterName : null;
+    return <div className="space-y-1.5">
+      <Label htmlFor={`task-${kind}`} className="text-xs text-muted-foreground">{label}</Label>
+      <Select value={personId || "none"} onValueChange={kind === "assignee" ? setAssigneeId : setRequesterId} disabled={blocked}>
+        <SelectTrigger id={`task-${kind}`} className="h-11"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">{none}</SelectItem>
+          {personId && personId !== "none" && !teamMembers.some((member) => member.id === personId) && <SelectItem value={personId}>{fallbackName || "Pessoa atual"}</SelectItem>}
+          {teamMembers.map((member) => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>;
+  };
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="p-4 sm:p-6 space-y-4">
-              {/* Main task form */}
-              <form id={formId} onSubmit={handleSubmit} className="space-y-4">
-                <fieldset disabled={isSubmitting} className="min-w-0 space-y-4">
-                {/* Title */}
+  return <>
+    <Dialog open={open} onOpenChange={(next) => { if (!next) void closeDraft(); else onOpenChange(true); }}>
+      <DialogContent ref={setPortalContainer} aria-describedby={undefined} className="flex h-[90dvh] max-h-[900px] w-[calc(100%-1.5rem)] max-w-[1060px] flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b px-5 py-4 sm:px-6">
+          <DialogTitle className="flex items-center gap-2.5 pr-10 text-base tracking-normal"><ClipboardList className="h-5 w-5 text-primary" />{copySource ? "Duplicar Tarefa" : isEditing ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="grid min-w-0 md:grid-cols-[minmax(0,1fr)_252px] lg:grid-cols-[minmax(0,1fr)_280px]">
+            <div className="min-w-0 space-y-6 p-5 sm:p-6">
+              <form id={formId} onSubmit={handleSubmit} className="min-w-0 space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Título *</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Nome da tarefa"
-                    autoFocus
-                  />
+                  <Label htmlFor="title" className="text-xs text-muted-foreground">Título *</Label>
+                  <Input id="title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Nome da tarefa" disabled={blocked} autoFocus
+                    className="h-auto min-h-12 border-0 border-b bg-transparent px-0 py-2 text-lg font-semibold shadow-none rounded-none focus-visible:ring-0 md:text-xl" />
                 </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Detalhes da tarefa..."
-                    rows={3}
-                  />
+                <div className="space-y-2.5">
+                  <Label className="flex items-center gap-2"><AlignLeft className="h-4 w-4 text-muted-foreground" />Descrição</Label>
+                  <TaskDescriptionEditor key={editorKey} initialContent={descriptionDocument} valueKey={String(editorKey)}
+                    onChange={(text, document) => { setDescription(text); setDescriptionDocument(document); }} colors={markerColors} onColorsChange={setMarkerColors}
+                    disabled={blocked} portalContainer={portalContainer} />
                 </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {/* Section */}
-                  <div className="space-y-2">
-                    <Label>Seção</Label>
-                    <Select value={sectionId} onValueChange={setSectionId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma seção" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sem seção</SelectItem>
-                        {sections.map((section) => (
-                          <SelectItem key={section.id} value={section.id}>
-                            {section.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Assignee */}
-                  <div className="space-y-2">
-                    <Label htmlFor="task-assignee">Responsável pela execução</Label>
-                    <Select value={assigneeId || "none"} onValueChange={setAssigneeId}>
-                      <SelectTrigger id="task-assignee" className="h-11 text-base sm:text-sm">
-                        <SelectValue placeholder="Selecione o responsável" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sem responsável</SelectItem>
-                        {assigneeId && assigneeId !== "none" && !teamMembers.some((member) => member.id === assigneeId) && (
-                          <SelectItem value={assigneeId}>{existingTask?.assignee?.name || "Responsável atual"}</SelectItem>
-                        )}
-                        {teamMembers.map((member) => (
-                          <SelectItem key={member.id} value={member.id}>
-                            {member.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="task-requester">Solicitante da demanda</Label>
-                  <Select value={requesterId || "none"} onValueChange={setRequesterId}>
-                    <SelectTrigger id="task-requester" className="h-11 text-base sm:text-sm"><SelectValue placeholder="Selecione o solicitante" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sem solicitante</SelectItem>
-                      {requesterId && requesterId !== "none" && !teamMembers.some((member) => member.id === requesterId) && (
-                        <SelectItem value={requesterId}>{readTaskDetails(copySource ?? existingTask ?? { custom_fields: {}, tags: [] }).requesterName || "Solicitante atual"}</SelectItem>
-                      )}
-                      {teamMembers.map((member) => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_160px]">
-                  <div className="space-y-2">
-                    <Label htmlFor="task-delivery-date">Data de entrega</Label>
-                    <Input id="task-delivery-date" type="date" className="h-11" value={dueDate ? format(dueDate, "yyyy-MM-dd") : ""}
-                      onChange={(event) => { setDueDate(event.target.value ? parseLocalDate(event.target.value) || undefined : undefined); if (!event.target.value) setDueTime(""); }} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="task-delivery-time">Horário de entrega</Label>
-                    <div className="relative">
-                      <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input id="task-delivery-time" type="text" inputMode="numeric" placeholder="HH:mm" maxLength={5} className="h-11 pl-9"
-                        value={dueTime} onChange={(event) => setDueTime(deliveryTimeInput(event.target.value))} disabled={!dueDate}
-                        aria-invalid={!!dueTime && !validDeliveryTime(dueTime)} />
-                    </div>
-                  </div>
-                </div>
-
-                <TaskLabelEditor value={labels} onChange={setLabels} catalog={labelCatalog} portalContainer={portalContainer} />
-
-                {/* Priority & Status */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Prioridade</Label>
-                    <Select value={priority} onValueChange={(v) => setPriority(v as MarketingTaskPriority)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Baixa</SelectItem>
-                        <SelectItem value="medium">Média</SelectItem>
-                        <SelectItem value="high">Alta</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Etapa</Label>
-                    <Select value={columnId} onValueChange={setColumnId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a etapa" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {columns.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            <span className="inline-flex items-center gap-2">
-                              <span className="inline-block w-2 h-2 rounded-full" style={{ background: c.color }} />
-                              {c.title}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                </fieldset>
               </form>
-
-              {/* Subtasks Section - OUTSIDE the main form to prevent event bubbling */}
-              <Separator className="my-4" />
-              {copySource ? <div className="space-y-2">
-                <Label>Subtarefas ({copySubtasks.length})</Label>
-                {copySubtasks.map((subtask, index) => <p key={index} className="border-b py-2 text-sm">{subtask.title}</p>)}
-              </div> : <SubtaskList taskId={isEditing ? taskId : null} />}
-
-              {/* Media Attachments Section - OUTSIDE the main form */}
-              <Separator className="my-4" />
-              <MarketingTaskMediaUpload
-                attachments={mediaAttachments}
-                onAttachmentsChange={(next) => {
-                  setMediaAttachments(next);
-                  if (cover?.kind === "image" && !next.some((a) => attachmentKey(a) === cover.attachment)) setCover(null);
-                }}
-                accountId={currentUser?.account_id || ""}
-                disabled={isSubmitting}
-                onUploadingChange={setIsUploading}
-                onUploaded={(path) => draftUploads.current.push(path)}
-              />
-              <Separator className="my-4" />
-              <TaskCoverEditor value={cover} onChange={setCover} attachments={mediaAttachments} disabled={isSubmitting || isUploading} />
-              <Separator className="my-4" />
-              <TaskComments key={copySource ? "copy" : taskId || "new"} taskId={isEditing ? taskId : null} />
+              <div className="border-t pt-5">
+                {copySource ? <div className="space-y-2"><Label>Subtarefas ({copySubtasks.length})</Label>{copySubtasks.map((subtask, index) => <p key={index} className="border-b py-2 text-sm">{subtask.title}</p>)}</div>
+                  : <SubtaskList taskId={isEditing ? taskId : null} />}
+              </div>
+              <div className="border-t pt-5"><TaskComments key={copySource ? "copy" : taskId || "new"} taskId={isEditing ? taskId : null} /></div>
             </div>
+            <aside className="min-w-0 space-y-5 border-t bg-muted/15 p-5 md:border-l md:border-t-0">
+              <div className="space-y-3"><h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><Users className="h-4 w-4" />Pessoas</h3>{selectPeople("requester")}{selectPeople("assignee")}</div>
+              <div className="space-y-3 border-t pt-5">
+                <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><CalendarDays className="h-4 w-4" />Entrega</h3>
+                <div className="space-y-1.5"><Label htmlFor="task-delivery-date" className="text-xs text-muted-foreground">Data de entrega</Label>
+                  <TaskDeliveryDate value={dueDate} onChange={(date) => { setDueDate(date); if (!date) setDueTime(""); }} onValidityChange={setDateValid} disabled={blocked} portalContainer={portalContainer} />
+                </div>
+                <div className="space-y-1.5"><Label htmlFor="task-delivery-time" className="text-xs text-muted-foreground">Horário de entrega</Label><div className="relative">
+                  <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input id="task-delivery-time" type="text" inputMode="numeric" placeholder="HH:mm" maxLength={5} className="h-11 pl-9" value={dueTime} onChange={(event) => setDueTime(deliveryTimeInput(event.target.value))} disabled={blocked || !dueDate} aria-invalid={!!dueTime && !validDeliveryTime(dueTime)} />
+                </div></div>
+              </div>
+              <div className="space-y-3 border-t pt-5">
+                <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><Settings2 className="h-4 w-4" />Organização</h3>
+                <div className="space-y-1.5"><Label htmlFor="task-stage" className="text-xs text-muted-foreground">Etapa</Label><Select value={columnId} onValueChange={setColumnId} disabled={blocked}><SelectTrigger id="task-stage"><SelectValue placeholder="Selecione a etapa" /></SelectTrigger><SelectContent>{columns.map((column) => <SelectItem key={column.id} value={column.id}>{column.title}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-1.5"><Label htmlFor="task-priority" className="text-xs text-muted-foreground">Prioridade</Label><Select value={priority} onValueChange={(value) => setPriority(value as MarketingTaskPriority)} disabled={blocked}><SelectTrigger id="task-priority"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">Baixa</SelectItem><SelectItem value="medium">Média</SelectItem><SelectItem value="high">Alta</SelectItem></SelectContent></Select></div>
+                <div className="space-y-1.5"><Label htmlFor="task-section" className="text-xs text-muted-foreground">Seção</Label><Select value={sectionId || "none"} onValueChange={setSectionId} disabled={blocked}><SelectTrigger id="task-section"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sem seção</SelectItem>{sections.map((section) => <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>)}</SelectContent></Select></div>
+                <TaskLabelEditor value={labels} onChange={setLabels} catalog={labelCatalog} portalContainer={portalContainer} />
+              </div>
+              <div className="border-t pt-5"><MarketingTaskMediaUpload attachments={mediaAttachments} onAttachmentsChange={(next) => { setMediaAttachments(next); if (cover?.kind === "image" && !next.some((attachment) => attachmentKey(attachment) === cover.attachment)) setCover(null); }}
+                accountId={currentUser?.account_id || ""} disabled={isSubmitting} onUploadingChange={setIsUploading} onUploaded={(path) => draftUploads.current.push(path)} /></div>
+              <Collapsible className="border-t pt-3"><CollapsibleTrigger asChild><Button type="button" variant="ghost" className="w-full justify-between px-0" disabled={blocked}><span className="flex items-center gap-2"><ImagePlus className="h-4 w-4" />Capa {cover && <Check className="h-3.5 w-3.5 text-primary" />}</span><ChevronDown className="h-4 w-4 text-muted-foreground" /></Button></CollapsibleTrigger><CollapsibleContent className="pt-3"><TaskCoverEditor value={cover} onChange={setCover} attachments={mediaAttachments} disabled={blocked} /></CollapsibleContent></Collapsible>
+            </aside>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t px-4 py-3 sm:px-6">
-            <div className="flex gap-1">
-              {isEditing && <>
-                <Button type="button" variant="outline" className="h-11" onClick={handleDuplicate} disabled={isSubmitting || isUploading}><Copy />Duplicar tarefa</Button>
-                <Button type="button" variant="ghost" size="icon" className="h-11 w-11 text-destructive" aria-label="Excluir tarefa" title="Excluir tarefa" onClick={() => setShowDeleteDialog(true)} disabled={isSubmitting || isUploading}><Trash2 /></Button>
-              </>}
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Button type="button" variant="outline" className="h-11" onClick={closeDraft} disabled={isSubmitting || isUploading}>Cancelar</Button>
-              <Button type="submit" form={formId} className="h-11" disabled={isSubmitting || isUploading || !title.trim() || (!!dueTime && (!dueDate || !validDeliveryTime(dueTime)))}>
-                {isSubmitting && <Loader2 className="motion-safe:animate-spin" />}{copySource ? "Criar cópia" : isEditing ? "Salvar" : "Criar"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A tarefa e suas subtarefas serão permanentemente excluídas.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t bg-background px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-1">{isEditing && <>
+            <Button type="button" variant="ghost" size="sm" className="h-10" onClick={handleDuplicate} disabled={blocked} aria-label="Duplicar tarefa"><Copy className="h-4 w-4" /><span className="hidden sm:inline">Duplicar tarefa</span></Button>
+            <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-destructive" aria-label="Excluir tarefa" title="Excluir tarefa" onClick={() => setShowDeleteDialog(true)} disabled={blocked}><Trash2 className="h-4 w-4" /></Button>
+          </>}</div>
+          <div className="ml-auto flex items-center gap-2"><Button type="button" variant="outline" className="h-10" onClick={closeDraft} disabled={blocked}>Cancelar</Button><Button type="submit" form={formId} className="h-10" disabled={blocked || !dateValid || !title.trim() || (!!dueTime && (!dueDate || !validDeliveryTime(dueTime)))}>{isSubmitting && <Loader2 className="h-4 w-4 motion-safe:animate-spin" />}{copySource ? "Criar cópia" : isEditing ? "Salvar" : "Criar"}</Button></div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir tarefa?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita. A tarefa e suas subtarefas serão permanentemente excluídas.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+  </>;
 }

@@ -19970,6 +19970,7 @@ export type Database = {
       marketing_task_comments: {
         Row: {
           account_id: string
+          author_name: string | null
           body: string
           created_at: string
           id: string
@@ -19978,6 +19979,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          author_name?: string | null
           body: string
           created_at?: string
           id?: string
@@ -19986,6 +19988,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          author_name?: string | null
           body?: string
           created_at?: string
           id?: string
@@ -20005,20 +20008,6 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "marketing_tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "marketing_task_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "active_users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "marketing_task_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

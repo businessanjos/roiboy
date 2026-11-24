@@ -1,11 +1,14 @@
 # Roadmap — Processos do CS
 
 ## Tarefas de Marketing: anexos, comentários, capas e separadores
-- [ ] Ampliar anexos para documentos e mídias, com abertura e remoção segura sem afetar cópias.
-- [ ] Comentários com autoria individual e data, sem misturar histórico na duplicação.
-- [ ] Capas escolhidas entre imagens anexadas ou cores, visíveis nos cartões.
-- [ ] Separadores nomeados e reordenáveis entre cartões, sem prazo/conclusão/responsável.
-- [ ] Testes e conferência autenticada com registros QA, celular/desktop; não publicar.
+- [x] Ampliar anexos para documentos e mídias privados, com abertura e remoção segura sem afetar cópias; limpar só uploads novos descartados do próprio rascunho.
+- [x] Comentários com autoria individual e data do servidor, nome histórico preservado e exclusão só do próprio autor, sem copiar histórico na duplicação.
+- [x] Capas escolhidas entre imagens anexadas ou cores, visíveis nos cartões e lista.
+- [x] Separadores nomeados, posição editável e arraste entre cartões, sem prazo/conclusão/responsável nem contagem como tarefa.
+- [x] 35 testes passaram; conferência com respostas fictícias em 390/794/1440 px, claro/escuro: selecionar/marcar texto, criar cor, salvar/reabrir, digitar data, bloquear inválida, abrir calendário, anexos/capa/comentário, duplicar e retirar anexo da cópia preservando a original, cancelar com limpeza de upload, arrastar separador antes do cartão; sem erros. Nenhum registro real alterado, tela temporária removida, não publicado.
+- [ ] Conferência autenticada em /marketing/projetos?tab=tarefas: sessão própria indisponível e criação de conta temporária falhou duas vezes; a tela real retorna ao login. Fluxo com respostas fictícias não valida upload/RLS no servidor.
+- [x] Reformular a janela de edição com descrição ampla e expansível, detalhes em coluna lateral, rodapé fixo e marca-texto por seleção com cores próprias, sem placeholder de instruções.
+- [x] Permitir digitar a data de entrega além de escolhê-la no calendário ROY, mantendo a data salva sem conversão de fuso; data parcial/inválida bloqueia Salvar.
 
 ## Tarefas de Marketing: duplicação e identificação
 - [x] Duplicar tarefa como uma nova cópia editável, preservando a original e reiniciando conclusão das subtarefas.
