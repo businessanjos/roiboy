@@ -1,4 +1,5 @@
 # AGENTS.md — src/hooks
+- CS process access is shared by `useCsProcessAccess`: editing comes from `is_cs_process_editor`, all-client visibility also accepts the existing `cs/processos_ver_todas` grant. Why: the controls must match content RLS without promoting anyone or changing global management rules.
 - Content archive reads every source page through the current user's client and RLS. Why: one read-only catalogue without copies, scraper jobs or changed access.
 
 - Notification INSERTs delivered late (tab asleep, browser back, realtime reconnect) only refresh the bell once; sound/toast/push fire only for fresh events, at most one per 1.2s. Why: a backlog flush used to interrupt for every event and froze the screen.

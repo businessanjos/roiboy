@@ -1,6 +1,7 @@
 import { Pencil } from "lucide-react";
 import { Check, ChevronRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { plainText, stepTitle, toStepInfo, visibleActions, type Action } from "@/lib/csProcessActions";
@@ -88,8 +89,9 @@ export function StepNavigator({ process, selected, onSelect, statusOf, visible, 
     return (
       <div data-tour="nav" className="space-y-2">
         {header}
+        <div className="flex items-center gap-2">
         <Select value={selected} onValueChange={onSelect}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
           <SelectContent>
             {process.phases.map((ph, pi) => (
               <SelectGroup key={pi}>
@@ -99,6 +101,8 @@ export function StepNavigator({ process, selected, onSelect, statusOf, visible, 
             ))}
           </SelectContent>
         </Select>
+        {onEdit && <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" onClick={() => onEdit(selected)} aria-label="Editar etapa" title="Editar etapa"><Pencil className="h-4 w-4" /></Button>}
+        </div>
       </div>
     );
   }

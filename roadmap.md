@@ -1,4 +1,7 @@
 # Roadmap — Processos do CS
+- [x] Andréia: liberar edição das mensagens dos Processos respeitando a autorização existente.
+- [x] Andréia: permitir ver clientes de todas as consultoras no onboarding dos Processos; testes de acesso e navegação autenticada passaram.
+- [ ] Conferência na sessão da Andréia: bloqueada porque esta sessão não pode abrir a conta de outra pessoa; edição e filtros conferidos com a sessão do solicitante, sem salvar mensagens reais.
 - [x] Painel analítico de inteligência: indicadores, evolução mensal, comparativos por canal/@ e histórico dos leads.
 - [x] Inteligência: conectar leads, MQL e vendas por canal/origem, exibir Instagram do lead e consultar seu histórico comercial.
 - [x] Conteúdos: reunir posts cadastrados de todas as redes e da Produção, com filtros e detalhes.

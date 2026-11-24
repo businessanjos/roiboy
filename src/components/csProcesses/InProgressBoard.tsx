@@ -8,13 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCsInProgress } from "@/hooks/useCsInProgress";
-import { isManagementUser } from "@/lib/access/managementRoles";
 import { sinceLabel, type BoardCard } from "@/lib/csInProgress";
 import { stepTitle } from "@/lib/csProcessActions";
 import type { Process } from "@/lib/csProcesses";
 import { cn } from "@/lib/utils";
-import { useUserPermissions } from "@/hooks/useUserPermissions";
-const SEE_ALL = { module: "cs", sub_item: "processos_ver_todas" };
+import { useCsProcessAccess } from "@/hooks/useCsProcessAccess";
 
 const borders = ["border-l-purple-500", "border-l-teal-500", "border-l-blue-500"];
 const fills = ["bg-purple-500", "bg-teal-500", "bg-blue-500"];
@@ -25,13 +23,12 @@ const NONE = "none";
 
 export function InProgressBoard({ processes, onOpenCard }: { processes: Process[]; onOpenCard: (processIndex: number, card: BoardCard) => void }) {
   const { currentUser } = useCurrentUser();
-  const isMgr = isManagementUser(currentUser as any);
-  const { perms } = useUserPermissions();
-  const canSeeAll = isMgr || perms.some((p) => p.module === SEE_ALL.module && p.sub_item === SEE_ALL.sub_item && p.access_level !== "none");
+  const { canSeeAll, defaultOwner } = useCsProcessAccess();
   const isMobile = useIsMobile();
   const { boards, users, loading, today } = useCsInProgress();
   const [pi, setPi] = useState(0);
-  const [owner, setOwner] = useState<string>("mine");
+  const [selectedOwner, setOwner] = useState<string | null>(null);
+  const owner = canSeeAll ? selectedOwner ?? defaultOwner : "mine";
   const [q, setQ] = useState("");
   const [onlyWaiting, setOnlyWaiting] = useState(false);
   const [mobileCol, setMobileCol] = useState(0);

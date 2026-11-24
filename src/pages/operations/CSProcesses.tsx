@@ -32,7 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { parseProcesses, defaultProcessesText, serializeProcesses, type Block, type Step } from "@/lib/csProcesses";
-import { isManagementUser } from "@/lib/access/managementRoles";
+import { useCsProcessAccess } from "@/hooks/useCsProcessAccess";
 import { isMasculineName } from "@/lib/consultantGender";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
@@ -122,13 +122,14 @@ export default function CSProcesses() {
     queryKey: ["cs-process-content", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async () => {
-      const { data } = await supabase.from("cs_process_content").select("content").eq("account_id", currentUser!.account_id).maybeSingle();
+      if (!currentUser) return null;
+      const { data } = await supabase.from("cs_process_content").select("content").eq("account_id", currentUser.account_id).maybeSingle();
       return (data?.content as string | undefined) ?? null;
     },
   });
   const processText = customText || defaultProcessesText;
   const csProcesses = useMemo(() => { const p = parseProcesses(processText); return p.length ? p : parseProcesses(defaultProcessesText); }, [processText]);
-  const canEdit = isManagementUser(currentUser as any);
+  const { canEdit } = useCsProcessAccess();
   const [editKey, setEditKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const defaultParsed = useMemo(() => parseProcesses(defaultProcessesText), []);
@@ -137,14 +138,14 @@ export default function CSProcesses() {
   const editStep = editIdx ? editProc?.phases[editIdx[0]]?.steps[editIdx[1]] ?? null : null;
   const editOriginal = editIdx ? defaultParsed.find((p) => p.id === editProc?.id)?.phases[editIdx[0]]?.steps[editIdx[1]] ?? null : null;
   const saveStep = async (st: Step) => {
-    if (!currentUser || !editIdx) return;
+    if (!currentUser || !editIdx || !canEdit) return;
     const next = structuredClone(csProcesses);
     const target = next[Math.min(active, next.length - 1)];
     target.phases[editIdx[0]].steps[editIdx[1]] = st;
     setSaving(true);
     const { error } = await supabase.from("cs_process_content").upsert({ account_id: currentUser.account_id, content: serializeProcesses(next), updated_by: currentUser.id, updated_at: new Date().toISOString() });
     setSaving(false);
-    if (error) { toast.error("Não foi possível salvar. Só gestores podem editar."); return; }
+    if (error) { toast.error("Não foi possível salvar a etapa. Verifique seu acesso e tente novamente."); return; }
     toast.success("Etapa atualizada para toda a equipe");
     setEditKey(null);
     qc.invalidateQueries({ queryKey: ["cs-process-content"] });
@@ -370,8 +371,9 @@ export default function CSProcesses() {
       client, onEditClient: (f) => { setEditField(f); setEditClientOpen(true); },
       waits: ws, alertDays: (i) => waitDays.get(waitKey(proc.id, k, i)) ?? 2, canConfigWait: canEdit,
       onSetAlertDays: async (i, n) => {
-        const { error } = await supabase.from("cs_process_wait_settings").upsert({ account_id: currentUser!.account_id, wait_key: waitKey(proc.id, k, i), alert_days: n, updated_by: currentUser!.id, updated_at: new Date().toISOString() });
-        if (error) toast.error("Só gestores podem mudar os dias de espera."); else { toast.success(`Aviso após ${n} ${n === 1 ? "dia" : "dias"}`); qc.invalidateQueries({ queryKey: ["cs-process-wait-settings"] }); }
+        if (!currentUser || !canEdit) return;
+        const { error } = await supabase.from("cs_process_wait_settings").upsert({ account_id: currentUser.account_id, wait_key: waitKey(proc.id, k, i), alert_days: n, updated_by: currentUser.id, updated_at: new Date().toISOString() });
+        if (error) toast.error("Não foi possível alterar os dias de espera."); else { toast.success(`Aviso após ${n} ${n === 1 ? "dia" : "dias"}`); qc.invalidateQueries({ queryKey: ["cs-process-wait-settings"] }); }
       },
       onStartWait: (i) => startWait(k, i),
       onResolveWait: async (i) => {
