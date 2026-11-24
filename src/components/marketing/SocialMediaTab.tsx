@@ -109,6 +109,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
     saves: '[&_tr>*:nth-child(11)]:!table-cell', link_clicks: '[&_tr>*:nth-child(12)]:!table-cell',
     views: '[&_tr>*:nth-child(13)]:!table-cell', engagement_rate: '[&_tr>*:nth-child(14)]:!table-cell',
     virality_rate: '[&_tr>*:nth-child(15)]:!table-cell',
+    all: 'overflow-x-auto [&_table]:min-w-[1500px] [&_tr>*:nth-child(6)]:w-[320px] [&_tr>*:nth-child(n+7):nth-child(-n+15)]:!table-cell',
   };
   
   const {
@@ -473,7 +474,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                 <Select value={visibleMetric} onValueChange={setVisibleMetric}>
                   <SelectTrigger className="h-9 w-[155px] bg-card" aria-label="Métrica da lista"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries({ reach: 'Alcance', likes: 'Curtidas', comments: 'Comentários', shares: 'Compartilhamentos', saves: 'Salvamentos', link_clicks: 'Cliques no link', views: 'Visualizações', engagement_rate: 'Engajamento', virality_rate: 'Viralidade' }).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
+                    {Object.entries({ all: 'Todas as métricas', reach: 'Alcance', likes: 'Curtidas', comments: 'Comentários', shares: 'Compartilhamentos', saves: 'Salvamentos', link_clicks: 'Cliques no link', views: 'Visualizações', engagement_rate: 'Engajamento', virality_rate: 'Viralidade' }).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <SocialPostsDateFilter
