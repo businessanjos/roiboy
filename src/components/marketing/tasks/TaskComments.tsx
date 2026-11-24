@@ -10,6 +10,7 @@ import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { plainTaskDocument } from "@/lib/marketing/taskDescription";
 import { writeTaskComment } from "@/lib/marketing/taskCommentContent";
 import { cn } from "@/lib/utils";
+import { isMasculineName } from "@/lib/consultantGender";
 import { TaskDescriptionEditor } from "./TaskDescriptionEditor";
 import { TaskCommentBody } from "./TaskCommentBody";
 
@@ -28,6 +29,9 @@ export function TaskComments({ taskId, focusCommentId }: { taskId?: string | nul
   const conversation = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
   const lastCommentId = comments.at(-1)?.id;
+  const name = currentUser?.name?.trim();
+  const placeholder = !taskId ? "Salve a tarefa para comentar." : isLoading || error || comments.length > 0
+    ? "Escreva um comentário…" : name ? `Seja ${isMasculineName(name) ? "o primeiro" : "a primeira"} a comentar…` : "Seja o primeiro a comentar…";
   const focusedComment = useRef<string | null>(null);
   const rootRef = useCallback((element: HTMLDivElement | null) => setPortalContainer(element?.closest<HTMLElement>('[role="dialog"]') ?? null), []);
   useEffect(() => {
@@ -50,10 +54,9 @@ export function TaskComments({ taskId, focusCommentId }: { taskId?: string | nul
   return <div className="min-w-0 space-y-3" ref={rootRef}>
     <Label className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-muted-foreground" />Comentários {comments.length > 0 && <span className="text-xs text-muted-foreground">({comments.length})</span>}</Label>
     {error && <p role="alert" className="text-sm text-destructive">Não foi possível carregar os comentários.</p>}
-    <div ref={conversation} role="log" aria-label="Conversa da tarefa" aria-live="polite" className="max-h-80 min-w-0 space-y-3 overflow-y-auto overscroll-contain rounded-md border bg-muted/40 p-3 sm:p-4"
+    {(comments.length > 0 || (isLoading && taskId)) && <div ref={conversation} role="log" aria-label="Conversa da tarefa" aria-live="polite" className="max-h-80 min-w-0 space-y-3 overflow-y-auto overscroll-contain py-1"
       onScroll={(event) => { const element = event.currentTarget; stickToBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48; }}>
       {isLoading && taskId && <div className="flex justify-center py-3"><Loader2 aria-label="Carregando comentários" className="h-4 w-4 motion-safe:animate-spin text-muted-foreground" /></div>}
-      {!isLoading && !error && !comments.length && <p className="py-3 text-center text-xs text-muted-foreground">{taskId ? "Nenhum comentário ainda." : "Salve a tarefa para comentar."}</p>}
       {comments.map((comment, index) => {
         const own = comment.user_id === currentUser?.id;
         const fullName = comment.author?.name || comment.author_name || "Usuário";
@@ -80,11 +83,11 @@ export function TaskComments({ taskId, focusCommentId }: { taskId?: string | nul
           </div>
         </div>
       })}
-    </div>
+    </div>}
     <TaskDescriptionEditor initialContent={document} valueKey={String(editorKey)} label="Novo comentário" compact
       onChange={(text, next) => { setBody(text); setDocument(next); }} colors={colors} onColorsChange={setColors}
-      disabled={!taskId || add.isPending} portalContainer={portalContainer} mentionPeople={mentionPeople} />
-    <div className="flex justify-end"><Button type="button" variant="default" size="sm" onClick={submit} disabled={!taskId || !body.trim() || add.isPending}>{add.isPending ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" /> : <Send className="h-4 w-4" />}Comentar</Button></div>
+      disabled={!taskId || add.isPending} portalContainer={portalContainer} mentionPeople={mentionPeople} placeholder={placeholder}
+      footer={<Button type="button" variant="default" size="sm" className="h-8 gap-2" onClick={submit} disabled={!taskId || !body.trim() || add.isPending}>{add.isPending ? <Loader2 className="h-3.5 w-3.5 motion-safe:animate-spin" /> : <Send className="h-3.5 w-3.5" />}Comentar</Button>} />
     <AlertDialog open={!!deleting} onOpenChange={(open) => { if (!open && !remove.isPending) setDeleting(null); }}>
       <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir seu comentário?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter>
         <AlertDialogCancel disabled={remove.isPending}>Cancelar</AlertDialogCancel>

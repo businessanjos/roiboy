@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Comentários: estado vazio e campo de escrita
+- [x] Remover o quadro vazio acima do editor; placeholder dentro do campo com concordância pelo nome da pessoa logada, incluindo Jessica e Fernanda; barra compacta e envio integrado, sem mudar dados, acesso ou notificações.
+- [x] 23 testes passaram; vazio, concordância Jessica/Fernanda/Lucas, digitação, envio/releitura/reabertura e falha mantendo rascunho conferidos com respostas fictícias em 390/798/1440 px, claro/escuro. Sem erros de execução/compilação, nenhum comentário real alterado; não publicado.
+- [ ] Conferência na sessão real em /marketing/projetos: sessão própria indisponível e criação de pessoa temporária falhou; a página retorna ao login. Exemplos não validam persistência autenticada.
+
 ## Marcações de tempo na descrição
 - [x] Marcações como 26:49 em negrito ao digitar, colar e abrir descrições; preserva texto simples, listas, itálico e marca-texto, sem estender o negrito à frase seguinte, sem mudança em comentários ou dados reais.
 - [x] 25 testes passaram; digitação, colagem real via clipboard, criação/edição e salvar/reabrir conferidos em tarefa fictícia em 390/798/1440 px e claro/escuro. Sem erros de execução e compilação sem erros; não publicado.

@@ -49,6 +49,22 @@ describe("Escrever comentários formatados", () => {
     await waitFor(() => expect(state.send).toHaveBeenCalledTimes(1));
     expect(editor.getJSON()).toEqual(before);
   });
+  it("mantém o campo vazio após enviar e envia somente o novo conteúdo digitado", async () => {
+    state.send.mockResolvedValue(undefined);
+    const { view, editor } = await setup();
+    expect(editor.getText()).toBe("");
+    fireEvent.click(view.getByRole("button", { name: "Comentar" }));
+    expect(state.send).not.toHaveBeenCalled();
+    act(() => { editor.commands.insertContent("Ajustes concluídos"); });
+    fireEvent.click(view.getByRole("button", { name: "Comentar" }));
+    await waitFor(() => expect(editor.getText()).toBe(""));
+    fireEvent.click(view.getByRole("button", { name: "Comentar" }));
+    expect(state.send).toHaveBeenCalledTimes(1);
+    act(() => { editor.commands.insertContent("Pronto para revisar"); });
+    fireEvent.click(view.getByRole("button", { name: "Comentar" }));
+    await waitFor(() => expect(state.send).toHaveBeenCalledTimes(2));
+    expect(state.send.mock.calls.map(([body]) => readTaskComment(body).text)).toEqual(["Ajustes concluídos", "Pronto para revisar"]);
+  });
   it("não envia texto vazio ou comentário de tarefa ainda não salva", async () => {
     const { view, editor } = await setup(null);
     act(() => { editor.commands.insertContent("Rascunho"); });

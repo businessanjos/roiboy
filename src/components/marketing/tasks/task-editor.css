@@ -22,7 +22,10 @@
 .task-description-editor .tiptap ::selection { background: hsl(var(--primary) / 0.3); }
 .task-description-editor.expanded .tiptap { min-height: 400px; max-height: 60dvh; }
 .task-description-editor.compact .tiptap { min-height: 88px; max-height: 200px; padding: 12px; font-size: 14px; line-height: 1.6; }
+.task-editor-placeholder { padding: 18px; font-size: 15px; line-height: 1.8; }
+.task-description-editor.compact .task-editor-placeholder { padding: 12px; font-size: 14px; line-height: 1.6; }
 @media (max-width: 639px) {
   .task-description-editor .tiptap { min-height: 200px; max-height: 360px; padding: 14px; }
+  .task-description-editor:not(.compact) .task-editor-placeholder { padding: 14px; }
   .task-description-editor.expanded .tiptap { min-height: 300px; }
 }
