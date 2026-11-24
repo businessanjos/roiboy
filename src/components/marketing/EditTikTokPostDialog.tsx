@@ -29,6 +29,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { formatMetricInput, parseMetricInput } from '@/lib/marketing/metricInput';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { TikTokPost, TikTokPostFormData } from '@/hooks/useTikTokData';
 
@@ -72,14 +73,14 @@ export function EditTikTokPostDialog({
       setCaption(post.caption || '');
       setPostedAt(post.posted_at ? new Date(post.posted_at) : new Date());
       setDurationSeconds(post.duration_seconds?.toString() || '');
-      setViews(post.views?.toString() || '');
-      setLikes(post.likes?.toString() || '');
-      setComments(post.comments?.toString() || '');
-      setShares(post.shares?.toString() || '');
-      setSaves(post.saves?.toString() || '');
+      setViews(formatMetricInput(post.views ?? ''));
+      setLikes(formatMetricInput(post.likes ?? ''));
+      setComments(formatMetricInput(post.comments ?? ''));
+      setShares(formatMetricInput(post.shares ?? ''));
+      setSaves(formatMetricInput(post.saves ?? ''));
       setAvgWatchTime(post.avg_watch_time?.toString() || '');
       setCompletionRate(post.completion_rate?.toString() || '');
-      setFollowersGained(post.followers_gained?.toString() || '');
+      setFollowersGained(formatMetricInput(post.followers_gained ?? ''));
       setIsViral(post.is_viral || false);
       setSoundName(post.sound_name || '');
       setHashtagsInput(post.hashtags?.join(', ') || '');
@@ -103,14 +104,14 @@ export function EditTikTokPostDialog({
       caption: caption || undefined,
       posted_at: postedAt,
       duration_seconds: durationSeconds ? parseInt(durationSeconds) : undefined,
-      views: views ? parseInt(views) : undefined,
-      likes: likes ? parseInt(likes) : undefined,
-      comments: comments ? parseInt(comments) : undefined,
-      shares: shares ? parseInt(shares) : undefined,
-      saves: saves ? parseInt(saves) : undefined,
+      views: views ? parseMetricInput(views) : undefined,
+      likes: likes ? parseMetricInput(likes) : undefined,
+      comments: comments ? parseMetricInput(comments) : undefined,
+      shares: shares ? parseMetricInput(shares) : undefined,
+      saves: saves ? parseMetricInput(saves) : undefined,
       avg_watch_time: avgWatchTime ? parseFloat(avgWatchTime) : undefined,
       completion_rate: completionRate ? parseFloat(completionRate) : undefined,
-      followers_gained: followersGained ? parseInt(followersGained) : undefined,
+      followers_gained: followersGained ? parseMetricInput(followersGained) : undefined,
       is_viral: isViral,
       sound_name: soundName || undefined,
       hashtags: hashtags.length > 0 ? hashtags : undefined,
@@ -215,10 +216,10 @@ export function EditTikTokPostDialog({
                   </Label>
                   <Input
                     id="views"
-                    type="number"
+                    type="text" inputMode="numeric"
                     placeholder="0"
                     value={views}
-                    onChange={(e) => setViews(e.target.value)}
+                    onChange={(e) => setViews(formatMetricInput(e.target.value))}
                   />
                 </div>
 
@@ -229,10 +230,10 @@ export function EditTikTokPostDialog({
                   </Label>
                   <Input
                     id="likes"
-                    type="number"
+                    type="text" inputMode="numeric"
                     placeholder="0"
                     value={likes}
-                    onChange={(e) => setLikes(e.target.value)}
+                    onChange={(e) => setLikes(formatMetricInput(e.target.value))}
                   />
                 </div>
 
@@ -243,10 +244,10 @@ export function EditTikTokPostDialog({
                   </Label>
                   <Input
                     id="comments"
-                    type="number"
+                    type="text" inputMode="numeric"
                     placeholder="0"
                     value={comments}
-                    onChange={(e) => setComments(e.target.value)}
+                    onChange={(e) => setComments(formatMetricInput(e.target.value))}
                   />
                 </div>
 
@@ -257,10 +258,10 @@ export function EditTikTokPostDialog({
                   </Label>
                   <Input
                     id="shares"
-                    type="number"
+                    type="text" inputMode="numeric"
                     placeholder="0"
                     value={shares}
-                    onChange={(e) => setShares(e.target.value)}
+                    onChange={(e) => setShares(formatMetricInput(e.target.value))}
                   />
                 </div>
 
@@ -271,10 +272,10 @@ export function EditTikTokPostDialog({
                   </Label>
                   <Input
                     id="saves"
-                    type="number"
+                    type="text" inputMode="numeric"
                     placeholder="0"
                     value={saves}
-                    onChange={(e) => setSaves(e.target.value)}
+                    onChange={(e) => setSaves(formatMetricInput(e.target.value))}
                   />
                 </div>
 
@@ -285,10 +286,10 @@ export function EditTikTokPostDialog({
                   </Label>
                   <Input
                     id="followers-gained"
-                    type="number"
+                    type="text" inputMode="numeric"
                     placeholder="0"
                     value={followersGained}
-                    onChange={(e) => setFollowersGained(e.target.value)}
+                    onChange={(e) => setFollowersGained(formatMetricInput(e.target.value))}
                   />
                 </div>
               </div>

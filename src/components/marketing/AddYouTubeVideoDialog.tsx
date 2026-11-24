@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { formatMetricInput, parseMetricInput } from '@/lib/marketing/metricInput';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { YouTubeVideoFormData } from '@/hooks/useYouTubeData';
 
@@ -59,12 +60,12 @@ export function AddYouTubeVideoDialog({ open, onOpenChange, onSubmit, isLoading 
       video_url: videoUrl || undefined, title: title || undefined, caption: caption || undefined,
       posted_at: postedAt, duration_seconds: durationSeconds ? parseInt(durationSeconds) : undefined,
       video_type: videoType,
-      views: views ? parseInt(views) : undefined, likes: likes ? parseInt(likes) : undefined,
-      dislikes: dislikes ? parseInt(dislikes) : undefined,
-      comments: comments ? parseInt(comments) : undefined, shares: shares ? parseInt(shares) : undefined,
-      saves: saves ? parseInt(saves) : undefined, avg_watch_time: avgWatchTime ? parseFloat(avgWatchTime) : undefined,
+      views: views ? parseMetricInput(views) : undefined, likes: likes ? parseMetricInput(likes) : undefined,
+      dislikes: dislikes ? parseMetricInput(dislikes) : undefined,
+      comments: comments ? parseMetricInput(comments) : undefined, shares: shares ? parseMetricInput(shares) : undefined,
+      saves: saves ? parseMetricInput(saves) : undefined, avg_watch_time: avgWatchTime ? parseFloat(avgWatchTime) : undefined,
       completion_rate: completionRate ? parseFloat(completionRate) : undefined,
-      followers_gained: followersGained ? parseInt(followersGained) : undefined,
+      followers_gained: followersGained ? parseMetricInput(followersGained) : undefined,
       is_viral: isViral, hashtags: hashtags.length > 0 ? hashtags : undefined,
       ai_objective: objective, category: category || undefined, notes: notes || undefined,
     });
@@ -135,12 +136,12 @@ export function AddYouTubeVideoDialog({ open, onOpenChange, onSubmit, isLoading 
             <div className="space-y-4">
               <h4 className="font-medium text-sm text-muted-foreground">Métricas de Desempenho</h4>
               <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" />Views</Label><Input type="number" placeholder="0" value={views} onChange={(e) => setViews(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" />Curtidas</Label><Input type="number" placeholder="0" value={likes} onChange={(e) => setLikes(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><ThumbsDown className="h-3.5 w-3.5" />Dislikes</Label><Input type="number" placeholder="0" value={dislikes} onChange={(e) => setDislikes(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" />Comentários</Label><Input type="number" placeholder="0" value={comments} onChange={(e) => setComments(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Share2 className="h-3.5 w-3.5" />Compartilhamentos</Label><Input type="number" placeholder="0" value={shares} onChange={(e) => setShares(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />Inscritos Ganhos</Label><Input type="number" placeholder="0" value={followersGained} onChange={(e) => setFollowersGained(e.target.value)} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" />Views</Label><Input type="text" inputMode="numeric" placeholder="0" value={views} onChange={(e) => setViews(formatMetricInput(e.target.value))} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" />Curtidas</Label><Input type="text" inputMode="numeric" placeholder="0" value={likes} onChange={(e) => setLikes(formatMetricInput(e.target.value))} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><ThumbsDown className="h-3.5 w-3.5" />Dislikes</Label><Input type="text" inputMode="numeric" placeholder="0" value={dislikes} onChange={(e) => setDislikes(formatMetricInput(e.target.value))} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" />Comentários</Label><Input type="text" inputMode="numeric" placeholder="0" value={comments} onChange={(e) => setComments(formatMetricInput(e.target.value))} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Share2 className="h-3.5 w-3.5" />Compartilhamentos</Label><Input type="text" inputMode="numeric" placeholder="0" value={shares} onChange={(e) => setShares(formatMetricInput(e.target.value))} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />Inscritos Ganhos</Label><Input type="text" inputMode="numeric" placeholder="0" value={followersGained} onChange={(e) => setFollowersGained(formatMetricInput(e.target.value))} /></div>
               </div>
             </div>
             <div className="space-y-4">

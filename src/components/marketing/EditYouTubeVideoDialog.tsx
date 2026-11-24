@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { formatMetricInput, parseMetricInput } from '@/lib/marketing/metricInput';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { YouTubeVideo, YouTubeVideoFormData } from '@/hooks/useYouTubeData';
 
@@ -50,12 +51,12 @@ export function EditYouTubeVideoDialog({ open, onOpenChange, onSubmit, isLoading
       setVideoUrl(video.video_url || ''); setTitle(video.title || ''); setCaption(video.caption || '');
       setPostedAt(video.posted_at ? new Date(video.posted_at) : new Date());
       setDurationSeconds(video.duration_seconds?.toString() || ''); setVideoType(video.video_type || 'video');
-      setViews(video.views?.toString() || ''); setLikes(video.likes?.toString() || '');
-      setDislikes(video.dislikes?.toString() || '');
-      setComments(video.comments?.toString() || ''); setShares(video.shares?.toString() || '');
-      setSaves(video.saves?.toString() || ''); setAvgWatchTime(video.avg_watch_time?.toString() || '');
+      setViews(formatMetricInput(video.views ?? '')); setLikes(formatMetricInput(video.likes ?? ''));
+      setDislikes(formatMetricInput(video.dislikes ?? ''));
+      setComments(formatMetricInput(video.comments ?? '')); setShares(formatMetricInput(video.shares ?? ''));
+      setSaves(formatMetricInput(video.saves ?? '')); setAvgWatchTime(video.avg_watch_time?.toString() || '');
       setCompletionRate(video.completion_rate?.toString() || '');
-      setFollowersGained(video.followers_gained?.toString() || '');
+      setFollowersGained(formatMetricInput(video.followers_gained ?? ''));
       setIsViral(video.is_viral || false); setHashtagsInput(video.hashtags?.join(', ') || '');
       setObjective(video.ai_objective || 'growth'); setCategory(video.category || '');
       setNotes(video.notes || '');
@@ -69,12 +70,12 @@ export function EditYouTubeVideoDialog({ open, onOpenChange, onSubmit, isLoading
     onSubmit(video.id, {
       video_url: videoUrl || undefined, title: title || undefined, caption: caption || undefined,
       posted_at: postedAt, duration_seconds: durationSeconds ? parseInt(durationSeconds) : undefined,
-      video_type: videoType, views: views ? parseInt(views) : undefined,
-      likes: likes ? parseInt(likes) : undefined, dislikes: dislikes ? parseInt(dislikes) : undefined,
-      comments: comments ? parseInt(comments) : undefined, shares: shares ? parseInt(shares) : undefined,
-      saves: saves ? parseInt(saves) : undefined, avg_watch_time: avgWatchTime ? parseFloat(avgWatchTime) : undefined,
+      video_type: videoType, views: views ? parseMetricInput(views) : undefined,
+      likes: likes ? parseMetricInput(likes) : undefined, dislikes: dislikes ? parseMetricInput(dislikes) : undefined,
+      comments: comments ? parseMetricInput(comments) : undefined, shares: shares ? parseMetricInput(shares) : undefined,
+      saves: saves ? parseMetricInput(saves) : undefined, avg_watch_time: avgWatchTime ? parseFloat(avgWatchTime) : undefined,
       completion_rate: completionRate ? parseFloat(completionRate) : undefined,
-      followers_gained: followersGained ? parseInt(followersGained) : undefined,
+      followers_gained: followersGained ? parseMetricInput(followersGained) : undefined,
       is_viral: isViral, hashtags: hashtags.length > 0 ? hashtags : undefined,
       ai_objective: objective, category: category || undefined, notes: notes || undefined,
     });
@@ -105,12 +106,12 @@ export function EditYouTubeVideoDialog({ open, onOpenChange, onSubmit, isLoading
             <div className="space-y-4">
               <h4 className="font-medium text-sm text-muted-foreground">Métricas</h4>
               <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" />Views</Label><Input type="number" value={views} onChange={(e) => setViews(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" />Curtidas</Label><Input type="number" value={likes} onChange={(e) => setLikes(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><ThumbsDown className="h-3.5 w-3.5" />Dislikes</Label><Input type="number" value={dislikes} onChange={(e) => setDislikes(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" />Comentários</Label><Input type="number" value={comments} onChange={(e) => setComments(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Share2 className="h-3.5 w-3.5" />Compartilhamentos</Label><Input type="number" value={shares} onChange={(e) => setShares(e.target.value)} /></div>
-                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />Inscritos Ganhos</Label><Input type="number" value={followersGained} onChange={(e) => setFollowersGained(e.target.value)} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" />Views</Label><Input type="text" inputMode="numeric" value={views} onChange={(e) => setViews(formatMetricInput(e.target.value))} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" />Curtidas</Label><Input type="text" inputMode="numeric" value={likes} onChange={(e) => setLikes(formatMetricInput(e.target.value))} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><ThumbsDown className="h-3.5 w-3.5" />Dislikes</Label><Input type="text" inputMode="numeric" value={dislikes} onChange={(e) => setDislikes(formatMetricInput(e.target.value))} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" />Comentários</Label><Input type="text" inputMode="numeric" value={comments} onChange={(e) => setComments(formatMetricInput(e.target.value))} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Share2 className="h-3.5 w-3.5" />Compartilhamentos</Label><Input type="text" inputMode="numeric" value={shares} onChange={(e) => setShares(formatMetricInput(e.target.value))} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />Inscritos Ganhos</Label><Input type="text" inputMode="numeric" value={followersGained} onChange={(e) => setFollowersGained(formatMetricInput(e.target.value))} /></div>
               </div>
             </div>
             <div className="space-y-4">

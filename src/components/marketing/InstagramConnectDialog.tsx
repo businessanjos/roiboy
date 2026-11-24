@@ -1,3 +1,4 @@
+import { formatMetricInput, parseMetricInput } from '@/lib/marketing/metricInput';
 import { useState, useEffect } from 'react';
 import { Instagram, ExternalLink, Key, Link2, Users, UserPlus, Grid3X3 } from 'lucide-react';
 import {
@@ -89,9 +90,9 @@ export function InstagramConnectDialog({
     onConnect({
       username: extractedUsername,
       accessToken: accessToken.trim() || undefined,
-      followers_count: followersCount ? parseInt(followersCount, 10) : undefined,
-      following_count: followingCount ? parseInt(followingCount, 10) : undefined,
-      posts_count: postsCount ? parseInt(postsCount, 10) : undefined,
+      followers_count: followersCount ? parseMetricInput(followersCount) : undefined,
+      following_count: followingCount ? parseMetricInput(followingCount) : undefined,
+      posts_count: postsCount ? parseMetricInput(postsCount) : undefined,
       bio: bio.trim() || undefined,
     });
   };
@@ -165,10 +166,10 @@ export function InstagramConnectDialog({
                 </Label>
                 <Input
                   id="followers"
-                  type="number"
+                  type="text" inputMode="numeric"
                   placeholder="0"
                   value={followersCount}
-                  onChange={(e) => setFollowersCount(e.target.value)}
+                  onChange={(e) => setFollowersCount(formatMetricInput(e.target.value))}
                   className="bg-background"
                 />
               </div>
@@ -179,10 +180,10 @@ export function InstagramConnectDialog({
                 </Label>
                 <Input
                   id="following"
-                  type="number"
+                  type="text" inputMode="numeric"
                   placeholder="0"
                   value={followingCount}
-                  onChange={(e) => setFollowingCount(e.target.value)}
+                  onChange={(e) => setFollowingCount(formatMetricInput(e.target.value))}
                   className="bg-background"
                 />
               </div>
@@ -193,10 +194,10 @@ export function InstagramConnectDialog({
                 </Label>
                 <Input
                   id="posts"
-                  type="number"
+                  type="text" inputMode="numeric"
                   placeholder="0"
                   value={postsCount}
-                  onChange={(e) => setPostsCount(e.target.value)}
+                  onChange={(e) => setPostsCount(formatMetricInput(e.target.value))}
                   className="bg-background"
                 />
               </div>
