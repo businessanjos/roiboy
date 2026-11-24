@@ -18,7 +18,7 @@ const ChecklistView = lazy(async () => {
 const MetricsView = lazy(async () => {
   const { ManualMetricsTab } = await import("@/components/marketing/ManualMetricsTab");
   const View = () => (
-    <div className="container mx-auto py-6">
+    <div className="w-full min-w-0 py-6">
       <ManualMetricsTab />
     </div>
   );

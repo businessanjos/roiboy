@@ -240,7 +240,7 @@ export function ManualMetricsTab() {
     .filter(Boolean) as any[];
 
   return (
-    <div className="space-y-4">
+    <div className="w-full min-w-0 space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <ToggleGroup
           type="single"
@@ -347,20 +347,25 @@ export function ManualMetricsTab() {
         metricError={selectedLinkState?.error}
       />
 
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
+      <Card className="min-w-0 max-w-full overflow-hidden">
+        <CardContent className="p-0 overflow-x-auto" role="region" aria-label="Métricas semanais">
           {isLoading ? (
             <div className="p-6"><Skeleton className="h-48 w-full" /></div>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[1568px] table-fixed text-sm" aria-label="Métricas por semana">
+              <colgroup>
+                <col className="w-40" />
+                {METRICS.map((m) => <col key={m.key} className="w-44" />)}
+                {RECORDS_LINK_METRICS.map((m) => <col key={m.key} className="w-44" />)}
+              </colgroup>
               <thead>
                 <tr className="border-b bg-muted/40">
-                  <th className="text-left font-medium p-3 w-[110px]">Semana</th>
+                  <th className="text-left font-medium p-3">Semana</th>
                   {METRICS.map((m) => (
-                    <th key={m.key} className={`text-left font-medium p-3 whitespace-nowrap transition-colors ${m.key === chartMetric ? 'bg-primary/10 text-primary' : ''}`}>{m.label}</th>
+                    <th key={m.key} className={`text-left font-medium p-3 whitespace-normal break-words leading-5 transition-colors ${m.key === chartMetric ? 'bg-primary/10 text-primary' : ''}`}>{m.label}</th>
                   ))}
                   {RECORDS_LINK_METRICS.map((m) => (
-                    <th key={m.key} className={`text-left font-medium p-3 whitespace-nowrap transition-colors ${m.key === chartMetric ? 'bg-primary/10 text-primary' : ''}`}>{m.label}</th>
+                    <th key={m.key} className={`text-left font-medium p-3 whitespace-normal break-words leading-5 transition-colors ${m.key === chartMetric ? 'bg-primary/10 text-primary' : ''}`}>{m.label}</th>
                   ))}
                 </tr>
               </thead>
@@ -369,10 +374,10 @@ export function ManualMetricsTab() {
                   <tr key={w} className="border-b last:border-0">
                     <td className="p-3 font-medium text-muted-foreground">Semana {w}</td>
                     {METRICS.map((m) => (
-                      <td key={m.key} className={`p-2 transition-colors ${m.key === chartMetric ? 'bg-primary/5' : ''}`}>
+                      <td key={m.key} className={`p-3 transition-colors ${m.key === chartMetric ? 'bg-primary/5' : ''}`}>
                         <Input
                           inputMode="numeric"
-                          className="h-9 w-[130px]"
+                          className="h-10 w-full tabular-nums"
                           placeholder="0"
                           value={values[w]?.[m.key] ?? ''}
                           onFocus={(e) => setCell(w, m.key, unformatManualMetricNumber(e.target.value))}
@@ -404,10 +409,10 @@ export function ManualMetricsTab() {
                     </span>
                   </td>
                   {METRICS.map((m) => (
-                    <td key={m.key} className="p-2">
+                    <td key={m.key} className="p-3">
                       <Input
                         inputMode="numeric"
-                        className="h-9 w-[130px]"
+                        className="h-10 w-full tabular-nums"
                         placeholder="0"
                         value={goalValues[m.key] ?? ''}
                         onFocus={(e) => setGoalValues((prev) => ({ ...prev, [m.key]: unformatManualMetricNumber(e.target.value) }))}
