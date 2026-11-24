@@ -1,26 +1,37 @@
-# Chave de TV abrindo a mesma tela de Insights logada
+# Alterações em massa: janela, histórico e desfazer
 
-## O que muda para você
-- Com `?tv_token`, a TV abre exatamente a tela de Insights em modo TV que ela mostra hoje logada: mesmo layout, mesmos gráficos (pílulas EM/EC, E-Pass escondido), selo e título do modo TV, e os mesmos parâmetros (periodo, setor, foco, tv=0/1, zoom).
-- A tela "limpa" atual da chave (caminho do link compartilhado) sai.
-- Atualização dos dados igual à tela logada, porque é o mesmo código.
-- Continua só leitura, com validação no servidor.
+## Janela mais organizada
+- Ajustar largura, espaçamento e alinhamento dos campos, mantendo o visual ROY.
+- Cabeçalho com quantidade selecionada, conteúdo rolável e rodapé fixo; revisão mostra o destino e os negócios envolvidos antes de aplicar.
+- “Selecionar cards” sai da barra destacada e entra no menu de três pontos do funil. A barra de seleção só aparece enquanto estiver selecionando.
 
-## Como funciona
-A chave passa a ser uma "conta de TV" que só consegue ler:
-1. A TV abre o link com a chave. O Roy monta a tela de Insights normal.
-2. Toda busca de dados dessa tela vai para uma função do servidor, que confere a chave a cada pedido.
-3. A função só aceita leituras (consultas e funções de leitura de uma lista fechada). Qualquer gravação, upload ou mudança é recusada no servidor.
-4. A função busca os dados com as permissões da conta que as TVs usam hoje logadas, então os números saem iguais. Essa sessão fica só no servidor; a TV nunca recebe login de verdade.
+## Somente adm/gestor
+- Seleção, alterações em massa, histórico e desfazer ficam disponíveis apenas para administradores e gestores.
+- Verificar essa autorização no servidor, não apenas esconder o botão.
+- Usar a identidade e os cargos já cadastrados, sem promover pessoas nem ampliar acesso aos negócios. Edição individual continua como hoje.
 
-## Preciso de você
-- Qual conta as TVs usam hoje logadas (e-mail). Ela define o que o painel enxerga.
-- A senha dessa conta guardada como segredo no servidor (pedido por um cartão seguro, nunca no chat). Se preferir, crio uma conta "TV Escritório" com o mesmo perfil.
+## Histórico
+- Adicionar “Histórico de alterações em massa” no mesmo menu do funil.
+- Registrar quem fez, data e hora de Brasília, tipo de alteração, destino/valor/campo, negócios envolvidos e resultado de cada um.
+- Guardar os valores anteriores e posteriores junto da alteração efetiva, para não haver alteração sem histórico ou histórico de uma alteração que falhou.
+- O histórico começa com as novas operações; não inventar autoria nem reversão para operações antigas.
 
-## Depois de pronto
-Comparo lado a lado, com e sem chave, os painéis 05fe3fc0, a920cd07, 29104b57 e 77cb0a0e (fotos das duas versões) e digo qualquer diferença. Não publico sem autorização.
+## Desfazer última movimentação
+- Disponibilizar no histórico “Desfazer última movimentação”, com confirmação e resumo dos negócios que voltarão ao funil/etapa anterior.
+- Considerar a última movimentação em massa feita pela própria pessoa, mesmo depois de atualizar a página; reverter somente os negócios realmente movidos nessa operação.
+- Recusar a reversão se algum negócio tiver sido movido novamente, encerrado, excluído, perdido o acesso ou se a etapa original não estiver disponível.
+- Restaurar somente os dados da movimentação, sem sobrescrever produto, valor, responsável, cliente, contratos ou outros campos editados depois.
+- Fazer a reversão de modo indivisível: ou todos os negócios elegíveis retornam, ou nenhum é alterado. Registrar também quem desfez e quando, impedindo repetição.
+- Neste pedido, desfazer fica limitado a movimentações de funil/etapa; produto, valor e campos continuam com histórico, sem reversão automática.
+
+## Verificação
+- Testes para adm/gestor permitido e demais perfis bloqueados, inclusive em chamadas diretas.
+- Conferir isolamento por conta e permissões dos negócios, autoria derivada da sessão e rejeição de autoria enviada pelo solicitante.
+- Com negócios “TESTE QA”, mover em massa, reler o histórico, desfazer e confirmar o retorno pela interface; testar bloqueio após nova movimentação.
+- Conferir computador/celular, rolagem da lista e rodapé sempre acessível. Nenhum registro real será alterado para testar; não publicar.
 
 ## Detalhes técnicos
-- Nova edge function `tv-proxy`: valida `tv_token` (mesmo HMAC de `_shared/tvToken.ts`), permite só GET/HEAD em `/rest/v1/*` e POST em `/rest/v1/rpc/<allowlist>`; encaminha com JWT da conta de TV (sign-in server-side, cache em memória); atualiza `last_used_at`.
-- No front, quando há `tv_token` sem sessão, um cliente Supabase com `fetch` customizado redireciona REST/RPC para `tv-proxy`; `useCurrentUser`/permissões recebem o perfil da conta de TV via `tv-proxy` (ação `whoami`). Realtime desligado nesse modo (os refetch intervals existentes seguem).
-- `TvInsightsView` e a ação `tv_load` do `shared-insights` são removidas; regra no AGENTS.md atualizada.
+- Adicionar registros de operações e resultados com índices, GRANTs explícitos e RLS; auditoria protegida contra alteração direta pelo navegador.
+- Encaminhar as gravações em massa por operações autenticadas e transacionais, preservando a RLS atual e os gatilhos de produto/empresa; não alterar as permissões gerais das tabelas de negócios.
+- Manter validação de campos obrigatórios, etapas ativas, regra existente SDR → Closer, progresso, interrupção e tratamento de falhas por negócio.
+- A reversão valida snapshots reais e bloqueia concorrência antes de restaurar funil, etapa e probabilidade. Não aceita estados anteriores fornecidos pelo navegador.
