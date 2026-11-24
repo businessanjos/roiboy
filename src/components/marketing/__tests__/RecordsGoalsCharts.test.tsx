@@ -23,6 +23,16 @@ const GOALS = [
 const pill = (label: string) => screen.getByRole('button', { name: label });
 
 describe('seleção de métrica no comparativo de crescimento', () => {
+  it('Story e Feed exibem seus próprios totais sem substituir os cliques externos', () => {
+    render(<RecordsGoalsCharts weekly={WEEKLY.map((row) => ({ ...row, story_link_clicks: row.week === 1 ? 30 : 4, feed_link_clicks: row.week === 1 ? 70 : 0 }))} goals={GOALS} year={2026} month={11} />);
+    fireEvent.click(pill('Clique no link - Story'));
+    expect(screen.getByText('34')).toBeInTheDocument();
+    fireEvent.click(pill('Clique no link - Feed'));
+    expect(screen.getByText('70')).toBeInTheDocument();
+    fireEvent.click(pill('Cliques no link externo'));
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
   it('desmarca a métrica quando se clica de novo nela', () => {
     render(<RecordsGoalsCharts weekly={WEEKLY} goals={GOALS} year={2026} month={11} />);
 

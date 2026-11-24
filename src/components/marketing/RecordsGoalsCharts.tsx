@@ -17,6 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Button } from '@/components/ui/button';
+import { RECORDS_LINK_METRICS, type RecordsLinkMetricKey } from '@/lib/marketing/linkClicks';
 
 export const METRICS = [
   { key: 'views', label: 'Visualizações' },
@@ -28,11 +30,13 @@ export const METRICS = [
 ] as const;
 
 export type MetricKey = (typeof METRICS)[number]['key'];
+export type ChartMetricKey = MetricKey | RecordsLinkMetricKey;
+const CHART_METRICS = [...METRICS, ...RECORDS_LINK_METRICS];
 
 const MONTHS_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-export type WeeklyRow = { year: number; month: number; week: number } & Record<MetricKey, number>;
-export type GoalRow = { year: number; month: number } & Record<MetricKey, number>;
+export type WeeklyRow = { year: number; month: number; week: number } & Record<MetricKey, number> & Partial<Record<RecordsLinkMetricKey, number>>;
+export type GoalRow = { year: number; month: number } & Record<MetricKey, number> & Partial<Record<RecordsLinkMetricKey, number>>;
 
 type Period = 'today' | '7d' | '30d' | 'month' | 'quarter' | 'year';
 
@@ -85,14 +89,16 @@ interface Props {
   goals: GoalRow[];
   year: number;
   month: number;
-  metric?: MetricKey | null;
-  onMetricChange?: (m: MetricKey | null) => void;
+  metric?: ChartMetricKey | null;
+  onMetricChange?: (m: ChartMetricKey | null) => void;
+  metricLoading?: boolean;
+  metricError?: boolean;
 }
 
-export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricProp, onMetricChange }: Props) {
-  const [metricLocal, setMetricLocal] = useState<MetricKey | null>('views');
+export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricProp, onMetricChange, metricLoading = false, metricError = false }: Props) {
+  const [metricLocal, setMetricLocal] = useState<ChartMetricKey | null>('views');
   const metric = metricProp === undefined ? metricLocal : metricProp;
-  const setMetric = (m: MetricKey) => {
+  const setMetric = (m: ChartMetricKey) => {
     const next = m === metric ? null : m;
     setMetricLocal(next);
     onMetricChange?.(next);
@@ -167,7 +173,8 @@ export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricP
 
   const pct = goalTotal > 0 ? Math.round((current / goalTotal) * 100) : 0;
   const growth = previous > 0 ? ((current - previous) / previous) * 100 : null;
-  const metricLabel = METRICS.find((m) => m.key === metric)?.label ?? '';
+  const metricLabel = CHART_METRICS.find((m) => m.key === metric)?.label ?? '';
+  const metricUnavailable = metricLoading || metricError;
   const hasGoal = data.some((row) => row.meta > 0);
 
   return (
@@ -196,19 +203,21 @@ export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricP
         </div>
 
         <div role="group" aria-label="Métrica do gráfico" className="flex flex-wrap gap-1.5">
-          {METRICS.map((m) => {
+          {CHART_METRICS.map((m) => {
             const on = m.key === metric;
             return (
-              <button
+              <Button
                 key={m.key}
+                variant="outline"
+                size="sm"
                 type="button"
                 aria-pressed={on}
                 title={on ? 'Clique novamente para desmarcar' : m.label}
                 onClick={() => setMetric(m.key)}
-                className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${on ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground'}`}
+                className={`h-auto min-h-8 rounded-full border px-3.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${on ? 'border-primary bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground' : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground'}`}
               >
                 {m.label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -216,7 +225,7 @@ export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricP
         <div className="grid gap-4 border-y py-4 sm:grid-cols-3 sm:gap-6">
           <div className="min-w-0 sm:border-r sm:pr-6">
             <p className="text-xs text-muted-foreground">{metric ? `${metricLabel} no período` : 'Nenhuma métrica selecionada'}</p>
-            <p className="mt-1.5 text-3xl font-semibold tabular-nums">{metric ? fmt(current) : '—'}</p>
+            <p className="mt-1.5 text-3xl font-semibold tabular-nums">{metric && !metricUnavailable ? fmt(current) : '—'}</p>
           </div>
           <div className="min-w-0 sm:border-r sm:pr-6">
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Target className="h-3.5 w-3.5" />Meta do período</p>
@@ -230,7 +239,7 @@ export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricP
           </div>
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Crescimento vs. período anterior</p>
-            {growth === null ? (
+            {growth === null || metricUnavailable ? (
               <><p className="mt-1.5 text-2xl font-semibold text-muted-foreground">—</p><p className="mt-1 text-xs text-muted-foreground">Sem base de comparação</p></>
             ) : (
               <Badge
@@ -254,7 +263,11 @@ export function RecordsGoalsCharts({ weekly, goals, year, month, metric: metricP
             {hasGoal && <span className="inline-flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed border-accent" />{goalLabel}</span>}
           </div>
         </div>
-        {metric ? (
+        {metric && metricUnavailable ? (
+          <div role={metricError ? 'alert' : 'status'} className="flex h-[280px] items-center justify-center px-6 text-center text-sm text-muted-foreground sm:h-[300px]">
+            {metricError ? 'Não foi possível carregar os cliques deste perfil.' : 'Carregando cliques…'}
+          </div>
+        ) : metric ? (
         <div className="h-[280px] w-full sm:h-[300px]" role="img" aria-label={`${metricLabel} por ${period === 'quarter' || period === 'year' ? 'mês' : 'semana'}: ${data.map((row) => `${row.name}: ${fmt(row.valor)}`).join(', ')}`}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart accessibilityLayer data={data} barCategoryGap="28%" margin={{ top: 26, right: 12, left: 0, bottom: 0 }}>

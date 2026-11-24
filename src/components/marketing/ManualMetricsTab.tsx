@@ -13,7 +13,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from 'sonner';
 import { MonthPicker } from './MonthPicker';
-import { RecordsGoalsCharts, METRICS, type MetricKey } from './RecordsGoalsCharts';
+import { RecordsGoalsCharts, METRICS, type MetricKey, type ChartMetricKey } from './RecordsGoalsCharts';
+import { RECORDS_LINK_METRICS } from '@/lib/marketing/linkClicks';
+import { useRecordsLinkClicks } from '@/hooks/useRecordsLinkClicks';
 import { RecordsCompareView } from './RecordsCompareView';
 import {
   formatManualMetricNumber,
@@ -22,6 +24,7 @@ import {
 } from './manualMetricFormat';
 
 const WEEKS = [1, 2, 3, 4, 5];
+const EMPTY_QUERY_ROWS: [] = [];
 
 type RowValues = Record<MetricKey, string>;
 
@@ -46,7 +49,8 @@ export function ManualMetricsTab() {
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState<'edit' | 'compare'>('edit');
   const [compareIds, setCompareIds] = useState<string[]>([]);
-  const [chartMetric, setChartMetric] = useState<MetricKey | null>('views');
+  const [chartMetric, setChartMetric] = useState<ChartMetricKey | null>('views');
+  const linkMetrics = useRecordsLinkClicks(accountId, profileId, Number(year));
 
 
 
@@ -84,7 +88,7 @@ export function ManualMetricsTab() {
   });
 
   // Dados do ano inteiro (para os gráficos comparativos)
-  const { data: yearRows = [] } = useQuery({
+  const { data: yearRows = EMPTY_QUERY_ROWS } = useQuery({
     queryKey: ['manual-metrics-year', profileId, year],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -98,7 +102,7 @@ export function ManualMetricsTab() {
     enabled: !!profileId,
   });
 
-  const { data: goalRows = [] } = useQuery({
+  const { data: goalRows = EMPTY_QUERY_ROWS } = useQuery({
     queryKey: ['manual-metrics-goals', profileId, year],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -111,6 +115,14 @@ export function ManualMetricsTab() {
     },
     enabled: !!profileId,
   });
+
+  const chartRows = useMemo(() => linkMetrics.weeks.map((week) => ({
+    ...METRICS.reduce((acc, metric) => ({ ...acc, [metric.key]: 0 }), {} as Record<MetricKey, number>),
+    ...yearRows.find((row) => row.year === week.year && row.month === week.month && row.week === week.week),
+    ...week,
+  })), [yearRows, linkMetrics.weeks]);
+  const selectedLinkState = chartMetric === 'story_link_clicks' ? linkMetrics.story : chartMetric === 'feed_link_clicks' ? linkMetrics.feed : null;
+  const linkMonthWeeks = linkMetrics.weeks.filter((week) => week.month === Number(month));
 
   useEffect(() => {
     const next: Record<number, RowValues> = {};
@@ -325,12 +337,14 @@ export function ManualMetricsTab() {
       ) : (
         <>
       <RecordsGoalsCharts
-        weekly={(yearRows ?? []) as any}
+        weekly={chartRows}
         goals={(goalRows ?? []) as any}
         year={Number(year)}
         month={Number(month)}
         metric={chartMetric}
         onMetricChange={setChartMetric}
+        metricLoading={selectedLinkState?.loading}
+        metricError={selectedLinkState?.error}
       />
 
       <Card>
@@ -343,6 +357,9 @@ export function ManualMetricsTab() {
                 <tr className="border-b bg-muted/40">
                   <th className="text-left font-medium p-3 w-[110px]">Semana</th>
                   {METRICS.map((m) => (
+                    <th key={m.key} className={`text-left font-medium p-3 whitespace-nowrap transition-colors ${m.key === chartMetric ? 'bg-primary/10 text-primary' : ''}`}>{m.label}</th>
+                  ))}
+                  {RECORDS_LINK_METRICS.map((m) => (
                     <th key={m.key} className={`text-left font-medium p-3 whitespace-nowrap transition-colors ${m.key === chartMetric ? 'bg-primary/10 text-primary' : ''}`}>{m.label}</th>
                   ))}
                 </tr>
@@ -364,12 +381,20 @@ export function ManualMetricsTab() {
                         />
                       </td>
                     ))}
+                    {RECORDS_LINK_METRICS.map((m) => (
+                      <td key={m.key} className={`p-3 tabular-nums ${m.key === chartMetric ? 'bg-primary/5' : ''}`}>
+                        {linkMetrics[m.placement].loading || linkMetrics[m.placement].error ? '—' : fmt(linkMonthWeeks.find((week) => week.week === w)?.[m.key] ?? 0)}
+                      </td>
+                    ))}
                   </tr>
                 ))}
                 <tr className="bg-muted/40 font-semibold">
                   <td className="p-3">Total</td>
                   {METRICS.map((m) => (
                     <td key={m.key} className="p-3">{fmt(totals[m.key])}</td>
+                  ))}
+                  {RECORDS_LINK_METRICS.map((m) => (
+                    <td key={m.key} className="p-3 tabular-nums">{linkMetrics[m.placement].loading || linkMetrics[m.placement].error ? '—' : fmt(linkMonthWeeks.reduce((sum, week) => sum + week[m.key], 0))}</td>
                   ))}
                 </tr>
                 <tr className="border-t bg-primary/5">
@@ -391,6 +416,7 @@ export function ManualMetricsTab() {
                       />
                     </td>
                   ))}
+                  {RECORDS_LINK_METRICS.map((m) => <td key={m.key} className="p-3 text-muted-foreground">—</td>)}
                 </tr>
                 <tr className="bg-primary/5 border-t">
                   <td className="p-3 text-muted-foreground">Atingimento</td>
@@ -415,6 +441,7 @@ export function ManualMetricsTab() {
 
                     );
                   })}
+                  {RECORDS_LINK_METRICS.map((m) => <td key={m.key} className="p-3 text-muted-foreground">—</td>)}
                 </tr>
               </tbody>
             </table>

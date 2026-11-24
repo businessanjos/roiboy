@@ -97,7 +97,7 @@ export function LinkClicksTab({ placement }: { placement: LinkClickPlacement }) 
     if (!accountId) return;
     const { error } = await supabase.from(storage.table).delete().eq('id', id).eq('account_id', accountId).eq('profile_id', profileId);
     if (error) return toast.error('Não foi possível excluir.');
-    await qc.invalidateQueries({ queryKey: key });
+    await qc.invalidateQueries({ queryKey: ['link-clicks', placement, accountId] });
   };
 
   if (!accountId || profilesQuery.isPending) return <p role="status" className="py-6 text-sm text-muted-foreground">Carregando perfis…</p>;
