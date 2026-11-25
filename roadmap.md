@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Etiquetas de tarefas: criação no filtro e cartões discretos
+- [x] Seleção/busca compacta, criação diretamente no filtro e editor compartilhado com nome/cor e prévia; etiquetas ainda não usadas ficam neste navegador por conta/pessoa, etiquetas salvas nas tarefas continuam compartilhadas, sem alterar backend ou permissões. Criar no filtro não ativa um filtro vazio.
+- [x] Etiquetas no quadro/lista e na edição com ponto de cor, fundo suave, tamanho compacto e contraste nos dois temas; campos, busca e pessoas preservados.
+- [x] 29 testes passaram; conferência autenticada com etiqueta e tarefa fictícias: criar no filtro, selecionar/desmarcar, recarregar, aplicar/salvar/reabrir, cancelar e excluir somente a tarefa QA. 390/803/1440 px, claro/escuro sem cortes ou erros de execução; nenhuma tarefa real alterada, sem publicação.
+
 ## Transferência em massa sem mudar status
 - [x] Confirmar falha dos quatro negócios ganhos do Jonathan: bloqueio de movimentação para negócios encerrados, nenhuma alteração aplicada.
 - [x] Permitir mudar funil/etapa preservando status, datas de fechamento, responsáveis e contratos; manter permissões, histórico e desfazer seguro. Funções alteradas e confirmadas no banco; sem transferir automaticamente negócios reais ou publicar.

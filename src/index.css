@@ -9,6 +9,12 @@
 
 @layer base {
   :root {
+    --task-label-blue: 212 67% 38%;
+    --task-label-green: 153 57% 29%;
+    --task-label-yellow: 36 76% 32%;
+    --task-label-red: 355 62% 41%;
+    --task-label-purple: 270 46% 43%;
+    --task-label-gray: 215 12% 39%;
     --task-marker-yellow: hsl(49 95% 78%);
     --task-marker-green: hsl(144 58% 78%);
     --task-marker-blue: hsl(204 85% 80%);
@@ -140,6 +146,12 @@
   }
 
   .dark {
+    --task-label-blue: 210 86% 74%;
+    --task-label-green: 151 55% 65%;
+    --task-label-yellow: 42 85% 67%;
+    --task-label-red: 355 79% 76%;
+    --task-label-purple: 270 72% 79%;
+    --task-label-gray: 215 15% 72%;
     --wa-header: 168 60% 16%; --wa-header-foreground: 0 0% 100%; --wa-wallpaper: 30 12% 9%; --wa-bubble-out: 166 60% 22%; --wa-bubble-out-foreground: 0 0% 96%; --wa-meta: 160 10% 70%; --wa-tick: 199 85% 60%; --wa-chip: 200 12% 18%; --wa-bar: 200 10% 14%;
     /* Fundo mais profundo e elegante */
     --background: 20 12% 8%; /* mais escuro e rico */

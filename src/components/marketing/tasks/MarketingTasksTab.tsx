@@ -31,7 +31,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { isPast, isToday, parseISO, startOfDay } from "date-fns";
-import { taskLabelCatalog, matchesTaskLabels, deliverySortKey } from "@/lib/marketing/taskDetails";
+import { matchesTaskLabels, deliverySortKey } from "@/lib/marketing/taskDetails";
+import { useMarketingTaskLabelCatalog } from "@/hooks/useMarketingTaskLabelCatalog";
 import { TaskLabelFilter } from "./TaskLabels";
 import { useMarketingTaskSeparators } from "@/hooks/useMarketingTaskSeparators";
 import { TaskSeparatorDialog } from "./TaskSeparator";
@@ -103,7 +104,7 @@ export function MarketingTasksTab() {
       setSearchParams(next, { replace: true });
     }
   };
-  const labelCatalog = useMemo(() => taskLabelCatalog(tasks), [tasks]);
+  const { catalog: labelCatalog, createLabel } = useMarketingTaskLabelCatalog(tasks);
   const { sections, isLoading: sectionsLoading, createSection } = useMarketingTaskSections();
   const { columns, isLoading: columnsLoading } = useMarketingTaskColumns();
 
@@ -435,7 +436,7 @@ export function MarketingTasksTab() {
           </div>
                 <div className="flex items-center justify-between border-t pt-3">
                   <span className="text-xs font-medium text-muted-foreground">Etiquetas</span>
-                  <TaskLabelFilter catalog={labelCatalog} selected={labelFilter} onChange={setLabelFilter} />
+                  <TaskLabelFilter catalog={labelCatalog} selected={labelFilter} onChange={setLabelFilter} onCreate={createLabel} />
                 </div>
               </div>
               <div className="border-t px-3 py-2">

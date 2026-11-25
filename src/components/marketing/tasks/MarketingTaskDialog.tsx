@@ -38,7 +38,8 @@ import { MarketingTaskMediaUpload } from "./MarketingTaskMediaUpload";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { toast } from "sonner";
-import { readTaskDetails, writeTaskDetails, taskCopyDraft, taskLabelCatalog, validDeliveryTime, deliveryTimeInput, hasTaskResponsible, type TaskLabel, type TaskCopySubtask } from "@/lib/marketing/taskDetails";
+import { readTaskDetails, writeTaskDetails, taskCopyDraft, validDeliveryTime, deliveryTimeInput, hasTaskResponsible, type TaskLabel, type TaskCopySubtask } from "@/lib/marketing/taskDetails";
+import { useMarketingTaskLabelCatalog } from "@/hooks/useMarketingTaskLabelCatalog";
 import { TaskLabelEditor } from "./TaskLabels";
 import { TaskCoverEditor } from "./TaskCover";
 import { TaskComments } from "./TaskComments";
@@ -103,7 +104,7 @@ export function MarketingTaskDialog({
   // Fetch team members
   const { data: teamMembers = [] } = useMarketingTeamUsers();
 
-  const labelCatalog = taskLabelCatalog(tasks);
+  const { catalog: labelCatalog, createLabel } = useMarketingTaskLabelCatalog(tasks);
 
   useEffect(() => {
     if (!open) { setCopySource(null); setCopySubtasks([]); return; }
@@ -303,7 +304,7 @@ export function MarketingTaskDialog({
                 <div className="space-y-1.5"><Label htmlFor="task-stage" className="text-xs text-muted-foreground">Etapa</Label><Select value={columnId} onValueChange={setColumnId} disabled={blocked}><SelectTrigger id="task-stage"><SelectValue placeholder="Selecione a etapa" /></SelectTrigger><SelectContent>{columns.map((column) => <SelectItem key={column.id} value={column.id}>{column.title}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-1.5"><Label htmlFor="task-priority" className="text-xs text-muted-foreground">Prioridade</Label><Select value={priority} onValueChange={(value) => setPriority(value as MarketingTaskPriority)} disabled={blocked}><SelectTrigger id="task-priority"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">Baixa</SelectItem><SelectItem value="medium">Média</SelectItem><SelectItem value="high">Alta</SelectItem></SelectContent></Select></div>
                 </div>
-                <TaskLabelEditor value={labels} onChange={setLabels} catalog={labelCatalog} portalContainer={portalContainer} />
+                <TaskLabelEditor value={labels} onChange={setLabels} catalog={labelCatalog} onCreate={createLabel} portalContainer={portalContainer} disabled={blocked} />
               </div>
             </aside>
           </div>

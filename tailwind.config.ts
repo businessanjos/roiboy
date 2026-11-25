@@ -18,6 +18,14 @@ export default {
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
+        "task-label": {
+          blue: "hsl(var(--task-label-blue))",
+          green: "hsl(var(--task-label-green))",
+          yellow: "hsl(var(--task-label-yellow))",
+          red: "hsl(var(--task-label-red))",
+          purple: "hsl(var(--task-label-purple))",
+          gray: "hsl(var(--task-label-gray))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

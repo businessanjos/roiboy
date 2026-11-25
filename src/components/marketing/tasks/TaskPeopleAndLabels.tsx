@@ -4,8 +4,8 @@ import { TaskLabelBadge } from "./TaskLabels";
 
 export function TaskPeopleAndLabels({ task, showAssignee = true }: { task: MarketingTask; showAssignee?: boolean }) {
   const details = readTaskDetails(task);
-  return <div className="mt-2 space-y-1.5">
-    {details.labels.length > 0 && <div className="flex flex-wrap gap-1">
+  return <div className="mt-2 min-w-0 space-y-1.5">
+    {details.labels.length > 0 && <div className="flex min-w-0 flex-wrap gap-1.5">
       {details.labels.map((label) => <TaskLabelBadge key={labelKey(label.name)} label={label} />)}
     </div>}
     {details.requesterId && <p className="truncate text-xs text-muted-foreground">

@@ -7,12 +7,12 @@ export function hasTaskResponsible(assigneeId: string | null | undefined): assig
 }
 
 export const TASK_LABEL_COLORS = [
-  { value: "blue", name: "Azul", swatch: "bg-info", badge: "bg-info-soft text-info-strong border-info/25" },
-  { value: "green", name: "Verde", swatch: "bg-success", badge: "bg-success-soft text-success-strong border-success/25" },
-  { value: "yellow", name: "Amarelo", swatch: "bg-warning", badge: "bg-warning-soft text-warning-strong border-warning/25" },
-  { value: "red", name: "Vermelho", swatch: "bg-danger", badge: "bg-danger-soft text-danger-strong border-danger/25" },
-  { value: "purple", name: "Roxo", swatch: "bg-renewal", badge: "bg-renewal/10 text-renewal border-renewal/25" },
-  { value: "gray", name: "Cinza", swatch: "bg-muted-foreground", badge: "bg-muted text-foreground border-border" },
+  { value: "blue", name: "Azul", swatch: "bg-task-label-blue", badge: "bg-task-label-blue/10 text-task-label-blue border-transparent" },
+  { value: "green", name: "Verde", swatch: "bg-task-label-green", badge: "bg-task-label-green/10 text-task-label-green border-transparent" },
+  { value: "yellow", name: "Amarelo", swatch: "bg-task-label-yellow", badge: "bg-task-label-yellow/10 text-task-label-yellow border-transparent" },
+  { value: "red", name: "Vermelho", swatch: "bg-task-label-red", badge: "bg-task-label-red/10 text-task-label-red border-transparent" },
+  { value: "purple", name: "Roxo", swatch: "bg-task-label-purple", badge: "bg-task-label-purple/10 text-task-label-purple border-transparent" },
+  { value: "gray", name: "Cinza", swatch: "bg-task-label-gray", badge: "bg-task-label-gray/10 text-task-label-gray border-transparent" },
 ] as const;
 
 export type TaskLabelColor = typeof TASK_LABEL_COLORS[number]["value"];
