@@ -184,7 +184,6 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
   const containerRef = useRef<HTMLDivElement>(null);
   const [showPodium, setShowPodium] = useState(true);
   const [boxHeight, setBoxHeight] = useState(0);
-  const [boxWidth, setBoxWidth] = useState(0);
 
   // Detect container size for responsive podium / row fitting
   useEffect(() => {
@@ -193,7 +192,6 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
       for (const entry of entries) {
         setShowPodium(entry.contentRect.width >= 500);
         setBoxHeight(entry.contentRect.height);
-        setBoxWidth(entry.contentRect.width);
       }
     });
     observer.observe(containerRef.current);
@@ -236,39 +234,34 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
   const hasPodiumData = data.length >= 2;
   const colors = paletteColors(appearance);
 
-  // Na TV não existe rolagem: exibe só as posições que cabem na altura do card.
-  const rowHeight = Math.round((compact ? 104 : 44) * m);
+  // Company rankings keep a single ordered column, regardless of its width.
+  const rowHeight = Math.round((compact ? 72 : 44) * m);
   const headerHeight = Math.round(30 * m);
-  // Compact (company columns): seller cards flow side by side and wrap.
-  const cardMin = Math.round(200 * m);
   const cardGap = 8;
-  const cardColumns = Math.max(1, Math.floor((boxWidth + cardGap) / (cardMin + cardGap)));
   const visibleRows =
     tv.tv && boxHeight > 0
       ? compact
-        ? cardColumns * Math.max(1, Math.floor((boxHeight + cardGap) / (rowHeight + cardGap)))
+        ? Math.max(1, Math.floor((boxHeight + cardGap) / (rowHeight + cardGap)))
         : Math.max(3, Math.floor((boxHeight - headerHeight) / rowHeight))
       : data.length;
   const rows = data.slice(0, visibleRows);
 
   if (compact) {
     return (
-      <div ref={containerRef} className={`h-full ${tv.tv ? 'overflow-hidden' : 'overflow-auto'}`}>
+      <div ref={containerRef} className={`h-full min-w-0 ${tv.tv ? 'overflow-hidden' : 'overflow-auto'}`}>
         <ol
-          className="grid"
-          style={{ gap: cardGap, gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${cardMin}px), 1fr))`, fontSize: `${Math.round(14 * m)}px` }}
+          className="grid w-full max-w-[40rem] grid-cols-1 gap-2"
+          style={{ fontSize: `${Math.round(14 * m)}px` }}
         >
           {rows.map((item, index) => {
             const emoji = MEDAL_EMOJI[index];
-            const rowColor = colors[index % colors.length];
             const isTop = index < 3;
             const progress = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
             const userAvatar = avatars[item.name];
             return (
               <li
                 key={item.name}
-                className="flex min-w-0 items-start gap-2.5 rounded-lg border border-border/60 p-3"
-                style={isTop ? { backgroundColor: `${rowColor}1f` } : undefined}
+                className={`flex min-w-0 items-start gap-2.5 rounded-lg border px-3 py-2.5 ${isTop ? 'border-primary/20 bg-primary/5' : 'border-border/60 bg-card'}`}
               >
                 <span className="w-5 shrink-0 pt-1 text-center">
                   {emoji ? <span className="text-base leading-none">{emoji}</span> : (
@@ -277,19 +270,21 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                 </span>
                 {privacy?.showPhotos !== false && <Avatar className="shrink-0" style={{ height: Math.round(36 * m), width: Math.round(36 * m) }}>
                   <AvatarImage src={userAvatar?.avatar_url || undefined} alt={privacy?.showNames === false ? 'Vendedor' : item.name} />
-                  <AvatarFallback className="text-[10px] font-medium" style={{ backgroundColor: `${rowColor}22`, color: rowColor }}>
+                  <AvatarFallback className="bg-primary/10 text-[10px] font-medium text-primary">
                     {getInitials(item.name)}
                   </AvatarFallback>
                 </Avatar>}
                 <div className="min-w-0 flex-1">
-                  <span className="block break-words font-medium leading-snug" style={{ color: isTop ? rowColor : undefined }}>
+                  <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                  <span className="min-w-0 break-words font-medium leading-snug text-foreground">
                     {privacy?.showNames === false ? '• • •' : item.name}
                   </span>
-                  <span className={`mt-0.5 block font-semibold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>
+                  <span className={`shrink-0 font-semibold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>
                     {formatCurrency(item.value, formatting.type, formatting.decimals)}
                   </span>
+                  </div>
                   <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: rowColor }} />
+                    <div className="h-full rounded-full bg-primary/75 transition-all duration-500" style={{ width: `${progress}%` }} />
                   </div>
                   {item.products && item.products.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">

@@ -193,6 +193,7 @@ function getRowMinWidth(row: VisualRow, mins: MinCardWidths): number {
 function getRowMinHeight(row: VisualRow): number {
   if (row.isAllScorecards) return 150;
   if (row.isAllCompact) return 230;
+  if (row.visuals.some((visual) => visual.chart_type === 'ranking' && Array.isArray(visual.config?.rankingCompanyIds) && visual.config.rankingCompanyIds.length > 0)) return 340;
   return 300;
 }
 

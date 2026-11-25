@@ -9,6 +9,7 @@ import { FormatType, VisualConfig } from "../visual-builder/types";
 import { PresentationOptions } from "./RankingPresentationDialog";
 import logoEternum from "@/assets/logo-eternum.svg";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { CompanyRanking } from './CompanyRanking';
 import { rankingCompanyIds } from '@/lib/insights/companyRanking';
 
@@ -209,15 +210,19 @@ export function RankingPresentationView({
   const content = (
     <div className="fixed inset-0 z-[9999] bg-background text-foreground flex flex-col overflow-hidden">
       {/* Close button */}
-      <button
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label="Fechar apresentação"
         onClick={onClose}
-        className="absolute top-4 right-4 p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors z-10"
+        className="absolute right-4 top-4 z-10 bg-muted"
       >
         <X className="h-5 w-5 text-muted-foreground" />
-      </button>
+      </Button>
 
       {/* Header: Logo + Title + Clock */}
-      <div className="flex items-center justify-between px-8 pt-6 pb-2 flex-shrink-0">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 pb-2 pl-4 pr-16 pt-6 sm:pl-8 sm:pr-20">
         <div className="flex items-center gap-4">
           <img src={logoEternum} alt="Eternum" className="h-12 w-auto dark:invert dark:brightness-200" />
           <div>

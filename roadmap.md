@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Ranking e enquadramento do painel na TV
+- [x] Vendedores empilhados em ordem por empresa; cartões com largura máxima comum, valor alinhado ao nome quando cabe e pílulas discretas, sem esticar Darlan na Anjos. Empresas permanecem lado a lado na TV e empilhadas no celular.
+- [x] Folga no topo/bordas no ajuste automático e zoom; ajuste da altura considera borda/área interna e reserva espaço para ranking por empresa. Relógio da apresentação separado do botão de fechar; valores, filtros, layout salvo, Calls e intervalo de atualização preservados.
+- [x] 23 testes passaram; conferência autenticada em TV 1920×1080, 1366×768 e 803×674, claro/escuro: duas posições Eternum visíveis em ordem, card Anjos da mesma largura, quatro gráficos completos sem cortes. Normal 1440/390, apresentação e saída, zoom 80 e MQL TV conferidos, sem erros. Gravações de configurações bloqueadas durante QA; sem backend, dados reais, chaves ou publicação. Sem teste em aparelho físico de TV.
+
 ## Respeitar a situação escolhida nas tarefas
 - [x] Todas/Abertas/Em andamento/Concluídas persistem por pessoa ao atualizar ou reabrir; Abertas somente como padrão inicial, com rejeição de situações salvas inválidas, sem alterar outros filtros ou dados.
 - [x] 21 testes passaram; sessão real conferida selecionando cada situação e atualizando, quadro/lista, limpar filtros, tela cheia, trocar de aba e 803/390/1440 px, sem erros. Preferências locais restauradas após o teste, pedidos de escrita em tarefas bloqueados; nenhuma tarefa alterada, sem publicar.

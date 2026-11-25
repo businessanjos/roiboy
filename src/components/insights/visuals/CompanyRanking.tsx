@@ -39,7 +39,7 @@ export function CompanyRanking({ data, companyIds, ...rankingProps }: Props) {
           const total = rows.reduce((sum, row) => sum + row.value, 0);
           return (
             <section key={id} aria-label={`Ranking ${name}`} className={`flex min-h-0 min-w-0 flex-col border-border ${index > 0 ? 'company-ranking-secondary' : 'company-ranking-primary'}`}>
-              <header className="mb-3 flex shrink-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1 border-b border-border pb-3">
+              <header className="mb-3 flex w-full max-w-[40rem] shrink-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1 border-b border-border pb-3">
                 <h3 className="text-base font-semibold text-foreground">{name}</h3>
                 <span className={`text-sm font-semibold tabular-nums text-foreground ${rankingProps.privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>{format(total)}</span>
               </header>

@@ -52,9 +52,11 @@ export function TvFitStage({ children, title, subtitle, requiredHeight }: TvFitS
 
   // Altura em que o painel será desenhado antes de encolher para caber.
   const headerAllowance = title || subtitle ? 64 : 0;
-  const contentAvailable = Math.max(1, height - headerAllowance);
+  // The stage has a border and 24px of vertical content padding as well.
+  const stageAllowance = headerAllowance + 26;
+  const contentAvailable = Math.max(1, height - stageAllowance);
   const targetContent = Math.max(contentAvailable, requiredHeight || 0);
-  const fit = height ? Math.min(1, Math.max(0.45, contentAvailable / targetContent)) : 1;
+  const fit = height ? Math.min(1, height / (targetContent + stageAllowance)) : 1;
 
   // Escala tipográfica: quanto maior a tela, maiores os números e rótulos.
   // Quando o palco encolhe, compensamos um pouco para manter a leitura à distância.
@@ -62,7 +64,7 @@ export function TvFitStage({ children, title, subtitle, requiredHeight }: TvFitS
   const fontScale = Math.min(1.45, baseScale / Math.max(fit, 0.6));
 
   const stageWidth = width ? width / fit : undefined;
-  const stageHeight = height ? headerAllowance / fit + targetContent : undefined;
+  const stageHeight = height ? targetContent + stageAllowance : undefined;
 
   return (
     <div ref={wrapperRef} className="w-full h-full overflow-hidden">
@@ -73,7 +75,7 @@ export function TvFitStage({ children, title, subtitle, requiredHeight }: TvFitS
           transform: fit < 1 ? `scale(${fit})` : undefined,
           transformOrigin: "top left",
         }}
-        className="flex flex-col rounded-2xl border border-border/60 bg-card/40 shadow-2xl overflow-hidden"
+        className="flex flex-col overflow-hidden rounded-lg border border-border/60 bg-card/40"
       >
         {(title || subtitle) && (
           <div className="flex items-baseline justify-between gap-6 px-6 pt-4 pb-2 shrink-0">

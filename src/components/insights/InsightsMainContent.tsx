@@ -340,7 +340,7 @@ export function InsightsMainContent() {
 
           {/* Content: fits the whole dashboard on screen (TV) or scrolls with zoom */}
           {tvFit ? (
-            <div className="flex-1 min-h-0 overflow-hidden p-1 bg-gradient-to-b from-background to-muted/20">
+            <div className="flex-1 min-h-0 overflow-hidden bg-background p-3 lg:p-4">
               {hasVisuals && (
                 <TvFitStage requiredHeight={tvRequiredHeight}>
                   <InsightsGrid
@@ -357,7 +357,7 @@ export function InsightsMainContent() {
             </div>
           ) : (
 
-            <div className="flex-1 overflow-auto px-6 pb-6 pt-0">
+            <div className="min-h-0 flex-1 overflow-auto p-4 lg:p-6">
               <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top left', width: `${10000 / focusZoom}%` }}>
                 {hasVisuals && (
                   <InsightsGrid
