@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Zoom do ranking na proporção do MQL
+- [x] Padrão de 60% para TV no ranking, mantendo o ajuste automático para não cortar os vendedores; controles de zoom também disponíveis nesse modo e preferência local renovada, sem alterar o MQL, outros painéis, dados ou permissões.
+- [x] 36 testes passaram; redução medida de 100% para 60% nos dois temas em 1920×1080/1366×768/1280×720/803×674/668×674 com controles visíveis/recolhidos, hierarquia preservada e quatro visuais completos. Controles originais conferidos: preferência antiga de 100% substituída, ajuste para 70%, sair/reabrir mantendo escolha e link explícito de 80% respeitado. Imagens inspecionadas, compilação OK, sem erros, publicação ou escritas reais/backend; testes usam números locais.
+- [ ] Conferir na conta real e TV física: sessão própria indisponível e criação de sessão temporária falhou; aparelho não acessível neste ambiente.
+
 ## Enquadramento do ranking na TV de 43 polegadas
 - [x] Corte reproduzido no painel completo: Calls tinha 130px disponíveis para 224px de conteúdo, piso antigo de 180px. Linhas ajustadas pela altura natural dos vendedores + cabeçalho/bordas, palco redimensiona o conjunto e gráfico empilhado preserva 300px mínimos para legenda/barras; contexto de ajuste mantém blocos estáveis durante atualização, sem mudar organização salva, dados, hierarquia, zoom explícito ou modos normais.
 - [x] 44 testes passaram; painel e renderers originais com organização salva lida em consulta somente leitura e números locais conferidos em 1920×1080/1366×768/1280×720/803×674/668×674, dois temas e controles visíveis/recolhidos (20 cenários), mais adicionar/remover/esvaziar/recarregar vendedores e retorno desktop/mobile. Calls completas sem rolagem interna, quatro visuais dentro da tela, imagens inspecionadas e teste anterior de hierarquia/zoom repetido (20 cenários). Compilação OK, sem erros, escritas reais/backend ou publicação.

@@ -24,7 +24,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { parseUrlView, writeUrlView, replaceSearch } from "@/lib/insights/urlState";
-import { hasCompanyRanking } from "@/lib/insights/tvLayout";
+import { hasCompanyRanking, tvPresentationDefault } from "@/lib/insights/tvLayout";
 
 export function InsightsMainContent() {
   const { 
@@ -107,12 +107,8 @@ export function InsightsMainContent() {
   const isSellerTvBoard = (visuals || []).some(hasCompanyRanking);
 
   // Lembra o ajuste de TV (modo e zoom) de cada painel neste aparelho
-  // Padrão de TV 42" por painel (v2 descarta ajustes antigos salvos)
-  const TV_DEFAULT_ZOOM: Record<string, number> = {
-    "29104b57-a5bf-41aa-b28a-2bd42a525206": 60, // [MQL] Análise de Funil
-  };
-  // The improved seller board starts fitted, without inheriting its old 80% default.
-  const tvPrefKey = activeDashboardId ? `insights-tv-pref-${isSellerTvBoard ? 'v5' : 'v4'}:${activeDashboardId}` : null;
+  // Seller boards use MQL's compact zoom without inheriting the old full-size preference.
+  const tvPrefKey = activeDashboardId ? `insights-tv-pref-${isSellerTvBoard ? 'v6' : 'v4'}:${activeDashboardId}` : null;
   useEffect(() => {
     if (!tvPrefKey || isLoadingVisuals) return;
     if (urlViewOverride.current) { urlViewOverride.current = false; return; }
@@ -123,12 +119,12 @@ export function InsightsMainContent() {
         if (typeof p.tvFit === "boolean") setTvFit(p.tvFit);
         if (typeof p.zoom === "number") setFocusZoom(p.zoom);
       } else {
-        const def = activeDashboardId ? TV_DEFAULT_ZOOM[activeDashboardId] : undefined;
-        setTvFit(def == null);
-        setFocusZoom(def ?? 100);
+        const defaults = tvPresentationDefault(activeDashboardId, isSellerTvBoard);
+        setTvFit(defaults.tvFit);
+        setFocusZoom(defaults.zoom);
       }
     } catch { /* ignore */ }
-  }, [tvPrefKey, isLoadingVisuals]);
+  }, [tvPrefKey, isLoadingVisuals, activeDashboardId, isSellerTvBoard]);
   useEffect(() => {
     if (!tvPrefKey || !isFocusMode || isLoadingVisuals) return;
     try {
@@ -322,8 +318,8 @@ export function InsightsMainContent() {
                 <Tv className="h-4 w-4 mr-2" />
                 {tvFit ? "Ajustado à TV" : "Ajustar à TV"}
               </Button>
-              {!tvFit && (
-                <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} min={50} max={250} step={10} />
+              {(!tvFit || isSellerTvBoard) && (
+                <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} min={50} max={tvFit ? 100 : 250} step={10} />
               )}
               <Button variant="outline" size="icon" aria-label={isFullscreen ? "Sair da tela cheia" : "Tela cheia"} onClick={toggleFullscreen}>
                 {isFullscreen ? (
@@ -345,7 +341,7 @@ export function InsightsMainContent() {
           {tvFit ? (
             <div className="flex-1 min-h-0 overflow-hidden bg-background p-2">
               {hasVisuals && (
-                <TvFitStage requiredHeight={tvRequiredHeight}>
+                <TvFitStage requiredHeight={tvRequiredHeight} zoom={isSellerTvBoard ? focusZoom : 100}>
                   <InsightsGrid
                     visuals={filteredVisuals}
                     onLayoutChange={() => {}}

@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { TvModeProvider } from "./TvModeContext";
+import { tvStageSizing } from "@/lib/insights/tvLayout";
 
 /** Canvas nominal de uma TV 42" Full HD (16:9) — mantido por compatibilidade. */
 export const TV_STAGE_WIDTH = 1920;
@@ -17,6 +18,8 @@ interface TvFitStageProps {
    * assim gráficos não ficam espremidos nem cortados.
    */
   requiredHeight?: number;
+  /** Requested display zoom; fitting may reduce it further to keep all rows visible. */
+  zoom?: number;
 }
 
 /**
@@ -25,7 +28,7 @@ interface TvFitStageProps {
  * largura da tela e, se o conteúdo precisar de mais altura do que a TV tem,
  * reduzimos proporcionalmente até caber tudo sem rolagem.
  */
-export function TvFitStage({ children, title, subtitle, requiredHeight }: TvFitStageProps) {
+export function TvFitStage({ children, title, subtitle, requiredHeight, zoom = 100 }: TvFitStageProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
@@ -52,19 +55,7 @@ export function TvFitStage({ children, title, subtitle, requiredHeight }: TvFitS
 
   // Altura em que o painel será desenhado antes de encolher para caber.
   const headerAllowance = title || subtitle ? 64 : 0;
-  // Only safety padding, with no decorative frame competing with the visuals.
-  const stageAllowance = headerAllowance + 4;
-  const contentAvailable = Math.max(1, height - stageAllowance);
-  const targetContent = Math.max(contentAvailable, requiredHeight || 0);
-  const fit = height ? Math.min(1, height / (targetContent + stageAllowance)) : 1;
-
-  // Escala tipográfica: quanto maior a tela, maiores os números e rótulos.
-  // Quando o palco encolhe, compensamos um pouco para manter a leitura à distância.
-  // Stable typography: density responds to available height, not viewport width.
-  const fontScale = Math.min(1.2, 1 / Math.max(fit, 0.85));
-
-  const stageWidth = width ? width / fit : undefined;
-  const stageHeight = height ? targetContent + stageAllowance : undefined;
+  const { fit, fontScale, stageWidth, stageHeight } = tvStageSizing(width, height, requiredHeight, headerAllowance, zoom);
 
   return (
     <div ref={wrapperRef} className="w-full h-full overflow-hidden">
