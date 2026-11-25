@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Respeitar as cores selecionadas no painel
+- [x] Leitura confirma Brasa selecionada nos quatro visuais; ranking compacto ignorava a seleção e usava o dourado do tema. Barras, bordas suaves e iniciais agora usam a paleta do próprio visual, como o ranking normal; pílulas, produtos, dados e backend preservados.
+- [x] 16 testes de produtos/empresa passaram; exemplos isolados com os componentes originais em 390/1440 e TV 1920/1366, claro/escuro: selecionar Brasa → Ouro → Profissional → Brasa atualiza ranking e barras juntos, sem erros. Sem gravação de configurações nem publicação.
+- [ ] Conferir o painel na sessão autenticada: sessão própria não foi disponibilizada nesta rodada e criação da conta de teste falhou; exemplos isolados não verificam a conta real.
+
 ## Acabamento do gráfico Negócios por vendedor
 - [x] Legenda em altura própria, área central delimitada, barras com largura máxima e topo arredondado, totais destacados e contraste corrigido; nomes completos em duas linhas no celular. Altura móvel reconhece barras segmentadas; dados, cores, filtros, interações e configurações salvas preservados.
 - [x] 16 testes passaram; conferência autenticada em 390/803/1440, TV 1920×1080 e 1366×768 e TV 803×674, claro/escuro: sem cortes ou erros. Total 166 e vendedores 118/43/5 preservados; clicar Darlan abre seus 118 negócios e fechar retorna ao gráfico. Sem escritas em dados reais, backend ou publicação; sem teste em aparelho físico.

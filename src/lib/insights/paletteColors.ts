@@ -1,3 +1,5 @@
+import { COLOR_PALETTES, type ColorPalette } from "@/components/insights/visual-builder/types";
+
 /**
  * Utilitários de paleta para os visuais de Insights.
  *
@@ -93,4 +95,9 @@ export function extendPalette(base: string[], count = 20): string[] {
 export function paletteColorAt(base: string[], index: number): string {
   const extended = extendPalette(base, Math.max(base.length, index + 1));
   return extended[index % extended.length];
+}
+
+/** Same selected palette for regular and company-column rankings. */
+export function insightPaletteColors(palette: ColorPalette = 'ryka'): string[] {
+  return extendPalette(COLOR_PALETTES[palette] || COLOR_PALETTES.ryka, 20);
 }

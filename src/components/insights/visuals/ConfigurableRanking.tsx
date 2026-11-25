@@ -4,8 +4,8 @@ import { productShortName, isRenewalProduct } from "@/lib/insights/productShortN
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FormatType, AppearanceConfig, FONT_SCALE_MULTIPLIERS, COLOR_PALETTES } from "../visual-builder/types";
-import { extendPalette, readableTextOn } from "@/lib/insights/paletteColors";
+import { FormatType, AppearanceConfig, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
+import { insightPaletteColors, readableTextOn } from "@/lib/insights/paletteColors";
 import { useTvMode } from "../TvModeContext";
 
 interface AggregatedDataPoint {
@@ -45,13 +45,6 @@ const PODIUM_LAYOUT: Record<number, { height: number; order: number }> = {
   1: { height: 120, order: 1 },
   2: { height: 90, order: 3 },
 };
-
-/** Ranking colours follow the dashboard palette so the visual never clashes. */
-function paletteColors(appearance?: AppearanceConfig): string[] {
-  const palette = COLOR_PALETTES[appearance?.colorPalette || 'ryka'];
-  return extendPalette(palette?.length ? palette : COLOR_PALETTES.ryka, 20);
-}
-
 
 /** Junta produtos pela sigla (vendas novas primeiro), mantendo os nomes no tooltip. */
 function groupProducts(products: { name: string; qty: number }[], hidden?: string[]) {
@@ -232,7 +225,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
 
   const maxValue = Math.max(...data.map(d => d.value), 1);
   const hasPodiumData = data.length >= 2;
-  const colors = paletteColors(appearance);
+  const colors = insightPaletteColors(appearance?.colorPalette);
 
   // Company rankings keep a single ordered column, regardless of its width.
   const rowHeight = Math.round((compact ? 72 : 44) * m);
@@ -256,12 +249,14 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
           {rows.map((item, index) => {
             const emoji = MEDAL_EMOJI[index];
             const isTop = index < 3;
+            const rowColor = colors[index % colors.length];
             const progress = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
             const userAvatar = avatars[item.name];
             return (
               <li
                 key={item.name}
-                className={`flex min-w-0 items-start gap-2.5 rounded-lg border px-3 py-2.5 ${isTop ? 'border-primary/20 bg-primary/5' : 'border-border/60 bg-card'}`}
+                className="flex min-w-0 items-start gap-2.5 rounded-lg border border-border/60 bg-card px-3 py-2.5"
+                style={isTop ? { borderColor: `${rowColor}33`, backgroundColor: `${rowColor}0d` } : undefined}
               >
                 <span className="w-5 shrink-0 pt-1 text-center">
                   {emoji ? <span className="text-base leading-none">{emoji}</span> : (
@@ -270,7 +265,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                 </span>
                 {privacy?.showPhotos !== false && <Avatar className="shrink-0" style={{ height: Math.round(36 * m), width: Math.round(36 * m) }}>
                   <AvatarImage src={userAvatar?.avatar_url || undefined} alt={privacy?.showNames === false ? 'Vendedor' : item.name} />
-                  <AvatarFallback className="bg-primary/10 text-[10px] font-medium text-primary">
+                  <AvatarFallback className="text-[10px] font-medium" style={{ backgroundColor: `${rowColor}22`, color: rowColor }}>
                     {getInitials(item.name)}
                   </AvatarFallback>
                 </Avatar>}
@@ -284,7 +279,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                   </span>
                   </div>
                   <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary/75 transition-all duration-500" style={{ width: `${progress}%` }} />
+                    <div className="h-full rounded-full transition-all duration-500 motion-reduce:transition-none" style={{ width: `${progress}%`, backgroundColor: rowColor }} />
                   </div>
                   {item.products && item.products.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
