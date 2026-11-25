@@ -156,7 +156,7 @@ export function MarketingTaskKanban({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className={cn("flex gap-4 overflow-x-auto pb-4", fullHeight && "min-h-0 flex-1 items-stretch overflow-y-hidden")}>
+      <div className={cn("gap-4 overflow-x-auto pb-4", fullHeight ? "grid min-h-0 flex-1 auto-cols-[minmax(300px,1fr)] grid-flow-col items-stretch overflow-y-hidden" : "flex")}>
         {columns.map((column) => (
           <MarketingKanbanColumn
             key={column.id}

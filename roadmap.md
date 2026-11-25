@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Distribuição do quadro ampliado
+- [x] Colunas igualmente distribuídas pela largura disponível apenas ao ampliar, mínimo 300px com rolagem local nas telas estreitas; quadro normal, ordem, filtros, dados e ações intactos.
+- [x] 46 testes passaram; componentes originais com TESTE QA no navegador em 1562/1920/1440/803/390: colunas iguais sem vazio lateral no desktop, rolagem local mobile, clique abre tarefa e reduzir restaura larguras originais. Compilação OK, sem erros de execução, alterações em tarefas ou publicação; conferência isolada não substitui sessão real.
+
 ## Você nas pessoas das tarefas
 - [x] “Você” para responsável/solicitante da pessoa logada no quadro e na lista (incluindo seções, tela ampliada e cartão de arraste que reutilizam as mesmas apresentações); demais com primeiro nome, seletores completos, fotos/identidades/dados intactos.
 - [x] Comparação pelo ID de `useCurrentUser`, nunca nome; 63 testes passaram. Componentes originais com exemplos isolados em 390/803/1440 conferidos no navegador, incluindo funções independentes, nomes iguais de outras pessoas, troca de pessoa e identidade não carregada, sem erros ou escritas. Sem publicação; conferência em sessão real não executada (sessão indisponível no ajuste anterior).

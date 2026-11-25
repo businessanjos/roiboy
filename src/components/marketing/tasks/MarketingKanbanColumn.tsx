@@ -42,8 +42,8 @@ export function MarketingKanbanColumn({
       ref={setNodeRef}
       style={{ borderTopColor: column.color }}
       className={cn(
-        "flex flex-col min-w-[300px] max-w-[350px] bg-muted/30 rounded-lg border border-t-4",
-        fullHeight && "min-h-0 shrink-0",
+        "flex flex-col min-w-[300px] bg-muted/30 rounded-lg border border-t-4",
+        fullHeight ? "min-h-0 max-w-none" : "max-w-[350px]",
         isOver && "bg-muted/50 ring-2 ring-primary/20"
       )}
     >
