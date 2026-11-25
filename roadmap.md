@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Acabamento do gráfico Negócios por vendedor
+- [x] Legenda em altura própria, área central delimitada, barras com largura máxima e topo arredondado, totais destacados e contraste corrigido; nomes completos em duas linhas no celular. Altura móvel reconhece barras segmentadas; dados, cores, filtros, interações e configurações salvas preservados.
+- [x] 16 testes passaram; conferência autenticada em 390/803/1440, TV 1920×1080 e 1366×768 e TV 803×674, claro/escuro: sem cortes ou erros. Total 166 e vendedores 118/43/5 preservados; clicar Darlan abre seus 118 negócios e fechar retorna ao gráfico. Sem escritas em dados reais, backend ou publicação; sem teste em aparelho físico.
+
 ## Ranking e enquadramento do painel na TV
 - [x] Vendedores empilhados em ordem por empresa; cartões com largura máxima comum, valor alinhado ao nome quando cabe e pílulas discretas, sem esticar Darlan na Anjos. Empresas permanecem lado a lado na TV e empilhadas no celular.
 - [x] Folga no topo/bordas no ajuste automático e zoom; ajuste da altura considera borda/área interna e reserva espaço para ranking por empresa. Relógio da apresentação separado do botão de fechar; valores, filtros, layout salvo, Calls e intervalo de atualização preservados.

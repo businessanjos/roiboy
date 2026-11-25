@@ -48,6 +48,7 @@ const CONTAINER_PADDING: [number, number] = [4, 4];
 
 function getMobileMinHeight(visual: InsightsVisual): string {
   const ct = visual.chart_type || "bar";
+  if (["bar", "bar_horizontal"].includes(ct) && (visual.config?.stackBy || visual.config?.stackByCustomField)) return "min-h-[380px]";
   if (["scorecard", "kpi", "number"].includes(ct)) return "min-h-[132px]";
   if (["table", "ranking", "data_table", "daily_performance"].includes(ct)) return "min-h-[340px]";
   if (ct === "map") return "min-h-[320px]";
