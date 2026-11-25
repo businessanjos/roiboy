@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Calls Comerciais no ranking de vendedores
+- [ ] Reduzir blocos preenchidos e excesso visual, ajustar medidas ao espaço real e zoom; manter nomes, números, conversão, filtro anual e acesso, sem alterar outros gráficos ou configurações.
+- [ ] Conferir ajuste à TV, zoom e telas menores nos dois temas; testes existentes, sem publicar ou gravar dados reais.
+
 ## Tarefas recorrentes no Marketing
 - [x] Repetição diária/semanal/mensal no formulário, inclusive toda segunda-feira; rotina automática horária (calendário de Brasília), responsável/etiquetas/descrição/horário/capa/anexos preservados e subtarefas pendentes, sem reabrir concluídas. Campos e autoria validados no servidor, mesmo RLS de tarefas, chave única origem/data e cursor transacional, sem modificar registros reais.
 - [x] Alterar/parar no original e editar ocorrência sem afetar série; duplicar não inicia outra recorrência. 94 testes passaram, incluindo falha/recuperação, conta/autor forjados, datas, acesso negado e histórico; formulário original isolado com TESTE QA em 803/390/1440 e claro/escuro: criar report segunda, salvar/reabrir, mensal, cancelar e parar; sem erros ou pedidos ao backend. Rotina implantada, agenda ativa, função limitada a service_role, zero séries reais, compilação OK; sem publicar.

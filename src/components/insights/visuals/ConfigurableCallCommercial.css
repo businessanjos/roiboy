@@ -1,0 +1,60 @@
+.commercial-calls {
+  container-type: inline-size;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.commercial-calls-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 0.7fr));
+  column-gap: 12px;
+  align-items: center;
+}
+
+.commercial-calls-grid[data-sales="false"] {
+  grid-template-columns: minmax(0, 1.8fr) repeat(2, minmax(0, 0.7fr));
+}
+
+.commercial-calls-head {
+  min-height: 24px;
+  padding-bottom: 5px;
+}
+
+.commercial-calls-row {
+  min-height: var(--calls-row-height, 68px);
+  padding-block: 7px;
+}
+
+.commercial-calls-avatar {
+  width: var(--calls-avatar-size, 32px);
+  height: var(--calls-avatar-size, 32px);
+}
+
+.commercial-calls-name {
+  font-size: var(--calls-name-size, 16px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.commercial-calls-number {
+  font-size: var(--calls-value-size, 26px);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+@container (max-width: 400px) {
+  .commercial-calls-grid {
+    column-gap: 6px;
+    grid-template-columns: minmax(0, 1.65fr) repeat(3, minmax(0, 0.65fr));
+  }
+  .commercial-calls-grid[data-sales="false"] {
+    grid-template-columns: minmax(0, 1.65fr) repeat(2, minmax(0, 0.65fr));
+  }
+  .commercial-calls-name { font-size: 14px; }
+  .commercial-calls-number { font-size: 23px; }
+  .commercial-calls-avatar { width: 28px; height: 28px; }
+  .commercial-calls-head svg { display: none; }
+}

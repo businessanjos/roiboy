@@ -334,14 +334,14 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
               Atualizando…
             </span>
           )}
-          <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2", tv.tv && "space-y-1 px-4 pt-3 pb-2")}>
+          <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2", tv.tv && "space-y-1 px-4 pt-3 pb-2", chartType === 'call_commercial' && "space-y-0 px-3 pt-2.5 pb-1.5")}>
             <CardTitle
               className={cn(
                 "text-base flex items-center justify-between gap-1",
                 isScorecard && "text-sm",
                 tv.tv && "font-semibold tracking-normal text-foreground",
               )}
-              style={tv.tv ? { fontSize: Math.round((isScorecard ? 16 : 20) * tv.scale) } : undefined}
+              style={tv.tv ? { fontSize: Math.round((isScorecard || chartType === 'call_commercial' ? 16 : 20) * tv.scale) } : undefined}
             >
               <div className="flex items-center gap-1.5 min-w-0">
                 {!readOnly && <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />}
@@ -573,7 +573,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
               </div>
             )}
           </CardHeader>
-          <CardContent className={cn("flex-1 min-h-0", tv.tv ? "overflow-hidden px-4 pb-3" : "overflow-auto")}>
+          <CardContent className={cn("flex-1 min-h-0", tv.tv ? "overflow-hidden px-4 pb-3" : "overflow-auto", chartType === 'call_commercial' && "overflow-hidden px-3 pb-2")}>
            <ConfigurableChart
               type={effectiveChartType}
               data={processedData}

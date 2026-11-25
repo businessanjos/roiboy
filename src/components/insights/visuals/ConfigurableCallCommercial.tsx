@@ -1,5 +1,5 @@
 import { filterVisiblePeople, visiblePeopleQuery } from "@/lib/peopleVisibility";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,6 +7,7 @@ import { Calendar, CheckCircle2, Target } from "lucide-react";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { FormatType, FONT_SCALE_MULTIPLIERS, AppearanceConfig } from "../visual-builder/types";
 import { useTvMode } from "../TvModeContext";
+import "./ConfigurableCallCommercial.css";
 
 interface AggregatedDataPoint {
   name: string;
@@ -48,6 +49,18 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
   // Vendas/conversão são do mês: no filtro de Ano o card fica oculto.
   const showSales = filters.preset !== 'year';
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+    // Layout pixels, not transformed screen pixels: zoom must not amplify density decisions.
+    const update = () => setHeight(element.clientHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   // Fetch user avatars
   useEffect(() => {
@@ -79,53 +92,30 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
 
   if (!filteredData || filteredData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
+      <div ref={containerRef} className="flex items-center justify-center h-full text-muted-foreground">
         Sem dados para exibir
       </div>
     );
   }
 
-  if (tv.tv) {
-    return (
-      <div className="h-full min-h-0 overflow-auto">
-        <div className="grid grid-cols-2 gap-4">
-          {filteredData.map(item => {
-            const completed = item.count ?? 0;
-            const sales = item.salesMonth ?? 0;
-            const conversion = completed > 0 ? (sales / completed) * 100 : 0;
-            return (
-              <section key={item.name} className="min-w-0">
-                <div className="mb-3 flex min-w-0 items-center gap-2.5">
-                  <Avatar className="h-10 w-10 shrink-0 border border-border">
-                    <AvatarImage src={avatars[item.name]?.avatar_url || undefined} alt={item.name} />
-                    <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">{getInitials(item.name)}</AvatarFallback>
-                  </Avatar>
-                  <span className="min-w-0 break-words text-lg font-semibold leading-tight text-foreground" style={{ fontSize: Math.round(18 * m) }}>{item.name}</span>
-                </div>
-                <div className={`grid gap-2 ${showSales ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                  {[
-                    { label: 'A fazer', value: item.value, Icon: Calendar, accent: 'text-warning' },
-                    { label: 'Feitas', value: completed, Icon: CheckCircle2, accent: 'text-success' },
-                    ...(showSales ? [{ label: 'Vendas', value: sales, Icon: Target, accent: 'text-primary' }] : []),
-                  ].map(({ label, value, Icon, accent }) => (
-                    <div key={label} className={`relative flex min-w-0 flex-col items-center gap-1 rounded-md px-1 py-2 ${label === 'Vendas' ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted'}`}>
-                      <span className="font-bold leading-none tabular-nums text-foreground" style={{ fontSize: Math.round(28 * m) }}>{value}</span>
-                      <span className="flex items-center gap-1 whitespace-nowrap text-xs font-medium text-muted-foreground"><Icon className={`h-3 w-3 ${accent}`} />{label}</span>
-                      {label === 'Vendas' && <span className="absolute -top-2 right-1 rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold leading-none tabular-nums text-primary-foreground">{conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</span>}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
+  const rowSpace = height > 0 ? (height - 26) / filteredData.length : 70;
+  const dense = rowSpace < 70;
+  const scale = Math.min(m * (tv.tv ? tv.scale : 1), dense ? 1 : 1.2);
+  const dimensions = {
+    "--calls-name-size": `${Math.round(Math.min(tv.tv ? 20 : 18, Math.max(14, (dense ? 16 : 18) * scale)))}px`,
+    "--calls-value-size": `${Math.round(Math.min(tv.tv ? 30 : 28, Math.max(20, (dense ? 24 : 26) * scale)))}px`,
+    "--calls-avatar-size": `${dense ? 30 : 34}px`,
+    "--calls-row-height": `${Math.max(56, Math.min(78, rowSpace))}px`,
+  } as CSSProperties;
   return (
-    <div className="h-full overflow-auto px-2 py-3">
-      <div className="flex flex-wrap gap-4 justify-center">
+    <div ref={containerRef} className="commercial-calls" style={dimensions} role="table" aria-label="Calls por vendedor">
+      <div role="row" className="commercial-calls-grid commercial-calls-head border-b border-border/70 text-xs font-medium text-muted-foreground" data-sales={showSales}>
+        <span role="columnheader">Vendedor</span>
+        <span role="columnheader" className="flex items-center justify-center gap-1 whitespace-nowrap"><Calendar className="h-3 w-3" />A fazer</span>
+        <span role="columnheader" className="flex items-center justify-center gap-1 whitespace-nowrap"><CheckCircle2 className="h-3 w-3" />Feitas</span>
+        {showSales && <span role="columnheader" className="flex items-center justify-center gap-1 whitespace-nowrap"><Target className="h-3 w-3" />Vendas</span>}
+      </div>
+      <div role="rowgroup" className="divide-y divide-border/60">
         {filteredData.map((item) => {
           const userAvatar = avatars[item.name];
           const scheduled = item.value; // agendadas em aberto
@@ -134,64 +124,24 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
           const conversion = completed > 0 ? (sales / completed) * 100 : 0;
 
           return (
-            <div
+            <div role="row"
               key={item.name}
-              className="flex flex-col items-center gap-2 min-w-[120px]"
+              className="commercial-calls-grid commercial-calls-row"
+              data-sales={showSales}
             >
-              {/* Avatar */}
-              <Avatar className="h-14 w-14 shrink-0 border-2 border-border">
-                <AvatarImage src={userAvatar?.avatar_url || undefined} alt={item.name} />
-                <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">
-                  {getInitials(item.name)}
-                </AvatarFallback>
-              </Avatar>
-
-              {/* Name */}
-              <span className="font-medium text-foreground truncate max-w-[120px] text-center leading-tight" style={{ fontSize: `${Math.round(12 * m)}px` }}>
-                {item.name}
-              </span>
-
-              {/* Pills */}
-              <div className="flex gap-1">
-                {/* Agendadas em aberto */}
-                <div className="flex flex-col items-center gap-0.5 rounded-lg bg-muted px-2 py-2 w-[58px]">
-                  <Calendar className="h-3.5 w-3.5 text-warning" />
-                  <span className="font-bold text-foreground tabular-nums leading-none" style={{ fontSize: `${Math.round(18 * m)}px` }}>
-                    {scheduled}
-                  </span>
-                  <span className="text-[9px] text-muted-foreground font-medium leading-none">
-                    A fazer
-                  </span>
+              <div role="cell" className="flex min-w-0 items-center gap-2">
+                <Avatar className="commercial-calls-avatar shrink-0 border border-border">
+                  <AvatarImage src={userAvatar?.avatar_url || undefined} alt={item.name} />
+                  <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">{getInitials(item.name)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 space-y-1">
+                  <span className="commercial-calls-name block font-semibold text-foreground">{item.name}</span>
+                  {showSales && <span className="block text-xs leading-tight text-muted-foreground" title={`${sales} venda(s) ganha(s) neste mês • ${conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das calls feitas`}><span className="font-semibold tabular-nums text-primary">{conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</span> conversão</span>}
                 </div>
-
-                {/* Concluídas */}
-                <div className="flex flex-col items-center gap-0.5 rounded-lg bg-muted px-2 py-2 w-[58px]">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                  <span className="font-bold text-foreground tabular-nums leading-none" style={{ fontSize: `${Math.round(18 * m)}px` }}>
-                    {completed}
-                  </span>
-                  <span className="text-[9px] text-muted-foreground font-medium leading-none">
-                    Feitas
-                  </span>
-                </div>
-
-                {/* Vendas do mês + conversão */}
-                {showSales && (<div
-                  className="relative flex flex-col items-center gap-0.5 rounded-lg bg-primary/10 ring-1 ring-primary/30 px-2 py-2 w-[58px]"
-                  title={`${sales} venda(s) ganha(s) neste mês • ${conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das calls feitas`}
-                >
-                  <Target className="h-3.5 w-3.5 text-primary" />
-                  <span className="font-bold text-foreground tabular-nums leading-none" style={{ fontSize: `${Math.round(18 * m)}px` }}>
-                    {sales}
-                  </span>
-                  <span className="text-[9px] text-muted-foreground font-medium leading-none">
-                    Vendas
-                  </span>
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-px text-[9px] font-bold leading-none text-primary-foreground tabular-nums whitespace-nowrap">
-                    {conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%
-                  </span>
-                </div>)}
               </div>
+              <span role="cell" aria-label={`${scheduled} calls a fazer`} className="commercial-calls-number text-center font-semibold tabular-nums text-foreground">{scheduled.toLocaleString('pt-BR')}</span>
+              <span role="cell" aria-label={`${completed} calls feitas`} className="commercial-calls-number text-center font-semibold tabular-nums text-foreground">{completed.toLocaleString('pt-BR')}</span>
+              {showSales && <span role="cell" aria-label={`${sales} vendas`} className="commercial-calls-number text-center font-bold tabular-nums text-primary">{sales.toLocaleString('pt-BR')}</span>}
             </div>
           );
         })}
