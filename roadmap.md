@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Respeitar a situação escolhida nas tarefas
+- [x] Todas/Abertas/Em andamento/Concluídas persistem por pessoa ao atualizar ou reabrir; Abertas somente como padrão inicial, com rejeição de situações salvas inválidas, sem alterar outros filtros ou dados.
+- [x] 21 testes passaram; sessão real conferida selecionando cada situação e atualizando, quadro/lista, limpar filtros, tela cheia, trocar de aba e 803/390/1440 px, sem erros. Preferências locais restauradas após o teste, pedidos de escrita em tarefas bloqueados; nenhuma tarefa alterada, sem publicar.
+- [x] Caminhos irmãos lidos e resultados registrados em `.lovable/reviews/task-filter-refresh.md`: contagens, lista/seções, quadro/tela cheia, entrada/redirecionamento, links/avisos, recarga de dados, projetos, Copilot, MCP e funções atuais de notificação. Não reiniciam filtros em outros caminhos; backend e registros concluídos preservados.
+
 ## Horário de entrega antes da data
 - [x] Horário livre sem data; preenchimento de hoje para horário igual/posterior ao minuto atual ou amanhã se já passou, no mesmo dia local do calendário. Mudanças no horário ajustam somente a data automática; escolha manual e digitação parcial/inválida permanecem preservadas. Limpar somente a data não apaga o horário.
 - [x] 41 testes passaram, incluindo criação/edição/cópia, virada de mês/ano e prioridade do Hoje no calendário. Formulário original com dados fictícios conferido no navegador em 803/390/1440 px: horário primeiro, hoje/amanhã, escolha manual, salvar/reabrir e calendário; sem erros, sem gravações no backend, sem publicação.
@@ -23,10 +28,8 @@
 - [x] 24 testes passaram; valores reais conferidos no ano e mês com leitura do banco, 390/803/1440 px nos dois temas sem cortes, cancelamento da configuração, Calls sem opção de empresas, apresentação ampliada e modo TV com parâmetros preservados. Compilação sem erros; sem publicação.
 - Quatro vendas antigas de CR continuam vinculadas à Eternum; nenhum negócio foi reclassificado e não foram inventados subtotais por produto.
 
-## Tarefas abrem em Abertas
-- [x] Cada montagem começa em Abertas sem restaurar a situação anterior; troca manual, demais filtros, permissões e registros mantidos.
-- [x] 16 testes passaram; abertura com situação antiga salva, troca para Concluídas e reabertura em Abertas conferidas com tarefas fictícias em 390/958 px, sem erros ou escritas reais. Compilação sem erros; não publicado.
-- [ ] Conferência na conta real: sessão própria indisponível; teste com respostas fictícias não valida persistência real.
+## Padrão inicial das tarefas (substituído)
+- [x] O comportamento anterior reiniciava em Abertas; substituído pela preservação da escolha explícita solicitada em “Respeitar a situação escolhida nas tarefas”.
 
 ## Topo compacto das tarefas de Marketing
 - [x] Reduzir título e espaçamento; concentrar filtros num menu e ações secundárias em mais opções, preservando busca, filtros, telas e callbacks.

@@ -70,7 +70,8 @@ export function MarketingTasksTab() {
   const [searchQuery, setSearchQuery] = usePersistedFilter<string>("marketing-tasks", "search", "");
   const [savedAssigneeFilter, setAssigneeFilter] = usePersistedFilter<string>("marketing-tasks", "assignee", "all");
   const assigneeFilter = isHiddenTechnicalPerson({ id: savedAssigneeFilter }) ? "all" : savedAssigneeFilter;
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("pending");
+  const [savedStatusFilter, setStatusFilter] = usePersistedFilter<StatusFilter>("marketing-tasks", "status", "pending");
+  const statusFilter = STATUS_OPTIONS.some((option) => option.value === savedStatusFilter) ? savedStatusFilter : "pending";
   const [sortFilter, setSortFilter] = usePersistedFilter<SortFilter>("marketing-tasks", "sort", "manual");
   const [labelFilter, setLabelFilter] = usePersistedFilter<string[]>("marketing-tasks", "labels", []);
   const [isBoardExpanded, setIsBoardExpanded] = useState(false);
