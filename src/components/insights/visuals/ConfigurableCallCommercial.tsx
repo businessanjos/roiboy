@@ -107,7 +107,9 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
   // Density uses available height without changing the dashboard's saved layout.
   const rows = filteredData.length;
   const rowSpace = size.height > 0 ? (size.height - 4 - (rows - 1) * 12) / rows : 114;
-  const dense = rowSpace < 114;
+  // The fitted stage reserves natural height; switching density while fitting
+  // would alternate between two content minimums after data refreshes.
+  const dense = !tv.fitted && rowSpace < 114;
   const scale = Math.min(m * (tv.tv ? tv.scale : 1), dense ? 1 : 1.15);
   const dimensions = {
     "--calls-name-size": `${Math.round(Math.min(18, Math.max(14, (dense ? 14 : 16) * scale)))}px`,

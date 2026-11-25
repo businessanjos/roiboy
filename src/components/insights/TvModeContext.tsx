@@ -9,6 +9,8 @@ export interface TvModeValue {
   maxCategories: number;
   /** Palco renderizado pequeno: densidade reduzida para continuar legível. */
   compact: boolean;
+  /** Whole-board fitting reserves natural content height before scaling. */
+  fitted?: boolean;
 }
 
 const DEFAULT_TV_MODE: TvModeValue = { tv: false, scale: 1, maxCategories: 0, compact: false };
@@ -21,6 +23,7 @@ interface TvModeProviderProps {
   maxCategories?: number;
   enabled?: boolean;
   compact?: boolean;
+  fitted?: boolean;
 }
 
 export function TvModeProvider({
@@ -29,10 +32,11 @@ export function TvModeProvider({
   maxCategories = 12,
   enabled = true,
   compact = false,
+  fitted = false,
 }: TvModeProviderProps) {
   const value = useMemo<TvModeValue>(
-    () => (enabled ? { tv: true, scale, maxCategories, compact } : DEFAULT_TV_MODE),
-    [enabled, scale, maxCategories, compact]
+    () => (enabled ? { tv: true, scale, maxCategories, compact, fitted } : DEFAULT_TV_MODE),
+    [enabled, scale, maxCategories, compact, fitted]
   );
   return <TvModeContext.Provider value={value}>{children}</TvModeContext.Provider>;
 }

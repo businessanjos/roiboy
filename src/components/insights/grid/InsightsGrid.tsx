@@ -7,7 +7,8 @@ import { getCompactor } from "react-grid-layout/core";
 import { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { ConfigurableVisualCard } from "../visuals/ConfigurableVisualCard";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { hasCompanyRanking, tvRowSizing } from "@/lib/insights/tvLayout";
+import { hasCompanyRanking, tvRowContentSizing, tvRowSizing } from "@/lib/insights/tvLayout";
+import { useTvRowContentHeight } from "./useTvRowContentHeight";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -213,15 +214,19 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
 }) {
   const rows = useMemo(() => groupVisualsIntoRows(visuals), [visuals]);
   const sellerBoard = visuals.some(hasCompanyRanking);
-  const sizing = rows.map(row => tvRowSizing(row.visuals, sellerBoard, { minHeight: getRowMinHeight(row), weight: row.weight }));
+  const [contentHeights, setContentHeights] = useState<Record<string, number>>({});
+  const reportContentHeight = useCallback((key: string, height: number) => {
+    setContentHeights(previous => (previous[key] ?? 0) === height ? previous : { ...previous, [key]: height });
+  }, []);
+  const rowKey = (row: VisualRow) => row.visuals.map(visual => visual.id).join(':');
+  const sizing = rows.map(row => tvRowContentSizing(
+    tvRowSizing(row.visuals, sellerBoard, { minHeight: getRowMinHeight(row), weight: row.weight }),
+    contentHeights[rowKey(row)] ?? 0,
+  ));
   const mins = useMemo(() => ({ ...DEFAULT_MIN_CARD_WIDTHS, ...(minCardWidths || {}) }), [minCardWidths]);
 
-  const requiredHeight = useMemo(
-    () =>
-      rows.reduce((sum, row) => sum + tvRowSizing(row.visuals, sellerBoard, { minHeight: getRowMinHeight(row), weight: row.weight }).minHeight, 0) +
-      Math.max(0, rows.length - 1) * TV_ROW_GAP,
-    [rows, sellerBoard]
-  );
+  const requiredHeight = sizing.reduce((sum, row) => sum + row.minHeight, 0) +
+    Math.max(0, rows.length - 1) * TV_ROW_GAP;
 
   useEffect(() => {
     if (fitHeight) onRequiredHeight?.(requiredHeight);
@@ -240,13 +245,15 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
           minWidth={getRowMinWidth(row, mins)}
           fitHeight={fitHeight}
           tvSizing={sizing[rowIdx]}
+          rowKey={rowKey(row)}
+          onContentHeight={reportContentHeight}
         />
       ))}
     </div>
   );
 }
 
-function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly, minWidth, fitHeight, tvSizing }: {
+function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly, minWidth, fitHeight, tvSizing, rowKey, onContentHeight }: {
   row: VisualRow;
   containerWidth: number;
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
@@ -255,8 +262,12 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
   minWidth: number;
   fitHeight?: boolean;
   tvSizing: { minHeight: number; weight: number };
+  rowKey: string;
+  onContentHeight: (key: string, height: number) => void;
 }) {
   const { visuals } = row;
+  const content = useTvRowContentHeight(!!fitHeight);
+  useEffect(() => { onContentHeight(rowKey, content.height); }, [rowKey, content.height, onContentHeight]);
 
   // How many columns the auto-fit grid will actually create at this width.
   // Used only to translate col_span (1/1, 1/2, 1/3) into a real column span.
@@ -281,6 +292,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
 
   return (
     <div
+      ref={content.ref}
       className={fitHeight ? "grid gap-2.5 min-h-0" : "grid gap-3"}
       style={{
         gridTemplateColumns: useSavedWidths
@@ -331,6 +343,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
         return (
           <div
             key={visual.id}
+            data-tv-visual={fitHeight ? visual.id : undefined}
             className={`overflow-hidden rounded-lg min-w-0 ${fitHeight ? "h-full min-h-0" : ""}`}
             style={{
               ...(fitHeight ? { minHeight: 0 } : { minHeight: minH }),

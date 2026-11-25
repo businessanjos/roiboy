@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Enquadramento do ranking na TV de 43 polegadas
+- [x] Corte reproduzido no painel completo: Calls tinha 130px disponíveis para 224px de conteúdo, piso antigo de 180px. Linhas ajustadas pela altura natural dos vendedores + cabeçalho/bordas, palco redimensiona o conjunto e gráfico empilhado preserva 300px mínimos para legenda/barras; contexto de ajuste mantém blocos estáveis durante atualização, sem mudar organização salva, dados, hierarquia, zoom explícito ou modos normais.
+- [x] 44 testes passaram; painel e renderers originais com organização salva lida em consulta somente leitura e números locais conferidos em 1920×1080/1366×768/1280×720/803×674/668×674, dois temas e controles visíveis/recolhidos (20 cenários), mais adicionar/remover/esvaziar/recarregar vendedores e retorno desktop/mobile. Calls completas sem rolagem interna, quatro visuais dentro da tela, imagens inspecionadas e teste anterior de hierarquia/zoom repetido (20 cenários). Compilação OK, sem erros, escritas reais/backend ou publicação.
+- [ ] Conferir na sessão real e TV física de 43 polegadas: sessão própria indisponível e criação da sessão temporária falhou; não foi possível medir resolução/zoom/overscan do aparelho, apenas tamanhos de tela no navegador.
+
 ## Pílulas de Hoje e Amanhã na data de entrega
 - [x] Campo mais compacto com pílulas discretas Hoje/Amanhã e destaque leve da data selecionada; mesma seleção explícita do calendário, preservando digitação, horário, criação/edição/cópia, estados bloqueados e validação.
 - [x] 54 testes passaram, incluindo dias locais, virada de mês/ano e envio da data/horário pelo formulário original. Campo e calendário originais conferidos no navegador em 390/668/1440 nos dois temas: escolher Hoje/Amanhã, guardar/reabrir rascunho local, digitar, limpar e bloquear controles; imagens inspecionadas, sem cortes/erros. Compilação OK, nenhum dado real/backend alterado ou publicação; conferência isolada não valida gravação autenticada.

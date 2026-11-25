@@ -86,7 +86,7 @@ export function TvFitStage({ children, title, subtitle, requiredHeight }: TvFitS
           </div>
         )}
         <div className="flex-1 min-h-0 p-0.5 overflow-hidden">
-          <TvModeProvider enabled scale={fontScale} maxCategories={10}>
+          <TvModeProvider enabled fitted scale={fontScale} maxCategories={10}>
             {children}
           </TvModeProvider>
         </div>
