@@ -17,6 +17,20 @@ beforeEach(() => { localStorage.clear(); session.user = { id: "qa-user", account
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("Catálogo de etiquetas sem alterações de tarefas", () => {
+  it("envia cor personalizada normalizada pelo mesmo salvamento e conta", async () => {
+    const hook = catalogHook([{ tags: ["TESTE QA"], custom_fields: {} }]);
+    rpc.mockResolvedValueOnce({ data: [], error: null });
+    await act(async () => { await hook.result.current.editLabel({ name: "TESTE QA", color: "blue" }, { name: "TESTE QA", color: "#12AB34" }); });
+    expect(rpc).toHaveBeenLastCalledWith("edit_marketing_task_label", { p_account_id: "qa-account", p_old_name: "TESTE QA", p_name: "TESTE QA", p_color: "#12ab34" });
+  });
+  it("restaura cor personalizada após reabrir sem chamadas ou escritas em tarefas", () => {
+    const calls = rpc.mock.calls.length;
+    const hook = catalogHook([]);
+    act(() => { hook.result.current.createLabel({ name: "TESTE QA Cor livre", color: "#12AB34" }); });
+    hook.unmount();
+    expect(catalogHook([]).result.current.catalog).toEqual([{ name: "TESTE QA Cor livre", color: "#12ab34" }]);
+    expect(rpc.mock.calls.length).toBe(calls);
+  });
   it("cria pelo filtro, disponibiliza na edição e restaura após reabrir com nome/cor", () => {
     const tasks = [{ tags: [], custom_fields: {} }];
     const filter = catalogHook(tasks);

@@ -25,6 +25,8 @@ export default {
           red: "hsl(var(--task-label-red))",
           purple: "hsl(var(--task-label-purple))",
           gray: "hsl(var(--task-label-gray))",
+          custom: "hsl(var(--task-label-custom))",
+          "custom-swatch": "hsl(var(--task-label-custom-swatch))",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

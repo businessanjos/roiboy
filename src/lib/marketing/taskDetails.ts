@@ -1,21 +1,13 @@
 import type { MarketingTask } from "@/hooks/useMarketingTasks";
 import { isHiddenTechnicalPerson } from "@/lib/peopleVisibility";
+import { labelColor, type TaskLabelColor } from "./taskLabelColors";
+export { TASK_LABEL_COLORS, labelColor, type TaskLabelColor } from "./taskLabelColors";
 
 /** Form validation only: legacy tasks remain untouched until explicitly saved. */
 export function hasTaskResponsible(assigneeId: string | null | undefined): assigneeId is string {
   return !!assigneeId?.trim() && assigneeId !== "none" && !isHiddenTechnicalPerson({ id: assigneeId });
 }
 
-export const TASK_LABEL_COLORS = [
-  { value: "blue", name: "Azul", swatch: "bg-task-label-blue", badge: "bg-task-label-blue/10 text-task-label-blue border-transparent" },
-  { value: "green", name: "Verde", swatch: "bg-task-label-green", badge: "bg-task-label-green/10 text-task-label-green border-transparent" },
-  { value: "yellow", name: "Amarelo", swatch: "bg-task-label-yellow", badge: "bg-task-label-yellow/10 text-task-label-yellow border-transparent" },
-  { value: "red", name: "Vermelho", swatch: "bg-task-label-red", badge: "bg-task-label-red/10 text-task-label-red border-transparent" },
-  { value: "purple", name: "Roxo", swatch: "bg-task-label-purple", badge: "bg-task-label-purple/10 text-task-label-purple border-transparent" },
-  { value: "gray", name: "Cinza", swatch: "bg-task-label-gray", badge: "bg-task-label-gray/10 text-task-label-gray border-transparent" },
-] as const;
-
-export type TaskLabelColor = typeof TASK_LABEL_COLORS[number]["value"];
 export interface TaskLabel { name: string; color: TaskLabelColor }
 export interface TaskDetails {
   dueTime: string;
@@ -30,10 +22,6 @@ function record(value: unknown): Record<string, unknown> {
 
 export function labelKey(name: string): string {
   return name.trim().replace(/\s+/g, " ").normalize("NFC").toLocaleLowerCase("pt-BR");
-}
-
-export function labelColor(value: unknown) {
-  return TASK_LABEL_COLORS.find((color) => color.value === value) ?? TASK_LABEL_COLORS[0];
 }
 
 export function validDeliveryTime(value: unknown): value is string {

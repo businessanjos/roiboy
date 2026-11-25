@@ -7,6 +7,53 @@ import type { TaskLabel } from "@/lib/marketing/taskDetails";
 
 afterEach(cleanup);
 describe("Criação e seleção pelo filtro de etiquetas", () => {
+  it("editar cor personalizada mantém o nome e a seleção existentes", async () => {
+    const original: TaskLabel = { name: "TESTE QA Existente", color: "yellow" }; const change = vi.fn(); const save = vi.fn(async (_old: TaskLabel, label: TaskLabel) => label);
+    render(<TooltipProvider><TaskLabelEditor value={[original]} catalog={[original]} portalContainer={null} onChange={change} onEdit={save} /></TooltipProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Selecionar etiquetas da tarefa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Editar etiqueta TESTE QA Existente" }));
+    fireEvent.change(screen.getByLabelText("Código da cor personalizada"), { target: { value: "#12AB34" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar etiqueta" }));
+    await waitFor(() => expect(save).toHaveBeenCalledWith(original, { name: original.name, color: "#12ab34" }));
+    expect(change).toHaveBeenCalledWith([{ name: original.name, color: "#12ab34" }]);
+  });
+  it("cria etiqueta com uma das novas cores sem ativar o filtro", () => {
+    const create = vi.fn((label: TaskLabel) => label); const change = vi.fn();
+    render(<TooltipProvider><TaskLabelFilter catalog={[]} selected={[]} onChange={change} onCreate={create} /></TooltipProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Filtrar por etiquetas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Criar etiqueta" }));
+    fireEvent.change(screen.getByLabelText("Nome da etiqueta"), { target: { value: "TESTE QA Laranja" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Laranja" }));
+    fireEvent.click(screen.getByRole("button", { name: "Criar etiqueta" }));
+    expect(create).toHaveBeenCalledWith({ name: "TESTE QA Laranja", color: "#ea580c" });
+    expect(change).not.toHaveBeenCalled();
+  });
+  it("permite cor personalizada por código ou seletor sem submeter a tarefa", () => {
+    const change = vi.fn(); const submit = vi.fn();
+    render(<TooltipProvider><form onSubmit={submit}><TaskLabelEditor value={[]} catalog={[]} portalContainer={null} onChange={change} onCreate={label => label} /></form></TooltipProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Selecionar etiquetas da tarefa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Criar etiqueta" }));
+    fireEvent.change(screen.getByLabelText("Nome da etiqueta"), { target: { value: "TESTE QA Cor livre" } });
+    fireEvent.change(screen.getByLabelText("Escolher cor personalizada"), { target: { value: "#112233" } });
+    fireEvent.change(screen.getByLabelText("Código da cor personalizada"), { target: { value: "#0AF" } });
+    fireEvent.keyDown(screen.getByLabelText("Código da cor personalizada"), { key: "Enter" });
+    expect(change).toHaveBeenCalledWith([{ name: "TESTE QA Cor livre", color: "#00aaff" }]);
+    expect(submit).not.toHaveBeenCalled();
+  });
+  it("cor incompleta bloqueia a criação até corrigir ou escolher outra cor", () => {
+    const create = vi.fn((label: TaskLabel) => label);
+    render(<TooltipProvider><TaskLabelFilter catalog={[]} selected={[]} onChange={vi.fn()} onCreate={create} /></TooltipProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Filtrar por etiquetas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Criar etiqueta" }));
+    fireEvent.change(screen.getByLabelText("Nome da etiqueta"), { target: { value: "TESTE QA" } });
+    fireEvent.change(screen.getByLabelText("Código da cor personalizada"), { target: { value: "#12" } });
+    fireEvent.keyDown(screen.getByLabelText("Nome da etiqueta"), { key: "Enter" });
+    expect(create).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Criar etiqueta" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: "Turquesa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Criar etiqueta" }));
+    expect(create).toHaveBeenCalledWith({ name: "TESTE QA", color: "#0f766e" });
+  });
   it("cria pelo próprio filtro sem ativar um filtro vazio e permite selecionar/desmarcar", () => {
     const onChange = vi.fn(); const onCreate = vi.fn((label: TaskLabel) => label);
     function Filter() {

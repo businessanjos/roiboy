@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Mais cores e personalização das etiquetas
+- [x] Autorizado pelo usuário: ampliada somente a validação do salvamento compartilhado para aceitar HEX nas etiquetas existentes, mantendo identidade, RLS, concessões e atomicidade; nenhuma etiqueta alterada automaticamente. Função implantada e conferida em leitura.
+- [x] Paleta ampliada de seis para 18 cores e escolha livre por seletor/código HEX na criação e edição, preservando seleção, identidades antigas e paleta das capas. Bolinha mantém a cor exata; texto se adapta ao tema para continuar legível. Lista/quadro reutilizam a mesma apresentação.
+- [x] 87 testes passaram; sessão real conferida em 1440/390 claro/escuro: criar etiqueta local sem ativar filtro, código parcial bloqueia, cor exata/legível, reabrir restaura e janela permanece contida com rodapé fixo. Salvamento autenticado por lápis de etiqueta existente em tarefa fictícia TESTE QA: HEX salvo, relido e restaurado após reload, nome/título preservados e cancelar não grava. Somente a tarefa fictícia identificada por ID/título/marcador e sua etiqueta local foram removidas; nenhum registro real alterado. Imagens inspecionadas, compilação OK, sem erros ou publicação.
+
 ## Zoom do ranking na proporção do MQL
 - [x] Padrão de 60% para TV no ranking, mantendo o ajuste automático para não cortar os vendedores; controles de zoom também disponíveis nesse modo e preferência local renovada, sem alterar o MQL, outros painéis, dados ou permissões.
 - [x] 36 testes passaram; redução medida de 100% para 60% nos dois temas em 1920×1080/1366×768/1280×720/803×674/668×674 com controles visíveis/recolhidos, hierarquia preservada e quatro visuais completos. Controles originais conferidos: preferência antiga de 100% substituída, ajuste para 70%, sair/reabrir mantendo escolha e link explícito de 80% respeitado. Imagens inspecionadas, compilação OK, sem erros, publicação ou escritas reais/backend; testes usam números locais.

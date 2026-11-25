@@ -20,6 +20,7 @@ beforeAll(async () => {
     CREATE POLICY w ON marketing_tasks FOR UPDATE TO authenticated USING(account_id=current_setting('app.account')::uuid AND allowed) WITH CHECK(account_id=current_setting('app.account')::uuid AND allowed);`);
   await db.exec(readFileSync('drizzle/migrations/0112_marketing_task_label_edit.sql','utf8'));
   await db.exec(readFileSync('drizzle/migrations/0113_marketing_task_label_complete_access.sql','utf8'));
+  await db.exec(readFileSync('drizzle/migrations/0116_marketing_task_label_custom_colors.sql','utf8'));
 }, 20000);
 beforeEach(async () => {
   await db.exec('RESET ROLE; DELETE FROM marketing_tasks;');
@@ -49,6 +50,26 @@ it('cor pode mudar sem renomear ou duplicar a etiqueta', async () => {
   const rows=(await db.query<{tags:string[];custom_fields:any}>('SELECT * FROM marketing_tasks')).rows;
   expect(rows.map(r=>r.tags)).toEqual([['Design','Instagram Eternum'],['Design','Instagram Eternum']]);
   expect(rows.map(r=>r.custom_fields.delivery_details.label_colors['instagram eternum'])).toEqual(['red','red']);
+});
+it('HEX personalizado atualiza todas as tarefas com normalização sem afetar outro campo', async () => {
+  expect((await edit('Instagram Eternum',' #12AB34 ')).rows).toHaveLength(2);
+  const rows=(await db.query<{tags:string[];custom_fields:any}>('SELECT * FROM marketing_tasks')).rows;
+  expect(rows.map(r=>r.tags)).toEqual([['Design','Instagram Eternum'],['Design','Instagram Eternum']]);
+  expect(rows.map(r=>r.custom_fields.delivery_details.label_colors)).toEqual([{design:'purple','instagram eternum':'#12ab34'},{design:'purple','instagram eternum':'#12ab34'}]);
+  expect(rows.map(r=>r.custom_fields.delivery_details.due_time)).toEqual(['17:30','17:30']);
+});
+it('novas cores da paleta seguem a mesma atualização compartilhada', async () => {
+  await edit('Instagram Eternum','#ea580c');
+  expect((await db.query<{custom_fields:any}>('SELECT custom_fields FROM marketing_tasks')).rows.map(r=>r.custom_fields.delivery_details.label_colors['instagram eternum'])).toEqual(['#ea580c','#ea580c']);
+});
+it('código personalizado inválido é rejeitado sem alterar a cor existente', async () => {
+  for (const color of ['#12', '#xyzxyz', '#12345678', 'url(https://example.test)', 'var(--primary)', '']) await expect(edit('Instagram Eternum',color)).rejects.toThrow('Informe');
+  expect((await db.query<{custom_fields:any}>('SELECT custom_fields FROM marketing_tasks')).rows.map(r=>r.custom_fields.delivery_details.label_colors['instagram eternum'])).toEqual(['yellow','yellow']);
+});
+it('cor personalizada não permite contornar edição parcial negada', async () => {
+  await db.exec("RESET ROLE; UPDATE marketing_tasks SET allowed=false WHERE status='done'; SET ROLE authenticated;");
+  await expect(edit('Instagram Eternum','#12ab34')).rejects.toThrow('Sem permissão');
+  expect((await db.query<{custom_fields:any}>('SELECT custom_fields FROM marketing_tasks')).rows.map(r=>r.custom_fields.delivery_details.label_colors['instagram eternum'])).toEqual(['yellow','yellow']);
 });
 it('um nome já existente não mescla nem altera tarefas', async () => {
   await expect(edit(' DESIGN ')).rejects.toThrow('Já existe');

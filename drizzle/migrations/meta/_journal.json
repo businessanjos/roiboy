@@ -813,6 +813,13 @@
       "when": 1795622427566,
       "tag": "0115_marketing_task_recurrence_atomic_counts",
       "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "7",
+      "when": 1795628232245,
+      "tag": "0116_marketing_task_label_custom_colors",
+      "breakpoints": true
     }
   ]
 }
