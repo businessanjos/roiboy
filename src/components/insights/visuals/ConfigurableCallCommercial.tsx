@@ -1,4 +1,5 @@
 import { filterVisiblePeople, visiblePeopleQuery } from "@/lib/peopleVisibility";
+import { rankCallCommercialSellers } from "@/lib/insights/callCommercialRanking";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -90,9 +91,9 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
     fetchAvatars();
   }, [currentUser?.account_id, data]);
 
-  const filteredData = filterVisiblePeople(hiddenUsers?.length
+  const filteredData = rankCallCommercialSellers(filterVisiblePeople(hiddenUsers?.length
     ? data.filter(d => !hiddenUsers.includes(d.name))
-    : data);
+    : data), showSales);
 
   if (!filteredData || filteredData.length === 0) {
     return (
@@ -102,15 +103,13 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
     );
   }
 
-  // Both normal and TV layouts keep the same separated metric blocks.
-  // Width only selects columns; font sizes respond to row height and the chosen font setting.
-  const columns = size.width >= (tv.tv ? 260 : 360) && filteredData.length > 1 ? 2 : 1;
-  const rows = Math.ceil(filteredData.length / columns);
+  // One seller per row in rank order; keep the existing bounded metric blocks.
+  // Density uses available height without changing the dashboard's saved layout.
+  const rows = filteredData.length;
   const rowSpace = size.height > 0 ? (size.height - 4 - (rows - 1) * 12) / rows : 114;
   const dense = rowSpace < 114;
   const scale = Math.min(m * (tv.tv ? tv.scale : 1), dense ? 1 : 1.15);
   const dimensions = {
-    "--calls-columns": columns,
     "--calls-name-size": `${Math.round(Math.min(18, Math.max(14, (dense ? 14 : 16) * scale)))}px`,
     "--calls-value-size": `${Math.round(Math.min(30, Math.max(22, (dense ? 24 : 26) * scale)))}px`,
     "--calls-avatar-size": `${dense ? 28 : 32}px`,

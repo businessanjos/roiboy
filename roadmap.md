@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Hierarquia dos vendedores nas Calls Comerciais
+- [x] Empilhados vendedores com seus próprios blocos, ordenados por vendas e calls feitas no desempate (ano: calls feitas, sem usar vendas ocultas); preservados enquadramento, agregações, filtros e restante do painel, no renderer compartilhado por normal/TV/prévia/compartilhado.
+- [x] 36 testes passaram; componente original com os números da imagem: Jonathan (3 vendas, 10 calls) acima de Darlan (1 venda, 8 calls), 20 cenários 390/803/1366/1440/1920 normal/TV/zoom 80–200% nos dois temas; ordem atualiza ao mudar vendas, ocultos mantidos, ano correto e rolagem local para oito pessoas TESTE QA. Imagens inspecionadas, sem cortes, erros ou escritas; compilação OK, sem publicação.
+- [ ] Conferir o painel na sessão real: sessão própria indisponível (nenhuma conta correspondente) e criação da sessão temporária falhou; os números da imagem foram verificados isoladamente, sem leitura autenticada nem teste em TV física.
+
 ## Menus sem corte na janela de tarefa
 - [x] Etiquetas na edição/cópia/criação e no filtro, calendário e paleta da descrição/comentário limitados ao espaço do diálogo/tela, com rolagem local e botões completos; nomes longos não encobrem lápis. Entradas e caminhos irmãos lidos em `.lovable/reviews/task-menu-clipping.md`; gravação/repetição/permissões/dados intactos.
 - [x] 45 testes passaram; componentes originais com rascunhos TESTE QA: lista/editar/criar/cancelar/rolar/calendário/paleta/filtro em 390/803/1440/1920 claro/escuro, 56 verificações de limites sem cortes ou erros. Compilação OK; conferência visual isolada, sem persistência autenticada, escritas reais/backend ou publicação.

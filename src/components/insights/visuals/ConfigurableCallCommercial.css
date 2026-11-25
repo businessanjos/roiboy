@@ -11,7 +11,7 @@
 
 .commercial-calls-sellers {
   display: grid;
-  grid-template-columns: repeat(var(--calls-columns, 1), minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px 16px;
   align-items: stretch;
   width: 100%;
