@@ -161,7 +161,7 @@ export function StackedHorizontalBarChart({
       ? Math.round(tickFont * 2.2)
       : Math.min(xAxisCap, Math.round(Math.min(longestName, maxNameChars) * tickFont * 0.5) + 18);
     const labelStep = Math.max(1, Math.ceil((approxTextWidth(longestTick, valueFont) + 16) / slot));
-    const barLimit = tvMode.tv ? 132 : 104;
+    const barLimit = tvMode.tv ? 160 : 128;
 
     return (
       <div className={`mx-auto flex h-full w-full min-w-0 flex-col gap-3 ${tvMode.tv ? 'max-w-[1440px]' : 'max-w-[1120px]'}`}>

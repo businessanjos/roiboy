@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Barras ligeiramente mais largas para TV
+- [x] Ampliar limite das barras verticais de 104 para 128 px no painel e de 132 para 160 px no modo TV; telas estreitas continuam limitadas pelo espaço disponível. Cores, alturas proporcionais, nomes, valores e configurações preservados.
+- [x] Conferência isolada com o gráfico original em 390/1440 e TV 1920×1080/1366×768, claro/escuro: barras maiores, nomes e totais sem cortes ou erros; compilação sem erros. Nenhum dado, configuração ou backend alterado; sem publicar. Sessão própria indisponível, sem conferência autenticada ou aparelho físico.
+
 ## Respeitar as cores selecionadas no painel
 - [x] Leitura confirma Brasa selecionada nos quatro visuais; ranking compacto ignorava a seleção e usava o dourado do tema. Barras, bordas suaves e iniciais agora usam a paleta do próprio visual, como o ranking normal; pílulas, produtos, dados e backend preservados.
 - [x] 16 testes de produtos/empresa passaram; exemplos isolados com os componentes originais em 390/1440 e TV 1920/1366, claro/escuro: selecionar Brasa → Ouro → Profissional → Brasa atualiza ranking e barras juntos, sem erros. Sem gravação de configurações nem publicação.
