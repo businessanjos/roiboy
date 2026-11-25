@@ -28,6 +28,7 @@ import { ZappLeadDataEditor } from "./ZappLeadDataEditor";
 import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { isRenewalDeal } from "@/lib/sales/renewalBriefing";
+import { fetchSubscriptionWinState } from "@/lib/sales/subscriptionWinState";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 
 interface ZappDealDetailSheetProps {
@@ -134,6 +135,7 @@ export function ZappDealDetailSheet({
     missingFields: CustomField[];
     outcomeType?: "won" | "lost";
     skipBriefing?: boolean;
+    subscriptionRequired?: boolean;
   } | null>(null);
 
   const toggleItemExpanded = (itemId: string) => {
@@ -446,7 +448,17 @@ export function ZappDealDetailSheet({
                             .eq("deal_id", dealId)
                             .maybeSingle();
                           const briefingMissing = !isRenewal && !briefingRow?.is_complete;
-                          if (!result.canMoveToStage || briefingMissing) {
+                          // Empresas marcadas (ex.: Anjos) exigem responder "É uma assinatura?" antes do ganho
+                          let subscriptionState;
+                          try {
+                            subscriptionState = await fetchSubscriptionWinState(dealId);
+                          } catch (subscriptionError) {
+                            console.error("Erro ao conferir assinatura:", subscriptionError);
+                            toast.error("Não foi possível conferir os dados de assinatura. Tente novamente.");
+                            return;
+                          }
+                          const subscriptionMissing = subscriptionState.required && !subscriptionState.complete;
+                          if (!result.canMoveToStage || briefingMissing || subscriptionMissing) {
                             setRequiredFieldsModal({
                               open: true,
                               dealId: dealId,
@@ -455,6 +467,7 @@ export function ZappDealDetailSheet({
                               missingFields: result.missingFields,
                               outcomeType: "won",
                               skipBriefing: isRenewal,
+                              subscriptionRequired: subscriptionState.required,
                             });
                           } else {
                             updateDealStatus.mutate("won");
@@ -870,6 +883,7 @@ export function ZappDealDetailSheet({
           accountId={currentUser?.account_id || ""}
           outcomeType={requiredFieldsModal.outcomeType}
           skipBriefing={!!requiredFieldsModal.skipBriefing}
+          subscriptionRequired={!!requiredFieldsModal.subscriptionRequired}
           onComplete={() => {
             if (requiredFieldsModal.outcomeType) {
               updateDealStatus.mutate(requiredFieldsModal.outcomeType);

@@ -10,6 +10,8 @@ import {
 } from "@/lib/receivedValueFormat";
 import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
+import { SUBSCRIPTION_CYCLE_LABEL, subscriptionSummaryLabel, type SubscriptionCycle } from "@/lib/sales/subscriptionWin";
+import { fetchSubscriptionWinState } from "@/lib/sales/subscriptionWinState";
 import { MarkAsLostDialog } from "@/components/sales/MarkAsLostDialog";
 import { RenewalResponsibleDialog, useCsTeamUsers, type CsUser } from "@/components/sales/RenewalResponsibleDialog";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
@@ -175,6 +177,8 @@ interface DealDetailSheetProps {
   onStageChange: (dealId: string, stageId: string, pipelineId?: string) => Promise<boolean>;
   onDealUpdated?: () => void;
   processingWonDealId?: string | null;
+  /** Falso quando a própria tela já confere a assinatura no ganho (Pipeline). */
+  gateSubscriptionOnWin?: boolean;
 }
 
 const EVENT_TYPES = [
@@ -229,6 +233,7 @@ export function DealDetailSheet({
   onStageChange,
   onDealUpdated,
   processingWonDealId,
+  gateSubscriptionOnWin = true,
 }: DealDetailSheetProps) {
   // Com o discador 3C aberto, a ficha deixa de bloquear cliques fora dela.
   const dialerOpen = useThreeCPlusOpen();
@@ -271,6 +276,51 @@ export function DealDetailSheet({
   const [localWonAt, setLocalWonAt] = useState<string | null>(deal?.won_at || null);
   const [isRenewalDeal, setIsRenewalDeal] = useState<boolean>(!!(deal as any)?.is_renewal);
   const [savingRenewal, setSavingRenewal] = useState(false);
+  // Assinatura: resposta dada no ganho (somente leitura no card)
+  const [subscriptionInfo, setSubscriptionInfo] = useState<{ isSubscription: boolean | null; cycle: SubscriptionCycle | null }>({
+    isSubscription: null,
+    cycle: null,
+  });
+  const [subscriptionGateOpen, setSubscriptionGateOpen] = useState(false);
+  const [checkingSubscription, setCheckingSubscription] = useState(false);
+
+  const loadSubscriptionInfo = async (dealId: string) => {
+    const { data } = await supabase
+      .from("deals")
+      .select("is_subscription, subscription_cycle")
+      .eq("id", dealId)
+      .maybeSingle();
+    setSubscriptionInfo({
+      isSubscription: data?.is_subscription ?? null,
+      cycle: (data?.subscription_cycle as SubscriptionCycle | null) ?? null,
+    });
+  };
+
+  useEffect(() => {
+    setSubscriptionInfo({ isSubscription: null, cycle: null });
+    if (open && deal?.id) void loadSubscriptionInfo(deal.id);
+  }, [open, deal?.id, (deal as any)?.status]);
+
+  // Telas que dão o ganho direto (Leads, Tarefas, ficha do cliente) passam por esta conferência.
+  const handleWinClick = async () => {
+    if (!deal) return;
+    if (!gateSubscriptionOnWin) return onMarkAsWon(deal.id);
+    setCheckingSubscription(true);
+    try {
+      const state = await fetchSubscriptionWinState(deal.id);
+      if (state.required && !state.complete) {
+        setSubscriptionGateOpen(true);
+        return;
+      }
+    } catch (error) {
+      console.error("Erro ao conferir assinatura:", error);
+      toast.error("Não foi possível conferir os dados de assinatura. Tente novamente.");
+      return;
+    } finally {
+      setCheckingSubscription(false);
+    }
+    await onMarkAsWon(deal.id);
+  };
   const [resolvedLeadId, setResolvedLeadId] = useState<string | null>(null);
   
   // Pipeline/stage state for cross-pipeline moves
@@ -1195,8 +1245,8 @@ export function DealDetailSheet({
                     variant="ghost"
                     size="sm"
                     className="h-11 sm:h-8 px-2.5 flex-1 sm:flex-none text-success hover:text-success-strong hover:bg-success/10"
-                    onClick={() => onMarkAsWon(deal.id)}
-                    disabled={processingWonDealId === deal.id}
+                    onClick={handleWinClick}
+                    disabled={processingWonDealId === deal.id || checkingSubscription}
                   >
                     {processingWonDealId === deal.id ? (
                       <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -1423,6 +1473,29 @@ export function DealDetailSheet({
                     }}
                   />
                 </div>
+
+                {/* Assinatura — respondida no ganho, somente leitura */}
+                {subscriptionSummaryLabel(subscriptionInfo.isSubscription, subscriptionInfo.cycle) && (
+                  <div className="rounded-lg border p-3 bg-muted/30">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <icons.Repeat className="h-3.5 w-3.5 text-info" />
+                        <span className="text-xs font-semibold">É uma assinatura</span>
+                      </div>
+                      <span className="text-xs font-semibold text-foreground">
+                        {subscriptionInfo.isSubscription ? "Sim" : "Não"}
+                      </span>
+                    </div>
+                    {subscriptionInfo.isSubscription && subscriptionInfo.cycle && (
+                      <div className="mt-2 flex items-center justify-between gap-3 text-[11px]">
+                        <span className="text-muted-foreground">Mensal ou anual</span>
+                        <span className="font-semibold text-foreground">
+                          {SUBSCRIPTION_CYCLE_LABEL[subscriptionInfo.cycle]}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Valor Recebido (alimenta SPIFFs de cash collect) */}
                 <div className="rounded-lg border p-3 bg-success/5 border-success/20">
@@ -2279,6 +2352,24 @@ export function DealDetailSheet({
           />
         )}
         
+        {/* Assinatura exigida antes do ganho (atalhos fora do Pipeline) */}
+        {deal && gateSubscriptionOnWin && (
+          <RequiredFieldsModal
+            open={subscriptionGateOpen}
+            onOpenChange={setSubscriptionGateOpen}
+            dealId={deal.id}
+            dealTitle={deal.title}
+            targetStageName="Ganho"
+            missingFields={[]}
+            accountId={deal.account_id}
+            subscriptionRequired
+            onComplete={async () => {
+              await loadSubscriptionInfo(deal.id);
+              await onMarkAsWon(deal.id);
+            }}
+          />
+        )}
+
         {/* Merge Deal Dialog */}
         {deal && (
           <MergeDealDialog

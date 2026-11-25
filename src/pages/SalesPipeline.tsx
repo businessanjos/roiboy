@@ -125,6 +125,7 @@ import { isManagementUser } from "@/lib/access/managementRoles";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Trash2 as Trash2Icon } from "lucide-react";
 import { isRenewalDeal } from "@/lib/sales/renewalBriefing";
+import { fetchSubscriptionWinState } from "@/lib/sales/subscriptionWinState";
 
 
 export default function SalesPipeline() {
@@ -1730,7 +1731,21 @@ export default function SalesPipeline() {
       const receivedMissing =
         (dealRow as any)?.received_value === null || (dealRow as any)?.received_value === undefined;
 
-      if (hasMissingFields || briefingMissing || receivedMissing) {
+      // Empresas marcadas (ex.: Anjos) exigem responder "É uma assinatura?" antes do ganho
+      let subscriptionState;
+      try {
+        subscriptionState = await fetchSubscriptionWinState(dealId);
+      } catch (subscriptionError) {
+        console.error("[MarkAsWon] Error reading subscription state:", subscriptionError);
+        toast.error("Não foi possível conferir os dados de assinatura. Tente novamente.");
+        return;
+      }
+      const subscriptionMissing = subscriptionState.required && !subscriptionState.complete;
+
+      if (hasMissingFields || briefingMissing || receivedMissing || subscriptionMissing) {
+        if (!hasMissingFields && !briefingMissing && !receivedMissing && subscriptionMissing) {
+          toast.info("Informe se a venda é uma assinatura antes de marcar como ganho.");
+        }
         if (!hasMissingFields && !briefingMissing && receivedMissing) {
           toast.info("Informe o valor recebido antes de marcar como ganho.");
         }
@@ -1745,6 +1760,7 @@ export default function SalesPipeline() {
           missingFields: validation.missingFields,
           clientId: deal.client_id ?? null,
           skipBriefing: isRenewal,
+          subscriptionRequired: subscriptionState.required,
         } as any);
         return;
       }
@@ -3214,6 +3230,7 @@ export default function SalesPipeline() {
 
       {/* Deal Detail Sheet */}
       <DealDetailSheet
+        gateSubscriptionOnWin={false}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
         deal={selectedDeal}
@@ -3294,6 +3311,7 @@ export default function SalesPipeline() {
         outcomeType={outcomeRequiredFieldsModal.outcomeType}
         clientId={outcomeRequiredFieldsModal.clientId ?? null}
         skipBriefing={!!outcomeRequiredFieldsModal.skipBriefing}
+        subscriptionRequired={!!(outcomeRequiredFieldsModal as any).subscriptionRequired}
       />
 
       {/* Meeting Schedule Dialog - opens when deal moves to "reunião agendada" */}

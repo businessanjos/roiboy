@@ -5250,6 +5250,7 @@ export type Database = {
           notazz_token: string | null
           notes: string | null
           phone: string | null
+          requires_subscription_on_win: boolean
           tax_regime: string | null
           trade_name: string | null
           updated_at: string
@@ -5278,6 +5279,7 @@ export type Database = {
           notazz_token?: string | null
           notes?: string | null
           phone?: string | null
+          requires_subscription_on_win?: boolean
           tax_regime?: string | null
           trade_name?: string | null
           updated_at?: string
@@ -5306,6 +5308,7 @@ export type Database = {
           notazz_token?: string | null
           notes?: string | null
           phone?: string | null
+          requires_subscription_on_win?: boolean
           tax_regime?: string | null
           trade_name?: string | null
           updated_at?: string
@@ -8042,6 +8045,7 @@ export type Database = {
           has_second_seat: boolean
           id: string
           is_renewal: boolean
+          is_subscription: boolean | null
           lead_id: string | null
           loss_notes: string | null
           loss_reason_id: string | null
@@ -8062,6 +8066,7 @@ export type Database = {
           stage_changed_at: string | null
           stage_id: string | null
           status: string
+          subscription_cycle: string | null
           tags: Json | null
           title: string
           typeform_last_reapplication_at: string | null
@@ -8090,6 +8095,7 @@ export type Database = {
           has_second_seat?: boolean
           id?: string
           is_renewal?: boolean
+          is_subscription?: boolean | null
           lead_id?: string | null
           loss_notes?: string | null
           loss_reason_id?: string | null
@@ -8110,6 +8116,7 @@ export type Database = {
           stage_changed_at?: string | null
           stage_id?: string | null
           status?: string
+          subscription_cycle?: string | null
           tags?: Json | null
           title: string
           typeform_last_reapplication_at?: string | null
@@ -8138,6 +8145,7 @@ export type Database = {
           has_second_seat?: boolean
           id?: string
           is_renewal?: boolean
+          is_subscription?: boolean | null
           lead_id?: string | null
           loss_notes?: string | null
           loss_reason_id?: string | null
@@ -8158,6 +8166,7 @@ export type Database = {
           stage_changed_at?: string | null
           stage_id?: string | null
           status?: string
+          subscription_cycle?: string | null
           tags?: Json | null
           title?: string
           typeform_last_reapplication_at?: string | null

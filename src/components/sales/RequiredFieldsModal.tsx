@@ -25,6 +25,14 @@ import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from
 import { BonusSelector } from "@/components/sales/BonusSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BillingMentoreeSection, BillingMentoreeValues, isBillingMentoreeComplete } from "@/components/sales/BillingMentoreeSection";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  allowedSubscriptionPayments,
+  isSubscriptionAnswerComplete,
+  prefillSubscriptionPayment,
+  type SubscriptionCycle,
+} from "@/lib/sales/subscriptionWin";
+import { fetchSubscriptionWinState, type SubscriptionWinState } from "@/lib/sales/subscriptionWinState";
 import { clearLocalAutosaveDraft, readLocalAutosaveDraft, writeLocalAutosaveDraft } from "@/hooks/useLocalAutosaveDraft";
 
 interface RequiredFieldsModalProps {
@@ -42,6 +50,8 @@ interface RequiredFieldsModalProps {
   clientId?: string | null;
   /** Renovação: dispensa o briefing para operação */
   skipBriefing?: boolean;
+  /** A empresa do negócio exige responder "É uma assinatura?" antes do ganho */
+  subscriptionRequired?: boolean;
 }
 
 const PAYMENT_METHOD_FIELD_NAME = "Forma da Pagamento";
@@ -78,7 +88,11 @@ export function RequiredFieldsModal({
   outcomeType,
   clientId,
   skipBriefing = false,
+  subscriptionRequired = false,
 }: RequiredFieldsModalProps) {
+  const [subscriptionState, setSubscriptionState] = useState<SubscriptionWinState | null>(null);
+  const [isSubscription, setIsSubscription] = useState<boolean | null>(null);
+  const [subscriptionCycle, setSubscriptionCycle] = useState<SubscriptionCycle | null>(null);
   const [values, setValues] = useState<Record<string, any>>({});
   const [breakdown, setBreakdown] = useState<PaymentBreakdownItem[]>([]);
   const [saving, setSaving] = useState(false);
@@ -109,6 +123,27 @@ export function RequiredFieldsModal({
       setBriefingComplete(false);
       setDealContact(undefined);
       setReceivedValue("");
+      setSubscriptionState(null);
+      setIsSubscription(null);
+      setSubscriptionCycle(null);
+
+      if (subscriptionRequired && dealId) {
+        fetchSubscriptionWinState(dealId)
+          .then((state) => {
+            setSubscriptionState(state);
+            setIsSubscription(state.isSubscription);
+            const cycle = state.isSubscription ? state.cycle : null;
+            setSubscriptionCycle(cycle);
+            if (cycle && state.paymentField) {
+              const prefill = prefillSubscriptionPayment(cycle, state.paymentValue);
+              if (prefill) setValues((prev) => ({ ...prev, [state.paymentField!.id]: prev[state.paymentField!.id] ?? prefill }));
+            }
+          })
+          .catch((err) => {
+            console.error("Erro ao carregar dados de assinatura:", err);
+            toast.error("Não foi possível carregar os dados de assinatura. Feche e tente novamente.");
+          });
+      }
 
       if (showBriefing && dealId) {
         supabase
@@ -146,7 +181,7 @@ export function RequiredFieldsModal({
         setDraftHydrated(true);
       }, 0);
     }
-  }, [open, dealId, showBriefing, showBilling, draftKey]);
+  }, [open, dealId, showBriefing, showBilling, draftKey, subscriptionRequired]);
 
   useEffect(() => {
     if (!open || !draftKey || skipAutosaveRef.current) return;
@@ -157,12 +192,54 @@ export function RequiredFieldsModal({
     });
   }, [open, draftKey, values, breakdown, billingValues]);
 
-  const paymentMethodField = missingFields.find((f) => f.name === PAYMENT_METHOD_FIELD_NAME);
+  const missingPaymentField = missingFields.find((f) => f.name === PAYMENT_METHOD_FIELD_NAME);
+  const subscriptionActive = subscriptionRequired && isSubscription === true;
+  // Em assinatura, a forma de pagamento é sempre conferida — mesmo quando já estava preenchida.
+  const subscriptionPaymentField: CustomField | undefined =
+    subscriptionActive && !missingPaymentField && subscriptionState?.paymentField
+      ? ({
+          ...subscriptionState.paymentField,
+          is_required: true,
+          display_order: 0,
+          is_active: true,
+          show_in_clients: false,
+          folder_id: null,
+        } as unknown as CustomField)
+      : undefined;
+  const paymentMethodField = missingPaymentField ?? subscriptionPaymentField;
   const paymentMethodValue = paymentMethodField ? values[paymentMethodField.id] : undefined;
-  const requiredMethods = paymentMethodValue
+  const storedPaymentValue = subscriptionState?.paymentValue ?? null;
+  // Forma já salva e mantida: o detalhamento existente continua valendo, sem preencher de novo.
+  const paymentKeptFromDeal = !!subscriptionPaymentField && !!paymentMethodValue && paymentMethodValue === storedPaymentValue;
+  const requiredMethods = paymentMethodValue && !paymentKeptFromDeal
     ? getMethodsForPaymentOption(paymentMethodValue as string)
     : [];
   const needsBreakdown = requiredMethods.length > 0;
+  const allowedPaymentValues = subscriptionActive && subscriptionCycle ? allowedSubscriptionPayments(subscriptionCycle) : null;
+  const subscriptionOk =
+    !subscriptionRequired ||
+    (subscriptionState !== null &&
+      isSubscriptionAnswerComplete({
+        isSubscription,
+        cycle: subscriptionCycle,
+        // Sem o campo de forma de pagamento na conta, basta responder o ciclo.
+        paymentValue: paymentMethodField
+          ? (paymentMethodValue as string | undefined)
+          : subscriptionCycle
+            ? allowedSubscriptionPayments(subscriptionCycle)[0]
+            : null,
+      }));
+
+  const applyCycle = (cycle: SubscriptionCycle | null) => {
+    setSubscriptionCycle(cycle);
+    const field = missingPaymentField ?? subscriptionState?.paymentField;
+    if (!cycle || !field) return;
+    const current = values[field.id] as string | undefined;
+    if (current && allowedSubscriptionPayments(cycle).includes(current)) return;
+    const prefill = prefillSubscriptionPayment(cycle, storedPaymentValue);
+    setValues((prev) => ({ ...prev, [field.id]: prefill ?? undefined }));
+    setBreakdown([]);
+  };
 
   const paymentMethodLabel = (() => {
     if (!paymentMethodField || !paymentMethodValue) return "";
@@ -186,13 +263,16 @@ export function RequiredFieldsModal({
   // Valor recebido (cash collect) é obrigatório no ganho — pode ser 0, mas precisa ser informado.
   const parsedReceived = Number(String(receivedValue).replace(/\./g, "").replace(",", "."));
   const receivedOk = !showBilling || (receivedValue.trim() !== "" && Number.isFinite(parsedReceived) && parsedReceived >= 0);
-  const canSave = allFieldsFilled && breakdownOk && briefingOk && billingOk && receivedOk;
+  const canSave = subscriptionOk && allFieldsFilled && breakdownOk && briefingOk && billingOk && receivedOk;
 
   const handleSave = async () => {
     setSaving(true);
     try {
       // Save standard required fields
-      for (const field of missingFields) {
+      const fieldsToSave = subscriptionPaymentField && !paymentKeptFromDeal
+        ? [...missingFields, subscriptionPaymentField]
+        : missingFields;
+      for (const field of fieldsToSave) {
         // Skip the breakdown field — handled separately so we always write the latest composer state.
         if (field.name === PAYMENT_BREAKDOWN_FIELD_NAME) continue;
 
@@ -247,8 +327,10 @@ export function RequiredFieldsModal({
         if (error) throw error;
       }
 
-      // Save the payment breakdown into "Detalhamento de Pagamento" if applicable
-      if (needsBreakdown) {
+      // Save the payment breakdown into "Detalhamento de Pagamento" if applicable.
+      // Em assinatura, trocar para uma forma sem detalhamento (Pix) limpa o detalhamento da forma anterior.
+      const clearStaleBreakdown = !!subscriptionPaymentField && !paymentKeptFromDeal && !needsBreakdown;
+      if (needsBreakdown || clearStaleBreakdown) {
         const breakdownField = missingFields.find((f) => f.name === PAYMENT_BREAKDOWN_FIELD_NAME);
         // Fall back to fetching it if it's not part of missingFields (e.g. already filled but still required)
         let breakdownFieldId = breakdownField?.id;
@@ -263,7 +345,7 @@ export function RequiredFieldsModal({
         }
 
         if (breakdownFieldId) {
-          const summary = breakdown
+          const summary = clearStaleBreakdown ? null : breakdown
             .map(
               (b) =>
                 `${b.method_label}: R$ ${(b.amount ?? 0).toFixed(2)} em ${b.installments}x (1ª: ${b.first_due_date})`
@@ -276,7 +358,7 @@ export function RequiredFieldsModal({
               deal_id: dealId,
               field_id: breakdownFieldId,
               value_text: summary,
-              value_json: breakdown as any,
+              value_json: clearStaleBreakdown ? null : (breakdown as any),
               value_number: null,
               value_boolean: null,
               value_date: null,
@@ -356,6 +438,17 @@ export function RequiredFieldsModal({
         }
       }
 
+      if (subscriptionRequired) {
+        const { error: subErr } = await supabase
+          .from("deals")
+          .update({
+            is_subscription: isSubscription,
+            subscription_cycle: isSubscription ? subscriptionCycle : null,
+          })
+          .eq("id", dealId);
+        if (subErr) throw subErr;
+      }
+
       if (showBilling && receivedOk) {
         const { error: rvErr } = await supabase
           .from("deals")
@@ -392,17 +485,24 @@ export function RequiredFieldsModal({
     if (outcomeType === "lost") {
       return `Para marcar "${dealTitle}" como Perdida, preencha os campos abaixo:`;
     }
+    if (subscriptionRequired) {
+      return `Para marcar "${dealTitle}" como Ganha, responda abaixo:`;
+    }
     return `Para mover "${dealTitle}" para a etapa "${targetStageName}", preencha os campos abaixo:`;
   };
 
   const getButtonLabel = () => {
     if (outcomeType === "won") return "Preencher e Ganhar";
     if (outcomeType === "lost") return "Preencher e Perder";
+    if (subscriptionRequired) return "Preencher e Ganhar";
     return "Preencher e Mover";
   };
 
   // Filter out the auto-managed breakdown field from the displayed list
-  const displayedFields = missingFields.filter((f) => f.name !== PAYMENT_BREAKDOWN_FIELD_NAME);
+  // Em assinatura, a forma de pagamento sai da lista comum e aparece junto da pergunta, só com as opções permitidas.
+  const displayedFields = missingFields.filter(
+    (f) => f.name !== PAYMENT_BREAKDOWN_FIELD_NAME && !(subscriptionActive && f.id === paymentMethodField?.id),
+  );
 
   const renderField = (field: CustomField) => {
     const bonusField = isBonusField(field.name);
@@ -419,7 +519,11 @@ export function RequiredFieldsModal({
           />
         ) : (
           <InlineFieldInput
-            field={field}
+            field={
+              allowedPaymentValues && field.id === paymentMethodField?.id
+                ? { ...field, options: field.options.filter((o) => allowedPaymentValues.includes(o.value)) }
+                : field
+            }
             value={values[field.id]}
             onChange={(newValue) => handleValueChange(field.id, newValue)}
           />
@@ -436,6 +540,63 @@ export function RequiredFieldsModal({
     );
   };
 
+
+  const subscriptionSection = subscriptionRequired ? (
+    <div className="space-y-4 rounded-lg border border-border bg-muted/30 p-3">
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">
+          É uma assinatura? <span className="text-destructive">*</span>
+        </Label>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          className="justify-start"
+          disabled={subscriptionState === null}
+          value={isSubscription === null ? "" : isSubscription ? "yes" : "no"}
+          onValueChange={(next) => {
+            if (!next) return;
+            const yes = next === "yes";
+            setIsSubscription(yes);
+            if (!yes) setSubscriptionCycle(null);
+          }}
+          aria-label="É uma assinatura?"
+        >
+          <ToggleGroupItem value="yes" className="h-11 min-w-20 sm:h-9">Sim</ToggleGroupItem>
+          <ToggleGroupItem value="no" className="h-11 min-w-20 sm:h-9">Não</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+      {isSubscription === true && (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">
+            É uma assinatura mensal ou anual? <span className="text-destructive">*</span>
+          </Label>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            className="justify-start"
+            value={subscriptionCycle ?? ""}
+            onValueChange={(next) => {
+              if (next) applyCycle(next as SubscriptionCycle);
+            }}
+            aria-label="É uma assinatura mensal ou anual?"
+          >
+            <ToggleGroupItem value="monthly" className="h-11 min-w-20 sm:h-9">Mensal</ToggleGroupItem>
+            <ToggleGroupItem value="annual" className="h-11 min-w-20 sm:h-9">Anual</ToggleGroupItem>
+          </ToggleGroup>
+          <p className="text-xs text-muted-foreground">
+            {subscriptionCycle === "annual"
+              ? "Assinatura anual: Pix ou Cartão de crédito."
+              : subscriptionCycle === "monthly"
+                ? "Assinatura mensal: Cartão recorrência."
+                : "A forma de pagamento disponível depende dessa escolha."}
+          </p>
+        </div>
+      )}
+
+      {subscriptionActive && subscriptionCycle && paymentMethodField && renderField(paymentMethodField)}
+    </div>
+  ) : null;
 
   const receivedValueSection = showBilling ? (
     <div className="space-y-2 rounded-lg border border-border p-3">
@@ -473,6 +634,7 @@ export function RequiredFieldsModal({
               </TabsList>
 
               <TabsContent value="fields" className="space-y-6 mt-4">
+                {subscriptionSection}
                 {displayedFields.length > 0 && (
                   <div className="space-y-4">
                     {displayedFields.map((field) => renderField(field))}
@@ -507,6 +669,7 @@ export function RequiredFieldsModal({
             </Tabs>
           ) : (
             <div className="space-y-6">
+              {subscriptionSection}
               {displayedFields.length > 0 && (
                 <div className="space-y-4">
                   {displayedFields.map((field) => renderField(field))}

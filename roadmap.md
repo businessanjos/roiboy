@@ -333,3 +333,9 @@
 ## Retorno ao primeiro ranking separado por empresa
 - [x] Restaurar o layout da primeira separação Eternum/Anjos (25/11, 12:26), sem desfazer correções de números, paleta ou mudanças em outras áreas.
 - [x] Painel real conferido na sessão atual em 1440, 1920×1080, 668 e 390 px: tabelas originais, foco a 80% e ajuste TV; sem erros de execução. 30 testes de cálculos/separação passaram; sem alterar dados, permissões, integrações ou publicar.
+
+## Assinatura no ganho (Anjos)
+- [x] Pergunta "É uma assinatura?" e ciclo mensal/anual obrigatórios no ganho das vendas da Anjos
+- [x] Formas de pagamento restritas por ciclo, com preenchimento automático da forma compatível
+- [x] Conferência em todos os pontos de ganho (Pipeline, RoyZapp, Leads, Tarefas, ficha do cliente)
+- [x] Exibição somente leitura no card abaixo de "É uma renovação"
