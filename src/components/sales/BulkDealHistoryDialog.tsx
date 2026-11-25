@@ -101,7 +101,7 @@ export function BulkDealHistoryDialog({ open, onOpenChange, onRefresh }: { open:
                 </li>)}
               </ul>}
               {(items.data?.length ?? 0) < selected.deal_ids.length && <p className="mt-3 text-xs text-muted-foreground">Alguns negócios não foram processados ou seus detalhes não estão disponíveis ao seu acesso atual.</p>}
-              {confirmUndo && <div className="mt-4 space-y-2 border-l-2 border-primary pl-3"><Badge variant="outline">Confirmar reversão</Badge><p className="text-sm">{last.data?.changed_count} negócios voltarão ao funil e à etapa anteriores.</p><p className="text-xs text-muted-foreground">Se algum tiver recebido outra movimentação, nenhum será alterado.</p></div>}
+              {confirmUndo && <div className="mt-4 space-y-2 border-l-2 border-primary pl-3"><Badge variant="outline">Confirmar reversão</Badge><p className="text-sm">{last.data?.changed_count} negócios voltarão ao funil e à etapa anteriores, mantendo o status.</p><p className="text-xs text-muted-foreground">Se algum tiver recebido outra movimentação ou mudado de status, nenhum será alterado.</p></div>}
             </>}
           </div>
         </div>}

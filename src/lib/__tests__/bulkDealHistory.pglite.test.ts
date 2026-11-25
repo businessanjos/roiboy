@@ -14,7 +14,7 @@ async function fixture(role = "gestor") {
     CREATE FUNCTION user_has_sector_access(uuid,text) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
     CREATE TABLE pipelines(id uuid PRIMARY KEY,account_id uuid,name text,is_active boolean DEFAULT true);
     CREATE TABLE deal_stages(id uuid PRIMARY KEY,pipeline_id uuid,account_id uuid,name text,probability integer,display_order integer DEFAULT 0,is_active boolean DEFAULT true);
-    CREATE TABLE deals(id uuid PRIMARY KEY,account_id uuid,title text,pipeline_id uuid,stage_id uuid,value numeric DEFAULT 0,probability integer DEFAULT 10,status text DEFAULT 'open',stage_changed_at timestamptz DEFAULT clock_timestamp(),deleted_at timestamptz,contact_phone text);
+    CREATE TABLE deals(id uuid PRIMARY KEY,account_id uuid,title text,pipeline_id uuid,stage_id uuid,value numeric DEFAULT 0,probability integer DEFAULT 10,status text DEFAULT 'open',stage_changed_at timestamptz DEFAULT clock_timestamp(),deleted_at timestamptz,contact_phone text,won_at timestamptz,lost_at timestamptz,loss_reason text,responsible_user_id uuid,client_id uuid);
     CREATE TABLE custom_fields(id uuid PRIMARY KEY,account_id uuid,name text,field_type text,options jsonb DEFAULT '[]',required_stages jsonb,is_required boolean DEFAULT false,is_active boolean DEFAULT true,show_in_deals boolean DEFAULT true,display_order integer DEFAULT 0);
     CREATE TABLE deal_field_values(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),account_id uuid,deal_id uuid,field_id uuid,value_text text,value_number numeric,value_boolean boolean,value_date date,value_json jsonb,UNIQUE(deal_id,field_id));
     CREATE TABLE products(id uuid PRIMARY KEY,account_id uuid,is_active boolean DEFAULT true,name text);
@@ -33,6 +33,7 @@ async function fixture(role = "gestor") {
   await db.exec(readFileSync("drizzle/migrations/0101_bulk_deal_history_and_undo.sql", "utf8"));
   await db.exec(readFileSync("drizzle/migrations/0102_bulk_deal_execution_guards.sql", "utf8"));
   await db.exec(readFileSync("drizzle/migrations/0103_bulk_deal_descriptions_and_concurrency.sql", "utf8"));
+  await db.exec(readFileSync("drizzle/migrations/0111_bulk_move_preserve_deal_status.sql", "utf8"));
   await db.query("INSERT INTO users VALUES($1,$2,$3,'TESTE QA',$4,false),($5,$6,$7,'Outra conta','gestor',false)", [id(1),id(2),id(3),role,id(21),id(22),id(23)]);
   await db.query("INSERT INTO pipelines(id,account_id,name) VALUES($1,$3,'Funil Original'),($2,$3,'Funil Destino')", [id(4),id(5),id(3)]);
   await db.query("INSERT INTO deal_stages(id,pipeline_id,account_id,name,probability) VALUES($1,$3,$5,'Chegou Lead',10),($2,$4,$5,'Contato Realizado',30)", [id(6),id(7),id(4),id(5),id(3)]);
@@ -51,6 +52,56 @@ async function run(db: PGlite, action = { type: "move", pipelineId: id(5), stage
   return op;
 }
 describe("Histórico e reversão reais com RLS", () => {
+  for (const status of ["won", "lost", "open"]) it(`move e desfaz mantendo status ${status}, fechamento e demais dados`, async () => {
+    const db = await fixture();
+    try {
+      const probability = status === "won" ? 100 : status === "lost" ? 0 : 10;
+      await db.query("UPDATE deals SET status=$1,probability=$2,value=35000,won_at=$3,lost_at=$4,loss_reason=$5,responsible_user_id=$6,client_id=$7 WHERE id=$8", [
+        status, probability, status === "won" ? "2026-11-25T12:00:00Z" : null,
+        status === "lost" ? "2026-11-24T12:00:00Z" : null,
+        status === "lost" ? "Sem interesse" : null, id(1), id(40), id(8),
+      ]);
+      const stableQuery = "SELECT to_jsonb(d) - ARRAY['pipeline_id','stage_id','stage_changed_at','probability'] AS state FROM deals d WHERE id=$1";
+      const before = (await db.query(stableQuery, [id(8)])).rows[0];
+      const op = await run(db, undefined, [id(8)]);
+      expect((await db.query(stableQuery, [id(8)])).rows[0]).toEqual(before);
+      expect((await db.query("SELECT status,pipeline_id,stage_id,probability FROM deals WHERE id=$1", [id(8)])).rows[0]).toEqual({
+        status, pipeline_id: id(5), stage_id: id(7), probability: status === "open" ? 30 : probability,
+      });
+      expect((await db.query("SELECT before_state->'deal'->>'status' AS before,after_state->'deal'->>'status' AS after FROM bulk_deal_operation_items WHERE operation_id=$1", [op])).rows[0]).toEqual({ before: status, after: status });
+      expect((await db.query("SELECT undo_last_bulk_deal_move($1) count", [op])).rows[0]).toEqual({ count: 1 });
+      expect((await db.query(stableQuery, [id(8)])).rows[0]).toEqual(before);
+      expect((await db.query("SELECT status,pipeline_id,stage_id,probability FROM deals WHERE id=$1", [id(8)])).rows[0]).toEqual({
+        status, pipeline_id: id(4), stage_id: id(6), probability,
+      });
+    } finally { await db.close(); }
+  }, 20000);
+  it("não desfaz nenhum negócio se um ganho mudou de status depois", async () => {
+    const db = await fixture();
+    try {
+      await db.query("UPDATE deals SET status='won',probability=100 WHERE id=ANY($1::uuid[])", [[id(8), id(9)]]);
+      const op = await run(db);
+      await db.query("UPDATE deals SET status='lost' WHERE id=$1", [id(9)]);
+      await expect(db.query("SELECT undo_last_bulk_deal_move($1)", [op])).rejects.toThrow("Nada foi desfeito");
+      expect((await db.query("SELECT id,status,pipeline_id,stage_id FROM deals ORDER BY id")).rows).toEqual([
+        { id: id(8), status: "won", pipeline_id: id(5), stage_id: id(7) },
+        { id: id(9), status: "lost", pipeline_id: id(5), stage_id: id(7) },
+      ]);
+    } finally { await db.close(); }
+  }, 20000);
+  it("ganho sem acesso não é movido nem reaberto", async () => {
+    const db = await fixture();
+    try {
+      await db.query("UPDATE deals SET status='won',probability=100 WHERE id=$1", [id(8)]);
+      await db.query("SELECT set_config('test.hidden',$1,false)", [id(8)]);
+      const start = await db.query<{ op: string }>("SELECT begin_bulk_deal_operation($1,$2) op", [JSON.stringify({ type: "move", pipelineId: id(5), stageId: id(7) }), [id(8)]]);
+      const op = start.rows[0]?.op;
+      if (!op) throw new Error("Operação de teste não criada");
+      await expect(db.query("SELECT apply_bulk_deal_operation_item($1,$2) result", [op, id(8)])).rejects.toThrow("row-level security");
+      await db.query("SELECT set_config('test.hidden','',false)");
+      expect((await db.query("SELECT status,pipeline_id,stage_id FROM deals WHERE id=$1", [id(8)])).rows[0]).toEqual({ status: "won", pipeline_id: id(4), stage_id: id(6) });
+    } finally { await db.close(); }
+  }, 20000);
   it("campo numérico usa só a coluna tipada, registra antes/depois e preserva zero",async () => {
     const db=await fixture();
     try {

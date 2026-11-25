@@ -1,5 +1,12 @@
 # Roadmap — Processos do CS
 
+## Transferência em massa sem mudar status
+- [x] Confirmar falha dos quatro negócios ganhos do Jonathan: bloqueio de movimentação para negócios encerrados, nenhuma alteração aplicada.
+- [x] Permitir mudar funil/etapa preservando status, datas de fechamento, responsáveis e contratos; manter permissões, histórico e desfazer seguro. Funções alteradas e confirmadas no banco; sem transferir automaticamente negócios reais ou publicar.
+- [x] 31 testes passaram: ganhos, perdidos e abertos mantêm status/fechamento/dados, reversão segura e bloqueio após mudança posterior de status; acesso negado mantém o ganho intacto. Compilação sem erros.
+- [x] Regra conferida no código: transferência em massa nunca reabre um negócio. Seleção do quadro/lista nas três abas → BulkDealDialog → useBulkDeals → begin/apply/finish; histórico → get_last/undo/capture. Todos usam o mesmo caminho, sem status enviado pelo cliente; corrigidos apply e undo/capture. Movimentação individual não escreve status; reabertura explícita permanece separada. Gatilhos de etapa, preenchimento do cliente e Central de Tráfego lidos: mantidos, sem repetir eventos de ganho/perda.
+- [ ] Conferir fluxo completo em sessão autenticada: sessão própria não disponível e criação da sessão de teste falhou; testes isolados não validam a interface na conta do Jonathan.
+
 ## Primeiro Ranking de Vendedores: empresas lado a lado
 - [x] Dividir apenas esse visual em Eternum e Anjos, com valores, posições e produtos independentes pela empresa salva na venda; filtros e atualização preservados.
 - [x] Configuração ativada somente no primeiro ranking de Leaderboard, com leitura autenticada após salvar/recarregar; demais configurações e layouts comparados antes/depois, intactos.
@@ -151,7 +158,7 @@
 - [x] Registrar autor, data, ação e resultados em histórico persistente; desfazer a última movimentação própria com verificação contra alterações posteriores.
 - [x] 38 testes passaram; movimentação/reversão e autoria conferidas pela sessão atual, pedidos anônimos e autoria forjada rejeitados. Janela e histórico conferidos em 390/794/1440 px, claro/escuro, sem erros. Dois negócios fictícios retirados ao final, sem excluir registros reais; não publicado.
 - [x] Selecionar cards ou todos os negócios do resultado filtrado, no quadro e na lista.
-- [x] Confirmar alteração de funil/etapa, produto, valor ou campo personalizado, preservando permissões, contratos e regras existentes; negócios encerrados exigem reabertura individual para mover.
+- [x] Confirmar alteração de funil/etapa, produto, valor ou campo personalizado, preservando permissões, contratos e regras existentes.
 - [x] Progresso, resultado por negócio e interrupção dos próximos; 40 testes passaram, valor/produto/campo/transferência salvos e relidos pela interface em dois negócios fictícios, depois removidos; 390/794/1440 px e Escape conferidos, sem publicar.
 
 ## Cliques em links no Marketing
