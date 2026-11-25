@@ -1,0 +1,1 @@
+- Default lead/deal funnel routing uses the alias lists in `supabase/functions/_shared/pipelineNames.ts`. Why: a rename left leads without deals.
