@@ -313,6 +313,7 @@ const App = () => (
                           <Route path="/privacidade" element={<PrivacyPolicy />} />
                           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                           <Route path="/data-deletion" element={<DataDeletion />} />
+                          <Route path="/royzapp" element={<PreserveQueryRedirect to="/roy-zapp" params={{ sector: "vendas" }} />} />
                           
                           <Route element={<AppLayout />}>
                             <Route path="/setores" element={<Sectors />} />

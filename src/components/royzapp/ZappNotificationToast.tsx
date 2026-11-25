@@ -44,7 +44,7 @@ export const ZappNotificationToast = memo(function ZappNotificationToast({
   const isQueue = origin === "queue";
   
   return (
-    <div className="w-[360px] bg-zapp-panel border border-zapp-border rounded-lg shadow-lg overflow-hidden animate-in slide-in-from-right-5 duration-300">
+    <div className="w-full min-w-0 bg-zapp-panel border border-zapp-border rounded-lg shadow-lg overflow-hidden animate-in slide-in-from-right-5 duration-300">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-zapp-bg border-b border-zapp-border">
         <div className="flex items-center gap-2">
@@ -53,6 +53,7 @@ export const ZappNotificationToast = memo(function ZappNotificationToast({
         </div>
         <button
           onClick={onDismiss}
+          aria-label="Fechar aviso"
           className="text-zapp-text-muted hover:text-zapp-text transition-colors"
         >
           <X className="h-4 w-4" />

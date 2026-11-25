@@ -1,5 +1,12 @@
 # Roadmap — Processos do CS
 
+## Project monitoring — notificações
+- [x] Conferidos avisos, sino, histórico, navegador, produtor de push e decisões do app/WhatsApp, incluindo funções atuais em leitura; inventário em `.lovable/reviews/notification-monitoring.md`, sem alterar registros enviados.
+- [x] Reproduzidos clique bloqueado no aviso WhatsApp e `/royzapp` → 404; avisos gerais já liberavam cliques, mas largura externa deixava X fora da tela.
+- [x] Avisos personalizados clicáveis e limitados à largura existente; `/royzapp` redireciona ao RoyZapp Vendas com parâmetros preservados e mesmas verificações. Backend, permissões, dados, integrações e silêncio dos painéis intactos.
+- [x] 34 testes passaram; original no navegador em 803/390/1440: abrir/fechar WhatsApp, geral e tarefa, ação comum e passagem de cliques preservadas, destino legado sem 404. Compilação OK; sem publicar.
+- [ ] Verificação autenticada até a conversa e push no aparelho: sessão própria sem conta correspondente, criação de teste falhou e `/sw.js` não está no checkout/servidor local.
+
 ## Largura dos cartões do ranking superior
 - [x] Cabeçalhos e cartões limitados juntos a 32rem ou largura disponível, com a mesma proporção nas duas empresas; nome/valor continuam legíveis. Colunas, ordem, dados, cores, calls e outros gráficos intactos.
 - [x] 30 testes passaram; componentes originais com exemplos em normal/TV/zoom 390/803/1366/1440/1920, compartilhado 390/1440 e zoom 250%, apresentação 803/1440, nos dois temas: cabeçalho/lista com largura igual, sem cortes ou erros. Fontes e caminhos registrados em `.lovable/reviews/company-ranking-width.md`; compilação OK, sem escritas reais ou publicação.

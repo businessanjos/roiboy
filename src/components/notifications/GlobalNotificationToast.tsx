@@ -46,7 +46,7 @@ export function GlobalNotificationToast({ title, content, type, sourceType, acto
     </div>;
   }
   return (
-    <div className="pointer-events-auto w-[min(360px,calc(100vw-2rem))] rounded-lg border border-border bg-card text-card-foreground shadow-lg overflow-hidden">
+    <div className="pointer-events-auto w-full min-w-0 rounded-lg border border-border bg-card text-card-foreground shadow-lg overflow-hidden">
       <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border bg-muted/50">
         <div className="flex items-center gap-2 min-w-0">
           <Icon className="h-4 w-4 text-primary shrink-0" />
