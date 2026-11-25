@@ -71,13 +71,13 @@ function TaskLabelPicker({ catalog, selected, onToggle, onClear, onCreate, onEdi
       </Button>
     </PopoverTrigger>
     <PopoverContent aria-label={mode === "filter" ? "Etiquetas do filtro" : "Etiquetas da tarefa"} portalContainer={portalContainer}
-      align={mode === "filter" ? "end" : "start"} collisionPadding={12}
-      className="flex max-h-[min(520px,calc(100dvh-2rem))] w-[336px] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden p-0">
+      align="end" collisionBoundary={portalContainer ?? undefined} collisionPadding={12}
+      className="flex max-h-[min(520px,var(--radix-popover-content-available-height))] w-[336px] max-w-[min(calc(100vw-1.5rem),var(--radix-popover-content-available-width))] flex-col overflow-hidden p-0">
       <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2.5">
         {showForm ? <Button type="button" variant="ghost" size="icon" disabled={saving} aria-label="Voltar às etiquetas" className="h-11 w-11 md:h-7 md:w-7" onClick={closeForm}><ArrowLeft className="h-3.5 w-3.5" /></Button> : <Tags className="ml-1 h-4 w-4 text-muted-foreground" />}
-        <h4 className="flex-1 text-sm font-semibold tracking-normal">{editing ? "Editar etiqueta" : creating ? "Nova etiqueta" : "Etiquetas"}</h4>
-        {!showForm && selected.length > 0 && <span className="text-xs tabular-nums text-muted-foreground">{selected.length} selecionada{selected.length > 1 ? "s" : ""}</span>}
-        <Button type="button" variant="ghost" size="icon" disabled={saving} aria-label="Fechar etiquetas" className="h-11 w-11 md:h-7 md:w-7 text-muted-foreground" onClick={() => { setOpen(false); closeForm(); }}><X className="h-3.5 w-3.5" /></Button>
+        <h4 className="min-w-0 flex-1 text-sm font-semibold tracking-normal">{editing ? "Editar etiqueta" : creating ? "Nova etiqueta" : "Etiquetas"}</h4>
+        {!showForm && selected.length > 0 && <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{selected.length} selecionada{selected.length > 1 ? "s" : ""}</span>}
+        <Button type="button" variant="ghost" size="icon" disabled={saving} aria-label="Fechar etiquetas" className="h-11 w-11 shrink-0 md:h-7 md:w-7 text-muted-foreground" onClick={() => { setOpen(false); closeForm(); }}><X className="h-3.5 w-3.5" /></Button>
       </div>
       {showForm ? <div className="min-h-0 space-y-4 overflow-y-auto p-4">
         <div className="space-y-1.5">
@@ -113,7 +113,7 @@ function TaskLabelPicker({ catalog, selected, onToggle, onClear, onCreate, onEdi
           {options.map((label) => <div key={labelKey(label.name)} className={cn("flex min-h-11 min-w-0 items-center rounded transition-colors hover:bg-muted", selected.includes(labelKey(label.name)) && "bg-muted/60")}>
             <label className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2.5 px-2 py-1.5">
             <Checkbox aria-label={`${mode === "filter" ? "Filtrar" : "Selecionar"} etiqueta ${label.name}`} checked={selected.includes(labelKey(label.name))} onCheckedChange={() => onToggle(label)} />
-            <TaskLabelBadge label={label} />
+            <span className="min-w-0 flex-1"><TaskLabelBadge label={label} /></span>
             </label>
             {onEdit && <Tooltip><TooltipTrigger asChild>
               <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0 text-muted-foreground" aria-label={`Editar etiqueta ${label.name}`} disabled={disabled}

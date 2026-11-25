@@ -84,7 +84,8 @@ export function TaskDescriptionEditor({ initialContent, valueKey, onChange, colo
             editor.chain().focus().unsetHighlight().run();
             setPaletteOpen(false);
           }}><Highlighter className="h-4 w-4" /></Button></PopoverTrigger></TooltipTrigger><TooltipContent>Marca-texto</TooltipContent></Tooltip>
-        <PopoverContent portalContainer={portalContainer} align="start" className="w-64 space-y-3" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <PopoverContent portalContainer={portalContainer} collisionBoundary={portalContainer ?? undefined} collisionPadding={12} align="start"
+          className="max-h-[var(--radix-popover-content-available-height)] w-64 max-w-[var(--radix-popover-content-available-width)] space-y-3 overflow-y-auto" onOpenAutoFocus={(e) => e.preventDefault()}>
           <div className="flex flex-wrap gap-2">
             {TASK_MARKER_COLORS.map((color) => <Button key={color.name} type="button" variant="outline" size="icon" title={color.name} aria-label={`Destacar em ${color.name}`} className={cn("h-10 w-10", color.className)} onClick={() => apply(color.color)} />)}
             {colors.map((color) => <Button key={color} type="button" variant="outline" size="icon" title={color} aria-label={`Destacar em ${color}`} className="h-10 w-10" style={{ backgroundColor: color }} onClick={() => apply(color)} />)}

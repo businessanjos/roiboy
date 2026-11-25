@@ -30,7 +30,8 @@ export function TaskDeliveryDate({ value, onChange, onValidityChange, disabled, 
       <div className="absolute right-1 flex">
         {text && <Button type="button" variant="ghost" size="icon" aria-label="Limpar data de entrega" title="Limpar data" className="h-9 w-8" disabled={disabled} onClick={() => choose(undefined)}><X className="h-3.5 w-3.5" /></Button>}
         <Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><Button type="button" variant="ghost" size="icon" aria-label="Abrir calendário de entrega" title="Calendário" className="h-9 w-9 text-primary" disabled={disabled}><CalendarDays className="h-4 w-4" /></Button></PopoverTrigger>
-          <PopoverContent portalContainer={portalContainer} className="w-auto overflow-hidden p-0" align="end">
+          <PopoverContent portalContainer={portalContainer} collisionBoundary={portalContainer ?? undefined} collisionPadding={12}
+            className="max-h-[var(--radix-popover-content-available-height)] w-auto max-w-[var(--radix-popover-content-available-width)] overflow-y-auto p-0" align="end">
             <Calendar mode="single" selected={value} defaultMonth={value} onSelect={choose} locale={ptBR} initialFocus className="pointer-events-auto" />
             <div className="flex items-center justify-between border-t bg-muted/40 px-3 py-1.5"><Button type="button" variant="ghost" size="sm" onClick={() => choose(undefined)}>Limpar</Button><Button type="button" variant="ghost" size="sm" className="text-primary" onClick={() => choose(new Date())}>Hoje</Button></div>
           </PopoverContent>

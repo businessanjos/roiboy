@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Menus sem corte na janela de tarefa
+- [x] Etiquetas na edição/cópia/criação e no filtro, calendário e paleta da descrição/comentário limitados ao espaço do diálogo/tela, com rolagem local e botões completos; nomes longos não encobrem lápis. Entradas e caminhos irmãos lidos em `.lovable/reviews/task-menu-clipping.md`; gravação/repetição/permissões/dados intactos.
+- [x] 45 testes passaram; componentes originais com rascunhos TESTE QA: lista/editar/criar/cancelar/rolar/calendário/paleta/filtro em 390/803/1440/1920 claro/escuro, 56 verificações de limites sem cortes ou erros. Compilação OK; conferência visual isolada, sem persistência autenticada, escritas reais/backend ou publicação.
+
 ## Seleção e ações em grupo nas tarefas de Marketing
 - [x] Menu do quadro com seleção individual/todos os resultados filtrados e por coluna/seção no quadro, lista e tela ampliada; mover, concluir, reabrir e prioridade em grupo com confirmação; filtros removem tarefas ocultas da seleção.
 - [x] Desfazer a última edição/movimentação/conclusão/reordenação da própria sessão compartilhada pelo formulário e quadro, restaurando só campos alterados e horários originais; conta/ID/versão comparados sob RLS existente, erros parciais explícitos e alterações posteriores preservadas. Sem exclusão em grupo, migração, mudanças de permissões/backend ou publicação.
