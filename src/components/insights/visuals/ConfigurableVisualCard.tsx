@@ -35,6 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useTvMode } from "../TvModeContext";
+import { companyRankingShares, rankingCompanyIds } from "@/lib/insights/companyRanking";
 
 const SWITCHABLE_TYPES: { type: ChartType; icon: React.ElementType; label: string }[] = [
   { type: 'bar', icon: BarChart3, label: 'Barras' },
@@ -207,13 +208,14 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
     }
     // Formato "%" com modo participação: cada item vira sua fatia do total exibido
     if (isPercentShare) {
+      if (rankingCompanyIds(config, chartType).length) return companyRankingShares(result);
       const total = result.reduce((acc, item) => acc + (Number(item.value) || 0), 0);
       if (total) {
         result = result.map((item) => ({ ...item, value: ((Number(item.value) || 0) / total) * 100 }));
       }
     }
     return result;
-  }, [data, config?.customFormula, config?.hiddenCategories, isPercentShare]);
+  }, [data, config?.customFormula, config?.hiddenCategories, config?.rankingCompanyIds, chartType, isPercentShare]);
 
   // Resumo do topo: soma e média das barras/pontos exibidos, para "bater o olho".
   // Percentual não soma (a soma de porcentagens não significa nada), então mostra só a média.
@@ -623,6 +625,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                 formatting={config?.formatting || { type: 'number' as FormatType, decimals: 0 }}
                 options={presentationOptions}
                 dashboardId={visual.dashboard_id}
+                config={config ?? undefined}
                 onClose={() => setPresentationOptions(null)}
               />
             )}

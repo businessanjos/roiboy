@@ -21,6 +21,8 @@ import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { DaysElapsedScorecard } from "./DaysElapsedScorecard";
 import { SalesLeadsScorecard } from "./SalesLeadsScorecard";
 import { ConfigurableRanking } from "./ConfigurableRanking";
+import { CompanyRanking } from "./CompanyRanking";
+import { rankingCompanyIds } from "@/lib/insights/companyRanking";
 import { ConfigurableCallCommercial } from "./ConfigurableCallCommercial";
 import { GaugeFromConfig } from "./ConfigurableGauge";
 import { IndicatorFromConfig } from "./ConfigurableIndicator";
@@ -42,6 +44,8 @@ interface AggregatedDataPoint {
   value: number;
   count?: number;
   color?: string;
+  companyId?: string | null;
+  products?: { name: string; qty: number }[];
 }
 
 interface ConfigurableChartProps {
@@ -102,6 +106,7 @@ export function ConfigurableChart({ type, data: rawData, formatting, appearance,
   const baseConfig = appearance || DEFAULT_APPEARANCE;
   // Na TV o gráfico é lido de longe: rótulos de valor sempre visíveis.
   const config: AppearanceConfig = tv.tv ? { ...baseConfig, showDataLabels: true } : baseConfig;
+  const companyIds = rankingCompanyIds(visualConfig, type);
 
   const isDateDimension = !!(visualConfig?.dimension as any)?.granularity;
   const cappable = type === 'bar' || type === 'bar_horizontal' || type === 'pie';
@@ -110,7 +115,7 @@ export function ConfigurableChart({ type, data: rawData, formatting, appearance,
 
 
   
-  if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && type !== 'data_table' && type !== 'daily_performance' && type !== 'goal_tracker' && type !== 'scorecard' && type !== 'number' && (!data || data.length === 0)) {
+  if (!companyIds.length && type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && type !== 'data_table' && type !== 'daily_performance' && type !== 'goal_tracker' && type !== 'scorecard' && type !== 'number' && (!data || data.length === 0)) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         Sem dados para exibir
@@ -129,6 +134,8 @@ export function ConfigurableChart({ type, data: rawData, formatting, appearance,
       }
       return <ConfigurableScorecard data={data} formatting={formatting} config={visualConfig} />;
     case 'ranking':
+      if (companyIds.length) return <CompanyRanking data={data} companyIds={companyIds} formatting={formatting}
+        appearance={config} dimensionLabel={getDimensionLabel(visualConfig)} measureLabel={getMeasureLabel(visualConfig)} hiddenProducts={visualConfig?.hiddenProducts} />;
       return (
         <ConfigurableRanking
           data={data}

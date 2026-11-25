@@ -1,5 +1,11 @@
 # Roadmap — Processos do CS
 
+## Primeiro Ranking de Vendedores: empresas lado a lado
+- [x] Dividir apenas esse visual em Eternum e Anjos, com valores, posições e produtos independentes pela empresa salva na venda; filtros e atualização preservados.
+- [x] Configuração ativada somente no primeiro ranking de Leaderboard, com leitura autenticada após salvar/recarregar; demais configurações e layouts comparados antes/depois, intactos.
+- [x] 24 testes passaram; valores reais conferidos no ano e mês com leitura do banco, 390/803/1440 px nos dois temas sem cortes, cancelamento da configuração, Calls sem opção de empresas, apresentação ampliada e modo TV com parâmetros preservados. Compilação sem erros; sem publicação.
+- Quatro vendas antigas de CR continuam vinculadas à Eternum; nenhum negócio foi reclassificado e não foram inventados subtotais por produto.
+
 ## Tarefas abrem em Abertas
 - [x] Cada montagem começa em Abertas sem restaurar a situação anterior; troca manual, demais filtros, permissões e registros mantidos.
 - [x] 16 testes passaram; abertura com situação antiga salva, troca para Concluídas e reabertura em Abertas conferidas com tarefas fictícias em 390/958 px, sem erros ou escritas reais. Compilação sem erros; não publicado.

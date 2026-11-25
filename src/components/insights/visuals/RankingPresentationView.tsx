@@ -9,12 +9,16 @@ import { FormatType, VisualConfig } from "../visual-builder/types";
 import { PresentationOptions } from "./RankingPresentationDialog";
 import logoEternum from "@/assets/logo-eternum.svg";
 import { cn } from "@/lib/utils";
+import { CompanyRanking } from './CompanyRanking';
+import { rankingCompanyIds } from '@/lib/insights/companyRanking';
 
 interface AggregatedDataPoint {
   name: string;
   value: number;
   count?: number;
   color?: string;
+  companyId?: string | null;
+  products?: { name: string; qty: number }[];
 }
 
 interface UserAvatar {
@@ -28,6 +32,7 @@ interface RankingPresentationViewProps {
   formatting: { type: FormatType; decimals: number };
   options: PresentationOptions;
   dashboardId?: string;
+  config?: VisualConfig;
   onClose: () => void;
 }
 
@@ -105,16 +110,18 @@ export function RankingPresentationView({
   formatting,
   options,
   dashboardId,
+  config,
   onClose,
 }: RankingPresentationViewProps) {
   const data = useMemo(() => filterVisiblePeople(sourceData), [sourceData]);
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
   const [goalValue, setGoalValue] = useState<number | null>(null);
+  const companyIds = rankingCompanyIds(config, 'ranking');
 
   // Fetch goal from sibling gauge visuals in the same dashboard
   useEffect(() => {
-    if (!dashboardId) return;
+    if (!dashboardId || companyIds.length) return;
     const fetchGoal = async () => {
       const { data: visuals } = await supabase
         .from("insights_visuals")
@@ -143,7 +150,7 @@ export function RankingPresentationView({
       }
     };
     fetchGoal();
-  }, [dashboardId]);
+  }, [dashboardId, config?.rankingCompanyIds]);
 
   useEffect(() => {
     if (!currentUser?.account_id || data.length === 0) return;
@@ -294,7 +301,12 @@ export function RankingPresentationView({
       </div>
 
       {/* Main content: Podium + Table */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 px-8 pb-6 overflow-hidden min-h-0">
+      {companyIds.length ? (
+        <div className="min-h-0 flex-1 overflow-auto px-4 pb-6 sm:px-8">
+          <CompanyRanking data={data} companyIds={companyIds} formatting={formatting} appearance={config?.appearance}
+            hiddenProducts={config?.hiddenProducts} dimensionLabel="Vendedor" privacy={options} />
+        </div>
+      ) : <div className="flex-1 flex flex-col lg:flex-row gap-6 px-8 pb-6 overflow-hidden min-h-0">
         {/* Podium */}
         {top3.length >= 2 && (
           <div className="lg:w-[45%] flex items-end justify-center gap-4 shrink-0 pb-4">
@@ -409,7 +421,7 @@ export function RankingPresentationView({
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
     </div>
   );
 

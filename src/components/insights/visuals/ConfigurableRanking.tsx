@@ -28,6 +28,9 @@ interface ConfigurableRankingProps {
   measureLabel?: string;
   /** Produtos escondidos das pílulas (nome completo ou sigla). */
   hiddenProducts?: string[];
+  /** Company columns use the list only, with readable values beneath the name. */
+  compact?: boolean;
+  privacy?: { showNames: boolean; showPhotos: boolean; blurNumbers: boolean };
 }
 
 interface UserAvatar {
@@ -172,7 +175,7 @@ function Podium({
   );
 }
 
-export function ConfigurableRanking({ data: sourceData, formatting, appearance, dimensionLabel, measureLabel, hiddenProducts }: ConfigurableRankingProps) {
+export function ConfigurableRanking({ data: sourceData, formatting, appearance, dimensionLabel, measureLabel, hiddenProducts, compact = false, privacy }: ConfigurableRankingProps) {
   const data = useMemo(() => filterVisiblePeople(sourceData), [sourceData]);
   const tv = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'] * tv.scale;
@@ -232,18 +235,18 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
   const colors = paletteColors(appearance);
 
   // Na TV não existe rolagem: exibe só as posições que cabem na altura do card.
-  const rowHeight = Math.round(44 * m);
+  const rowHeight = Math.round((compact ? 104 : 44) * m);
   const headerHeight = Math.round(30 * m);
   const visibleRows =
     tv.tv && boxHeight > 0
-      ? Math.max(3, Math.floor((boxHeight - headerHeight) / rowHeight))
+      ? Math.max(compact ? 1 : 3, Math.floor((boxHeight - headerHeight) / rowHeight))
       : data.length;
   const rows = data.slice(0, visibleRows);
 
   return (
     <div ref={containerRef} className={`h-full px-1 flex gap-4 ${tv.tv ? 'overflow-hidden' : 'overflow-auto'}`}>
       {/* Podium - left side */}
-      {showPodium && hasPodiumData && (
+      {!compact && showPodium && hasPodiumData && (
         <div className="w-[40%] shrink-0 flex items-end justify-center">
           <Podium data={data} avatars={avatars} formatting={formatting} fontMultiplier={m} colors={colors} />
         </div>
@@ -251,12 +254,12 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
 
       {/* Table - right side */}
       <div className="flex-1 min-w-0">
-        <table className="w-full" style={{ fontSize: `${Math.round(14 * m)}px` }}>
+        <table className={compact ? 'w-full table-fixed' : 'w-full'} style={{ fontSize: `${Math.round(14 * m)}px` }}>
           <thead className="sticky top-0 z-10 bg-card">
             <tr className="text-muted-foreground border-b" style={{ fontSize: `${Math.round(12 * m)}px` }}>
               <th className="text-left py-2 px-1 w-8">#</th>
               <th className="text-left py-2 px-1 truncate">{dimensionLabel || 'Item'}</th>
-              <th className="text-right py-2 px-1 truncate">{measureLabel || 'Valor'}</th>
+              {!compact && <th className="text-right py-2 px-1 truncate">{measureLabel || 'Valor'}</th>}
             </tr>
           </thead>
           <tbody>
@@ -283,20 +286,21 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                     )}
                   </td>
                   <td className="py-2.5 px-1">
-                    <div className="flex items-center gap-2.5">
-                      <Avatar className="shrink-0" style={{ height: Math.round(32 * m), width: Math.round(32 * m) }}>
-                        <AvatarImage src={userAvatar?.avatar_url || undefined} alt={item.name} />
+                    <div className={`flex gap-2.5 ${compact ? 'items-start' : 'items-center'}`}>
+                      {privacy?.showPhotos !== false && <Avatar className="shrink-0" style={{ height: Math.round(32 * m), width: Math.round(32 * m) }}>
+                        <AvatarImage src={userAvatar?.avatar_url || undefined} alt={privacy?.showNames === false ? 'Vendedor' : item.name} />
                         <AvatarFallback className="text-[10px] font-medium" style={{ backgroundColor: `${rowColor}22`, color: rowColor }}>
                           {getInitials(item.name)}
                         </AvatarFallback>
-                      </Avatar>
+                      </Avatar>}
                       <div className="flex-1 min-w-0">
                         <span
-                          className="font-medium block truncate"
+                          className={compact ? 'block break-words font-medium leading-snug' : 'font-medium block truncate'}
                           style={{ fontSize: `${Math.round(14 * m)}px`, color: isTop ? rowColor : undefined }}
                         >
-                          {item.name}
+                          {privacy?.showNames === false ? '• • •' : item.name}
                         </span>
+                        {compact && <span className={`mt-1 block font-semibold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>{formatCurrency(item.value, formatting.type, formatting.decimals)}</span>}
                         <div className="w-full h-1.5 bg-muted rounded-full mt-1">
                           <div
                             className="h-full rounded-full transition-all duration-500"
@@ -309,7 +313,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                               <span
                                 key={g.short}
                                 title={g.items.map(i => `${i.qty}x ${i.name}`).join('\n')}
-                                className={`inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-semibold leading-none tabular-nums ${g.renewal ? 'border-renewal/30 bg-renewal/10 text-foreground' : 'border-primary/30 bg-primary/10 text-foreground'}`}
+                              className={`inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-semibold leading-none tabular-nums ${g.renewal ? 'border-renewal/30 bg-renewal/10 text-foreground' : 'border-primary/30 bg-primary/10 text-foreground'}`}
                                 style={{ fontSize: `${Math.round(11 * m)}px` }}
                               >
                                 <span className={g.renewal ? 'text-renewal' : 'text-primary'}>{g.qty}x</span>
@@ -321,14 +325,14 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                       </div>
                     </div>
                   </td>
-                  <td className="py-2.5 px-1 text-right">
+                  {!compact && <td className="py-2.5 px-1 text-right">
                     <span
                       className="font-semibold tabular-nums"
                       style={{ color: isTop ? rowColor : undefined }}
                     >
                       {formatCurrency(item.value, formatting.type, formatting.decimals)}
                     </span>
-                  </td>
+                  </td>}
                 </tr>
               );
             })}

@@ -1,0 +1,32 @@
+.company-ranking {
+  container-type: inline-size;
+  container-name: company-ranking;
+}
+
+.company-ranking-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.company-ranking-secondary {
+  border-top-width: 1px;
+  padding-top: 16px;
+}
+
+@container company-ranking (min-width: 500px) {
+  .company-ranking-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+  }
+
+  .company-ranking-primary {
+    padding-right: 20px;
+  }
+
+  .company-ranking-secondary {
+    border-top-width: 0;
+    border-left-width: 1px;
+    padding-top: 0;
+    padding-left: 20px;
+  }
+}

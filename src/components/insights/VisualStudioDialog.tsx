@@ -14,6 +14,7 @@ import { Trash2, Tv, Wand2, Sliders, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCompany } from "@/contexts/CompanyContext";
 import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
 import { useFieldCatalog } from "@/lib/insights/fieldRegistry";
 import { ChartTypeSelector } from "./visual-builder/ChartTypeSelector";
@@ -109,6 +110,7 @@ export function VisualStudioDialog({
 }: VisualStudioDialogProps) {
   const ctx = useInsightsDashboardsSafe();
   const { currentUser } = useCurrentUser();
+  const { companies } = useCompany();
   const isEdit = !!visual;
 
   const activeDashboardId = overrideDashboardId ?? ctx?.activeDashboardId ?? null;
@@ -143,6 +145,7 @@ export function VisualStudioDialog({
   const [mode, setMode] = useState<'simple' | 'advanced'>('simple');
   const [recipeId, setRecipeId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [companyIds, setCompanyIds] = useState<string[]>([]);
 
   // Appearance
   const [showDataLabels, setShowDataLabels] = useState(DEFAULT_APPEARANCE.showDataLabels);
@@ -179,6 +182,7 @@ export function VisualStudioDialog({
       setDailyPerf(baseConfig.dailyPerformanceConfig ?? {});
       setGoalSettings(baseConfig.goalConfig ?? {});
       setStatusFilter(baseConfig.statusFilter);
+      setCompanyIds(baseConfig.rankingCompanyIds ?? []);
       setMode('advanced');
       setRecipeId(null);
       setTitle(visual.title ?? '');
@@ -208,6 +212,7 @@ export function VisualStudioDialog({
       setDailyPerf({});
       setGoalSettings({});
       setStatusFilter(undefined);
+      setCompanyIds([]);
       setMode('simple');
       setRecipeId(null);
       setTitle('');
@@ -345,6 +350,7 @@ export function VisualStudioDialog({
       statusFilter,
       // Marca que o status foi definido explicitamente aqui: sem filtro = todos.
       explicitStatus: true,
+      ...(chartType === 'ranking' ? { rankingCompanyIds: companyIds } : {}),
     };
 
     if (isTable) {
@@ -393,7 +399,7 @@ export function VisualStudioDialog({
     baseConfig, dataSource, measureField, aggregation, dimensionField, isDimensionDate, dateGrouping,
     formatType, percentMode, showDataLabels, dateDisplayFormat, colorPalette, paletteLocked, fillEmptyDates, fontScale, valueColor,
     isScorecard, isIndicator, isTable, isGauge, tableColumns, gaugeSubType, indicatorMin, indicatorMax,
-    visualFilters, segmentBy, statusFilter, isDailyPerformance, dailyPerf, isGoalTracker, goalSettings,
+    visualFilters, segmentBy, statusFilter, isDailyPerformance, dailyPerf, isGoalTracker, goalSettings, chartType, companyIds,
   ]);
 
   const canSave =
@@ -898,6 +904,16 @@ export function VisualStudioDialog({
                 onValueColorChange={setValueColor}
               />
             </div>
+            )}
+            {chartType === 'ranking' && ['deals', 'sale_items'].includes(dataSource ?? '') && dimensionField === 'responsible_name' && ['sum', 'count', 'avg'].includes(aggregation) && (
+              <div className="mt-6 border-t border-border pt-4">
+                <Label htmlFor="ranking-company-columns" className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
+                  <Checkbox id="ranking-company-columns" checked={companyIds.length > 0}
+                    disabled={companies.length < 2}
+                    onCheckedChange={checked => setCompanyIds(checked ? companies.map(company => company.id) : [])} />
+                  Empresas lado a lado
+                </Label>
+              </div>
             )}
           </aside>
 

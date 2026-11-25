@@ -16,6 +16,7 @@ import { scheduleVisualQuery } from "@/lib/queryScheduler";
 import { isCustomFieldKey, enrichRecordsWithCustomField, getSelectedValuesForKey } from "@/lib/insights/customFieldValues";
 import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
 import { resolveFunnelPipelineIds } from "@/lib/insights/funnelPipelineScope";
+import { aggregateCompanyRanking, rankingCompanyIds } from "@/lib/insights/companyRanking";
 
 
 
@@ -30,6 +31,7 @@ export interface AggregatedDataPoint {
   lostCount?: number;
   /** Produtos vendidos no grupo (ranking): nome e quantidade de negócios. */
   products?: { name: string; qty: number }[];
+  companyId?: string | null;
   /** Calls comerciais: vendas ganhas no mês atual. */
   salesMonth?: number;
 }
@@ -119,7 +121,7 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
       switch (dataSource) {
         case 'deals':
         case 'sale_items':
-          result = await fetchDealsData(accountId, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, effectiveDealStatusFilter, unifiedFilters);
+          result = await fetchDealsData(accountId, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, effectiveDealStatusFilter, unifiedFilters, undefined, rankingCompanyIds(config, chartType).length > 0);
           break;
         case 'leads':
           result = await fetchLeadsData(accountId, measure, dimension, filters, dateDisplayFormat, leadFilters, dealFilters, dealStatusFilter, unifiedFilters);
@@ -922,7 +924,8 @@ async function fetchDealsData(
   dealFilters?: FieldFilter[],
   dealStatusFilter?: string[],
   unifiedFilters?: VisualFilter[],
-  dateFieldOverride?: string
+  dateFieldOverride?: string,
+  splitByCompany = false
 ): Promise<AggregatedDataPoint[]> {
   // Special handling for sales cycle calculation
   if (measure.aggregation === 'sales_cycle') {
@@ -947,6 +950,7 @@ async function fetchDealsData(
     .select(`
       id,
       lead_id,
+      company_id,
       value,
       entry_value,
       probability,
@@ -1112,6 +1116,11 @@ async function fetchDealsData(
 
   // Enrich deals with "Valor Recebido da Venda" custom field for tiebreaker
   const enrichedWithEntryValue = await enrichDealsWithReceivedValue(accountId, filteredData);
+
+  if (splitByCompany) {
+    const withProduct = await enrichDealsWithProduct(accountId, enrichedWithEntryValue);
+    return aggregateCompanyRanking(withProduct, rows => aggregateData(rows, measure, aggregationDimension, dateDisplayFormat));
+  }
 
   const aggregated = aggregateData(enrichedWithEntryValue, measure, aggregationDimension, dateDisplayFormat);
   if (aggregationDimension.type === 'date' || enrichedWithEntryValue.length === 0) return aggregated;

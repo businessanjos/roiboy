@@ -62,6 +62,8 @@ export interface VisualConfig {
   hiddenCategories?: string[];
   // Ranking: produtos escondidos das pílulas (nome completo ou sigla), salvo para todos
   hiddenProducts?: string[];
+  // Opt-in per seller visual: independent company columns, never a global filter.
+  rankingCompanyIds?: string[];
   // Stack by field for stacked bar charts (e.g., 'responsible_name')
   stackBy?: string;
   // Override chart orientation for stacked charts
