@@ -10,49 +10,7 @@ export interface LocationValue {
   place_id?: string;
 }
 
-interface NominatimAddress {
-  road?: string;
-  neighbourhood?: string;
-  suburb?: string;
-  city?: string;
-  city_district?: string;
-  municipality?: string;
-  state?: string;
-  country?: string;
-}
-
-interface NominatimResult {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-  address?: NominatimAddress;
-}
-
-const formatSimpleAddress = (result: NominatimResult): string => {
-  if (!result.address) return result.display_name;
-  
-  const { road, neighbourhood, suburb, city, city_district, municipality, state, country } = result.address;
-  
-  const parts: string[] = [];
-  
-  // Localização específica (rua ou bairro)
-  if (road) parts.push(road);
-  else if (neighbourhood) parts.push(neighbourhood);
-  else if (suburb) parts.push(suburb);
-  
-  // Cidade
-  const cityName = city || city_district || municipality;
-  if (cityName && !parts.includes(cityName)) parts.push(cityName);
-  
-  // Estado
-  if (state && !parts.includes(state)) parts.push(state);
-  
-  // País
-  if (country && !parts.includes(country)) parts.push(country);
-  
-  return parts.length > 0 ? parts.join(", ") : result.display_name;
-};
+import { formatSimpleAddress, rankLocationResults, type NominatimResult } from "@/lib/locationAddress";
 
 interface LocationAutocompleteProps {
   value?: LocationValue | null;
@@ -127,7 +85,7 @@ export function LocationAutocomplete({
       setLoading(true);
       try {
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`,
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=10`,
           {
             headers: {
               "Accept-Language": "pt-BR",
@@ -135,7 +93,7 @@ export function LocationAutocomplete({
           }
         );
         const data: NominatimResult[] = await response.json();
-        setSuggestions(data);
+        setSuggestions(rankLocationResults(data, query));
         setShowSuggestions(true);
       } catch (error) {
         console.error("Error searching address:", error);
