@@ -114,7 +114,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
     "--calls-name-size": `${Math.round(Math.min(18, Math.max(14, (dense ? 14 : 16) * scale)))}px`,
     "--calls-value-size": `${Math.round(Math.min(30, Math.max(22, (dense ? 24 : 26) * scale)))}px`,
     "--calls-avatar-size": `${dense ? 28 : 32}px`,
-    "--calls-block-height": `${dense ? 56 : 72}px`,
+    "--calls-block-height": `${dense ? 60 : 72}px`,
   } as CSSProperties;
   return (
     <div ref={containerRef} className="commercial-calls" style={dimensions} role="group" aria-label="Calls por vendedor">
@@ -146,8 +146,8 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
                     aria-label={accessible}
                     title={salesMetric ? `${sales} venda(s) ganha(s) neste mês • ${conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das calls feitas` : undefined}
                   >
-                    <span className="commercial-calls-label flex items-center justify-center gap-1 font-medium text-muted-foreground"><Icon className={`h-3 w-3 shrink-0 ${accent}`} />{label}</span>
                     <span className={`commercial-calls-number font-bold tabular-nums ${salesMetric ? 'text-primary' : 'text-foreground'}`}>{value.toLocaleString('pt-BR')}</span>
+                    <span className="commercial-calls-label flex items-center justify-center gap-1 font-medium text-muted-foreground"><Icon className={`h-3 w-3 shrink-0 ${accent}`} />{label}</span>
                     {salesMetric && <span className="commercial-calls-conversion font-semibold tabular-nums text-primary">{conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</span>}
                   </div>
                 ))}

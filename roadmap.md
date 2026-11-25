@@ -1,6 +1,7 @@
 # Roadmap — Processos do CS
 
 ## Calls Comerciais no ranking de vendedores
+- [x] Hierarquia interna ajustada: vendedor alinhado ao título, blocos diretamente abaixo na mesma linha e ordem número → legenda → percentual. Restante do dashboard intacto; 30 testes e 12 cenários isolados nos dois temas passaram, sem cortes ou erros; compilação OK, sem publicar.
 - [x] Mantidos blocos preenchidos com medidas limitadas, vendedores lado a lado quando cabe, percentuais dentro de Vendas e rolagem local; sem tabela, alteração de métricas/configurações ou outros gráficos.
 - [x] 30 testes passaram; componentes originais com exemplos em TV 1920/1366/803, normal 1440/390/803 e zoom 80/150/200, compartilhado 803/390 e 250%, claro/escuro: sem cortes dos blocos/nomes/percentuais ou erros. Caminhos irmãos lidos em `.lovable/reviews/calls-blocks-framing.md`; compilação OK, sem backend, escritas reais ou publicação.
 - [ ] Conferência do painel com sessão real e TV física: sessão própria indisponível e criação de pessoa de teste falhou; exemplos não substituem a conta real ou o aparelho.

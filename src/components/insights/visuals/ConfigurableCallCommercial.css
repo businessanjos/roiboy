@@ -13,19 +13,20 @@
   display: grid;
   grid-template-columns: repeat(var(--calls-columns, 1), minmax(0, 1fr));
   gap: 12px 16px;
-  align-items: start;
+  align-items: stretch;
   width: 100%;
-  max-width: 840px;
-  margin-inline: auto;
 }
 
 .commercial-calls-seller {
   container-type: inline-size;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  max-width: 420px;
 }
 
 .commercial-calls-identity {
-  min-height: var(--calls-avatar-size, 32px);
+  min-height: 38px;
   margin-bottom: 6px;
 }
 
@@ -33,6 +34,8 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
+  margin-top: auto;
+  flex-shrink: 0;
 }
 
 .commercial-calls-metrics[data-sales="false"] {
@@ -41,7 +44,7 @@
 
 .commercial-calls-block {
   display: grid;
-  grid-template-rows: 14px minmax(0, 1fr) 12px;
+  grid-template-rows: minmax(0, 1fr) 14px 12px;
   align-items: center;
   justify-items: center;
   height: var(--calls-block-height, 72px);
@@ -50,7 +53,7 @@
 }
 
 .commercial-calls-label {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 14px;
   white-space: nowrap;
 }
@@ -79,4 +82,5 @@
 
 @container (max-width: 220px) {
   .commercial-calls-label svg { display: none; }
+  .commercial-calls-label { font-size: 10px; }
 }

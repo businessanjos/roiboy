@@ -23,3 +23,9 @@ Manter os blocos preenchidos escolhidos por Lucas: cada número, legenda e perce
 - Imagens finais do ajuste à TV e compartilhamento inspecionadas. Arquivos temporários em `/tmp/browser/calls-blocks`.
 - Sessão própria recusada por ausência de conta correspondente; criação da sessão de teste também falhou. **Não verificado na conta real nem no aparelho físico.** Exemplos não validam leitura autenticada.
 - Compilação OK. Nenhuma escrita em registros reais, configurações, backend, permissões ou contratos; não publicado.
+
+## Hierarquia interna — ajuste seguinte
+- Alterados somente ConfigurableCallCommercial e seu CSS: vendedor alinhado à esquerda com o título, área de identidade com altura comum, blocos alinhados abaixo mesmo quando o nome quebra e ordem número → legenda → conversão. Cada seção conserva largura máxima, mas não fica centralizada dentro do painel.
+- Nenhuma mudança na grade, ordem, altura salva dos gráficos, leitura de dados, título do visual, escopos ou backend. O mesmo renderer cobre normal, TV, prévia e compartilhado.
+- 30 testes de regressão passaram novamente. Conferência isolada nos mesmos 12 cenários e ambos os temas, com medidas concretas: legenda abaixo do número, métricas abaixo da identidade e blocos de vendedores na mesma linha com topo igual; nenhum conteúdo cortado ou erro de execução. Imagens inspecionadas em `/tmp/browser/calls-hierarchy`.
+- Compilação OK; limitação de sessão real/TV física permanece. Sem publicação ou escritas reais.
