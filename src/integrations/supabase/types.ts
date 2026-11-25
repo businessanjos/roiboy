@@ -21790,6 +21790,47 @@ export type Database = {
           },
         ]
       }
+      pipeline_name_history: {
+        Row: {
+          account_id: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_name: string
+          old_name: string
+          pipeline_id: string
+          visuals_updated: number
+        }
+        Insert: {
+          account_id: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_name: string
+          old_name: string
+          pipeline_id: string
+          visuals_updated?: number
+        }
+        Update: {
+          account_id?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_name?: string
+          old_name?: string
+          pipeline_id?: string
+          visuals_updated?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_name_history_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipelines: {
         Row: {
           account_id: string
@@ -21800,6 +21841,8 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          previous_names: string[]
+          system_role: string | null
           updated_at: string
         }
         Insert: {
@@ -21811,6 +21854,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          previous_names?: string[]
+          system_role?: string | null
           updated_at?: string
         }
         Update: {
@@ -21822,6 +21867,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          previous_names?: string[]
+          system_role?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -31937,6 +31984,10 @@ export type Database = {
         Args: { p_account_id: string }
         Returns: undefined
       }
+      insights_config_uses_pipeline_name: {
+        Args: { p_config: Json; p_name: string }
+        Returns: boolean
+      }
       internal_client_ids: { Args: { p_account_id: string }; Returns: string[] }
       internal_client_split: { Args: { p_account_id: string }; Returns: Json }
       is_account_locked: { Args: { p_email: string }; Returns: boolean }
@@ -31991,6 +32042,7 @@ export type Database = {
         Args: { _dominant: string; _role_profile: string; _secondary: string }
         Returns: number
       }
+      pipeline_rename_impact: { Args: { p_pipeline_id: string }; Returns: Json }
       pretty_person_name: { Args: { _name: string }; Returns: string }
       private_get_tech_projects_key: { Args: never; Returns: string }
       process_recurring_entries: { Args: never; Returns: number }

@@ -1,4 +1,4 @@
-import { MQL_PIPELINE_NAMES } from "../_shared/pipelineNames.ts";
+import { MQL_PIPELINE_NAMES, loadActivePipelines, pickDefaultPipeline, pickPipelineByName } from "../_shared/pipelineNames.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   authenticateRequestWithLegacy,
@@ -207,7 +207,7 @@ async function resolveProductSelection(
 
 /**
  * Resolves the pipeline and first stage for a deal.
- * Priority: 1) payload.pipeline_name  2) "Closer" pipeline  3) first active pipeline
+ * Priority: 1) payload.pipeline_name (current or former name)  2) closing pipeline by fixed role  3) first active pipeline
  * ALWAYS returns both pipeline_id and stage_id, or throws.
  */
 async function resolvePipelineAndStage(
@@ -231,21 +231,14 @@ async function resolvePipelineAndStage(
     if (pipeline) console.log(`[PIPELINE] Matched by payload name: "${pipeline.name}" (${pipeline.id})`);
   }
 
-  // 2. Default to Closer pipeline
-  for (const cand of pipeline ? [] : MQL_PIPELINE_NAMES) {
-    const { data } = await supabase
-      .from("pipelines")
-      .select("id, name")
-      .eq("account_id", accountId)
-      .eq("is_active", true)
-      .ilike("name", cand)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    pipeline = (data as { id: string; name: string } | null) ?? null;
-    if (pipeline) {
+  // 1b/2. Nome anterior do funil informado; depois o funil de fechamento pelo papel fixo.
+  if (!pipeline) {
+    const active = await loadActivePipelines(supabase, accountId);
+    const hit = (preferredPipelineName?.trim() ? pickPipelineByName(active, preferredPipelineName) : null)
+      ?? pickDefaultPipeline(active, "closer", MQL_PIPELINE_NAMES);
+    if (hit) {
+      pipeline = { id: hit.id, name: hit.name };
       console.log(`[PIPELINE] Using default pipeline: "${pipeline.name}" (${pipeline.id})`);
-      break;
     }
   }
 

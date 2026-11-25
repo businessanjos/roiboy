@@ -3,13 +3,14 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { expect, it } from 'vitest';
+import * as pipelineNames from '../../../supabase/functions/_shared/pipelineNames';
 
 // Run the actual webhook against an in-memory query client, never production data.
 async function runWebhook(deals: Record<string, any>[], repeats = 1) {
   const store: Record<string, Record<string, any>[]> = {
     deals, leads: [{ id: 'lead', account_id: 'acc', full_name: 'TESTE QA', email: 'qa@example.test', phone: '+5511999999999', instagram: null }],
     typeform_forms: [{ title: '[TRAF-AMP-EC] Teste', account_id: 'acc', form_id: 'form' }],
-    pipelines: [{ id: 'pipe', account_id: 'acc', name: 'Closer' }],
+    pipelines: [{ id: 'pipe', account_id: 'acc', name: 'Funil Renomeado', is_active: true, system_role: 'closer', previous_names: ['Closer'] }],
     deal_stages: [{ id: 'stage', pipeline_id: 'pipe', display_order: 0 }],
     custom_fields: [], deal_activities: [], typeform_responses: [], lead_field_values: [], deal_field_values: [],
   };
@@ -57,6 +58,7 @@ async function runWebhook(deals: Record<string, any>[], repeats = 1) {
     createClient: () => client, canonicalEmail: (v: any) => v, canonicalE164: (v: any) => v,
     phoneVariants: (v: any) => [v], phoneCoreKey: (v: any) => v,
     createLeadCore: () => { throw new Error('Existing lead must not be duplicated'); },
+    resolveRevenueRoutedPipeline: async () => null, ...pipelineNames,
     URL, Response, console,
   });
   if (!handler) throw new Error('Webhook handler not registered');

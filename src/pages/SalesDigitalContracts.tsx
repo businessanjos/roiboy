@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { hasPipelineRole } from "@/lib/sales/pipelineRoles";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { DigitalContractTab } from "@/components/sales/contracts/DigitalContractTab";
 import { format } from "date-fns";
@@ -193,17 +194,17 @@ export default function SalesDigitalContracts() {
       const accountId = currentUser.account_id;
       setLoadingDeals(true);
       try {
-        // Buscar todas as stages do Funil Mentoria, antigo Closer (qualquer etapa pode gerar contrato)
+        // Etapas do funil de fechamento, reconhecido pelo papel fixo e não pelo nome (qualquer etapa pode gerar contrato)
         const { data: stagesData, error: stagesError } = await supabase
           .from("deal_stages")
-          .select("id, name, pipeline:pipelines!inner(name)")
+          .select("id, name, pipeline:pipelines!inner(name, system_role)")
           .eq("account_id", accountId);
 
         if (stagesError) throw stagesError;
         if (reqId !== dealSearchReqRef.current) return;
 
         const closerStageIds = (stagesData ?? [])
-          .filter((s: any) => /^closer$|^funil mentoria$/i.test((s.pipeline?.name ?? "").trim()))
+          .filter((s: any) => hasPipelineRole(s.pipeline, "closer"))
           .map((s: any) => s.id);
 
         if (closerStageIds.length === 0) {

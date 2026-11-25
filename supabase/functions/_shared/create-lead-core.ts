@@ -1,4 +1,4 @@
-import { MQL_PIPELINE_NAMES, NON_MQL_PIPELINE_NAMES } from "./pipelineNames.ts";
+import { MQL_PIPELINE_NAMES, NON_MQL_PIPELINE_NAMES, loadActivePipelines, pickDefaultPipeline, pickPipelineByName } from "./pipelineNames.ts";
 import { resolveRevenueRoutedPipeline } from "./leadRevenueRouting.ts";
 // Core lead-creation logic shared between the public create-lead endpoint
 // (called by external integrations / N8N) and internal callers like the
@@ -262,6 +262,10 @@ export async function createLeadCore(
           .ilike("name", payload.pipeline_name)
           .maybeSingle();
         pipelineId = pipe?.id || null;
+        // Integrações antigas ainda enviam o nome anterior do funil.
+        if (!pipelineId) {
+          pipelineId = pickPipelineByName(await loadActivePipelines(supabase, accountId), payload.pipeline_name)?.id || null;
+        }
       }
 
       // Regra do gestor por faixa de faturamento (Configurações > Roteamento de leads)
@@ -282,18 +286,9 @@ export async function createLeadCore(
         const candidates = isMql
           ? MQL_PIPELINE_NAMES
           : NON_MQL_PIPELINE_NAMES;
-        for (const cand of candidates) {
-          const { data: routedPipe } = await supabase
-            .from("pipelines")
-            .select("id")
-            .eq("account_id", accountId)
-            .eq("is_active", true)
-            .ilike("name", cand)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          if (routedPipe?.id) { pipelineId = routedPipe.id; break; }
-        }
+        pipelineId = pickDefaultPipeline(
+          await loadActivePipelines(supabase, accountId), isMql ? "closer" : "low_ticket", candidates,
+        )?.id || null;
         if (pipelineId) {
           console.log(`[create-lead-core] Auto-routed by MQL=${resolvedMql} → pipeline ${isMql ? "Closer" : "TP - Eternum Pass"} (${pipelineId})`);
         }

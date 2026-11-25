@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { findPipelineByRole } from "@/lib/sales/pipelineRoles";
 
 const FATURAMENTO_FIELD_ID = "ed5c7c0e-0740-4945-b982-70a593ffae0c";
 const DEFAULT = "__default__";
@@ -32,7 +33,7 @@ export function LeadRevenueRoutingManager() {
     queryFn: async () => {
       const [field, pipes, rules, history] = await Promise.all([
         supabase.from("custom_fields").select("options").eq("id", FATURAMENTO_FIELD_ID).maybeSingle(),
-        supabase.from("pipelines").select("id, name").eq("account_id", accountId!).eq("is_active", true).order("created_at"),
+        supabase.from("pipelines").select("id, name, system_role").eq("account_id", accountId!).eq("is_active", true).order("created_at"),
         supabase.from("lead_revenue_routing").select("revenue_value, pipeline_id").eq("account_id", accountId!),
         (supabase as any).from("lead_revenue_routing_history").select("id, revenue_value, old_pipeline_id, new_pipeline_id, changed_by, changed_at").eq("account_id", accountId!).order("changed_at", { ascending: false }).limit(50),
       ]);
@@ -49,7 +50,8 @@ export function LeadRevenueRoutingManager() {
   const pipeName = (id?: string | null) => data?.pipelines.find((p) => p.id === id)?.name;
   const defaultPipe = (label: string) => {
     const mql = rangeTop(label) > 30;
-    return data?.pipelines.find((p) => (mql ? /^closer$|mentoria/i.test(p.name) : /e-pass|eternum pass/i.test(p.name)))?.name
+    return findPipelineByRole(data?.pipelines ?? [], mql ? "closer" : "low_ticket")?.name
+      ?? data?.pipelines.find((p) => (mql ? /^closer$|mentoria/i.test(p.name) : /e-pass|eternum pass/i.test(p.name)))?.name
       ?? (mql ? "Funil Mentoria" : "E-Pass");
   };
 

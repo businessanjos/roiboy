@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { MQL_PIPELINE_NAMES, NON_MQL_PIPELINE_NAMES } from "../_shared/pipelineNames.ts";
+import { MQL_PIPELINE_NAMES, NON_MQL_PIPELINE_NAMES, loadActivePipelines, pickDefaultPipeline } from "../_shared/pipelineNames.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { canonicalEmail } from "../_shared/email-normalize.ts";
 import { canonicalE164, phoneVariants, phoneCoreKey } from "../_shared/phone-normalize.ts";
@@ -470,17 +470,10 @@ Deno.serve(async (req) => {
         let pipe: { id: string } | null = null;
         const routedId = await resolveRevenueRoutedPipeline(supabase, accountId, bundle.revenue_range);
         if (routedId) pipe = { id: routedId };
-        for (const cand of pipe ? [] : candidates) {
-          const { data } = await supabase
-            .from("pipelines")
-            .select("id")
-            .eq("account_id", accountId)
-            .eq("is_active", true)
-            .ilike("name", cand)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          if (data?.id) { pipe = data; break; }
+        if (!pipe) {
+          pipe = pickDefaultPipeline(
+            await loadActivePipelines(supabase, accountId), isMql ? "closer" : "low_ticket", candidates,
+          );
         }
         if (!pipe?.id) {
           noteFailure(`Pipeline "${targetName}" não encontrado para roteamento do lead existente`);

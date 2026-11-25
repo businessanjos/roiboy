@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Pipeline } from "@/hooks/usePipelines";
 import { PipelineOrderDialog } from "./PipelineOrderDialog";
+import { PipelineRenameNotice } from "./PipelineRenameNotice";
 import { Plus, ChevronDown, Pencil, Trash2, GitBranch, ArrowDownUp } from "lucide-react";
 
 interface PipelineSelectorProps {
@@ -60,6 +61,10 @@ export function PipelineSelector({
   const [color, setColor] = useState(PIPELINE_COLORS[0]);
 
   const activePipeline = pipelines.find(p => p.id === activePipelineId);
+  const newName = name.trim();
+  const isRenaming = !!editingPipeline && !!newName && newName !== editingPipeline.name;
+  // Dois funis com o mesmo nome deixariam filtros e integrações sem saber qual é qual.
+  const nameTaken = isRenaming && pipelines.some(p => p.id !== editingPipeline.id && p.name.trim().toLowerCase() === newName.toLowerCase());
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -72,7 +77,7 @@ export function PipelineSelector({
   };
 
   const handleEdit = async () => {
-    if (!editingPipeline || !name.trim()) return;
+    if (!editingPipeline || !name.trim() || nameTaken) return;
     const success = await onUpdate(editingPipeline.id, {
       name: name.trim(),
       description: description.trim() || undefined,
@@ -240,7 +245,11 @@ export function PipelineSelector({
         color={color}
         setColor={setColor}
         onSave={handleEdit}
-        saveLabel="Salvar"
+        saveLabel={isRenaming ? "Salvar novo nome" : "Salvar"}
+        saveDisabled={nameTaken}
+        notice={!isRenaming || !editingPipeline ? null : nameTaken
+          ? <p role="alert" className="text-xs text-destructive">Já existe um funil com esse nome. Escolha outro para os painéis e integrações não confundirem os dois.</p>
+          : <PipelineRenameNotice pipelineId={editingPipeline.id} oldName={editingPipeline.name} newName={newName} />}
       />
     </div>
   );
@@ -259,6 +268,8 @@ function PipelineFormDialog({
   setColor,
   onSave,
   saveLabel = "Criar funil",
+  saveDisabled = false,
+  notice,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -272,10 +283,12 @@ function PipelineFormDialog({
   setColor: (v: string) => void;
   onSave: () => void;
   saveLabel?: string;
+  saveDisabled?: boolean;
+  notice?: ReactNode;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px]">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <GitBranch className="h-5 w-5" />
@@ -291,6 +304,7 @@ function PipelineFormDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
+            {notice}
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Descrição (opcional)</label>
@@ -320,7 +334,7 @@ function PipelineFormDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={onSave} disabled={!name.trim()}>
+          <Button onClick={onSave} disabled={!name.trim() || saveDisabled}>
             {saveLabel}
           </Button>
         </DialogFooter>

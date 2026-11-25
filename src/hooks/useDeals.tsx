@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { findPipelineByRole, hasPipelineRole } from "@/lib/sales/pipelineRoles";
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -397,13 +398,13 @@ export function useDeals(pipelineId?: string | null) {
       let targetStageId = cleanData.stage_id;
 
       if (!targetPipelineId && isGeorgeCreating) {
-        const { data: sdrPipeline } = await supabase
+        const { data: activePipelines } = await supabase
           .from('pipelines')
-          .select('id')
+          .select('id, name, system_role')
           .eq('account_id', currentUser.account_id)
-          .eq('name', 'SDR')
           .eq('is_active', true)
-          .single();
+          .order('created_at', { ascending: true });
+        const sdrPipeline = findPipelineByRole(activePipelines || [], 'sdr');
 
         if (sdrPipeline) {
           targetPipelineId = sdrPipeline.id;
@@ -693,21 +694,19 @@ export function useDeals(pipelineId?: string | null) {
         // Get current pipeline info
         const { data: currentPipeline } = await supabase
           .from('pipelines')
-          .select('name')
+          .select('name, system_role')
           .eq('id', resolvedPipelineId)
           .single();
 
-        if (currentPipeline?.name === 'SDR') {
+        if (hasPipelineRole(currentPipeline, 'sdr')) {
           // Find the Closer pipeline
-          const { data: closerPipeline } = await supabase
+          const { data: activePipelines } = await supabase
             .from('pipelines')
-            .select('id')
+            .select('id, name, system_role')
             .eq('account_id', currentUser.account_id)
-            .in('name', ['Closer', 'Funil Mentoria'])
             .eq('is_active', true)
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .maybeSingle();
+            .order('created_at', { ascending: true });
+          const closerPipeline = findPipelineByRole(activePipelines || [], 'closer');
 
           if (closerPipeline) {
             // Find "Reunião Agendada" stage in Closer pipeline

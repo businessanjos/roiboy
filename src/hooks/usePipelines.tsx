@@ -15,6 +15,9 @@ export interface Pipeline {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  /** Papel fixo mantido pelo servidor; as regras usam isto, nunca o nome. */
+  system_role?: string | null;
+  previous_names?: string[] | null;
 }
 
 export function usePipelines() {
@@ -134,8 +137,11 @@ export function usePipelines() {
 
       if (error) throw error;
 
+      const previousName = pipelines.find(p => p.id === id)?.name;
       setPipelines(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-      toast.success('Funil atualizado');
+      if (updates.name && previousName && updates.name !== previousName) {
+        toast.success(`Funil renomeado para "${updates.name}"`, { description: 'Painéis, entrada de leads e integrações continuam ligados a ele.' });
+      } else toast.success('Funil atualizado');
       return true;
     } catch (error: any) {
       console.error('Error updating pipeline:', error);
