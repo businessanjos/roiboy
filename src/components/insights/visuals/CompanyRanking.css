@@ -8,6 +8,12 @@
   gap: 20px;
 }
 
+.company-ranking-column-content {
+  width: 100%;
+  max-width: 32rem;
+  min-width: 0;
+}
+
 .company-ranking-secondary {
   border-top-width: 1px;
   padding-top: 16px;

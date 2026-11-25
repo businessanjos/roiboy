@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Largura dos cartões do ranking superior
+- [x] Cabeçalhos e cartões limitados juntos a 32rem ou largura disponível, com a mesma proporção nas duas empresas; nome/valor continuam legíveis. Colunas, ordem, dados, cores, calls e outros gráficos intactos.
+- [x] 30 testes passaram; componentes originais com exemplos em normal/TV/zoom 390/803/1366/1440/1920, compartilhado 390/1440 e zoom 250%, apresentação 803/1440, nos dois temas: cabeçalho/lista com largura igual, sem cortes ou erros. Fontes e caminhos registrados em `.lovable/reviews/company-ranking-width.md`; compilação OK, sem escritas reais ou publicação.
+- [ ] Conferência na conta real, acesso externo e TV física: sessão própria indisponível e criação de pessoa de teste falhou; exemplos não validam essas sessões ou o aparelho.
+
 ## Calls Comerciais no ranking de vendedores
 - [x] Hierarquia interna ajustada: vendedor alinhado ao título, blocos diretamente abaixo na mesma linha e ordem número → legenda → percentual. Restante do dashboard intacto; 30 testes e 12 cenários isolados nos dois temas passaram, sem cortes ou erros; compilação OK, sem publicar.
 - [x] Mantidos blocos preenchidos com medidas limitadas, vendedores lado a lado quando cabe, percentuais dentro de Vendas e rolagem local; sem tabela, alteração de métricas/configurações ou outros gráficos.

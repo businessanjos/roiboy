@@ -234,7 +234,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
   // Company rankings keep a single ordered column, regardless of its width.
   const rowHeight = Math.round((compact ? 72 : 44) * m);
   const denseTv = compact && tv.tv && boxHeight / Math.max(fitRowCount ?? data.length, 1) < 140;
-  const narrowTv = compact && tv.tv && boxWidth > 0 && boxWidth < 440;
+  const narrowTv = compact && tv.tv && boxWidth > 0 && boxWidth < 560;
   const headerHeight = Math.round(30 * m);
   const visibleRows =
     tv.tv && boxHeight > 0

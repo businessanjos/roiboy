@@ -40,7 +40,8 @@ export function CompanyRanking({ data, companyIds, ...rankingProps }: Props) {
           const total = rows.reduce((sum, row) => sum + row.value, 0);
           return (
             <section key={id} aria-label={`Ranking ${name}`} className={`flex min-h-0 min-w-0 flex-col border-border ${index > 0 ? 'company-ranking-secondary' : 'company-ranking-primary'}`}>
-              <header className={`flex w-full shrink-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1 border-b border-border ${tv.tv ? 'mb-2 max-w-[54rem] pb-2' : 'mb-3 max-w-[40rem] pb-3'}`}>
+              <div className="company-ranking-column-content flex min-h-0 flex-1 flex-col">
+              <header className={`flex w-full shrink-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1 border-b border-border ${tv.tv ? 'mb-2 pb-2' : 'mb-3 pb-3'}`}>
                 <h3 className={`${tv.tv ? 'text-xl' : 'text-base'} font-semibold text-foreground`}>{name}</h3>
                 <span className={`${tv.tv ? 'text-2xl font-bold' : 'text-sm font-semibold'} tabular-nums text-foreground ${rankingProps.privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>{format(total)}</span>
               </header>
@@ -48,6 +49,7 @@ export function CompanyRanking({ data, companyIds, ...rankingProps }: Props) {
                 {rows.length ? <ConfigurableRanking data={rows} {...rankingProps} compact fitRowCount={fitRowCount} /> : (
                   <p className="py-8 text-center text-sm text-muted-foreground">Sem vendas neste período</p>
                 )}
+              </div>
               </div>
             </section>
           );
