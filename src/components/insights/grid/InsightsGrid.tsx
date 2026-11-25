@@ -7,9 +7,6 @@ import { getCompactor } from "react-grid-layout/core";
 import { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { ConfigurableVisualCard } from "../visuals/ConfigurableVisualCard";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { hasCompanyRanking, tvRowContentSizing, tvRowSizing } from "@/lib/insights/tvLayout";
-import { useTvRowContentHeight } from "./useTvRowContentHeight";
-import { useTvMode } from '../TvModeContext';
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -51,7 +48,6 @@ const CONTAINER_PADDING: [number, number] = [4, 4];
 
 function getMobileMinHeight(visual: InsightsVisual): string {
   const ct = visual.chart_type || "bar";
-  if (["bar", "bar_horizontal"].includes(ct) && (visual.config?.stackBy || visual.config?.stackByCustomField)) return "min-h-[380px]";
   if (["scorecard", "kpi", "number"].includes(ct)) return "min-h-[132px]";
   if (["table", "ranking", "data_table", "daily_performance"].includes(ct)) return "min-h-[340px]";
   if (ct === "map") return "min-h-[320px]";
@@ -197,11 +193,10 @@ function getRowMinWidth(row: VisualRow, mins: MinCardWidths): number {
 function getRowMinHeight(row: VisualRow): number {
   if (row.isAllScorecards) return 150;
   if (row.isAllCompact) return 230;
-  if (row.visuals.some((visual) => visual.chart_type === 'ranking' && Array.isArray(visual.config?.rankingCompanyIds) && visual.config.rankingCompanyIds.length > 0)) return 340;
   return 300;
 }
 
-const TV_ROW_GAP = 10;
+const TV_ROW_GAP = 16;
 
 function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth, readOnly, minCardWidths, fitHeight, onRequiredHeight }: {
   visuals: InsightsVisual[];
@@ -214,30 +209,21 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
   onRequiredHeight?: (px: number) => void;
 }) {
   const rows = useMemo(() => groupVisualsIntoRows(visuals), [visuals]);
-  const tv = useTvMode();
-  const sellerBoard = visuals.some(hasCompanyRanking);
-  const [contentHeights, setContentHeights] = useState<Record<string, number>>({});
-  const reportContentHeight = useCallback((key: string, height: number) => {
-    setContentHeights(previous => (previous[key] ?? 0) === height ? previous : { ...previous, [key]: height });
-  }, []);
-  const rowKey = (row: VisualRow) => row.visuals.map(visual => visual.id).join(':');
-  const sizing = rows.map(row => tvRowContentSizing(
-    tvRowSizing(row.visuals, sellerBoard, { minHeight: getRowMinHeight(row), weight: row.weight }),
-    Math.max(contentHeights[rowKey(row)] ?? 0, tv.presentation
-      ? (row.visuals.some(hasCompanyRanking) ? 320 : row.visuals.some(v => v.chart_type === 'bar_stacked' || (v.chart_type === 'bar' && (v.config?.stackBy || v.config?.stackByCustomField))) ? 380 : 0) / (tv.pixelScale ?? 1)
-      : 0),
-  ));
   const mins = useMemo(() => ({ ...DEFAULT_MIN_CARD_WIDTHS, ...(minCardWidths || {}) }), [minCardWidths]);
 
-  const requiredHeight = sizing.reduce((sum, row) => sum + row.minHeight, 0) +
-    Math.max(0, rows.length - 1) * TV_ROW_GAP;
+  const requiredHeight = useMemo(
+    () =>
+      rows.reduce((sum, row) => sum + getRowMinHeight(row), 0) +
+      Math.max(0, rows.length - 1) * TV_ROW_GAP,
+    [rows]
+  );
 
   useEffect(() => {
     if (fitHeight) onRequiredHeight?.(requiredHeight);
   }, [fitHeight, requiredHeight, onRequiredHeight]);
 
   return (
-    <div className={fitHeight ? "flex flex-col gap-2.5 h-full min-h-0" : "flex flex-col gap-3"}>
+    <div className={fitHeight ? "flex flex-col gap-4 h-full min-h-0" : "flex flex-col gap-3"}>
       {rows.map((row, rowIdx) => (
         <ResponsiveRow
           key={rowIdx}
@@ -248,16 +234,13 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
           readOnly={readOnly}
           minWidth={getRowMinWidth(row, mins)}
           fitHeight={fitHeight}
-          tvSizing={sizing[rowIdx]}
-          rowKey={rowKey(row)}
-          onContentHeight={reportContentHeight}
         />
       ))}
     </div>
   );
 }
 
-function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly, minWidth, fitHeight, tvSizing, rowKey, onContentHeight }: {
+function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly, minWidth, fitHeight }: {
   row: VisualRow;
   containerWidth: number;
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
@@ -265,13 +248,8 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
   readOnly?: boolean;
   minWidth: number;
   fitHeight?: boolean;
-  tvSizing: { minHeight: number; weight: number };
-  rowKey: string;
-  onContentHeight: (key: string, height: number) => void;
 }) {
   const { visuals } = row;
-  const content = useTvRowContentHeight(!!fitHeight);
-  useEffect(() => { onContentHeight(rowKey, content.height); }, [rowKey, content.height, onContentHeight]);
 
   // How many columns the auto-fit grid will actually create at this width.
   // Used only to translate col_span (1/1, 1/2, 1/3) into a real column span.
@@ -296,8 +274,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
 
   return (
     <div
-      ref={content.ref}
-      className={fitHeight ? "grid gap-2.5 min-h-0" : "grid gap-3"}
+      className={fitHeight ? "grid gap-4 min-h-0" : "grid gap-3"}
       style={{
         gridTemplateColumns: useSavedWidths
           ? `repeat(${PROPORTIONAL_COLS}, minmax(0, 1fr))`
@@ -306,10 +283,10 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
           ? {
               // Altura proporcional: usa a altura salva (ou o peso por tipo),
               // então linhas de scorecards ficam baixas e tabelas ganham espaço.
-              flex: `${tvSizing.weight} 1 0%`,
+              flex: `${row.weight} 1 0%`,
               // Piso de altura: sem ele, linhas de scorecard podem ficar tão
               // baixas que o número estoura o card e cobre o título.
-              minHeight: tvSizing.minHeight,
+              minHeight: getRowMinHeight(row),
               gridAutoRows: "1fr",
             }
           : {}),
@@ -326,7 +303,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
 
         if (useSavedWidths) {
           maxSpan = PROPORTIONAL_COLS;
-          const raw = ((visual.layout?.w || 0) / rowSavedWidth) * PROPORTIONAL_COLS;
+          const raw = ((visual.layout!.w || 0) / rowSavedWidth) * PROPORTIONAL_COLS;
           span = Math.max(4, Math.round(raw));
           // Garante que a última coluna feche exatamente a linha
           if (idx === visuals.length - 1) {
@@ -347,7 +324,6 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
         return (
           <div
             key={visual.id}
-            data-tv-visual={fitHeight ? visual.id : undefined}
             className={`overflow-hidden rounded-lg min-w-0 ${fitHeight ? "h-full min-h-0" : ""}`}
             style={{
               ...(fitHeight ? { minHeight: 0 } : { minHeight: minH }),
@@ -508,7 +484,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
 
   // ResizeObserver with debounce
   useEffect(() => {
-    if (!containerRef.current || (isMobile && !fitHeight)) return;
+    if (!containerRef.current || isMobile) return;
 
     let rafId: number | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -539,7 +515,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
       if (debounceTimer) clearTimeout(debounceTimer);
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [isMobile, readOnly, fitHeight]);
+  }, [isMobile, readOnly]);
 
   const visualsById = useMemo(() => new Map(visuals.map((v) => [v.id, v])), [visuals]);
 
@@ -585,7 +561,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
 
   if (visuals.length === 0) return null;
 
-  if (isMobile && !fitHeight) {
+  if (isMobile) {
     return (
       <MobileInsightsGrid
         visuals={visuals}

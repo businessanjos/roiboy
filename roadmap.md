@@ -310,3 +310,7 @@
 - [x] Aviso "Conta de TV sem acesso — verifique em Configurações > TVs" na TV e na tela de TVs
 - [x] Front: Insights normal em modo TV com tv_token; remover TvInsightsView
 - [x] Lista de RPC liberadas + comparação lado a lado dos 4 painéis
+
+## Retorno ao primeiro ranking separado por empresa
+- [x] Restaurar o layout da primeira separação Eternum/Anjos (25/11, 12:26), sem desfazer correções de números, paleta ou mudanças em outras áreas.
+- [x] Painel real conferido na sessão atual em 1440, 1920×1080, 668 e 390 px: tabelas originais, foco a 80% e ajuste TV; sem erros de execução. 30 testes de cálculos/separação passaram; sem alterar dados, permissões, integrações ou publicar.

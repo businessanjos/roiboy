@@ -24,7 +24,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { parseUrlView, writeUrlView, replaceSearch } from "@/lib/insights/urlState";
-import { hasCompanyRanking, tvPresentationDefault } from "@/lib/insights/tvLayout";
 
 export function InsightsMainContent() {
   const { 
@@ -104,18 +103,15 @@ export function InsightsMainContent() {
     });
   }, [visuals, fixedYear, selectedMonth]);
 
-  const isSellerTvBoard = (visuals || []).some(hasCompanyRanking);
-  useEffect(() => {
-    // TV links can specify only foco + zoom. Keep those seller boards fitted;
-    // an explicit tv=0 and the user's subsequent manual toggle still win.
-    if (!isLoadingVisuals && isSellerTvBoard && initialView.foco && initialView.tv === null) setTvFit(true);
-  }, [isLoadingVisuals, isSellerTvBoard, activeDashboardId]);
-
   // Lembra o ajuste de TV (modo e zoom) de cada painel neste aparelho
-  // Seller boards use MQL's compact zoom without inheriting the old full-size preference.
-  const tvPrefKey = activeDashboardId ? `insights-tv-pref-${isSellerTvBoard ? 'v6' : 'v4'}:${activeDashboardId}` : null;
+  // Padrão de TV 42" por painel (v2 descarta ajustes antigos salvos)
+  const TV_DEFAULT_ZOOM: Record<string, number> = {
+    "29104b57-a5bf-41aa-b28a-2bd42a525206": 60, // [MQL] Análise de Funil
+    "05fe3fc0-139f-4de2-b46c-da526bcd022a": 80, // Leaderboard
+  };
+  const tvPrefKey = activeDashboardId ? `insights-tv-pref-v4:${activeDashboardId}` : null;
   useEffect(() => {
-    if (!tvPrefKey || isLoadingVisuals) return;
+    if (!tvPrefKey) return;
     if (urlViewOverride.current) { urlViewOverride.current = false; return; }
     try {
       const raw = localStorage.getItem(tvPrefKey);
@@ -124,18 +120,18 @@ export function InsightsMainContent() {
         if (typeof p.tvFit === "boolean") setTvFit(p.tvFit);
         if (typeof p.zoom === "number") setFocusZoom(p.zoom);
       } else {
-        const defaults = tvPresentationDefault(activeDashboardId, isSellerTvBoard);
-        setTvFit(defaults.tvFit);
-        setFocusZoom(defaults.zoom);
+        const def = activeDashboardId ? TV_DEFAULT_ZOOM[activeDashboardId] : undefined;
+        setTvFit(def == null);
+        setFocusZoom(def ?? 100);
       }
     } catch { /* ignore */ }
-  }, [tvPrefKey, isLoadingVisuals, activeDashboardId, isSellerTvBoard]);
+  }, [tvPrefKey]);
   useEffect(() => {
-    if (!tvPrefKey || !isFocusMode || isLoadingVisuals) return;
+    if (!tvPrefKey || !isFocusMode) return;
     try {
       localStorage.setItem(tvPrefKey, JSON.stringify({ tvFit, zoom: focusZoom }));
     } catch { /* ignore */ }
-  }, [tvPrefKey, isFocusMode, tvFit, focusZoom, isLoadingVisuals]);
+  }, [tvPrefKey, isFocusMode, tvFit, focusZoom]);
 
   // Sincroniza foco/tv/zoom com a URL
   useEffect(() => {
@@ -309,10 +305,10 @@ export function InsightsMainContent() {
           className="fixed inset-0 z-[9999] bg-background flex flex-col"
         >
           {/* Header — some sozinho após alguns segundos sem mouse */}
-          <div className={`flex flex-wrap items-center justify-between gap-2 px-3 border-b border-border shrink-0 overflow-hidden transition-all duration-300 motion-reduce:transition-none ${controlsVisible ? "py-2 max-h-32 opacity-100" : "py-0 max-h-0 opacity-0 border-b-0"}`}>
-            <div className="flex min-w-0 items-center gap-2">
+          <div className={`flex items-center justify-between px-6 border-b border-border shrink-0 overflow-hidden transition-all duration-300 motion-reduce:transition-none ${controlsVisible ? "py-4 max-h-24 opacity-100" : "py-0 max-h-0 opacity-0 border-b-0"}`}>
+            <div className="flex items-center gap-3">
               <BarChart3 className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold truncate">{activeDashboard.name}</h1>
+              <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
             </div>
             <div className="flex items-center gap-3">
               <Button
@@ -323,8 +319,8 @@ export function InsightsMainContent() {
                 <Tv className="h-4 w-4 mr-2" />
                 {tvFit ? "Ajustado à TV" : "Ajustar à TV"}
               </Button>
-              {(!tvFit || isSellerTvBoard) && (
-                <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} min={50} max={tvFit ? 100 : 250} step={10} />
+              {!tvFit && (
+                <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} min={50} max={250} step={10} />
               )}
               <Button variant="outline" size="icon" aria-label={isFullscreen ? "Sair da tela cheia" : "Tela cheia"} onClick={toggleFullscreen}>
                 {isFullscreen ? (
@@ -344,9 +340,9 @@ export function InsightsMainContent() {
 
           {/* Content: fits the whole dashboard on screen (TV) or scrolls with zoom */}
           {tvFit ? (
-            <div className="flex-1 min-h-0 overflow-hidden bg-background p-2">
+            <div className="flex-1 min-h-0 overflow-hidden p-1 bg-gradient-to-b from-background to-muted/20">
               {hasVisuals && (
-                <TvFitStage requiredHeight={tvRequiredHeight} zoom={isSellerTvBoard ? focusZoom : 100} presentation={isSellerTvBoard}>
+                <TvFitStage requiredHeight={tvRequiredHeight}>
                   <InsightsGrid
                     visuals={filteredVisuals}
                     onLayoutChange={() => {}}
@@ -361,7 +357,7 @@ export function InsightsMainContent() {
             </div>
           ) : (
 
-            <div className="min-h-0 flex-1 overflow-auto p-4 lg:p-6">
+            <div className="flex-1 overflow-auto px-6 pb-6 pt-0">
               <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top left', width: `${10000 / focusZoom}%` }}>
                 {hasVisuals && (
                   <InsightsGrid

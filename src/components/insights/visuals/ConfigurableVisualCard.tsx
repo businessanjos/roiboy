@@ -159,7 +159,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
     if (!stackedResult?.data) return undefined;
     if (!config?.hiddenCategories?.length) return stackedResult;
 
-    const hidden = new Set(config.hiddenCategories!);
+    const hidden = new Set(config.hiddenCategories);
 
     // Filter series keys (stacked groups like "origem da venda" values)
     const filteredSeriesKeys = stackedResult.seriesKeys.filter(k => !hidden.has(k));
@@ -199,12 +199,12 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
     if (config?.customFormula) {
       result = result.map((item) => ({
         ...item,
-        value: evaluateFormula(config.customFormula!, { value: item.value }),
+        value: evaluateFormula(config.customFormula ?? "", { value: item.value }),
       }));
     }
     // Filter out hidden categories
     if (config?.hiddenCategories?.length) {
-      result = result.filter((item) => !config.hiddenCategories!.includes(item.name));
+      result = result.filter((item) => !config.hiddenCategories?.includes(item.name));
     }
     // Formato "%" com modo participação: cada item vira sua fatia do total exibido
     if (isPercentShare) {
@@ -328,20 +328,20 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
   return (
     <VisualErrorBoundary title={visual.title || "Visual"}>
       <>
-        <Card className={cn("relative flex flex-col h-full", tv.tv && "border-border/70 bg-card shadow-none", chartType === 'call_commercial' && "min-w-0 overflow-hidden")}>
+        <Card className={cn("relative flex flex-col h-full", tv.tv && "border-border/70 bg-card/80 shadow-lg")}>
           {isFailing && hasGoodData && (
             <span className="pointer-events-none absolute right-3 bottom-2 z-10 text-[11px] text-muted-foreground animate-pulse">
               Atualizando…
             </span>
           )}
-          <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2", tv.tv && "space-y-1 px-4 pt-3 pb-2", chartType === 'call_commercial' && "space-y-0 px-3 pt-2.5 pb-1.5", tv.presentation && "tv-visual-header")}>
+          <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2", tv.tv && "px-5 pt-4 pb-1")}>
             <CardTitle
               className={cn(
-                "text-base min-w-0 flex items-center justify-between gap-1",
+                "text-base flex items-center justify-between gap-1",
                 isScorecard && "text-sm",
-                tv.tv && "font-semibold tracking-normal text-foreground",
+                tv.tv && "font-semibold tracking-normal text-muted-foreground",
               )}
-              style={tv.tv ? { fontSize: tv.presentation ? 'var(--tv-title-size)' : Math.round((isScorecard || chartType === 'call_commercial' ? 16 : 20) * (chartType === 'call_commercial' ? Math.min(tv.scale, 1.15) : tv.scale)), ...(tv.presentation ? { lineHeight: 1.2 } : {}) } : undefined}
+              style={tv.tv ? { fontSize: Math.round((isScorecard ? 15 : 18) * tv.scale) } : undefined}
             >
               <div className="flex items-center gap-1.5 min-w-0">
                 {!readOnly && <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />}
@@ -559,7 +559,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
             {summary && (
               <div
                 className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground"
-                style={tv.tv ? { fontSize: tv.presentation ? 'var(--tv-caption-size)' : Math.round(12 * tv.scale), ...(tv.presentation ? { lineHeight: 1.3 } : {}) } : undefined}
+                style={tv.tv ? { fontSize: Math.round(12 * tv.scale) } : undefined}
               >
                 {summary.showTotal && (
                   <span>
@@ -573,7 +573,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
               </div>
             )}
           </CardHeader>
-          <CardContent className={cn("flex-1 min-h-0", tv.tv ? "overflow-hidden px-4 pb-3" : "overflow-auto", chartType === 'call_commercial' && "overflow-hidden px-3 pb-2", tv.presentation && "tv-visual-content")}>
+          <CardContent className={cn("flex-1 min-h-0", tv.tv ? "overflow-hidden px-4 pb-4" : "overflow-auto")}>
            <ConfigurableChart
               type={effectiveChartType}
               data={processedData}

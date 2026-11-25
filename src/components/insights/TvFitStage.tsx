@@ -1,8 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { TvModeProvider } from "./TvModeContext";
-import { tvStageSizing } from "@/lib/insights/tvLayout";
-import type { CSSProperties } from "react";
-import './TvPresentation.css';
 
 /** Canvas nominal de uma TV 42" Full HD (16:9) — mantido por compatibilidade. */
 export const TV_STAGE_WIDTH = 1920;
@@ -20,10 +17,6 @@ interface TvFitStageProps {
    * assim gráficos não ficam espremidos nem cortados.
    */
   requiredHeight?: number;
-  /** Requested display zoom; fitting may reduce it further to keep all rows visible. */
-  zoom?: number;
-  /** Wider seller presentation requested only by the focus overlay. */
-  presentation?: boolean;
 }
 
 /**
@@ -32,7 +25,7 @@ interface TvFitStageProps {
  * largura da tela e, se o conteúdo precisar de mais altura do que a TV tem,
  * reduzimos proporcionalmente até caber tudo sem rolagem.
  */
-export function TvFitStage({ children, title, subtitle, requiredHeight, zoom = 100, presentation = false }: TvFitStageProps) {
+export function TvFitStage({ children, title, subtitle, requiredHeight }: TvFitStageProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
@@ -59,8 +52,17 @@ export function TvFitStage({ children, title, subtitle, requiredHeight, zoom = 1
 
   // Altura em que o painel será desenhado antes de encolher para caber.
   const headerAllowance = title || subtitle ? 64 : 0;
-  const { fit, fontScale, stageWidth, stageHeight } = tvStageSizing(width, height, requiredHeight, headerAllowance, zoom);
-  const pixelScale = Math.min(1, Math.max(0.5, zoom / 100));
+  const contentAvailable = Math.max(1, height - headerAllowance);
+  const targetContent = Math.max(contentAvailable, requiredHeight || 0);
+  const fit = height ? Math.min(1, Math.max(0.45, contentAvailable / targetContent)) : 1;
+
+  // Escala tipográfica: quanto maior a tela, maiores os números e rótulos.
+  // Quando o palco encolhe, compensamos um pouco para manter a leitura à distância.
+  const baseScale = width ? Math.min(1.3, Math.max(1, 1 + (width - 1200) / 2000)) : 1.1;
+  const fontScale = Math.min(1.45, baseScale / Math.max(fit, 0.6));
+
+  const stageWidth = width ? width / fit : undefined;
+  const stageHeight = height ? headerAllowance / fit + targetContent : undefined;
 
   return (
     <div ref={wrapperRef} className="w-full h-full overflow-hidden">
@@ -70,9 +72,8 @@ export function TvFitStage({ children, title, subtitle, requiredHeight, zoom = 1
           height: stageHeight,
           transform: fit < 1 ? `scale(${fit})` : undefined,
           transformOrigin: "top left",
-          ...(presentation ? { '--tv-pixel-ratio': 1 / pixelScale } : {}),
-        } as CSSProperties}
-        className={`flex flex-col overflow-hidden ${presentation ? 'insights-tv-presentation' : ''}`}
+        }}
+        className="flex flex-col rounded-2xl border border-border/60 bg-card/40 shadow-2xl overflow-hidden"
       >
         {(title || subtitle) && (
           <div className="flex items-baseline justify-between gap-6 px-6 pt-4 pb-2 shrink-0">
@@ -82,8 +83,8 @@ export function TvFitStage({ children, title, subtitle, requiredHeight, zoom = 1
             )}
           </div>
         )}
-        <div className="flex-1 min-h-0 p-0.5 overflow-hidden">
-          <TvModeProvider enabled fitted scale={fontScale} maxCategories={10} presentation={presentation} pixelScale={pixelScale}>
+        <div className="flex-1 min-h-0 px-3 py-3 overflow-hidden">
+          <TvModeProvider enabled scale={fontScale} maxCategories={10}>
             {children}
           </TvModeProvider>
         </div>
