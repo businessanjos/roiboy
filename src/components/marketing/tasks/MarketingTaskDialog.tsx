@@ -105,7 +105,7 @@ export function MarketingTaskDialog({
   // Fetch team members
   const { data: teamMembers = [] } = useMarketingTeamUsers();
 
-  const { catalog: labelCatalog, createLabel } = useMarketingTaskLabelCatalog(tasks);
+  const { catalog: labelCatalog, createLabel, editLabel } = useMarketingTaskLabelCatalog(tasks);
 
   useEffect(() => {
     if (!open) { setCopySource(null); setCopySubtasks([]); return; }
@@ -140,7 +140,8 @@ export function MarketingTaskDialog({
     }
     inferredDeliveryDate.current = false;
     setDateValid(true); setEditorKey((key) => key + 1);
-  }, [open, existingTask, copySource, defaultSectionId, defaultColumnId, defaultAssigneeId, columns]);
+  // Shared label edits refresh the task cache; do not discard the open form's draft.
+  }, [open, existingTask?.id, copySource, defaultSectionId, defaultColumnId, defaultAssigneeId, columns]);
 
   const cleanupUploads = async (kept: MediaAttachment[] = []) => {
     const keptPaths = new Set(kept.filter((a) => a.bucket === TASK_FILES_BUCKET).map((a) => a.path));
@@ -314,7 +315,7 @@ export function MarketingTaskDialog({
                 <div className="space-y-1.5"><Label htmlFor="task-stage" className="text-xs text-muted-foreground">Etapa</Label><Select value={columnId} onValueChange={setColumnId} disabled={blocked}><SelectTrigger id="task-stage"><SelectValue placeholder="Selecione a etapa" /></SelectTrigger><SelectContent>{columns.map((column) => <SelectItem key={column.id} value={column.id}>{column.title}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-1.5"><Label htmlFor="task-priority" className="text-xs text-muted-foreground">Prioridade</Label><Select value={priority} onValueChange={(value) => setPriority(value as MarketingTaskPriority)} disabled={blocked}><SelectTrigger id="task-priority"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">Baixa</SelectItem><SelectItem value="medium">Média</SelectItem><SelectItem value="high">Alta</SelectItem></SelectContent></Select></div>
                 </div>
-                <TaskLabelEditor value={labels} onChange={setLabels} catalog={labelCatalog} onCreate={createLabel} portalContainer={portalContainer} disabled={blocked} />
+                <TaskLabelEditor key={editorKey} value={labels} onChange={setLabels} catalog={labelCatalog} onCreate={createLabel} onEdit={editLabel} portalContainer={portalContainer} disabled={blocked} />
               </div>
             </aside>
           </div>

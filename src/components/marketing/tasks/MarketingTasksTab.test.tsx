@@ -19,7 +19,7 @@ vi.mock("@/hooks/useMarketingTaskColumns", () => ({ useMarketingTaskColumns: () 
 vi.mock("@/hooks/useMarketingTaskSeparators", () => ({ useMarketingTaskSeparators: () => ({ separators: [], save: {} }) }));
 vi.mock("@/hooks/useMarketingTeamUsers", () => ({ useMarketingTeamUsers: () => ({ data: [{ id: "qa-user", name: "TESTE QA" }] }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
-vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: {} }) }));
+vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: {} }), useQueryClient: () => ({ setQueryData: vi.fn(), invalidateQueries: vi.fn() }) }));
 vi.mock("./MarketingTaskKanban", () => ({ MarketingTaskKanban: views.board }));
 vi.mock("./MarketingTaskList", () => ({ MarketingTaskList: views.list }));
 vi.mock("./MarketingTaskSection", () => ({ MarketingTaskSection: views.section }));

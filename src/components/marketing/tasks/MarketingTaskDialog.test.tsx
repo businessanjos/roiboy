@@ -10,6 +10,7 @@ vi.mock("@/hooks/useCurrentUser", () => ({ useCurrentUser: () => ({ currentUser:
 vi.mock("@/hooks/useMarketingTeamUsers", () => ({ useMarketingTeamUsers: () => ({ data: mocks.team }) }));
 vi.mock("@/lib/fetchAllRows", () => ({ fetchAllRows: async () => ({ data: [], error: null }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
+vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ setQueryData: vi.fn(), invalidateQueries: vi.fn() }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 vi.mock("./SubtaskList", () => ({ SubtaskList: () => null }));
 vi.mock("./TaskComments", () => ({ TaskComments: () => null }));

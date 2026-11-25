@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Editar etiquetas no Marketing
+- [x] Lápis nos menus da tarefa e do filtro permite editar nome/cor; Salvar etiqueta atualiza todas as tarefas que a usam, inclusive concluídas, pela mesma conta e RLS existente. Duplicatas não mesclam, falha não salva parcialmente e rascunho/seleção são preservados; sem alterar responsáveis, situações, datas ou anexos.
+- [x] 83 testes passaram; sessão autenticada com duas tarefas TESTE QA: salvar nome/cor, reler ambas, reabrir a concluída, cancelar, rejeitar duplicata e renomear pelo filtro mantendo seleção; recarga conserva catálogo/nome/cor. 390/798/1440 nos dois temas sem cortes ou erros; somente tarefas QA conhecidas removidas, nenhuma tarefa real modificada. Permissões e acesso anônimo conferidos no banco; sem publicação.
+
 ## Leitura ampliada na TV (aprovado)
 - [x] Ranking ampliado, medidas por altura disponível e preferência de TV independente do antigo 80%; gráfico com barras mais largas/legenda compacta, Calls com nomes/fotos ao lado e números maiores. Layout salvo, empresas, valores, cores, período e atualização preservados.
 - [x] 26 testes passaram; painel autenticado em 1920×1080, 1366×768 e 803×674 nos dois temas: três vendedores e quatro gráficos visíveis, sem cortes/erros; normal 1440/390 sem rolagem lateral, recarga e troca explícita de zoom 80 para ajuste automático conferidas. Detalhes de Darlan abrem com registros reais. Escritas em configurações bloqueadas durante QA; nenhum backend ou dado real alterado, sem publicação. Sem teste no aparelho físico.

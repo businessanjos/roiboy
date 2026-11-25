@@ -785,6 +785,20 @@
       "when": 1795611679101,
       "tag": "0111_bulk_move_preserve_deal_status",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1795621406260,
+      "tag": "0112_marketing_task_label_edit",
+      "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1795621590483,
+      "tag": "0113_marketing_task_label_complete_access",
+      "breakpoints": true
     }
   ]
 }

@@ -105,7 +105,7 @@ export function MarketingTasksTab() {
       setSearchParams(next, { replace: true });
     }
   };
-  const { catalog: labelCatalog, createLabel } = useMarketingTaskLabelCatalog(tasks);
+  const { catalog: labelCatalog, createLabel, editLabel } = useMarketingTaskLabelCatalog(tasks);
   const { sections, isLoading: sectionsLoading, createSection } = useMarketingTaskSections();
   const { columns, isLoading: columnsLoading } = useMarketingTaskColumns();
 
@@ -437,7 +437,7 @@ export function MarketingTasksTab() {
           </div>
                 <div className="flex items-center justify-between border-t pt-3">
                   <span className="text-xs font-medium text-muted-foreground">Etiquetas</span>
-                  <TaskLabelFilter catalog={labelCatalog} selected={labelFilter} onChange={setLabelFilter} onCreate={createLabel} />
+                  <TaskLabelFilter catalog={labelCatalog} selected={labelFilter} onChange={setLabelFilter} onCreate={createLabel} onEdit={editLabel} />
                 </div>
               </div>
               <div className="border-t px-3 py-2">

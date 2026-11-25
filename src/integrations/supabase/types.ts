@@ -31661,6 +31661,20 @@ export type Database = {
         Returns: Json
       }
       dunning_default_sla: { Args: { p_stage: string }; Returns: string }
+      edit_marketing_task_label: {
+        Args: {
+          p_account_id: string
+          p_color: string
+          p_name: string
+          p_old_name: string
+        }
+        Returns: {
+          custom_fields: Json
+          id: string
+          tags: string[]
+          updated_at: string
+        }[]
+      }
       ensure_default_contratada: {
         Args: { p_account_id: string }
         Returns: string
@@ -32021,6 +32035,7 @@ export type Database = {
           name: string
         }[]
       }
+      marketing_task_label_key: { Args: { value: string }; Returns: string }
       marketing_task_mention_key: { Args: { value: string }; Returns: string }
       merge_deals_reversible: {
         Args: { p_data: Json; p_source: string; p_target: string }

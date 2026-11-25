@@ -29,3 +29,17 @@ export function mergeTaskLabelCatalog(local: TaskLabel[], saved: TaskLabel[]): T
 export function taskLabelStorageKey(accountId: string | undefined, userId: string | undefined): string | null {
   return accountId && userId ? `roy_marketing_task_labels_${accountId}_${userId}` : null;
 }
+
+/** Validate edits without mutating the catalogue or the caller's selection. */
+export function editTaskLabelDraft(catalog: TaskLabel[], selected: TaskLabel[], original: TaskLabel, input: TaskLabel) {
+  const label = cleanTaskLabel(input);
+  const originalKey = labelKey(original.name);
+  if (!catalog.some(item => labelKey(item.name) === originalKey)) throw new Error("Esta etiqueta não está mais disponível.");
+  if (catalog.some(item => labelKey(item.name) !== originalKey && labelKey(item.name) === labelKey(label.name))) {
+    throw new Error("Já existe uma etiqueta com esse nome. Escolha outro nome.");
+  }
+  return {
+    label,
+    selected: selected.map(item => labelKey(item.name) === originalKey ? label : item),
+  };
+}
