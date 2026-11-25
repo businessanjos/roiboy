@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { isHiddenTechnicalPerson } from "@/lib/peopleVisibility";
+import { matchesTaskSearch } from "@/lib/marketing/taskSearch";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,6 +149,19 @@ export function MarketingTasksTab() {
 
   const isLoading = tasksLoading || sectionsLoading || columnsLoading;
 
+  const { data: subtaskTitles = {} } = useQuery({
+    queryKey: ["marketing-subtask-titles", taskIds],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("marketing_task_subtasks").select("task_id, title").in("task_id", taskIds);
+      if (error) throw error;
+      const titles: Record<string, string[]> = {};
+      (data || []).forEach((s) => { (titles[s.task_id] ||= []).push(s.title); });
+      return titles;
+    },
+    enabled: taskIds.length > 0 && searchQuery.trim().length > 0,
+    staleTime: 60_000,
+  });
+
   const { data: marketingTeam = [] } = useMarketingTeamUsers();
 
   const assigneeOptions = useMemo(() => {
@@ -167,11 +181,11 @@ export function MarketingTasksTab() {
 
   const baseFilteredForCounts = useMemo(() => {
     return tasks.filter((t) => {
-      const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = matchesTaskSearch(t, searchQuery, subtaskTitles[t.id]);
       const matchesStatus = statusFilter === "all" || t.status === statusFilter;
       return matchesSearch && matchesStatus && matchesTaskLabels(t, labelFilter);
     });
-  }, [tasks, searchQuery, statusFilter, labelFilter]);
+  }, [tasks, searchQuery, statusFilter, labelFilter, subtaskTitles]);
 
   const assigneeCounts = useMemo(() => {
     const counts: Record<string, number> = { all: baseFilteredForCounts.length, none: 0 };
@@ -190,7 +204,7 @@ export function MarketingTasksTab() {
 
   const filteredTasks = useMemo(() => {
     const filtered = tasks.filter((t) => {
-      const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = matchesTaskSearch(t, searchQuery, subtaskTitles[t.id]);
       const matchesAssignee =
         assigneeFilter === "all" ||
         (assigneeFilter === "none" ? !t.assignee_id : t.assignee_id === assigneeFilter);
@@ -210,7 +224,7 @@ export function MarketingTasksTab() {
       if (!bDue) return -1;
       return sortFilter === "due_date_asc" ? aDue.localeCompare(bDue) : bDue.localeCompare(aDue);
     });
-  }, [tasks, searchQuery, assigneeFilter, statusFilter, sortFilter, labelFilter]);
+  }, [tasks, searchQuery, assigneeFilter, statusFilter, sortFilter, labelFilter, subtaskTitles]);
 
 
   const isSortManual = sortFilter === "manual";
@@ -326,7 +340,7 @@ export function MarketingTasksTab() {
         <div className="relative order-first w-full min-w-0 sm:order-none sm:flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            aria-label="Buscar tarefas" placeholder="Buscar tarefas..." value={searchQuery}
+            aria-label="Buscar tarefas" placeholder="Buscar por título ou conteúdo..." value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             className={cn("h-9 w-full pl-9", searchQuery && "pr-9")}
           />
