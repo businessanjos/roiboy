@@ -44,3 +44,14 @@ export function isHiddenMarketingPerson(person: MaybePerson | null | undefined):
 export function filterMarketingPeople<T extends MaybePerson>(people: T[] | null | undefined): T[] {
   return (people || []).filter((person) => !isHiddenMarketingPerson(person));
 }
+
+/** Presentation only: requester/mention lists and existing assignments stay intact. */
+export function isHiddenMarketingTaskAssignee(person: MaybePerson | null | undefined): boolean {
+  return isHiddenMarketingPerson(person)
+    || normalize(person?.name) === "jonathan marcato"
+    || normalize(person?.name) === "jessica campos";
+}
+
+export function filterMarketingTaskAssignees<T extends MaybePerson>(people: T[] | null | undefined): T[] {
+  return (people || []).filter((person) => !isHiddenMarketingTaskAssignee(person));
+}

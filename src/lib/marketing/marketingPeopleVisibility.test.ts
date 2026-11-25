@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   filterMarketingPeople,
+  filterMarketingTaskAssignees,
   isHiddenMarketingPerson,
+  isHiddenMarketingTaskAssignee,
 } from "./marketingPeopleVisibility";
 
 const LUCAS_SUPORTE_ID = "4385080f-e707-460f-b7ab-489fa3f73150";
@@ -39,5 +41,35 @@ describe("marketingPeopleVisibility", () => {
       "Lincoln Ricardo",
     ]);
     expect(filterMarketingPeople(null)).toEqual([]);
+  });
+
+  it("exclui Jonathan Marcato apenas das opções de executor", () => {
+    const jonathan = { id: "jonathan", name: "Jonathan Marcato" };
+    expect(filterMarketingTaskAssignees([jonathan])).toEqual([]);
+    expect(filterMarketingPeople([jonathan])).toEqual([jonathan]);
+    expect(isHiddenMarketingTaskAssignee({ name: " JONATHAN   MARCATO " })).toBe(true);
+  });
+
+  it("exclui Jessica Campos apenas das opções de executor", () => {
+    const jessica = { id: "jessica", name: "Jessica Campos" };
+    expect(filterMarketingTaskAssignees([jessica])).toEqual([]);
+    expect(filterMarketingPeople([jessica])).toEqual([jessica]);
+    expect(isHiddenMarketingTaskAssignee({ name: "Jéssica Campos" })).toBe(true);
+  });
+
+  it("preserva os demais executores, a lista original e exclusões técnicas", () => {
+    const people = [
+      { id: "bruna", name: "Bruna Pieri" },
+      { id: "fernanda", name: "Fernanda Ramalho" },
+      { id: "lincoln", name: "Lincoln Ricardo" },
+      { id: "lucas", name: "Lucas dos Santos" },
+      { id: LUCAS_SUPORTE_ID, name: "Lucas Suporte" },
+      { id: "tv", name: "TV Escritório" },
+      { id: "other-jessica", name: "Jessica Silva" },
+    ];
+    expect(filterMarketingTaskAssignees(people).map((person) => person.id))
+      .toEqual(["bruna", "fernanda", "lincoln", "lucas", "other-jessica"]);
+    expect(people).toHaveLength(7);
+    expect(filterMarketingTaskAssignees(undefined)).toEqual([]);
   });
 });

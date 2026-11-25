@@ -19,6 +19,7 @@ import {
 import { Clock, Copy, Loader2, Trash2, AlignLeft, Users, CalendarDays, Settings2, ImagePlus, ChevronDown, Check, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
+import { filterMarketingTaskAssignees, isHiddenMarketingTaskAssignee } from "@/lib/marketing/marketingPeopleVisibility";
 import { useMarketingTasks, MarketingTask, MarketingTaskPriority, MediaAttachment } from "@/hooks/useMarketingTasks";
 import { useMarketingTaskColumns } from "@/hooks/useMarketingTaskColumns";
 import { supabase } from "@/integrations/supabase/client";
@@ -230,14 +231,19 @@ export function MarketingTaskDialog({
     const label = kind === "assignee" ? "Responsável pela execução" : "Solicitante da demanda";
     const none = kind === "assignee" ? "Sem responsável" : "Sem solicitante";
     const fallbackName = kind === "assignee" ? source?.assignee?.name : source ? readTaskDetails(source).requesterName : null;
+    const people = required ? filterMarketingTaskAssignees(teamMembers) : teamMembers;
+    const currentName = teamMembers.find((member) => member.id === personId)?.name ?? fallbackName;
+    const hiddenCurrent = required && !!personId && isHiddenMarketingTaskAssignee({ id: personId, name: currentName });
     return <div className="space-y-1.5">
       <Label htmlFor={`task-${kind}`} className="text-xs text-muted-foreground">{label}{required ? " *" : ""}</Label>
       <Select value={personId || (required ? "" : "none")} onValueChange={required ? setAssigneeId : setRequesterId} disabled={blocked}>
         <SelectTrigger id={`task-${kind}`} className="h-11" aria-required={required} aria-invalid={required && !hasResponsible && !!title.trim()} aria-describedby={required && !hasResponsible && title.trim() ? "task-assignee-error" : undefined}><SelectValue placeholder={required ? "Selecione o responsável" : undefined} /></SelectTrigger>
         <SelectContent>
           {!required && <SelectItem value="none">{none}</SelectItem>}
-          {personId && personId !== "none" && !teamMembers.some((member) => member.id === personId) && <SelectItem value={personId}>{fallbackName || "Pessoa atual"}</SelectItem>}
-          {teamMembers.map((member) => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}
+          {/* Keep the legacy value in Radix's native form select without offering it as a choice. */}
+          {hiddenCurrent && personId && <SelectItem value={personId} disabled aria-hidden="true" className="hidden">{currentName || "Pessoa atual"}</SelectItem>}
+          {personId && personId !== "none" && !hiddenCurrent && !people.some((member) => member.id === personId) && <SelectItem value={personId}>{fallbackName || "Pessoa atual"}</SelectItem>}
+          {people.map((member) => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}
         </SelectContent>
       </Select>
       {required && !hasResponsible && title.trim() && <p id="task-assignee-error" className="text-xs text-destructive">Selecione um responsável pela execução.</p>}

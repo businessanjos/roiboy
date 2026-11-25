@@ -3,11 +3,11 @@ import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/re
 import type { ReactNode } from "react";
 import { MarketingTaskDialog } from "./MarketingTaskDialog";
 
-const mocks = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn(), close: vi.fn(), tasks: [] as any[], columns: [{ id: "stage", title: "A Fazer", is_done: false }] }));
+const mocks = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn(), close: vi.fn(), tasks: [] as any[], team: [{ id: "executor", name: "TESTE QA" }, { id: "jonathan", name: "Jonathan Marcato" }, { id: "jessica", name: "Jessica Campos" }], columns: [{ id: "stage", title: "A Fazer", is_done: false }] }));
 vi.mock("@/hooks/useMarketingTasks", () => ({ useMarketingTasks: () => ({ tasks: mocks.tasks, createTask: { mutateAsync: mocks.create }, updateTask: { mutateAsync: mocks.update }, deleteTask: { mutateAsync: vi.fn() } }) }));
 vi.mock("@/hooks/useMarketingTaskColumns", () => ({ useMarketingTaskColumns: () => ({ columns: mocks.columns }) }));
 vi.mock("@/hooks/useCurrentUser", () => ({ useCurrentUser: () => ({ currentUser: { id: "creator", account_id: "account" } }) }));
-vi.mock("@/hooks/useMarketingTeamUsers", () => ({ useMarketingTeamUsers: () => ({ data: [{ id: "executor", name: "TESTE QA" }] }) }));
+vi.mock("@/hooks/useMarketingTeamUsers", () => ({ useMarketingTeamUsers: () => ({ data: mocks.team }) }));
 vi.mock("@/lib/fetchAllRows", () => ({ fetchAllRows: async () => ({ data: [], error: null }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
@@ -68,5 +68,24 @@ describe("Responsável obrigatório no formulário de tarefa", () => {
     await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ assignee_id: "executor", title: "TESTE QA — Revisar arte (cópia)", section_id: "existing-section" })));
     expect(mocks.update).not.toHaveBeenCalled();
     expect(oldTask.assignee_id).toBeNull();
+  });
+
+  it.each(["jonathan", "jessica"])("preserva a atribuição existente a %s ao editar outro campo", async (personId) => {
+    const person = mocks.team.find((member) => member.id === personId);
+    mocks.tasks = [{ ...oldTask, assignee_id: personId, assignee: person }];
+    render(<MarketingTaskDialog open taskId="old-task" onOpenChange={mocks.close} />);
+    expect(mocks.update).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Título *"), { target: { value: "TESTE QA — Título revisado" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Salvar$/ }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ assignee_id: personId, title: "TESTE QA — Título revisado" })));
+  });
+
+  it.each(["jonathan", "jessica"])("mantém %s disponível como solicitante independente do executor", async (personId) => {
+    render(<MarketingTaskDialog open onOpenChange={mocks.close} />);
+    fireEvent.change(screen.getByLabelText("Título *"), { target: { value: "TESTE QA — Revisar arte" } });
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: personId } });
+    fireEvent.change(responsible(), { target: { value: "executor" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Criar$/ }));
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ assignee_id: "executor", custom_fields: expect.objectContaining({ delivery_details: expect.objectContaining({ requester_id: personId }) }) })));
   });
 });
