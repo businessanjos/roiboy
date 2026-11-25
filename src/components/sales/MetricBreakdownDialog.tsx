@@ -25,6 +25,7 @@ interface Props {
   startDate: Date;
   endDate: Date;
   title: string;
+  wonDealIds?: readonly string[];
 }
 
 interface Row {
@@ -56,11 +57,11 @@ async function fetchLeadNames(ids: string[]): Promise<Map<string, string>> {
   return map;
 }
 
-export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accountId, startDate, endDate, title }: Props) {
+export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accountId, startDate, endDate, title, wonDealIds }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pg = usePagedList(rows, { resetKey: { kind, userId, accountId, start: startDate.toISOString(), end: endDate.toISOString() }, isLoading: loading });
+  const pg = usePagedList(rows, { resetKey: { kind, userId, accountId, wonDealIds, start: startDate.toISOString(), end: endDate.toISOString() }, isLoading: loading });
 
   const start = useMemo(() => startDate.toISOString(), [startDate]);
   const end = useMemo(() => endDate.toISOString(), [endDate]);
@@ -75,7 +76,8 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
     (async () => {
       try {
         if (kind === "won") {
-          const { data, error } = await supabase
+          if (wonDealIds?.length === 0) return;
+          const { data, error } = await fetchAllRows<any>((from, to) => supabase
             .from("deals")
             .select("id, title, value, won_at, client_id")
             .eq("account_id", accountId)
@@ -83,13 +85,14 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
             .eq("status", "won")
             .gte("won_at", start)
             .lte("won_at", end)
-            .order("won_at", { ascending: false });
+            .order("won_at", { ascending: false }).order("id").range(from, to));
           if (error) throw error;
           if (cancel) return;
-          const clientIds = Array.from(new Set((data || []).map((d: any) => d.client_id).filter(Boolean)));
+          const visibleDeals = wonDealIds ? data.filter(d => wonDealIds.includes(d.id)) : data;
+          const clientIds = Array.from(new Set(visibleDeals.map((d: any) => d.client_id).filter(Boolean)));
           const nameMap = await fetchClientNames(clientIds);
           setRows(
-            (data || []).map((d: any) => ({
+            visibleDeals.map((d: any) => ({
               id: d.id,
               label: nameMap.get(d.client_id) || d.title || "Cliente sem nome",
               date: d.won_at,
@@ -165,7 +168,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
     return () => {
       cancel = true;
     };
-  }, [open, kind, userId, accountId, start, end]);
+  }, [open, kind, userId, accountId, start, end, wonDealIds]);
 
   const sourceHelp =
     kind === "held"

@@ -1,5 +1,11 @@
 # Roadmap — Processos do CS
 
+## Acelerômetro: Mentorias e Programas
+- [x] Mentorias (EM, EC, EP e Conselho, com identidades legadas de Mentoring) é padrão e exclui CR; Programas começa com CR, por registro extensível de identidades. Sem alterar negócios, comissões, permissões ou backend.
+- [x] Velocímetro, recorde e lista usam as mesmas vendas completas por Item da Venda; nível de Mentorias separado e metas de Programas somente pelas quantidades já cadastradas. Sem meta, mostra quantidade e aviso, sem inventar patamares; demais indicadores/SPIFFs permanecem gerais.
+- [x] 28 testes passaram; alternância e lista autenticada conferidas em 390/668/1440, temas claro/escuro, sem rolagem lateral ou erros. Compilação OK; não publicado.
+- [ ] Conferir contagem e lista não vazias na sessão real: a sessão disponível é de Lucas Suporte e não possui vendas; regras com vendas verificadas por testes, sem entrar em conta alheia nem criar negócios reais.
+
 ## Excluir etiquetas e acabamento dos controles
 - [x] Exclusão com confirmação no filtro e na tarefa; função implantada remove só nome/cor da etiqueta, preserva tarefas e campos, respeita a conta e RLS e rejeita alteração parcial. Etiquetas sem uso continuam locais.
 - [x] Lápis menor, fino e discreto; fundo das etiquetas mais vivo, mantendo cores escolhidas, identidades antigas e capas. Contraste mínimo medido 4,73:1 no claro e 6,93:1 no escuro, incluindo branco/preto/neon.

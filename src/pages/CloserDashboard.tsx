@@ -39,6 +39,9 @@ import { useUserMonthlyTier } from "@/hooks/useUserMonthlyTier";
 import { useCloserPersonalStats } from "@/hooks/useCloserPersonalStats";
 import { cn } from "@/lib/utils";
 import { MetricBreakdownDialog, type BreakdownKind } from "@/components/sales/MetricBreakdownDialog";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useAccelerometerProgramGoal } from "@/hooks/useAccelerometerSales";
+import type { AccelerometerScope } from "@/lib/sales/accelerometer";
 
 // Líderes que enxergam o acelerômetro de seus liderados
 const MANAGER_IDS = new Set<string>([
@@ -369,9 +372,16 @@ export default function CloserDashboard() {
 
   const monthLabel = startOfMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
-  const { tier, sales: wonDeals } = useUserMonthlyTier(selYear, selMonth, effectiveUserId);
-  const closeRate = meetingsHeld > 0 ? Math.round((wonDeals / meetingsHeld) * 100) : 0;
-  const { record, recordMonthLabel, piggyValue, loading: statsLoading } =
+  const [accelerometerScope, setAccelerometerScope] = useState<AccelerometerScope>("mentorias");
+  const accelerometer = useUserMonthlyTier(selYear, selMonth, effectiveUserId, accelerometerScope);
+  const { tier, sales: wonDeals } = accelerometer;
+  const programGoal = useAccelerometerProgramGoal(selYear, selMonth, effectiveUserId, accelerometerScope === "programas");
+  const quota = accelerometerScope === "mentorias" ? MONTH_QUOTA_DEFAULT : programGoal.data ?? null;
+  const turbo = quota !== null && wonDeals > quota;
+  const scopeLabel = accelerometerScope === "mentorias" ? "Mentorias" : "Programas";
+  const totalWonDeals = me?.won_deals ?? 0;
+  const closeRate = meetingsHeld > 0 ? Math.round((totalWonDeals / meetingsHeld) * 100) : 0;
+  const { piggyValue, loading: statsLoading } =
     useCloserPersonalStats(selYear, selMonth, effectiveUserId);
   const [breakdown, setBreakdown] = useState<{ kind: BreakdownKind; title: string } | null>(null);
   const openBreakdown = (kind: BreakdownKind, title: string) => setBreakdown({ kind, title });
@@ -383,7 +393,7 @@ export default function CloserDashboard() {
       <div
         className={cn(
           "min-h-full bg-gradient-to-br transition-colors duration-700",
-          tier.pageBg,
+          accelerometerScope === "mentorias" ? tier.pageBg : "from-background to-background",
         )}
       >
         <div className="container mx-auto p-4 sm:p-6 space-y-6 max-w-7xl">
@@ -457,6 +467,23 @@ export default function CloserDashboard() {
               )}
             </div>
           </div>
+          <ToggleGroup type="single" value={accelerometerScope}
+            onValueChange={(value) => {
+              if (value !== "mentorias" && value !== "programas") return;
+              setBreakdown(null);
+              setAccelerometerScope(value);
+            }}
+            aria-label="Modalidade do acelerômetro"
+            className="justify-start w-fit max-w-full border border-border rounded-lg p-1 bg-muted/40">
+            <ToggleGroupItem value="mentorias" className="min-h-11 px-4 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Mentorias</ToggleGroupItem>
+            <ToggleGroupItem value="programas" className="min-h-11 px-4 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Programas</ToggleGroupItem>
+          </ToggleGroup>
+          {accelerometer.error && (
+            <div role="alert" className="flex items-center justify-between gap-3 text-sm text-destructive">
+              <span>{accelerometer.isStaleResponse ? "Não foi possível atualizar. Exibindo a última consulta." : "Não foi possível consultar as vendas."}</span>
+              <Button variant="outline" size="sm" onClick={() => void accelerometer.refetch()}>Tentar novamente</Button>
+            </div>
+          )}
           <ShareIncentivePlanDialog open={shareOpen} onOpenChange={setShareOpen} />
 
           {isViewingOther && (
@@ -472,23 +499,29 @@ export default function CloserDashboard() {
             </div>
           )}
 
-          {isCurrentMonth && <TierProgressHero userId={effectiveUserId} />}
+          {isCurrentMonth && accelerometerScope === "mentorias" && <TierProgressHero userId={effectiveUserId} scope={accelerometerScope} year={selYear} month={selMonth} />}
 
 
 
         {/* Speedometer + Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <Card
-            onClick={() => openBreakdown("won", "Vendas fechadas — fonte do velocímetro")}
+            onClick={() => !accelerometer.error && !accelerometer.isLoading && openBreakdown("won", `Vendas fechadas — ${scopeLabel}`)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              if (!accelerometer.error && !accelerometer.isLoading) openBreakdown("won", `Vendas fechadas — ${scopeLabel}`);
+            }}
+            aria-label={`Vendas fechadas — ${scopeLabel}`}
             role="button"
             tabIndex={0}
             className={cn(
               "lg:col-span-1 relative transition-shadow cursor-pointer hover:ring-1 hover:ring-primary/30",
-              wonDeals > MONTH_QUOTA_DEFAULT &&
+              turbo &&
                 "animate-turbo-glow border-warning/40 ring-1 ring-warning/40 overflow-visible",
             )}
           >
-            {wonDeals > MONTH_QUOTA_DEFAULT && (
+            {turbo && (
               <>
                 <span
                   aria-hidden
@@ -504,24 +537,32 @@ export default function CloserDashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Target className="h-4 w-4 text-primary" />
-                Velocímetro de Vendas
-                {wonDeals > MONTH_QUOTA_DEFAULT && (
+                Velocímetro — {scopeLabel}
+                {turbo && (
                   <Badge className="ml-1 bg-gradient-to-r from-warning via-warning to-danger text-white border-0 gap-1">
                     <Zap className="h-3 w-3 fill-current" /> TURBO
                   </Badge>
                 )}
               </CardTitle>
               <CardDescription>
-                {wonDeals > MONTH_QUOTA_DEFAULT
+                {turbo
                   ? "Meta batida! Cada venda extra acelera ainda mais 🔥"
-                  : "Vendas fechadas no mês vs. meta"}
+                  : quota === null ? "Vendas fechadas no mês" : "Vendas fechadas no mês vs. meta"}
               </CardDescription>
             </CardHeader>
             <CardContent className="pb-6">
-              {loading ? (
+              {accelerometer.isLoading || (accelerometerScope === "programas" && programGoal.isLoading) ? (
                 <Skeleton className="h-[220px] w-full" />
+              ) : accelerometer.error && !accelerometer.isStaleResponse ? (
+                <p className="text-sm text-muted-foreground py-12">Vendas indisponíveis</p>
+              ) : quota !== null ? (
+                <Speedometer value={wonDeals} max={quota} />
               ) : (
-                <Speedometer value={wonDeals} max={MONTH_QUOTA_DEFAULT} />
+                <div className="flex flex-col items-center justify-center min-h-[220px] gap-2">
+                  <span className="text-5xl font-bold tabular-nums">{wonDeals}</span>
+                  <span className="text-sm text-muted-foreground">{wonDeals === 1 ? "venda de programa" : "vendas de programas"}</span>
+                  <span className="text-xs text-muted-foreground">{programGoal.error ? "Não foi possível consultar a meta" : "Sem meta de Programas cadastrada neste mês"}</span>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -568,7 +609,7 @@ export default function CloserDashboard() {
                   icon={Percent}
                   label="Close Rate"
                   value={`${closeRate}%`}
-                  hint={`${wonDeals} fechadas / ${meetingsHeld} reuniões`}
+                  hint={`${totalWonDeals} fechadas / ${meetingsHeld} reuniões · geral`}
                   variant={closeRate >= 30 ? "success" : closeRate >= 15 ? "warning" : "danger"}
                   onClick={() => openBreakdown("won", "Vendas fechadas — fonte do close rate")}
                 />
@@ -580,12 +621,12 @@ export default function CloserDashboard() {
         {/* Recorde + Cofrinho */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SalesRecordCard
-            record={record}
-            monthLabel={recordMonthLabel}
+            record={accelerometer.record}
+            monthLabel={accelerometer.recordMonthLabel}
             current={wonDeals}
-            loading={statsLoading}
+            loading={accelerometer.isLoading || Boolean(accelerometer.error)}
           />
-          <PiggyBankCard value={piggyValue} salesCount={wonDeals} loading={statsLoading} />
+          <PiggyBankCard value={piggyValue} salesCount={totalWonDeals} loading={statsLoading} />
         </div>
 
         {/* SPIFFs */}
@@ -660,6 +701,7 @@ export default function CloserDashboard() {
         accountId={currentUser?.account_id}
         startDate={startOfMonth}
         endDate={endOfMonth}
+        wonDealIds={breakdown?.title === `Vendas fechadas — ${scopeLabel}` ? accelerometer.dealIds : undefined}
       />
     </TooltipProvider>
   );

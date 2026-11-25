@@ -4,13 +4,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUserMonthlyTier, TIER_LADDER } from "@/hooks/useUserMonthlyTier";
 import { Crown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { AccelerometerScope } from "@/lib/sales/accelerometer";
 
-export function TierProgressHero({ userId }: { userId?: string } = {}) {
-  const { sales, tier, nextTier, salesToNext, isLoading, monthLabel } = useUserMonthlyTier(undefined, undefined, userId);
+export function TierProgressHero({ userId, scope = "mentorias", year, month }: { userId?: string; scope?: AccelerometerScope; year?: number; month?: number } = {}) {
+  const { sales, tier, nextTier, salesToNext, isLoading, monthLabel, error } = useUserMonthlyTier(year, month, userId, scope);
 
   if (isLoading) {
     return <Skeleton className="h-28 w-full rounded-xl" />;
   }
+  if (error) return null;
 
   // Compute progress within current tier band (relative to next tier)
   const progress = nextTier

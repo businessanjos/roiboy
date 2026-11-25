@@ -1,7 +1,6 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useAccelerometerSales } from "./useAccelerometerSales";
+import type { AccelerometerScope } from "@/lib/sales/accelerometer";
 
 export type TierKey =
   | "Latão"
@@ -130,10 +129,7 @@ export function nextTier(current: TierDef): TierDef | null {
  * Returns the user's current tier based on won deals in the current month.
  * Counts deals where the user is the responsible_user_id (closer).
  */
-export function useUserMonthlyTier(year?: number, month?: number, userIdOverride?: string) {
-  const { currentUser } = useCurrentUser();
-  const accountId = currentUser?.account_id;
-  const userId = userIdOverride ?? currentUser?.id;
+export function useUserMonthlyTier(year?: number, month?: number, userIdOverride?: string, scope: AccelerometerScope = "mentorias") {
 
   const { start, end, monthLabel } = useMemo(() => {
     const now = new Date();
@@ -148,28 +144,14 @@ export function useUserMonthlyTier(year?: number, month?: number, userIdOverride
     };
   }, [year, month]);
 
-  const q = useQuery({
-    queryKey: ["user-monthly-won-count", accountId, userId, start],
-    enabled: !!accountId && !!userId,
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("deals")
-        .select("id", { count: "exact", head: true })
-        .eq("account_id", accountId!)
-        .eq("responsible_user_id", userId!)
-        .eq("status", "won")
-        .gte("won_at", start)
-        .lt("won_at", end);
-      if (error) throw error;
-      return count ?? 0;
-    },
-  });
-
-  const sales = q.data ?? 0;
+  const selected = new Date(start);
+  const q = useAccelerometerSales(selected.getFullYear(), selected.getMonth(), userIdOverride, scope);
+  const sales = q.sales;
   const tier = tierForSales(sales);
   const next = nextTier(tier);
 
   return {
+    ...q,
     sales,
     tier,
     nextTier: next,
