@@ -50,4 +50,4 @@
 - Lost deal closes lead chats (`close_zapp_on_deal_lost`). Why: triage.
 - CS processes parse `src/content/csProcesses.md`, overridable per account in `cs_process_content` (managers via `is_cs_process_editor`); progress `cs_process_progress`, tours `user_tour_views`. Why: one text source, editable.
 - plugin-legacy+6GB heap: old TVs.
-- Default lead/deal routing resolves funnels by the name lists in `supabase/functions/_shared/pipelineNames.ts` (old and current names, active only); DB fallbacks accept the same aliases. Why: a funnel rename once left MQL leads without a deal and silently broke contract/SDR handoffs.
+- Default lead/deal funnel routing uses the alias lists in `supabase/functions/_shared/pipelineNames.ts`. Why: a rename left leads without deals.
