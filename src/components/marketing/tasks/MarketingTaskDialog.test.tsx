@@ -82,6 +82,33 @@ describe("Entrega com horário antes da data", () => {
     fireEvent.change(responsible(), { target: { value: "executor" } });
   }
   function time(value: string) { fireEvent.change(screen.getByLabelText("Horário de entrega"), { target: { value } }); }
+  it.each([
+    ["Entregar hoje", "2026-11-25"],
+    ["Entregar amanhã", "2026-11-26"],
+  ])("o atalho %s salva a data escolhida sem perder o horário", async (shortcut, expected) => {
+    draft(); time("1058");
+    fireEvent.click(screen.getByRole("button", { name: shortcut }));
+    time("1100"); forceSubmit();
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ due_date: expected, custom_fields: expect.objectContaining({ delivery_details: expect.objectContaining({ due_time: "11:00" }) }) })));
+  });
+  it("Amanhã ao editar salva apenas a tarefa escolhida com a nova data", async () => {
+    mocks.tasks = [{ ...oldTask, assignee_id: "executor", due_date: "2026-12-04" }];
+    render(<MarketingTaskDialog open taskId="old-task" onOpenChange={mocks.close} />);
+    fireEvent.click(screen.getByRole("button", { name: "Entregar amanhã" }));
+    forceSubmit();
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ id: "old-task", due_date: "2026-11-26" })));
+    expect(mocks.tasks[0].due_date).toBe("2026-12-04");
+  });
+  it("Hoje na cópia não altera a data original", async () => {
+    mocks.tasks = [{ ...oldTask, assignee_id: "executor", due_date: "2026-12-04" }];
+    render(<MarketingTaskDialog open taskId="old-task" onOpenChange={mocks.close} />);
+    fireEvent.click(screen.getByRole("button", { name: "Duplicar tarefa" }));
+    await screen.findByRole("button", { name: "Criar cópia" });
+    fireEvent.click(screen.getByRole("button", { name: "Entregar hoje" })); forceSubmit();
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ due_date: "2026-11-25", title: "TESTE QA — Revisar arte (cópia)" })));
+    expect(mocks.tasks[0].due_date).toBe("2026-12-04");
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
   it("digitar horário futuro primeiro preenche hoje e salva os dois valores", async () => {
     draft(); time("1100");
     expect(screen.getByLabelText("Data de entrega")).toHaveValue("25/11/2026");

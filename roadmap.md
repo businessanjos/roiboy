@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Pílulas de Hoje e Amanhã na data de entrega
+- [x] Campo mais compacto com pílulas discretas Hoje/Amanhã e destaque leve da data selecionada; mesma seleção explícita do calendário, preservando digitação, horário, criação/edição/cópia, estados bloqueados e validação.
+- [x] 54 testes passaram, incluindo dias locais, virada de mês/ano e envio da data/horário pelo formulário original. Campo e calendário originais conferidos no navegador em 390/668/1440 nos dois temas: escolher Hoje/Amanhã, guardar/reabrir rascunho local, digitar, limpar e bloquear controles; imagens inspecionadas, sem cortes/erros. Compilação OK, nenhum dado real/backend alterado ou publicação; conferência isolada não valida gravação autenticada.
+
 ## Hierarquia dos vendedores nas Calls Comerciais
 - [x] Empilhados vendedores com seus próprios blocos, ordenados por vendas e calls feitas no desempate (ano: calls feitas, sem usar vendas ocultas); preservados enquadramento, agregações, filtros e restante do painel, no renderer compartilhado por normal/TV/prévia/compartilhado.
 - [x] 36 testes passaram; componente original com os números da imagem: Jonathan (3 vendas, 10 calls) acima de Darlan (1 venda, 8 calls), 20 cenários 390/803/1366/1440/1920 normal/TV/zoom 80–200% nos dois temas; ordem atualiza ao mudar vendas, ocultos mantidos, ano correto e rolagem local para oito pessoas TESTE QA. Imagens inspecionadas, sem cortes, erros ou escritas; compilação OK, sem publicação.
