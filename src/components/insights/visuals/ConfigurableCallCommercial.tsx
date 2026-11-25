@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, CheckCircle2, Target } from "lucide-react";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { FormatType, FONT_SCALE_MULTIPLIERS, AppearanceConfig } from "../visual-builder/types";
+import { useTvMode } from "../TvModeContext";
 
 interface AggregatedDataPoint {
   name: string;
@@ -40,6 +41,7 @@ function getInitials(name: string): string {
 }
 
 export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: ConfigurableCallCommercialProps) {
+  const tv = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'];
   const { currentUser } = useCurrentUser();
   const { filters } = useInsightsFilters();
@@ -79,6 +81,44 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         Sem dados para exibir
+      </div>
+    );
+  }
+
+  if (tv.tv) {
+    return (
+      <div className="h-full min-h-0 overflow-auto">
+        <div className="grid grid-cols-2 gap-4">
+          {filteredData.map(item => {
+            const completed = item.count ?? 0;
+            const sales = item.salesMonth ?? 0;
+            const conversion = completed > 0 ? (sales / completed) * 100 : 0;
+            return (
+              <section key={item.name} className="min-w-0">
+                <div className="mb-3 flex min-w-0 items-center gap-2.5">
+                  <Avatar className="h-10 w-10 shrink-0 border border-border">
+                    <AvatarImage src={avatars[item.name]?.avatar_url || undefined} alt={item.name} />
+                    <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">{getInitials(item.name)}</AvatarFallback>
+                  </Avatar>
+                  <span className="min-w-0 break-words text-lg font-semibold leading-tight text-foreground" style={{ fontSize: Math.round(18 * m) }}>{item.name}</span>
+                </div>
+                <div className={`grid gap-2 ${showSales ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  {[
+                    { label: 'A fazer', value: item.value, Icon: Calendar, accent: 'text-warning' },
+                    { label: 'Feitas', value: completed, Icon: CheckCircle2, accent: 'text-success' },
+                    ...(showSales ? [{ label: 'Vendas', value: sales, Icon: Target, accent: 'text-primary' }] : []),
+                  ].map(({ label, value, Icon, accent }) => (
+                    <div key={label} className={`relative flex min-w-0 flex-col items-center gap-1 rounded-md px-1 py-2 ${label === 'Vendas' ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted'}`}>
+                      <span className="font-bold leading-none tabular-nums text-foreground" style={{ fontSize: Math.round(28 * m) }}>{value}</span>
+                      <span className="flex items-center gap-1 whitespace-nowrap text-xs font-medium text-muted-foreground"><Icon className={`h-3 w-3 ${accent}`} />{label}</span>
+                      {label === 'Vendas' && <span className="absolute -top-2 right-1 rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold leading-none tabular-nums text-primary-foreground">{conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</span>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </div>
     );
   }

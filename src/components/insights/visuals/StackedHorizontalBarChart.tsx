@@ -128,9 +128,9 @@ export function StackedHorizontalBarChart({
     const narrow = width > 0 && width < 520;
     // Rótulos de eixo (datas, siglas) não precisam crescer tanto quanto os
     // números: no modo TV limitamos para sobrar altura útil às barras.
-    const tickFont = Math.min(Math.round((narrow ? 11 : 12) * m), tvMode.tv ? 14 : 16);
-    const valueFont = Math.min(Math.round(13 * m), tvMode.tv ? 16 : 17);
-    const legendFont = Math.min(Math.round(11 * m), tvMode.tv ? 14 : 15);
+    const tickFont = Math.min(Math.round((tvMode.tv ? 16 : narrow ? 11 : 12) * m), tvMode.tv ? 18 : 16);
+    const valueFont = Math.min(Math.round((tvMode.tv ? 22 : 13) * m), tvMode.tv ? 24 : 17);
+    const legendFont = Math.min(Math.round((tvMode.tv ? 14 : 11) * m), tvMode.tv ? 16 : 15);
     // Largura do eixo de valores baseada no maior rótulo (evita corte tipo "0.000")
     const totals = data.map((d) =>
       seriesKeys.reduce((sum, k) => sum + (Number((d as any)[k]) || 0), 0)
@@ -157,20 +157,24 @@ export function StackedHorizontalBarChart({
       Math.ceil((data.length * (fitsFlat ? nameWidth + 14 : tickFont + 6)) / plotWidth) - 1
     );
     const xAxisCap = Math.max(26, Math.round((containerHeight || 240) * 0.24));
-    const xHeight = wrapNames ? Math.round(tickFont * 3 + 14) : fitsFlat
-      ? Math.round(tickFont * 2.2)
+    const xHeight = wrapNames ? Math.round(tickFont * 3 + (tvMode.tv ? 10 : 14)) : fitsFlat
+      ? Math.round(tickFont * (tvMode.tv ? 1.6 : 2.2))
       : Math.min(xAxisCap, Math.round(Math.min(longestName, maxNameChars) * tickFont * 0.5) + 18);
     const labelStep = Math.max(1, Math.ceil((approxTextWidth(longestTick, valueFont) + 16) / slot));
-    const barLimit = tvMode.tv ? 160 : 128;
+    const barLimit = tvMode.tv ? 220 : 128;
+    const tvLegendLabels = seriesKeys.map(key => {
+      const short = productShortName(key);
+      return seriesKeys.filter(other => productShortName(other) === short).length > 1 ? key : short;
+    });
 
     return (
-      <div className={`mx-auto flex h-full w-full min-w-0 flex-col gap-3 ${tvMode.tv ? 'max-w-[1440px]' : 'max-w-[1120px]'}`}>
+      <div className={`mx-auto flex h-full w-full min-w-0 flex-col ${tvMode.tv ? 'gap-1.5 max-w-[1440px]' : 'gap-3 max-w-[1120px]'}`}>
         {/* A legenda ocupa sua altura real, independente do desenho das barras. */}
-        <ul aria-label="Legenda do gráfico" className="flex shrink-0 flex-wrap items-center justify-center gap-x-5 gap-y-1 border-b border-border/60 pb-3">
+        <ul aria-label="Legenda do gráfico" className={`flex shrink-0 flex-wrap items-center justify-center gap-x-5 gap-y-1 border-b border-border/60 ${tvMode.tv ? 'pb-1.5' : 'pb-3'}`}>
           {seriesKeys.map((key, index) => (
             <li key={key} className="flex min-w-0 max-w-full items-center gap-2 py-0.5" style={{ fontSize: legendFont }} title={key}>
               <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: getSeriesColor(key, index) }} />
-              <span className="break-words font-medium leading-snug text-muted-foreground">{key}</span>
+              <span className="break-words font-medium leading-snug text-muted-foreground">{tvMode.tv ? tvLegendLabels[index] : key}</span>
             </li>
           ))}
         </ul>
@@ -178,8 +182,8 @@ export function StackedHorizontalBarChart({
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
-          margin={{ top: showTotals ? valueFont + 22 : 16, right: 16, left: 0, bottom: 8 }}
-          barCategoryGap="32%"
+          margin={tvMode.tv ? { top: showTotals ? valueFont + 4 : 12, right: 12, left: 0, bottom: 2 } : { top: showTotals ? valueFont + 22 : 16, right: 16, left: 0, bottom: 8 }}
+          barCategoryGap={tvMode.tv ? '20%' : '32%'}
           maxBarSize={barLimit}
         >
           <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.45} strokeDasharray="3 5" />
@@ -197,7 +201,7 @@ export function StackedHorizontalBarChart({
             interval={xInterval}
             angle={fitsFlat || wrapNames ? 0 : -35}
             textAnchor={fitsFlat || wrapNames ? 'middle' : 'end'}
-            tickMargin={12}
+            tickMargin={tvMode.tv ? 8 : 12}
             height={xHeight}
           />
           <YAxis
@@ -229,7 +233,7 @@ export function StackedHorizontalBarChart({
               {/* Valor de cada fatia dentro do próprio bloco (azul, dourado...). */}
               <LabelList
                 dataKey={key}
-                content={(props: any) => renderInsideLabel({ ...props, fill: getSeriesColor(key, index) }, safeFormatting, Math.min(m * 1.2, 1.6), key)}
+                content={(props: any) => renderInsideLabel({ ...props, fill: getSeriesColor(key, index) }, safeFormatting, tvMode.tv ? Math.min(m * 1.8, 2) : Math.min(m * 1.2, 1.6), key)}
               />
 
               {showTotals && key === lastKey && (

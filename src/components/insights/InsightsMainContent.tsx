@@ -24,6 +24,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { parseUrlView, writeUrlView, replaceSearch } from "@/lib/insights/urlState";
+import { hasCompanyRanking } from "@/lib/insights/tvLayout";
 
 export function InsightsMainContent() {
   const { 
@@ -103,15 +104,17 @@ export function InsightsMainContent() {
     });
   }, [visuals, fixedYear, selectedMonth]);
 
+  const isSellerTvBoard = (visuals || []).some(hasCompanyRanking);
+
   // Lembra o ajuste de TV (modo e zoom) de cada painel neste aparelho
   // Padrão de TV 42" por painel (v2 descarta ajustes antigos salvos)
   const TV_DEFAULT_ZOOM: Record<string, number> = {
     "29104b57-a5bf-41aa-b28a-2bd42a525206": 60, // [MQL] Análise de Funil
-    "05fe3fc0-139f-4de2-b46c-da526bcd022a": 80, // Leaderboard
   };
-  const tvPrefKey = activeDashboardId ? `insights-tv-pref-v4:${activeDashboardId}` : null;
+  // The improved seller board starts fitted, without inheriting its old 80% default.
+  const tvPrefKey = activeDashboardId ? `insights-tv-pref-${isSellerTvBoard ? 'v5' : 'v4'}:${activeDashboardId}` : null;
   useEffect(() => {
-    if (!tvPrefKey) return;
+    if (!tvPrefKey || isLoadingVisuals) return;
     if (urlViewOverride.current) { urlViewOverride.current = false; return; }
     try {
       const raw = localStorage.getItem(tvPrefKey);
@@ -125,13 +128,13 @@ export function InsightsMainContent() {
         setFocusZoom(def ?? 100);
       }
     } catch { /* ignore */ }
-  }, [tvPrefKey]);
+  }, [tvPrefKey, isLoadingVisuals]);
   useEffect(() => {
-    if (!tvPrefKey || !isFocusMode) return;
+    if (!tvPrefKey || !isFocusMode || isLoadingVisuals) return;
     try {
       localStorage.setItem(tvPrefKey, JSON.stringify({ tvFit, zoom: focusZoom }));
     } catch { /* ignore */ }
-  }, [tvPrefKey, isFocusMode, tvFit, focusZoom]);
+  }, [tvPrefKey, isFocusMode, tvFit, focusZoom, isLoadingVisuals]);
 
   // Sincroniza foco/tv/zoom com a URL
   useEffect(() => {
@@ -180,7 +183,7 @@ export function InsightsMainContent() {
   // ESC listener
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isFocusMode) {
+      if (e.key === "Escape" && isFocusMode && !document.querySelector('[role="dialog"]')) {
         setIsFocusMode(false);
         if (document.fullscreenElement) document.exitFullscreen();
       }
@@ -305,10 +308,10 @@ export function InsightsMainContent() {
           className="fixed inset-0 z-[9999] bg-background flex flex-col"
         >
           {/* Header — some sozinho após alguns segundos sem mouse */}
-          <div className={`flex items-center justify-between px-6 border-b border-border shrink-0 overflow-hidden transition-all duration-300 ${controlsVisible ? "py-4 max-h-24 opacity-100" : "py-0 max-h-0 opacity-0 border-b-0"}`}>
-            <div className="flex items-center gap-3">
+          <div className={`flex flex-wrap items-center justify-between gap-2 px-3 border-b border-border shrink-0 overflow-hidden transition-all duration-300 motion-reduce:transition-none ${controlsVisible ? "py-2 max-h-32 opacity-100" : "py-0 max-h-0 opacity-0 border-b-0"}`}>
+            <div className="flex min-w-0 items-center gap-2">
               <BarChart3 className="h-6 w-6 text-primary" />
-              <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
+              <h1 className="text-xl font-bold truncate">{activeDashboard.name}</h1>
             </div>
             <div className="flex items-center gap-3">
               <Button
@@ -322,14 +325,14 @@ export function InsightsMainContent() {
               {!tvFit && (
                 <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} min={50} max={250} step={10} />
               )}
-              <Button variant="outline" size="icon" onClick={toggleFullscreen}>
+              <Button variant="outline" size="icon" aria-label={isFullscreen ? "Sair da tela cheia" : "Tela cheia"} onClick={toggleFullscreen}>
                 {isFullscreen ? (
                   <Minimize2 className="h-4 w-4" />
                 ) : (
                   <Maximize2 className="h-4 w-4" />
                 )}
               </Button>
-              <Button variant="outline" size="icon" onClick={() => {
+              <Button variant="outline" size="icon" aria-label="Sair do modo foco" onClick={() => {
                 setIsFocusMode(false);
                 if (document.fullscreenElement) document.exitFullscreen();
               }}>
@@ -340,7 +343,7 @@ export function InsightsMainContent() {
 
           {/* Content: fits the whole dashboard on screen (TV) or scrolls with zoom */}
           {tvFit ? (
-            <div className="flex-1 min-h-0 overflow-hidden bg-background p-3 lg:p-4">
+            <div className="flex-1 min-h-0 overflow-hidden bg-background p-2">
               {hasVisuals && (
                 <TvFitStage requiredHeight={tvRequiredHeight}>
                   <InsightsGrid

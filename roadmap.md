@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Leitura ampliada na TV (aprovado)
+- [x] Ranking ampliado, medidas por altura disponível e preferência de TV independente do antigo 80%; gráfico com barras mais largas/legenda compacta, Calls com nomes/fotos ao lado e números maiores. Layout salvo, empresas, valores, cores, período e atualização preservados.
+- [x] 26 testes passaram; painel autenticado em 1920×1080, 1366×768 e 803×674 nos dois temas: três vendedores e quatro gráficos visíveis, sem cortes/erros; normal 1440/390 sem rolagem lateral, recarga e troca explícita de zoom 80 para ajuste automático conferidas. Detalhes de Darlan abrem com registros reais. Escritas em configurações bloqueadas durante QA; nenhum backend ou dado real alterado, sem publicação. Sem teste no aparelho físico.
+
 ## CR no lado correto do ranking
 - [x] Quatro CR antigos somam R$ 125 mil na Eternum; ranking agora usa a empresa cadastrada no produto sem regravar vendas. Eternum R$ 321.600 e Anjos R$ 160.000; total R$ 481.600 preservado.
 - [x] 22 testes passaram; sessão real: recarga, vendedor, apresentação, celular 390 e TV 1920/1366/803 nos dois temas, valores/pílulas corretos, sem cortes ou erros. Banco relido intacto; Calls, demais gráficos, permissões e backend preservados, sem publicar. Caminhos irmãos conferidos em `.lovable/reviews/cr-company-ranking.md`.

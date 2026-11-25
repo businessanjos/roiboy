@@ -52,16 +52,16 @@ export function TvFitStage({ children, title, subtitle, requiredHeight }: TvFitS
 
   // Altura em que o painel será desenhado antes de encolher para caber.
   const headerAllowance = title || subtitle ? 64 : 0;
-  // The stage has a border and 24px of vertical content padding as well.
-  const stageAllowance = headerAllowance + 26;
+  // Only safety padding, with no decorative frame competing with the visuals.
+  const stageAllowance = headerAllowance + 4;
   const contentAvailable = Math.max(1, height - stageAllowance);
   const targetContent = Math.max(contentAvailable, requiredHeight || 0);
   const fit = height ? Math.min(1, height / (targetContent + stageAllowance)) : 1;
 
   // Escala tipográfica: quanto maior a tela, maiores os números e rótulos.
   // Quando o palco encolhe, compensamos um pouco para manter a leitura à distância.
-  const baseScale = width ? Math.min(1.3, Math.max(1, 1 + (width - 1200) / 2000)) : 1.1;
-  const fontScale = Math.min(1.45, baseScale / Math.max(fit, 0.6));
+  // Stable typography: density responds to available height, not viewport width.
+  const fontScale = Math.min(1.2, 1 / Math.max(fit, 0.85));
 
   const stageWidth = width ? width / fit : undefined;
   const stageHeight = height ? targetContent + stageAllowance : undefined;
@@ -75,17 +75,17 @@ export function TvFitStage({ children, title, subtitle, requiredHeight }: TvFitS
           transform: fit < 1 ? `scale(${fit})` : undefined,
           transformOrigin: "top left",
         }}
-        className="flex flex-col overflow-hidden rounded-lg border border-border/60 bg-card/40"
+        className="flex flex-col overflow-hidden"
       >
         {(title || subtitle) && (
           <div className="flex items-baseline justify-between gap-6 px-6 pt-4 pb-2 shrink-0">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground truncate">{title}</h2>
+            <h2 className="text-3xl font-bold tracking-normal text-foreground truncate">{title}</h2>
             {subtitle && (
               <span className="text-lg text-muted-foreground tabular-nums shrink-0">{subtitle}</span>
             )}
           </div>
         )}
-        <div className="flex-1 min-h-0 px-3 py-3 overflow-hidden">
+        <div className="flex-1 min-h-0 p-0.5 overflow-hidden">
           <TvModeProvider enabled scale={fontScale} maxCategories={10}>
             {children}
           </TvModeProvider>

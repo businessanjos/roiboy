@@ -30,6 +30,8 @@ interface ConfigurableRankingProps {
   hiddenProducts?: string[];
   /** Company columns use the list only, with readable values beneath the name. */
   compact?: boolean;
+  /** Shared density across company columns, even when one has a lone seller. */
+  fitRowCount?: number;
   privacy?: { showNames: boolean; showPhotos: boolean; blurNumbers: boolean };
 }
 
@@ -168,7 +170,7 @@ function Podium({
   );
 }
 
-export function ConfigurableRanking({ data: sourceData, formatting, appearance, dimensionLabel, measureLabel, hiddenProducts, compact = false, privacy }: ConfigurableRankingProps) {
+export function ConfigurableRanking({ data: sourceData, formatting, appearance, dimensionLabel, measureLabel, hiddenProducts, compact = false, fitRowCount, privacy }: ConfigurableRankingProps) {
   const data = useMemo(() => filterVisiblePeople(sourceData), [sourceData]);
   const tv = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'] * tv.scale;
@@ -177,6 +179,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
   const containerRef = useRef<HTMLDivElement>(null);
   const [showPodium, setShowPodium] = useState(true);
   const [boxHeight, setBoxHeight] = useState(0);
+  const [boxWidth, setBoxWidth] = useState(0);
 
   // Detect container size for responsive podium / row fitting
   useEffect(() => {
@@ -185,11 +188,12 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
       for (const entry of entries) {
         setShowPodium(entry.contentRect.width >= 500);
         setBoxHeight(entry.contentRect.height);
+        setBoxWidth(entry.contentRect.width);
       }
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [data.length > 0]);
 
   // Fetch user avatars
   useEffect(() => {
@@ -229,12 +233,13 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
 
   // Company rankings keep a single ordered column, regardless of its width.
   const rowHeight = Math.round((compact ? 72 : 44) * m);
+  const denseTv = compact && tv.tv && boxHeight / Math.max(fitRowCount ?? data.length, 1) < 140;
+  const narrowTv = compact && tv.tv && boxWidth > 0 && boxWidth < 440;
   const headerHeight = Math.round(30 * m);
-  const cardGap = 8;
   const visibleRows =
     tv.tv && boxHeight > 0
       ? compact
-        ? Math.max(1, Math.floor((boxHeight + cardGap) / (rowHeight + cardGap)))
+        ? data.length
         : Math.max(3, Math.floor((boxHeight - headerHeight) / rowHeight))
       : data.length;
   const rows = data.slice(0, visibleRows);
@@ -243,8 +248,8 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
     return (
       <div ref={containerRef} className={`h-full min-w-0 ${tv.tv ? 'overflow-hidden' : 'overflow-auto'}`}>
         <ol
-          className="grid w-full max-w-[40rem] grid-cols-1 gap-2"
-          style={{ fontSize: `${Math.round(14 * m)}px` }}
+          className={`grid w-full grid-cols-1 ${tv.tv ? 'max-w-[54rem] gap-2.5' : 'max-w-[40rem] gap-2'}`}
+          style={{ fontSize: `${Math.round((tv.tv ? (narrowTv ? 16 : denseTv ? 18 : 22) : 14) * m)}px` }}
         >
           {rows.map((item, index) => {
             const emoji = MEDAL_EMOJI[index];
@@ -255,15 +260,15 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
             return (
               <li
                 key={item.name}
-                className="flex min-w-0 items-start gap-2.5 rounded-lg border border-border/60 bg-card px-3 py-2.5"
-                style={isTop ? { borderColor: `${rowColor}33`, backgroundColor: `${rowColor}0d` } : undefined}
+                className={`flex min-w-0 ${tv.tv ? 'items-center' : 'items-start'} rounded-lg border border-border/60 bg-card ${tv.tv && !narrowTv ? 'gap-3 px-4 py-3' : 'gap-2 px-3 py-2.5'}`}
+                style={{ ...(isTop ? { borderColor: `${rowColor}33`, backgroundColor: `${rowColor}0d` } : {}), ...(tv.tv ? { minHeight: narrowTv ? 90 : denseTv ? 84 : 124 } : {}) }}
               >
-                <span className="w-5 shrink-0 pt-1 text-center">
-                  {emoji ? <span className="text-base leading-none">{emoji}</span> : (
+                <span className={`${tv.tv && !narrowTv ? 'w-7' : 'w-5'} shrink-0 text-center`}>
+                  {emoji ? <span className={`${tv.tv ? 'text-2xl' : 'text-base'} leading-none`}>{emoji}</span> : (
                     <span className="text-xs font-medium text-muted-foreground">{index + 1}º</span>
                   )}
                 </span>
-                {privacy?.showPhotos !== false && <Avatar className="shrink-0" style={{ height: Math.round(36 * m), width: Math.round(36 * m) }}>
+                {privacy?.showPhotos !== false && <Avatar className="shrink-0" style={{ height: Math.round((tv.tv ? (narrowTv ? 32 : denseTv ? 40 : 48) : 36) * m), width: Math.round((tv.tv ? (narrowTv ? 32 : denseTv ? 40 : 48) : 36) * m) }}>
                   <AvatarImage src={userAvatar?.avatar_url || undefined} alt={privacy?.showNames === false ? 'Vendedor' : item.name} />
                   <AvatarFallback className="text-[10px] font-medium" style={{ backgroundColor: `${rowColor}22`, color: rowColor }}>
                     {getInitials(item.name)}
@@ -274,11 +279,11 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                   <span className="min-w-0 break-words font-medium leading-snug text-foreground">
                     {privacy?.showNames === false ? '• • •' : item.name}
                   </span>
-                  <span className={`shrink-0 font-semibold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>
+                  <span style={tv.tv ? { fontSize: Math.round((narrowTv ? 18 : denseTv ? 20 : 28) * m) } : undefined} className={`shrink-0 font-bold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>
                     {formatCurrency(item.value, formatting.type, formatting.decimals)}
                   </span>
                   </div>
-                  <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted">
+                  <div className={`mt-1.5 ${tv.tv ? 'h-2' : 'h-1.5'} w-full rounded-full bg-muted`}>
                     <div className="h-full rounded-full transition-all duration-500 motion-reduce:transition-none" style={{ width: `${progress}%`, backgroundColor: rowColor }} />
                   </div>
                   {item.products && item.products.length > 0 && (
@@ -288,7 +293,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                           key={g.short}
                           title={g.items.map(i => `${i.qty}x ${i.name}`).join('\n')}
                           className={`inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-semibold leading-none tabular-nums ${g.renewal ? 'border-renewal/30 bg-renewal/10 text-foreground' : 'border-primary/30 bg-primary/10 text-foreground'}`}
-                          style={{ fontSize: `${Math.round(11 * m)}px` }}
+                          style={{ fontSize: `${Math.round((tv.tv ? 14 : 11) * m)}px` }}
                         >
                           <span className={g.renewal ? 'text-renewal' : 'text-primary'}>{g.qty}x</span>
                           {g.short}

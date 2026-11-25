@@ -7,6 +7,7 @@ import { getCompactor } from "react-grid-layout/core";
 import { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { ConfigurableVisualCard } from "../visuals/ConfigurableVisualCard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { hasCompanyRanking, tvRowSizing } from "@/lib/insights/tvLayout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -198,7 +199,7 @@ function getRowMinHeight(row: VisualRow): number {
   return 300;
 }
 
-const TV_ROW_GAP = 16;
+const TV_ROW_GAP = 10;
 
 function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth, readOnly, minCardWidths, fitHeight, onRequiredHeight }: {
   visuals: InsightsVisual[];
@@ -211,13 +212,15 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
   onRequiredHeight?: (px: number) => void;
 }) {
   const rows = useMemo(() => groupVisualsIntoRows(visuals), [visuals]);
+  const sellerBoard = visuals.some(hasCompanyRanking);
+  const sizing = rows.map(row => tvRowSizing(row.visuals, sellerBoard, { minHeight: getRowMinHeight(row), weight: row.weight }));
   const mins = useMemo(() => ({ ...DEFAULT_MIN_CARD_WIDTHS, ...(minCardWidths || {}) }), [minCardWidths]);
 
   const requiredHeight = useMemo(
     () =>
-      rows.reduce((sum, row) => sum + getRowMinHeight(row), 0) +
+      rows.reduce((sum, row) => sum + tvRowSizing(row.visuals, sellerBoard, { minHeight: getRowMinHeight(row), weight: row.weight }).minHeight, 0) +
       Math.max(0, rows.length - 1) * TV_ROW_GAP,
-    [rows]
+    [rows, sellerBoard]
   );
 
   useEffect(() => {
@@ -225,7 +228,7 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
   }, [fitHeight, requiredHeight, onRequiredHeight]);
 
   return (
-    <div className={fitHeight ? "flex flex-col gap-4 h-full min-h-0" : "flex flex-col gap-3"}>
+    <div className={fitHeight ? "flex flex-col gap-2.5 h-full min-h-0" : "flex flex-col gap-3"}>
       {rows.map((row, rowIdx) => (
         <ResponsiveRow
           key={rowIdx}
@@ -236,13 +239,14 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
           readOnly={readOnly}
           minWidth={getRowMinWidth(row, mins)}
           fitHeight={fitHeight}
+          tvSizing={sizing[rowIdx]}
         />
       ))}
     </div>
   );
 }
 
-function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly, minWidth, fitHeight }: {
+function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly, minWidth, fitHeight, tvSizing }: {
   row: VisualRow;
   containerWidth: number;
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
@@ -250,6 +254,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
   readOnly?: boolean;
   minWidth: number;
   fitHeight?: boolean;
+  tvSizing: { minHeight: number; weight: number };
 }) {
   const { visuals } = row;
 
@@ -276,7 +281,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
 
   return (
     <div
-      className={fitHeight ? "grid gap-4 min-h-0" : "grid gap-3"}
+      className={fitHeight ? "grid gap-2.5 min-h-0" : "grid gap-3"}
       style={{
         gridTemplateColumns: useSavedWidths
           ? `repeat(${PROPORTIONAL_COLS}, minmax(0, 1fr))`
@@ -285,10 +290,10 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
           ? {
               // Altura proporcional: usa a altura salva (ou o peso por tipo),
               // então linhas de scorecards ficam baixas e tabelas ganham espaço.
-              flex: `${row.weight} 1 0%`,
+              flex: `${tvSizing.weight} 1 0%`,
               // Piso de altura: sem ele, linhas de scorecard podem ficar tão
               // baixas que o número estoura o card e cobre o título.
-              minHeight: getRowMinHeight(row),
+              minHeight: tvSizing.minHeight,
               gridAutoRows: "1fr",
             }
           : {}),
@@ -305,7 +310,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
 
         if (useSavedWidths) {
           maxSpan = PROPORTIONAL_COLS;
-          const raw = ((visual.layout!.w || 0) / rowSavedWidth) * PROPORTIONAL_COLS;
+          const raw = ((visual.layout?.w || 0) / rowSavedWidth) * PROPORTIONAL_COLS;
           span = Math.max(4, Math.round(raw));
           // Garante que a última coluna feche exatamente a linha
           if (idx === visuals.length - 1) {
@@ -486,7 +491,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
 
   // ResizeObserver with debounce
   useEffect(() => {
-    if (!containerRef.current || isMobile) return;
+    if (!containerRef.current || (isMobile && !fitHeight)) return;
 
     let rafId: number | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -517,7 +522,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
       if (debounceTimer) clearTimeout(debounceTimer);
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [isMobile, readOnly]);
+  }, [isMobile, readOnly, fitHeight]);
 
   const visualsById = useMemo(() => new Map(visuals.map((v) => [v.id, v])), [visuals]);
 
@@ -563,7 +568,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
 
   if (visuals.length === 0) return null;
 
-  if (isMobile) {
+  if (isMobile && !fitHeight) {
     return (
       <MobileInsightsGrid
         visuals={visuals}

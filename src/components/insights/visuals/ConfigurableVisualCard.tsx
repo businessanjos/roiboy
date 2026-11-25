@@ -328,20 +328,20 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
   return (
     <VisualErrorBoundary title={visual.title || "Visual"}>
       <>
-        <Card className={cn("relative flex flex-col h-full", tv.tv && "border-border/70 bg-card/80 shadow-lg")}>
+        <Card className={cn("relative flex flex-col h-full", tv.tv && "border-border/70 bg-card shadow-none")}>
           {isFailing && hasGoodData && (
             <span className="pointer-events-none absolute right-3 bottom-2 z-10 text-[11px] text-muted-foreground animate-pulse">
               Atualizando…
             </span>
           )}
-          <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2", tv.tv && "px-5 pt-4 pb-1")}>
+          <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2", tv.tv && "space-y-1 px-4 pt-3 pb-2")}>
             <CardTitle
               className={cn(
                 "text-base flex items-center justify-between gap-1",
                 isScorecard && "text-sm",
-                tv.tv && "font-semibold tracking-tight text-muted-foreground",
+                tv.tv && "font-semibold tracking-normal text-foreground",
               )}
-              style={tv.tv ? { fontSize: Math.round((isScorecard ? 15 : 18) * tv.scale) } : undefined}
+              style={tv.tv ? { fontSize: Math.round((isScorecard ? 16 : 20) * tv.scale) } : undefined}
             >
               <div className="flex items-center gap-1.5 min-w-0">
                 {!readOnly && <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />}
@@ -573,7 +573,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
               </div>
             )}
           </CardHeader>
-          <CardContent className={cn("flex-1 min-h-0", tv.tv ? "overflow-hidden px-4 pb-4" : "overflow-auto")}>
+          <CardContent className={cn("flex-1 min-h-0", tv.tv ? "overflow-hidden px-4 pb-3" : "overflow-auto")}>
            <ConfigurableChart
               type={effectiveChartType}
               data={processedData}
