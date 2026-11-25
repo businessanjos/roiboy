@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarketingTask } from "@/hooks/useMarketingTasks";
-import { deliverySortKey, deliveryTimeInput, hasTaskResponsible, matchesTaskLabels, readTaskDetails, taskCopyDraft, taskCopySubtasks, taskLabelCatalog, validDeliveryTime, writeTaskDetails } from "./taskDetails";
+import { deliverySortKey, deliveryTimeInput, resolveTaskDeliveryDate, hasTaskResponsible, matchesTaskLabels, readTaskDetails, taskCopyDraft, taskCopySubtasks, taskLabelCatalog, validDeliveryTime, writeTaskDetails } from "./taskDetails";
 
 const task = {
   id: "original", account_id: "account", title: "Criar post", description: "Briefing",
@@ -13,6 +13,29 @@ const task = {
 } as MarketingTask;
 
 describe("Detalhes das tarefas de Marketing", () => {
+  const now = new Date(2026, 10, 25, 10, 59, 30);
+  it("horário posterior sem data assume hoje", () => {
+    expect(resolveTaskDeliveryDate(undefined, "11:00", now)).toEqual(new Date(2026, 10, 25));
+  });
+  it("horário do minuto atual sem data também assume hoje", () => {
+    expect(resolveTaskDeliveryDate(undefined, "10:59", now)).toEqual(new Date(2026, 10, 25));
+  });
+  it("horário já passado sem data assume amanhã", () => {
+    expect(resolveTaskDeliveryDate(undefined, "10:58", now)).toEqual(new Date(2026, 10, 26));
+  });
+  it("data selecionada não é substituída pelo horário", () => {
+    const selected = new Date(2026, 11, 4);
+    expect(resolveTaskDeliveryDate(selected, "10:58", now)).toBe(selected);
+  });
+  it("horário parcial, vazio ou inválido não inventa uma data", () => {
+    for (const time of ["", "10", "10:5", "24:00", "11:60"]) {
+      expect(resolveTaskDeliveryDate(undefined, time, now)).toBeUndefined();
+    }
+  });
+  it("amanhã atravessa o fim do mês e do ano sem converter o fuso", () => {
+    expect(resolveTaskDeliveryDate(undefined, "00:00", new Date(2026, 10, 30, 23, 59))).toEqual(new Date(2026, 11, 1));
+    expect(resolveTaskDeliveryDate(undefined, "00:00", new Date(2026, 11, 31, 23, 59))).toEqual(new Date(2027, 0, 1));
+  });
   it("exige responsável pela execução ao salvar, mesmo quando já há solicitante", () => {
     expect(hasTaskResponsible(null)).toBe(false);
     expect(hasTaskResponsible(undefined)).toBe(false);

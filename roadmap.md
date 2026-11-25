@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Horário de entrega antes da data
+- [x] Horário livre sem data; preenchimento de hoje para horário igual/posterior ao minuto atual ou amanhã se já passou, no mesmo dia local do calendário. Mudanças no horário ajustam somente a data automática; escolha manual e digitação parcial/inválida permanecem preservadas. Limpar somente a data não apaga o horário.
+- [x] 41 testes passaram, incluindo criação/edição/cópia, virada de mês/ano e prioridade do Hoje no calendário. Formulário original com dados fictícios conferido no navegador em 803/390/1440 px: horário primeiro, hoje/amanhã, escolha manual, salvar/reabrir e calendário; sem erros, sem gravações no backend, sem publicação.
+- [ ] Conferência na conta real em /marketing/projetos?tab=tarefas: sessão própria indisponível nesta rodada e criação da sessão temporária falhou; a verificação isolada não confirma gravação autenticada.
+
 ## Etiquetas de tarefas: criação no filtro e cartões discretos
 - [x] Seleção/busca compacta, criação diretamente no filtro e editor compartilhado com nome/cor e prévia; etiquetas ainda não usadas ficam neste navegador por conta/pessoa, etiquetas salvas nas tarefas continuam compartilhadas, sem alterar backend ou permissões. Criar no filtro não ativa um filtro vazio.
 - [x] Etiquetas no quadro/lista e na edição com ponto de cor, fundo suave, tamanho compacto e contraste nos dois temas; campos, busca e pessoas preservados.

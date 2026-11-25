@@ -38,7 +38,7 @@ import { MarketingTaskMediaUpload } from "./MarketingTaskMediaUpload";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { toast } from "sonner";
-import { readTaskDetails, writeTaskDetails, taskCopyDraft, validDeliveryTime, deliveryTimeInput, hasTaskResponsible, type TaskLabel, type TaskCopySubtask } from "@/lib/marketing/taskDetails";
+import { readTaskDetails, writeTaskDetails, taskCopyDraft, validDeliveryTime, deliveryTimeInput, resolveTaskDeliveryDate, hasTaskResponsible, type TaskLabel, type TaskCopySubtask } from "@/lib/marketing/taskDetails";
 import { useMarketingTaskLabelCatalog } from "@/hooks/useMarketingTaskLabelCatalog";
 import { TaskLabelEditor } from "./TaskLabels";
 import { TaskCoverEditor } from "./TaskCover";
@@ -93,6 +93,7 @@ export function MarketingTaskDialog({
   const [columnId, setColumnId] = useState<string | undefined>(undefined);
   const [assigneeId, setAssigneeId] = useState<string | undefined>(undefined);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const inferredDeliveryDate = useRef(false);
   const [priority, setPriority] = useState<MarketingTaskPriority>("medium");
   const [mediaAttachments, setMediaAttachments] = useState<MediaAttachment[]>([]);
   const [cover, setCover] = useState<TaskCover>(null);
@@ -137,6 +138,7 @@ export function MarketingTaskDialog({
       setLabels([]); setPriority("medium"); setMediaAttachments([]);
       setCover(null);
     }
+    inferredDeliveryDate.current = false;
     setDateValid(true); setEditorKey((key) => key + 1);
   }, [open, existingTask, copySource, defaultSectionId, defaultColumnId, defaultAssigneeId, columns]);
 
@@ -170,13 +172,14 @@ export function MarketingTaskDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting || isUploading || !dateValid || !title.trim() || (dueTime && (!dueDate || !validDeliveryTime(dueTime)))) return;
+    if (isSubmitting || isUploading || !dateValid || !title.trim() || (dueTime && !validDeliveryTime(dueTime))) return;
     if (!hasTaskResponsible(assigneeId)) {
       toast.error("Selecione um responsável pela execução.");
       document.getElementById("task-assignee")?.focus();
       return;
     }
 
+    const deliveryDate = resolveTaskDeliveryDate(dueDate, dueTime);
     setIsSubmitting(true);
     try {
       const finalColumn = columns.find((column) => column.id === columnId);
@@ -184,7 +187,7 @@ export function MarketingTaskDialog({
       const source = copySource ?? existingTask;
       const previousDetails = source ? readTaskDetails(source) : null;
       const customFields = writeTaskDetails(source?.custom_fields, {
-        dueTime: dueDate ? dueTime : "",
+        dueTime: deliveryDate ? dueTime : "",
         requesterId: finalRequesterId,
         requesterName: teamMembers.find((member) => member.id === finalRequesterId)?.name
           ?? (previousDetails?.requesterId === finalRequesterId ? previousDetails?.requesterName ?? null : null),
@@ -196,7 +199,7 @@ export function MarketingTaskDialog({
         section_id: sectionId && sectionId !== "none" ? sectionId : null,
         column_id: finalColumn?.id ?? null,
         assignee_id: assigneeId,
-        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
+        due_date: deliveryDate ? format(deliveryDate, "yyyy-MM-dd") : null,
         priority,
         status: finalColumn?.is_done ? "done" as const : "pending" as const,
         is_completed: !!finalColumn?.is_done,
@@ -290,11 +293,18 @@ export function MarketingTaskDialog({
                 <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><CalendarDays className="h-4 w-4" />Entrega</h3>
                 <div className="grid gap-3">
                 <div className="space-y-1.5"><Label htmlFor="task-delivery-date" className="text-xs text-muted-foreground">Data de entrega</Label>
-                  <TaskDeliveryDate value={dueDate} onChange={(date) => { setDueDate(date); if (!date) setDueTime(""); }} onValidityChange={setDateValid} disabled={blocked} portalContainer={portalContainer} />
+                  <TaskDeliveryDate value={dueDate} onChange={(date) => { inferredDeliveryDate.current = false; setDueDate(date); }} onValidityChange={setDateValid} disabled={blocked} portalContainer={portalContainer} />
                 </div>
                 <div className="grid grid-cols-[minmax(0,1fr)_116px] items-center gap-3"><Label htmlFor="task-delivery-time" className="text-xs text-muted-foreground">Horário de entrega</Label><div className="relative">
                   <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="task-delivery-time" type="text" inputMode="numeric" placeholder="HH:mm" maxLength={5} className="h-11 pl-9" value={dueTime} onChange={(event) => setDueTime(deliveryTimeInput(event.target.value))} disabled={blocked || !dueDate} aria-invalid={!!dueTime && !validDeliveryTime(dueTime)} />
+                  <Input id="task-delivery-time" type="text" inputMode="numeric" placeholder="HH:mm" maxLength={5} className="h-11 pl-9" value={dueTime} onChange={(event) => {
+                    const time = deliveryTimeInput(event.target.value);
+                    setDueTime(time);
+                    if (dateValid && validDeliveryTime(time) && (!dueDate || inferredDeliveryDate.current)) {
+                      setDueDate(resolveTaskDeliveryDate(undefined, time));
+                      inferredDeliveryDate.current = true;
+                    }
+                  }} disabled={blocked} aria-invalid={!!dueTime && !validDeliveryTime(dueTime)} />
                 </div></div>
                 </div>
               </div>
@@ -314,7 +324,7 @@ export function MarketingTaskDialog({
             <Button type="button" variant="ghost" size="sm" className="h-10" onClick={handleDuplicate} disabled={blocked} aria-label="Duplicar tarefa"><Copy className="h-4 w-4" /><span className="hidden sm:inline">Duplicar tarefa</span></Button>
             <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-destructive" aria-label="Excluir tarefa" title="Excluir tarefa" onClick={() => setShowDeleteDialog(true)} disabled={blocked}><Trash2 className="h-4 w-4" /></Button>
           </>}</div>
-          <div className="ml-auto flex items-center gap-2"><Button type="button" variant="outline" className="h-10" onClick={closeDraft} disabled={blocked}>Cancelar</Button><Button type="submit" form={formId} className="h-10" disabled={blocked || !dateValid || !title.trim() || !hasResponsible || (!!dueTime && (!dueDate || !validDeliveryTime(dueTime)))}>{isSubmitting && <Loader2 className="h-4 w-4 motion-safe:animate-spin" />}{copySource ? "Criar cópia" : isEditing ? "Salvar" : "Criar"}</Button></div>
+          <div className="ml-auto flex items-center gap-2"><Button type="button" variant="outline" className="h-10" onClick={closeDraft} disabled={blocked}>Cancelar</Button><Button type="submit" form={formId} className="h-10" disabled={blocked || !dateValid || !title.trim() || !hasResponsible || (!!dueTime && !validDeliveryTime(dueTime))}>{isSubmitting && <Loader2 className="h-4 w-4 motion-safe:animate-spin" />}{copySource ? "Criar cópia" : isEditing ? "Salvar" : "Criar"}</Button></div>
         </div>
       </DialogContent>
     </Dialog>

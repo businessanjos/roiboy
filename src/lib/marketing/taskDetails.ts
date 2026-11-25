@@ -45,6 +45,14 @@ export function deliveryTimeInput(value: string): string {
   return digits.length > 2 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : digits;
 }
 
+/** Use the calendar's local day; explicit dates always win. Compare at HH:mm precision. */
+export function resolveTaskDeliveryDate(date: Date | undefined, time: string, now = new Date()): Date | undefined {
+  if (date || !validDeliveryTime(time)) return date;
+  const [hours, minutes] = time.split(":").map(Number);
+  const passed = hours * 60 + minutes < now.getHours() * 60 + now.getMinutes();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + (passed ? 1 : 0));
+}
+
 export function readTaskDetails(task: Pick<MarketingTask, "custom_fields" | "tags">): TaskDetails {
   const details = record(record(task.custom_fields).delivery_details);
   const colors = record(details.label_colors);
