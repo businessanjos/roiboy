@@ -1,4 +1,5 @@
 import type { VisualConfig } from '@/components/insights/visual-builder/types';
+import { resolveItemVendaToProductId } from '@/lib/sales/itemVendaResolver';
 
 export interface RankingPoint {
   name: string;
@@ -16,14 +17,35 @@ export function rankingCompanyIds(config: VisualConfig | null | undefined, chart
   return [...new Set(config.rankingCompanyIds ?? [])].filter(Boolean);
 }
 
-/** Partition before aggregation: a shared seller never shares revenue/products. */
-export function aggregateCompanyRanking<T extends { company_id?: string | null; product?: string }>(
+interface RankingProduct {
+  id: string;
+  name: string;
+  company_id?: string | null;
+}
+
+/** Resolve only registered product identities; never guess a company from a name fragment. */
+export function rankingProductCompanyId(
+  rawValue: string | null | undefined,
+  products: readonly RankingProduct[],
+  optionLabels: ReadonlyMap<string, string>,
+): string | null {
+  const raw = rawValue?.trim();
+  if (!raw) return null;
+  const productId = resolveItemVendaToProductId(raw).toLowerCase();
+  if (productId) return products.find(product => product.id.toLowerCase() === productId)?.company_id || null;
+  const label = (optionLabels.get(raw) || raw).trim().toLowerCase();
+  const matches = products.filter(product => product.name.trim().toLowerCase() === label);
+  return matches.length === 1 ? matches[0]?.company_id || null : null;
+}
+
+/** Presentation only: prefer the registered product's company, preserving the stored sale. */
+export function aggregateCompanyRanking<T extends { company_id?: string | null; product_company_id?: string | null; product?: string }>(
   records: T[],
   aggregate: (rows: T[]) => RankingPoint[],
 ): RankingPoint[] {
   const partitions = new Map<string | null, T[]>();
   for (const record of records) {
-    const id = record.company_id || null;
+    const id = record.product_company_id || record.company_id || null;
     const rows = partitions.get(id) ?? [];
     rows.push(record);
     partitions.set(id, rows);

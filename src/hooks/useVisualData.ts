@@ -16,7 +16,7 @@ import { scheduleVisualQuery } from "@/lib/queryScheduler";
 import { isCustomFieldKey, enrichRecordsWithCustomField, getSelectedValuesForKey } from "@/lib/insights/customFieldValues";
 import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
 import { resolveFunnelPipelineIds } from "@/lib/insights/funnelPipelineScope";
-import { aggregateCompanyRanking, rankingCompanyIds } from "@/lib/insights/companyRanking";
+import { aggregateCompanyRanking, rankingCompanyIds, rankingProductCompanyId } from "@/lib/insights/companyRanking";
 
 
 
@@ -744,7 +744,7 @@ export async function enrichDealsWithCanal(accountId: string, deals: any[]): Pro
   return expanded;
 }
 
-export async function enrichDealsWithProduct(accountId: string, deals: any[]): Promise<any[]> {
+export async function enrichDealsWithProduct(accountId: string, deals: any[], includeRankingCompany = false): Promise<any[]> {
   if (deals.length === 0) return deals;
 
   // 1. Fetch the field definition to get legacy option labels
@@ -815,6 +815,22 @@ export async function enrichDealsWithProduct(accountId: string, deals: any[]): P
     }
   }
 
+  // Only opt-in company rankings read the catalog's current company. Sales remain untouched.
+  let rankingProducts: { id: string; name: string; company_id: string | null }[] = [];
+  if (includeRankingCompany) {
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase.from('products')
+        .select('id, name, company_id')
+        .eq('account_id', accountId)
+        .order('id')
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      rankingProducts = rankingProducts.concat(data || []);
+      if (!data || data.length < pageSize) break;
+    }
+  }
+
   // 5. Resolve label for each deal
   return deals.map(deal => {
     const rawValue = dealValueMap.get(deal.id);
@@ -826,7 +842,11 @@ export async function enrichDealsWithProduct(accountId: string, deals: any[]): P
         productName = optionLabels.get(rawValue) || rawValue;
       }
     }
-    return { ...deal, product: productName };
+    return {
+      ...deal,
+      product: productName,
+      ...(includeRankingCompany ? { product_company_id: rankingProductCompanyId(rawValue, rankingProducts, optionLabels) } : {}),
+    };
   });
 }
 const NAMED_COLORS: Record<string, string> = {
@@ -1118,7 +1138,7 @@ async function fetchDealsData(
   const enrichedWithEntryValue = await enrichDealsWithReceivedValue(accountId, filteredData);
 
   if (splitByCompany) {
-    const withProduct = await enrichDealsWithProduct(accountId, enrichedWithEntryValue);
+    const withProduct = await enrichDealsWithProduct(accountId, enrichedWithEntryValue, true);
     return aggregateCompanyRanking(withProduct, rows => aggregateData(rows, measure, aggregationDimension, dateDisplayFormat));
   }
 

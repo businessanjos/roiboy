@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## CR no lado correto do ranking
+- [x] Quatro CR antigos somam R$ 125 mil na Eternum; ranking agora usa a empresa cadastrada no produto sem regravar vendas. Eternum R$ 321.600 e Anjos R$ 160.000; total R$ 481.600 preservado.
+- [x] 22 testes passaram; sessão real: recarga, vendedor, apresentação, celular 390 e TV 1920/1366/803 nos dois temas, valores/pílulas corretos, sem cortes ou erros. Banco relido intacto; Calls, demais gráficos, permissões e backend preservados, sem publicar. Caminhos irmãos conferidos em `.lovable/reviews/cr-company-ranking.md`.
+
 ## Barras ligeiramente mais largas para TV
 - [x] Ampliar limite das barras verticais de 104 para 128 px no painel e de 132 para 160 px no modo TV; telas estreitas continuam limitadas pelo espaço disponível. Cores, alturas proporcionais, nomes, valores e configurações preservados.
 - [x] Conferência isolada com o gráfico original em 390/1440 e TV 1920×1080/1366×768, claro/escuro: barras maiores, nomes e totais sem cortes ou erros; compilação sem erros. Nenhum dado, configuração ou backend alterado; sem publicar. Sessão própria indisponível, sem conferência autenticada ou aparelho físico.
