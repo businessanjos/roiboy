@@ -7,6 +7,46 @@ import type { TaskLabel } from "@/lib/marketing/taskDetails";
 
 afterEach(cleanup);
 describe("Criação e seleção pelo filtro de etiquetas", () => {
+  it("excluir exige confirmação e cancelar preserva a etiqueta e a seleção", () => {
+    const label: TaskLabel = { name: "TESTE QA", color: "green" }; const remove = vi.fn(); const change = vi.fn();
+    render(<TooltipProvider><TaskLabelFilter catalog={[label]} selected={["teste qa"]} onChange={change} onCreate={item => item} onEdit={async (_old, item) => item} onDelete={remove} /></TooltipProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Filtrar por etiquetas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Editar etiqueta TESTE QA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Excluir etiqueta TESTE QA" }));
+    expect(remove).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(remove).not.toHaveBeenCalled(); expect(change).not.toHaveBeenCalled();
+  });
+  it("confirmar exclusão limpa só a etiqueta excluída do filtro", async () => {
+    const label: TaskLabel = { name: "TESTE QA", color: "green" }; const remove = vi.fn(async () => {}); const change = vi.fn();
+    render(<TooltipProvider><TaskLabelFilter catalog={[label]} selected={["teste qa", "outra"]} onChange={change} onCreate={item => item} onEdit={async (_old, item) => item} onDelete={remove} /></TooltipProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Filtrar por etiquetas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Editar etiqueta TESTE QA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Excluir etiqueta TESTE QA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Excluir etiqueta" }));
+    await waitFor(() => expect(remove).toHaveBeenCalledWith(label));
+    expect(change).toHaveBeenCalledWith(["outra"]);
+  });
+  it("exclusão na edição remove só a etiqueta do rascunho sem submeter a tarefa", async () => {
+    const label: TaskLabel = { name: "TESTE QA", color: "green" }; const other: TaskLabel = { name: "Outra", color: "blue" }; const change = vi.fn(); const submit = vi.fn(); const remove = vi.fn(async () => {});
+    render(<TooltipProvider><form onSubmit={submit}><TaskLabelEditor value={[label, other]} catalog={[label, other]} portalContainer={null} onChange={change} onEdit={async (_old, item) => item} onDelete={remove} /></form></TooltipProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Selecionar etiquetas da tarefa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Editar etiqueta TESTE QA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Excluir etiqueta TESTE QA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Excluir etiqueta" }));
+    await waitFor(() => expect(change).toHaveBeenCalledWith([other]));
+    expect(remove).toHaveBeenCalledWith(label); expect(submit).not.toHaveBeenCalled();
+  });
+  it("falha na exclusão mantém confirmação e seleção para tentar novamente", async () => {
+    const label: TaskLabel = { name: "TESTE QA", color: "green" }; const change = vi.fn(); const remove = vi.fn(async () => { throw new Error("Acesso negado"); });
+    render(<TooltipProvider><TaskLabelFilter catalog={[label]} selected={["teste qa"]} onChange={change} onCreate={item => item} onEdit={async (_old, item) => item} onDelete={remove} /></TooltipProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Filtrar por etiquetas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Editar etiqueta TESTE QA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Excluir etiqueta TESTE QA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Excluir etiqueta" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Acesso negado"));
+    expect(change).not.toHaveBeenCalled();
+  });
   it("editar cor personalizada mantém o nome e a seleção existentes", async () => {
     const original: TaskLabel = { name: "TESTE QA Existente", color: "yellow" }; const change = vi.fn(); const save = vi.fn(async (_old: TaskLabel, label: TaskLabel) => label);
     render(<TooltipProvider><TaskLabelEditor value={[original]} catalog={[original]} portalContainer={null} onChange={change} onEdit={save} /></TooltipProvider>);

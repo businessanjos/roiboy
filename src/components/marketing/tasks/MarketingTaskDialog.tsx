@@ -111,7 +111,7 @@ export function MarketingTaskDialog({
   // Fetch team members
   const { data: teamMembers = [] } = useMarketingTeamUsers();
 
-  const { catalog: labelCatalog, createLabel, editLabel } = useMarketingTaskLabelCatalog(tasks);
+  const { catalog: labelCatalog, createLabel, editLabel, deleteLabel } = useMarketingTaskLabelCatalog(tasks);
 
   useEffect(() => {
     if (!open) { setCopySource(null); setCopySubtasks([]); return; }
@@ -335,7 +335,7 @@ export function MarketingTaskDialog({
                 <div className="space-y-1.5"><Label htmlFor="task-stage" className="text-xs text-muted-foreground">Etapa</Label><Select value={columnId} onValueChange={setColumnId} disabled={blocked}><SelectTrigger id="task-stage"><SelectValue placeholder="Selecione a etapa" /></SelectTrigger><SelectContent>{columns.map((column) => <SelectItem key={column.id} value={column.id}>{column.title}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-1.5"><Label htmlFor="task-priority" className="text-xs text-muted-foreground">Prioridade</Label><Select value={priority} onValueChange={(value) => setPriority(value as MarketingTaskPriority)} disabled={blocked}><SelectTrigger id="task-priority"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">Baixa</SelectItem><SelectItem value="medium">Média</SelectItem><SelectItem value="high">Alta</SelectItem></SelectContent></Select></div>
                 </div>
-                <TaskLabelEditor key={editorKey} value={labels} onChange={setLabels} catalog={labelCatalog} onCreate={createLabel} onEdit={editLabel} portalContainer={portalContainer} disabled={blocked} />
+                <TaskLabelEditor key={editorKey} value={labels} onChange={setLabels} catalog={labelCatalog} onCreate={createLabel} onEdit={editLabel} onDelete={deleteLabel} portalContainer={portalContainer} disabled={blocked} />
               </div>
             </aside>
           </div>

@@ -17,6 +17,31 @@ beforeEach(() => { localStorage.clear(); session.user = { id: "qa-user", account
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("Catálogo de etiquetas sem alterações de tarefas", () => {
+  it("exclui etiqueta local e mantém outras sem chamar o servidor, inclusive após reabrir", async () => {
+    const hook = catalogHook([]); const calls = rpc.mock.calls.length;
+    act(() => { hook.result.current.createLabel({ name: "TESTE QA", color: "blue" }); hook.result.current.createLabel({ name: "Outra", color: "green" }); });
+    await act(async () => { await hook.result.current.deleteLabel({ name: "TESTE QA", color: "blue" }); });
+    expect(hook.result.current.catalog).toEqual([{ name: "Outra", color: "green" }]);
+    hook.unmount(); expect(catalogHook([]).result.current.catalog).toEqual([{ name: "Outra", color: "green" }]);
+    expect(rpc.mock.calls.length).toBe(calls);
+  });
+  it("exclusão compartilhada atualiza só os campos da etiqueta no cache e usa a conta atual", async () => {
+    const task = { id: "qa-task", title: "TESTE QA", status: "done", tags: ["TESTE QA", "Outra"], custom_fields: { kept: true, delivery_details: { label_colors: { "teste qa": "blue", outra: "green" } } }, updated_at: "before" };
+    client.setQueryData(["marketing-tasks", "qa-account", "qa-user"], [task]);
+    const hook = catalogHook([task]);
+    rpc.mockResolvedValueOnce({ data: [{ id: task.id, tags: ["Outra"], custom_fields: { kept: true, delivery_details: { label_colors: { outra: "green" } } }, updated_at: "after" }], error: null });
+    await act(async () => { await hook.result.current.deleteLabel({ name: "TESTE QA", color: "blue" }); });
+    expect(rpc).toHaveBeenLastCalledWith("delete_marketing_task_label", { p_account_id: "qa-account", p_name: "TESTE QA" });
+    expect(client.getQueryData(["marketing-tasks", "qa-account", "qa-user"])).toEqual([{ ...task, tags: ["Outra"], custom_fields: { kept: true, delivery_details: { label_colors: { outra: "green" } } }, updated_at: "after" }]);
+    expect(task.tags).toEqual(["TESTE QA", "Outra"]);
+  });
+  it("permissão negada preserva etiqueta local e tarefas sem exclusão parcial", async () => {
+    const hook = catalogHook([{ tags: ["TESTE QA"], custom_fields: {} }]);
+    localStorage.setItem("roy_marketing_task_labels_qa-account_qa-user", JSON.stringify([{ name: "TESTE QA", color: "blue" }]));
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "42501", message: "Sem permissão" } });
+    await expect(hook.result.current.deleteLabel({ name: "TESTE QA", color: "blue" })).rejects.toThrow("Sem permissão");
+    expect(JSON.parse(localStorage.getItem("roy_marketing_task_labels_qa-account_qa-user") ?? "[]")).toEqual([{ name: "TESTE QA", color: "blue" }]);
+  });
   it("envia cor personalizada normalizada pelo mesmo salvamento e conta", async () => {
     const hook = catalogHook([{ tags: ["TESTE QA"], custom_fields: {} }]);
     rpc.mockResolvedValueOnce({ data: [], error: null });

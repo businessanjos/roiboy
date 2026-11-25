@@ -2,12 +2,12 @@ import type { CSSProperties } from "react";
 
 // Keep these identities unchanged for legacy labels and the separate cover picker.
 export const TASK_LABEL_COLORS = [
-  { value: "blue", name: "Azul", hex: "#2069a2", swatch: "bg-task-label-blue", badge: "bg-task-label-blue/10 text-task-label-blue border-transparent" },
-  { value: "green", name: "Verde", hex: "#207449", swatch: "bg-task-label-green", badge: "bg-task-label-green/10 text-task-label-green border-transparent" },
-  { value: "yellow", name: "Amarelo", hex: "#906211", swatch: "bg-task-label-yellow", badge: "bg-task-label-yellow/10 text-task-label-yellow border-transparent" },
-  { value: "red", name: "Vermelho", hex: "#a92732", swatch: "bg-task-label-red", badge: "bg-task-label-red/10 text-task-label-red border-transparent" },
-  { value: "purple", name: "Roxo", hex: "#6e3b9f", swatch: "bg-task-label-purple", badge: "bg-task-label-purple/10 text-task-label-purple border-transparent" },
-  { value: "gray", name: "Cinza", hex: "#586271", swatch: "bg-task-label-gray", badge: "bg-task-label-gray/10 text-task-label-gray border-transparent" },
+  { value: "blue", name: "Azul", hex: "#2069a2", swatch: "bg-task-label-blue", badge: "bg-task-label-blue/20 text-task-label-blue border-transparent" },
+  { value: "green", name: "Verde", hex: "#207449", swatch: "bg-task-label-green", badge: "bg-task-label-green/20 text-task-label-green border-transparent" },
+  { value: "yellow", name: "Amarelo", hex: "#906211", swatch: "bg-task-label-yellow", badge: "bg-task-label-yellow/20 text-task-label-yellow border-transparent" },
+  { value: "red", name: "Vermelho", hex: "#a92732", swatch: "bg-task-label-red", badge: "bg-task-label-red/20 text-task-label-red border-transparent" },
+  { value: "purple", name: "Roxo", hex: "#6e3b9f", swatch: "bg-task-label-purple", badge: "bg-task-label-purple/20 text-task-label-purple border-transparent" },
+  { value: "gray", name: "Cinza", hex: "#586271", swatch: "bg-task-label-gray", badge: "bg-task-label-gray/20 text-task-label-gray border-transparent" },
 ] as const;
 
 export type TaskLabelColor = typeof TASK_LABEL_COLORS[number]["value"] | `#${string}`;
@@ -45,16 +45,16 @@ function colorLuminance(hue: number, saturation: number, lightness: number) {
 /** Keep the swatch exact; adapt only text lightness to the existing light/dark surfaces. */
 function readableLightness(hue: number, saturation: number, original: number) {
   let light = Math.min(original, 0.4), dark = Math.max(original, 0.65);
-  while (light > 0 && colorLuminance(hue, saturation, light) > 0.13) light = Math.max(0, light - 0.01);
+  while (light > 0 && colorLuminance(hue, saturation, light) > 0.10) light = Math.max(0, light - 0.01);
   while (dark < 1 && colorLuminance(hue, saturation, dark) < 0.55) dark = Math.min(1, dark + 0.01);
   return { light, dark };
 }
 
 /** User colors are data, passed to theme tokens as validated HSL channels only. */
 export function labelColor(value: unknown): LabelColorAppearance {
-  const preset = TASK_LABEL_COLORS.find(option => option.value === value);
-  if (preset) return preset;
-  const hex = normalizeTaskLabelHex(value);
+  const preset = TASK_LABEL_COLORS.find(option => option.value === value)
+    ?? (normalizeTaskLabelHex(value) ? undefined : TASK_LABEL_COLORS[0]);
+  const hex = preset?.hex ?? normalizeTaskLabelHex(value);
   if (!hex) return TASK_LABEL_COLORS[0];
   const [r, g, b] = [1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16) / 255);
   const high = Math.max(r, g, b), low = Math.min(r, g, b), delta = high - low;
@@ -63,8 +63,8 @@ export function labelColor(value: unknown): LabelColorAppearance {
   const hue = delta === 0 ? 0 : ((high === r ? (g - b) / delta : high === g ? (b - r) / delta + 2 : (r - g) / delta + 4) * 60 + 360) % 360;
   const readable = readableLightness(hue, saturation, lightness);
   return {
-    value: hex, hex, name: TASK_LABEL_PALETTE.find(option => option.value === hex)?.name ?? "Personalizada",
-    swatch: "bg-task-label-custom-swatch", badge: "bg-task-label-custom/10 text-task-label-custom border-transparent",
+    value: preset?.value ?? hex as TaskLabelColor, hex, name: preset?.name ?? TASK_LABEL_PALETTE.find(option => option.value === hex)?.name ?? "Personalizada",
+    swatch: preset?.swatch ?? "bg-task-label-custom-swatch", badge: "bg-task-label-custom/20 text-task-label-custom border-transparent",
     style: { "--task-label-custom-h": hue.toFixed(2), "--task-label-custom-s": `${(saturation * 100).toFixed(2)}%`, "--task-label-custom-l": `${(lightness * 100).toFixed(2)}%`, "--task-label-custom-light-l": `${(readable.light * 100).toFixed(2)}%`, "--task-label-custom-dark-l": `${(readable.dark * 100).toFixed(2)}%` } as CSSProperties,
   };
 }

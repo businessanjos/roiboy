@@ -820,6 +820,13 @@
       "when": 1795628232245,
       "tag": "0116_marketing_task_label_custom_colors",
       "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "7",
+      "when": 1795631671415,
+      "tag": "0117_marketing_task_label_delete",
+      "breakpoints": true
     }
   ]
 }

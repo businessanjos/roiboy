@@ -1,5 +1,11 @@
 # Roadmap — Processos do CS
 
+## Excluir etiquetas e acabamento dos controles
+- [x] Exclusão com confirmação no filtro e na tarefa; função implantada remove só nome/cor da etiqueta, preserva tarefas e campos, respeita a conta e RLS e rejeita alteração parcial. Etiquetas sem uso continuam locais.
+- [x] Lápis menor, fino e discreto; fundo das etiquetas mais vivo, mantendo cores escolhidas, identidades antigas e capas. Contraste mínimo medido 4,73:1 no claro e 6,93:1 no escuro, incluindo branco/preto/neon.
+- [x] 110 testes passaram, incluindo confirmação/cancelamento/falhas, cache, isolamento e remoção integral sob RLS; componentes originais com TESTE QA local conferidos em 1440/668/390, dois temas. Sem cortes/erros ou acesso a registros reais, compilação OK; não publicado.
+- [ ] Conferência de exclusão e releitura autenticada: sessão própria não encontrada e criação de usuário de teste falhou. Exemplos locais e testes SQL não substituem esse fluxo na conta real.
+
 ## Acabamento pontual do gráfico e calls inteiras na TV
 - [x] Somente Negócios por vendedor: legenda fora da área das barras, largura limitada, topo arredondado por série preenchida, totais destacados e contraste real corrigido; paleta, 171 negócios (118/48/5), interação e ranking restaurado preservados.
 - [x] Ajuste TV inclui bordas/espaço interno no tamanho total, evitando corte da última linha sem redesenhar as Calls, mudar zoom padrão ou layout salvo.

@@ -31678,6 +31678,15 @@ export type Database = {
         Args: { _doc_id: string; _path: string; _token: string }
         Returns: Json
       }
+      delete_marketing_task_label: {
+        Args: { p_account_id: string; p_name: string }
+        Returns: {
+          custom_fields: Json
+          id: string
+          tags: string[]
+          updated_at: string
+        }[]
+      }
       dunning_default_sla: { Args: { p_stage: string }; Returns: string }
       edit_marketing_task_label: {
         Args: {
