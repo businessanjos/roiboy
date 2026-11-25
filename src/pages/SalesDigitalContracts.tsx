@@ -193,7 +193,7 @@ export default function SalesDigitalContracts() {
       const accountId = currentUser.account_id;
       setLoadingDeals(true);
       try {
-        // Buscar todas as stages do funil Closer (qualquer etapa pode gerar contrato)
+        // Buscar todas as stages do Funil Mentoria, antigo Closer (qualquer etapa pode gerar contrato)
         const { data: stagesData, error: stagesError } = await supabase
           .from("deal_stages")
           .select("id, name, pipeline:pipelines!inner(name)")
@@ -203,7 +203,7 @@ export default function SalesDigitalContracts() {
         if (reqId !== dealSearchReqRef.current) return;
 
         const closerStageIds = (stagesData ?? [])
-          .filter((s: any) => (s.pipeline?.name ?? "").toLowerCase() === "closer")
+          .filter((s: any) => /^closer$|^funil mentoria$/i.test((s.pipeline?.name ?? "").trim()))
           .map((s: any) => s.id);
 
         if (closerStageIds.length === 0) {

@@ -1,3 +1,4 @@
+import { MQL_PIPELINE_NAMES } from "../_shared/pipelineNames.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   authenticateRequestWithLegacy,
@@ -231,17 +232,21 @@ async function resolvePipelineAndStage(
   }
 
   // 2. Default to Closer pipeline
-  if (!pipeline) {
+  for (const cand of pipeline ? [] : MQL_PIPELINE_NAMES) {
     const { data } = await supabase
       .from("pipelines")
       .select("id, name")
       .eq("account_id", accountId)
       .eq("is_active", true)
-      .ilike("name", "%closer%")
+      .ilike("name", cand)
+      .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
     pipeline = (data as { id: string; name: string } | null) ?? null;
-    if (pipeline) console.log(`[PIPELINE] Using Closer pipeline: "${pipeline.name}" (${pipeline.id})`);
+    if (pipeline) {
+      console.log(`[PIPELINE] Using default pipeline: "${pipeline.name}" (${pipeline.id})`);
+      break;
+    }
   }
 
   // 3. Fallback: first active pipeline by display order

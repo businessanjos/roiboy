@@ -1,3 +1,4 @@
+import { MQL_PIPELINE_NAMES, NON_MQL_PIPELINE_NAMES } from "./pipelineNames.ts";
 import { resolveRevenueRoutedPipeline } from "./leadRevenueRouting.ts";
 // Core lead-creation logic shared between the public create-lead endpoint
 // (called by external integrations / N8N) and internal callers like the
@@ -279,13 +280,14 @@ export async function createLeadCore(
         // O funil de não-MQL já foi renomeado (TP - Eternum Pass → E-Pass /
         // Clinica Ryka); tentamos todos os nomes conhecidos antes de desistir.
         const candidates = isMql
-          ? ["Closer"]
-          : ["TP - Eternum Pass", "E-Pass / Clinica Ryka", "%E-Pass%", "%Eternum Pass%"];
+          ? MQL_PIPELINE_NAMES
+          : NON_MQL_PIPELINE_NAMES;
         for (const cand of candidates) {
           const { data: routedPipe } = await supabase
             .from("pipelines")
             .select("id")
             .eq("account_id", accountId)
+            .eq("is_active", true)
             .ilike("name", cand)
             .order("created_at", { ascending: true })
             .limit(1)

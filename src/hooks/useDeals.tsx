@@ -703,9 +703,11 @@ export function useDeals(pipelineId?: string | null) {
             .from('pipelines')
             .select('id')
             .eq('account_id', currentUser.account_id)
-            .eq('name', 'Closer')
+            .in('name', ['Closer', 'Funil Mentoria'])
             .eq('is_active', true)
-            .single();
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
 
           if (closerPipeline) {
             // Find "Reunião Agendada" stage in Closer pipeline

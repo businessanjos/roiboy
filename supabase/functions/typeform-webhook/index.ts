@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { MQL_PIPELINE_NAMES, NON_MQL_PIPELINE_NAMES } from "../_shared/pipelineNames.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { canonicalEmail } from "../_shared/email-normalize.ts";
 import { canonicalE164, phoneVariants, phoneCoreKey } from "../_shared/phone-normalize.ts";
@@ -423,6 +424,7 @@ Deno.serve(async (req) => {
       leadId = createdLeadId;
       dealId = result.deal?.id || null;
       method = "created_from_typeform";
+      if (!dealId) noteFailure("Lead criado sem negócio: funil de destino não encontrado (verifique o nome dos funis e o roteamento de leads)");
     } else if (result.status === "duplicate") {
       leadId = result.existing_lead.id;
       method = "email";
@@ -462,8 +464,8 @@ Deno.serve(async (req) => {
         // Nomes alternativos: o funil de não-MQL já foi renomeado algumas vezes
         // (TP - Eternum Pass → E-Pass / Clinica Ryka). Tentamos todos.
         const candidates = isMql
-          ? ["Closer"]
-          : ["TP - Eternum Pass", "E-Pass / Clinica Ryka", "%E-Pass%", "%Eternum Pass%"];
+          ? MQL_PIPELINE_NAMES
+          : NON_MQL_PIPELINE_NAMES;
         const targetName = candidates[0];
         let pipe: { id: string } | null = null;
         const routedId = await resolveRevenueRoutedPipeline(supabase, accountId, bundle.revenue_range);
@@ -473,6 +475,7 @@ Deno.serve(async (req) => {
             .from("pipelines")
             .select("id")
             .eq("account_id", accountId)
+            .eq("is_active", true)
             .ilike("name", cand)
             .order("created_at", { ascending: true })
             .limit(1)

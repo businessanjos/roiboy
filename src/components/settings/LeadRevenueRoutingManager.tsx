@@ -49,8 +49,8 @@ export function LeadRevenueRoutingManager() {
   const pipeName = (id?: string | null) => data?.pipelines.find((p) => p.id === id)?.name;
   const defaultPipe = (label: string) => {
     const mql = rangeTop(label) > 30;
-    return data?.pipelines.find((p) => (mql ? /^closer$/i.test(p.name) : /e-pass|eternum pass/i.test(p.name)))?.name
-      ?? (mql ? "Closer" : "E-Pass / Clinica Ryka");
+    return data?.pipelines.find((p) => (mql ? /^closer$|mentoria/i.test(p.name) : /e-pass|eternum pass/i.test(p.name)))?.name
+      ?? (mql ? "Funil Mentoria" : "E-Pass");
   };
 
   const save = useMutation({
@@ -89,7 +89,7 @@ export function LeadRevenueRoutingManager() {
         <div className="flex gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
           <Info className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            <strong className="text-foreground">Padrão:</strong> até R$ 30 mil vai para E-Pass / Clinica Ryka e acima de R$ 30 mil vai para Closer.
+            <strong className="text-foreground">Padrão:</strong> até R$ 30 mil vai para {defaultPipe("10")} e acima de R$ 30 mil vai para {defaultPipe("31")}.
             Escolher um funil aqui substitui o padrão só daquela faixa. A etiqueta MQL do lead não muda.
           </p>
         </div>
