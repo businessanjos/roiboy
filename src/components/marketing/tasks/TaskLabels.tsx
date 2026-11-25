@@ -157,12 +157,16 @@ function TaskLabelPicker({ catalog, selected, onToggle, onClear, onCreate, onEdi
           }
         </div>
       </>}
+      {editing && onDelete && !deleting && <div className="shrink-0 border-t px-3 py-1.5">
+        <Button type="button" variant="ghost" size="sm" className="h-11 w-full justify-start gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive md:h-9" disabled={saving} aria-label={`Excluir etiqueta ${editing.name}`} onClick={() => { setDeleting(editing); setError(""); }}>
+          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />Excluir etiqueta
+        </Button>
+      </div>}
       <div className="mt-auto flex shrink-0 items-center gap-2 border-t p-3">
         {deleting ? <>
           <Button type="button" variant="ghost" size="sm" className="h-11 md:h-9" disabled={saving} onClick={() => { setDeleting(null); setError(""); }}>Cancelar</Button>
           <Button type="button" variant="destructive" size="sm" className="ml-auto h-11 gap-1.5 md:h-9" disabled={saving} onClick={deleteLabel}>{saving ? <Loader2 className="h-3.5 w-3.5 motion-safe:animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}Excluir etiqueta</Button>
         </> : showForm ? <>
-          {editing && onDelete && <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className="h-11 w-9 shrink-0 text-muted-foreground/70 hover:text-destructive md:h-9" disabled={saving} aria-label={`Excluir etiqueta ${editing.name}`} onClick={() => { setDeleting(editing); setError(""); }}><Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} /></Button></TooltipTrigger><TooltipContent>Excluir etiqueta</TooltipContent></Tooltip>}
           <Button type="button" variant="ghost" size="sm" className="h-11 md:h-9" disabled={saving} onClick={closeForm}>Cancelar</Button>
           <Button type="button" size="sm" className="ml-auto h-11 gap-1.5 md:h-9" disabled={!name.trim() || saving || !!invalidHex} onClick={createLabel}>{saving ? <Loader2 className="h-3.5 w-3.5 motion-safe:animate-spin" /> : editing || existing ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}{editing ? "Salvar etiqueta" : existing ? "Usar etiqueta" : "Criar etiqueta"}</Button>
         </> : <>
