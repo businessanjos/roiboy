@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Acabamento pontual do gráfico e calls inteiras na TV
+- [x] Somente Negócios por vendedor: legenda fora da área das barras, largura limitada, topo arredondado por série preenchida, totais destacados e contraste real corrigido; paleta, 171 negócios (118/48/5), interação e ranking restaurado preservados.
+- [x] Ajuste TV inclui bordas/espaço interno no tamanho total, evitando corte da última linha sem redesenhar as Calls, mudar zoom padrão ou layout salvo.
+- [x] 28 testes passaram; sessão real em 1440/668/390 e TV 1920×1080/1366×768/1280×720, dois temas: duas Calls completas sem rolagem interna, nomes do gráfico presentes, clique abre os 118 negócios de Darlan e retorna. Imagens conferidas, compilação OK, sem erros, escritas reais ou publicação. Não foi possível verificar o aparelho físico de 43 polegadas.
+
 ## Layout exclusivo da TV 1 — 1920×1080, foco=1, zoom=75
 - [x] Apenas na apresentação do ranking: empresas usam toda a largura, lista menor centraliza abaixo do cabeçalho e Calls têm três colunas iguais; normal/compartilhado continuam limitados e hierarquia intacta.
 - [x] Margens e títulos uniformes, três faixas medidas por conteúdo e preenchendo a tela sem rolagem; conversão junto de Vendas, legendas/pílulas ampliadas (mínimo visual medido >18px no Full HD com 75%).

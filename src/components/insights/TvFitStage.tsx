@@ -53,8 +53,11 @@ export function TvFitStage({ children, title, subtitle, requiredHeight }: TvFitS
   // Altura em que o painel será desenhado antes de encolher para caber.
   const headerAllowance = title || subtitle ? 64 : 0;
   const contentAvailable = Math.max(1, height - headerAllowance);
-  const targetContent = Math.max(contentAvailable, requiredHeight || 0);
-  const fit = height ? Math.min(1, Math.max(0.45, contentAvailable / targetContent)) : 1;
+  // Include the stage border and inner padding in the fitted canvas. Otherwise
+  // the final row extends beyond the bottom even though every row has its floor.
+  const stageChrome = 26;
+  const targetContent = Math.max(contentAvailable, (requiredHeight || 0) + stageChrome);
+  const fit = height ? Math.min(1, contentAvailable / targetContent) : 1;
 
   // Escala tipográfica: quanto maior a tela, maiores os números e rótulos.
   // Quando o palco encolhe, compensamos um pouco para manter a leitura à distância.
