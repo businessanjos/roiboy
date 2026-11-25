@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/re
 import type { ReactNode } from "react";
 import { MarketingTaskDialog } from "./MarketingTaskDialog";
 
-const mocks = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn(), close: vi.fn(), tasks: [] as any[], team: [{ id: "executor", name: "TESTE QA" }, { id: "jonathan", name: "Jonathan Marcato" }, { id: "jessica", name: "Jessica Campos" }], columns: [{ id: "stage", title: "A Fazer", is_done: false }] }));
+const mocks = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn(), close: vi.fn(), tasks: [] as any[], team: [{ id: "executor", name: "TESTE QA" }, { id: "jonathan", name: "Jonathan Marcato" }, { id: "jessica", name: "Jessica Marcato" }], columns: [{ id: "stage", title: "A Fazer", is_done: false }] }));
 vi.mock("@/hooks/useMarketingTasks", () => ({ useMarketingTasks: () => ({ tasks: mocks.tasks, createTask: { mutateAsync: mocks.create }, updateTask: { mutateAsync: mocks.update }, deleteTask: { mutateAsync: vi.fn() } }) }));
 vi.mock("@/hooks/useMarketingTaskColumns", () => ({ useMarketingTaskColumns: () => ({ columns: mocks.columns }) }));
 vi.mock("@/hooks/useCurrentUser", () => ({ useCurrentUser: () => ({ currentUser: { id: "creator", account_id: "account" } }) }));

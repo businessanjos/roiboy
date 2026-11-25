@@ -49,7 +49,7 @@ export function filterMarketingPeople<T extends MaybePerson>(people: T[] | null 
 export function isHiddenMarketingTaskAssignee(person: MaybePerson | null | undefined): boolean {
   return isHiddenMarketingPerson(person)
     || normalize(person?.name) === "jonathan marcato"
-    || normalize(person?.name) === "jessica campos";
+    || normalize(person?.name) === "jessica marcato";
 }
 
 export function filterMarketingTaskAssignees<T extends MaybePerson>(people: T[] | null | undefined): T[] {

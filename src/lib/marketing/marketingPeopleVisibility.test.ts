@@ -50,11 +50,17 @@ describe("marketingPeopleVisibility", () => {
     expect(isHiddenMarketingTaskAssignee({ name: " JONATHAN   MARCATO " })).toBe(true);
   });
 
-  it("exclui Jessica Campos apenas das opções de executor", () => {
-    const jessica = { id: "jessica", name: "Jessica Campos" };
+  it("exclui Jessica Marcato apenas das opções de executor", () => {
+    const jessica = { id: "jessica", name: "Jessica Marcato" };
     expect(filterMarketingTaskAssignees([jessica])).toEqual([]);
     expect(filterMarketingPeople([jessica])).toEqual([jessica]);
-    expect(isHiddenMarketingTaskAssignee({ name: "Jéssica Campos" })).toBe(true);
+    expect(isHiddenMarketingTaskAssignee({ name: "Jéssica Marcato" })).toBe(true);
+  });
+
+  it("mantém Jessica Campos nas opções de executor", () => {
+    const jessica = { id: "jessica-campos", name: "Jessica Campos" };
+    expect(filterMarketingTaskAssignees([jessica])).toEqual([jessica]);
+    expect(isHiddenMarketingTaskAssignee({ name: "Jéssica Campos" })).toBe(false);
   });
 
   it("preserva os demais executores, a lista original e exclusões técnicas", () => {
