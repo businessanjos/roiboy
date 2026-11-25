@@ -50,12 +50,16 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
   const showSales = filters.preset !== 'year';
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
   const containerRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState(0);
+  const [size, setSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
     // Layout pixels, not transformed screen pixels: zoom must not amplify density decisions.
-    const update = () => setHeight(element.clientHeight);
+    const update = () => setSize(previous => {
+      const width = element.clientWidth;
+      const height = element.clientHeight;
+      return previous.width === width && previous.height === height ? previous : { width, height };
+    });
     update();
     const observer = new ResizeObserver(update);
     observer.observe(element);
@@ -98,24 +102,23 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
     );
   }
 
-  const rowSpace = height > 0 ? (height - 26) / filteredData.length : 70;
-  const dense = rowSpace < 70;
-  const scale = Math.min(m * (tv.tv ? tv.scale : 1), dense ? 1 : 1.2);
+  // Both normal and TV layouts keep the same separated metric blocks.
+  // Width only selects columns; font sizes respond to row height and the chosen font setting.
+  const columns = size.width >= (tv.tv ? 260 : 360) && filteredData.length > 1 ? 2 : 1;
+  const rows = Math.ceil(filteredData.length / columns);
+  const rowSpace = size.height > 0 ? (size.height - 4 - (rows - 1) * 12) / rows : 114;
+  const dense = rowSpace < 114;
+  const scale = Math.min(m * (tv.tv ? tv.scale : 1), dense ? 1 : 1.15);
   const dimensions = {
-    "--calls-name-size": `${Math.round(Math.min(tv.tv ? 20 : 18, Math.max(14, (dense ? 16 : 18) * scale)))}px`,
-    "--calls-value-size": `${Math.round(Math.min(tv.tv ? 30 : 28, Math.max(20, (dense ? 24 : 26) * scale)))}px`,
-    "--calls-avatar-size": `${dense ? 30 : 34}px`,
-    "--calls-row-height": `${Math.max(56, Math.min(78, rowSpace))}px`,
+    "--calls-columns": columns,
+    "--calls-name-size": `${Math.round(Math.min(18, Math.max(14, (dense ? 14 : 16) * scale)))}px`,
+    "--calls-value-size": `${Math.round(Math.min(30, Math.max(22, (dense ? 24 : 26) * scale)))}px`,
+    "--calls-avatar-size": `${dense ? 28 : 32}px`,
+    "--calls-block-height": `${dense ? 56 : 72}px`,
   } as CSSProperties;
   return (
-    <div ref={containerRef} className="commercial-calls" style={dimensions} role="table" aria-label="Calls por vendedor">
-      <div role="row" className="commercial-calls-grid commercial-calls-head border-b border-border/70 text-xs font-medium text-muted-foreground" data-sales={showSales}>
-        <span role="columnheader">Vendedor</span>
-        <span role="columnheader" className="flex items-center justify-center gap-1 whitespace-nowrap"><Calendar className="h-3 w-3" />A fazer</span>
-        <span role="columnheader" className="flex items-center justify-center gap-1 whitespace-nowrap"><CheckCircle2 className="h-3 w-3" />Feitas</span>
-        {showSales && <span role="columnheader" className="flex items-center justify-center gap-1 whitespace-nowrap"><Target className="h-3 w-3" />Vendas</span>}
-      </div>
-      <div role="rowgroup" className="divide-y divide-border/60">
+    <div ref={containerRef} className="commercial-calls" style={dimensions} role="group" aria-label="Calls por vendedor">
+      <div className="commercial-calls-sellers">
         {filteredData.map((item) => {
           const userAvatar = avatars[item.name];
           const scheduled = item.value; // agendadas em aberto
@@ -124,25 +127,32 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
           const conversion = completed > 0 ? (sales / completed) * 100 : 0;
 
           return (
-            <div role="row"
-              key={item.name}
-              className="commercial-calls-grid commercial-calls-row"
-              data-sales={showSales}
-            >
-              <div role="cell" className="flex min-w-0 items-center gap-2">
+            <section key={item.name} className="commercial-calls-seller" aria-label={item.name}>
+              <div className="commercial-calls-identity flex min-w-0 items-center gap-2">
                 <Avatar className="commercial-calls-avatar shrink-0 border border-border">
                   <AvatarImage src={userAvatar?.avatar_url || undefined} alt={item.name} />
                   <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">{getInitials(item.name)}</AvatarFallback>
                 </Avatar>
-                <div className="min-w-0 space-y-1">
-                  <span className="commercial-calls-name block font-semibold text-foreground">{item.name}</span>
-                  {showSales && <span className="block text-xs leading-tight text-muted-foreground" title={`${sales} venda(s) ganha(s) neste mês • ${conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das calls feitas`}><span className="font-semibold tabular-nums text-primary">{conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</span> conversão</span>}
-                </div>
+                <span className="commercial-calls-name font-semibold text-foreground">{item.name}</span>
               </div>
-              <span role="cell" aria-label={`${scheduled} calls a fazer`} className="commercial-calls-number text-center font-semibold tabular-nums text-foreground">{scheduled.toLocaleString('pt-BR')}</span>
-              <span role="cell" aria-label={`${completed} calls feitas`} className="commercial-calls-number text-center font-semibold tabular-nums text-foreground">{completed.toLocaleString('pt-BR')}</span>
-              {showSales && <span role="cell" aria-label={`${sales} vendas`} className="commercial-calls-number text-center font-bold tabular-nums text-primary">{sales.toLocaleString('pt-BR')}</span>}
-            </div>
+              <div className="commercial-calls-metrics" data-sales={showSales}>
+                {[
+                  { label: 'A fazer', value: scheduled, Icon: Calendar, accent: 'text-warning', salesMetric: false, accessible: `${scheduled} calls a fazer` },
+                  { label: 'Feitas', value: completed, Icon: CheckCircle2, accent: 'text-success', salesMetric: false, accessible: `${completed} calls feitas` },
+                  ...(showSales ? [{ label: 'Vendas', value: sales, Icon: Target, accent: 'text-primary', salesMetric: true, accessible: `${sales} vendas` }] : []),
+                ].map(({ label, value, Icon, accent, salesMetric, accessible }) => (
+                  <div key={label}
+                    className={`commercial-calls-block rounded-md border ${salesMetric ? 'border-primary/30 bg-primary/10' : 'border-border bg-muted/60'}`}
+                    aria-label={accessible}
+                    title={salesMetric ? `${sales} venda(s) ganha(s) neste mês • ${conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das calls feitas` : undefined}
+                  >
+                    <span className="commercial-calls-label flex items-center justify-center gap-1 font-medium text-muted-foreground"><Icon className={`h-3 w-3 shrink-0 ${accent}`} />{label}</span>
+                    <span className={`commercial-calls-number font-bold tabular-nums ${salesMetric ? 'text-primary' : 'text-foreground'}`}>{value.toLocaleString('pt-BR')}</span>
+                    {salesMetric && <span className="commercial-calls-conversion font-semibold tabular-nums text-primary">{conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</span>}
+                  </div>
+                ))}
+              </div>
+            </section>
           );
         })}
       </div>

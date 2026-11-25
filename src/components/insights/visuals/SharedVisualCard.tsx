@@ -291,7 +291,7 @@ export function SharedVisualCard({ visual, data, stackedData, stackedSeriesKeys,
         <CardHeader className="pb-1 pt-3 px-3 flex-shrink-0">
           <CardTitle className="text-sm font-semibold truncate">{title}</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 min-h-0 overflow-auto px-3 pb-3 pt-0">
+        <CardContent className={`flex-1 min-h-0 px-3 pt-0 ${chartType === 'call_commercial' ? 'min-w-0 overflow-hidden pb-2' : 'overflow-auto pb-3'}`}>
           <ConfigurableChart
             type={chartType}
             data={processedData}

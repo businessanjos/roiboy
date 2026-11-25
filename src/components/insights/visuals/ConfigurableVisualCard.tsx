@@ -328,7 +328,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
   return (
     <VisualErrorBoundary title={visual.title || "Visual"}>
       <>
-        <Card className={cn("relative flex flex-col h-full", tv.tv && "border-border/70 bg-card shadow-none")}>
+        <Card className={cn("relative flex flex-col h-full", tv.tv && "border-border/70 bg-card shadow-none", chartType === 'call_commercial' && "min-w-0 overflow-hidden")}>
           {isFailing && hasGoodData && (
             <span className="pointer-events-none absolute right-3 bottom-2 z-10 text-[11px] text-muted-foreground animate-pulse">
               Atualizando…
@@ -337,11 +337,11 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
           <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2", tv.tv && "space-y-1 px-4 pt-3 pb-2", chartType === 'call_commercial' && "space-y-0 px-3 pt-2.5 pb-1.5")}>
             <CardTitle
               className={cn(
-                "text-base flex items-center justify-between gap-1",
+                "text-base min-w-0 flex items-center justify-between gap-1",
                 isScorecard && "text-sm",
                 tv.tv && "font-semibold tracking-normal text-foreground",
               )}
-              style={tv.tv ? { fontSize: Math.round((isScorecard || chartType === 'call_commercial' ? 16 : 20) * tv.scale) } : undefined}
+              style={tv.tv ? { fontSize: Math.round((isScorecard || chartType === 'call_commercial' ? 16 : 20) * (chartType === 'call_commercial' ? Math.min(tv.scale, 1.15) : tv.scale)) } : undefined}
             >
               <div className="flex items-center gap-1.5 min-w-0">
                 {!readOnly && <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />}

@@ -1,8 +1,9 @@
 # Roadmap — Processos do CS
 
 ## Calls Comerciais no ranking de vendedores
-- [ ] Reduzir blocos preenchidos e excesso visual, ajustar medidas ao espaço real e zoom; manter nomes, números, conversão, filtro anual e acesso, sem alterar outros gráficos ou configurações.
-- [ ] Conferir ajuste à TV, zoom e telas menores nos dois temas; testes existentes, sem publicar ou gravar dados reais.
+- [x] Mantidos blocos preenchidos com medidas limitadas, vendedores lado a lado quando cabe, percentuais dentro de Vendas e rolagem local; sem tabela, alteração de métricas/configurações ou outros gráficos.
+- [x] 30 testes passaram; componentes originais com exemplos em TV 1920/1366/803, normal 1440/390/803 e zoom 80/150/200, compartilhado 803/390 e 250%, claro/escuro: sem cortes dos blocos/nomes/percentuais ou erros. Caminhos irmãos lidos em `.lovable/reviews/calls-blocks-framing.md`; compilação OK, sem backend, escritas reais ou publicação.
+- [ ] Conferência do painel com sessão real e TV física: sessão própria indisponível e criação de pessoa de teste falhou; exemplos não substituem a conta real ou o aparelho.
 
 ## Tarefas recorrentes no Marketing
 - [x] Repetição diária/semanal/mensal no formulário, inclusive toda segunda-feira; rotina automática horária (calendário de Brasília), responsável/etiquetas/descrição/horário/capa/anexos preservados e subtarefas pendentes, sem reabrir concluídas. Campos e autoria validados no servidor, mesmo RLS de tarefas, chave única origem/data e cursor transacional, sem modificar registros reais.
