@@ -8,8 +8,9 @@ import { MarketingTask } from "@/hooks/useMarketingTasks";
 import { MarketingTaskColumn } from "@/hooks/useMarketingTaskColumns";
 import { taskBoardItems, type TaskSeparator } from "@/lib/marketing/taskPresentation";
 import { TaskSeparatorItem } from "./TaskSeparator";
+import { TaskGroupSelection, type TaskSelectionProps } from "./TaskSelection";
 
-interface MarketingKanbanColumnProps {
+interface MarketingKanbanColumnProps extends TaskSelectionProps {
   fullHeight?: boolean;
   column: MarketingTaskColumn;
   tasks: MarketingTask[];
@@ -33,8 +34,9 @@ export function MarketingKanbanColumn({
   separators,
   onAddSeparator,
   onEditSeparator,
+  ...selection
 }: MarketingKanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: column.id });
+  const { setNodeRef, isOver } = useDroppable({ id: column.id, disabled: selection.selectionMode || selection.selectionDisabled });
   const items = taskBoardItems(tasks, separators);
 
   return (
@@ -49,6 +51,7 @@ export function MarketingKanbanColumn({
     >
       <div className="flex min-h-[60px] shrink-0 items-center justify-between gap-3 rounded-t-md border-b border-border/70 bg-background/60 px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          {selection.selectionMode && <TaskGroupSelection tasks={tasks} label={`Selecionar tarefas de ${column.title}`} {...selection} />}
           <h3 className="min-w-0 break-words text-[15px] font-bold leading-5 text-foreground">{column.title}</h3>
           <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/60 px-1.5 text-[11px] font-semibold tabular-nums text-muted-foreground" aria-label={`${tasks.length} tarefas`}>
             {tasks.length}
@@ -71,6 +74,7 @@ export function MarketingKanbanColumn({
               onEdit={() => onEditTask(item.task.id)}
               onToggleComplete={(completed) => onToggleComplete(item.task.id, completed)}
               subtaskInfo={subtaskCounts[item.task.id]}
+              {...selection}
             />
           ))}
         </SortableContext>

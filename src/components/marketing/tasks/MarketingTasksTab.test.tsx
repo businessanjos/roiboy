@@ -99,3 +99,44 @@ describe("Situação escolhida nas tarefas de Marketing", () => {
     localStorage.setItem(key, JSON.stringify(invalid)); openTasks(); expect(visibleTaskIds()).toEqual(["qa-pending"]);
   });
 });
+
+function selectionProps(view = views.board) {
+  const calls = view.mock.calls as unknown as [{ selectedTaskIds: Set<string>; selectionMode: boolean; onSelectTask: (id: string) => void; onSelectTasks: (ids: string[], selected: boolean) => void }][];
+  const latest = calls.at(-1);
+  if (!latest) throw new Error("View missing");
+  return latest[0];
+}
+describe("Seleção de tarefas visíveis", () => {
+  it("selecionar todos usa somente o resultado filtrado e não conclui tarefas", () => {
+    openTasks();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Mais opções do quadro" }), { key: "Enter" });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Selecionar tarefas" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Selecionar todas as tarefas filtradas" }));
+    expect([...selectionProps().selectedTaskIds]).toEqual(["qa-pending"]);
+    expect(visibleTaskIds()).toEqual(["qa-pending"]);
+  });
+  it("trocar lista/quadro e expandir preserva a seleção sem selecionar outras tarefas", () => {
+    openTasks();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Mais opções do quadro" }), { key: "Enter" });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Selecionar tarefas" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Selecionar todas as tarefas filtradas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Visualizar lista" }));
+    expect([...selectionProps(views.list).selectedTaskIds]).toEqual(["qa-pending"]);
+    fireEvent.click(screen.getByRole("button", { name: "Visualizar quadro" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expandir quadro em tela cheia" }));
+    expect([...selectionProps().selectedTaskIds]).toEqual(["qa-pending"]);
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar seleção" }));
+    expect(selectionProps().selectionMode).toBe(false);
+    expect([...selectionProps().selectedTaskIds]).toEqual([]);
+  });
+  it("um filtro que esconde a tarefa a remove também da seleção", () => {
+    openTasks();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Mais opções do quadro" }), { key: "Enter" });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Selecionar tarefas" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Selecionar todas as tarefas filtradas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Filtrar tarefas" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Alterar seleção pending" }), { target: { value: "done" } });
+    expect([...selectionProps().selectedTaskIds]).toEqual([]);
+    expect(visibleTaskIds()).toEqual(["qa-done"]);
+  });
+});

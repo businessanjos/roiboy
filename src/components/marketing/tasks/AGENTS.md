@@ -1,5 +1,7 @@
 # Marketing task details
 
+- Task selection is scoped to visible filtered task IDs across board/list/expansion; task edits, bulk changes and undo share user/account-keyed session history through `useMarketingTasks` and `taskChanges`. Writes compare server `updated_at` under existing RLS, undo restores only changed fields, and partial results retain only successful changes in history. Why: group actions and reversal must not touch hidden tasks, lose completion timestamps or overwrite later edits; no deletion or backend permission changes.
+
 - Recurrence is configured on the original task in typed `recurrence_rule`; the server stamps the author and next date. The cron-only invoker processor locks sources, generates unique source/date occurrences and pending child tasks, and advances the cursor atomically, validating active same-account creator/assignee. Existing task RLS is unchanged; generated edits affect only that occurrence, and duplication never starts another series. Why: calendar repetition must survive closed browsers without forged identity, double creation or reopening completed history.
 
 - Delivery time, requester identity and label color metadata live in `marketing_tasks.custom_fields.delivery_details`; label names remain in `tags`, and execution ownership remains in `assignee_id`. Why: add task identification without schema, permission or audit-identity changes, retaining legacy fields.

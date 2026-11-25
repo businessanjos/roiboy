@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp, ListMinus, Maximize2, Minimize2, MoreHorizontal, X } from "lucide-react";
+import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp, ListMinus, Maximize2, Minimize2, MoreHorizontal, X, ListChecks, Undo2, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -37,6 +37,9 @@ import { TaskLabelFilter } from "./TaskLabels";
 import { useMarketingTaskSeparators } from "@/hooks/useMarketingTaskSeparators";
 import { TaskSeparatorDialog } from "./TaskSeparator";
 import type { TaskSeparator } from "@/lib/marketing/taskPresentation";
+import { TaskBulkToolbar } from "./TaskBulkToolbar";
+import { taskCompletionChange, taskBulkChanges, type TaskBulkAction } from "@/lib/marketing/taskChanges";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 type ViewMode = "list" | "board";
 
@@ -63,6 +66,7 @@ export function isTaskOverdue(task: MarketingTask): boolean {
 }
 
 export function MarketingTasksTab() {
+  const { currentUser } = useCurrentUser();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTask = searchParams.get("task");
   const requestedComment = searchParams.get("comment");
@@ -89,7 +93,10 @@ export function MarketingTasksTab() {
   const [separatorColumn, setSeparatorColumn] = useState<string | undefined>();
   const { separators, error: separatorsError, save: saveSeparator } = useMarketingTaskSeparators();
 
-  const { tasks, error: tasksError, isLoading: tasksLoading, updateTask, toggleComplete, reorderTasks } = useMarketingTasks();
+  const { tasks, error: tasksError, isLoading: tasksLoading, updateTask, reorderTasks, bulkUpdateTasks, undoLastChange, canUndo, isChangingTasks, changeProgress } = useMarketingTasks();
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  useEffect(() => { setSelectionMode(false); setSelectedTaskIds(new Set()); }, [currentUser?.id, currentUser?.account_id]);
   const openedLink = useRef<string | null>(null);
   useEffect(() => {
     if (!requestedTask || tasksLoading || openedLink.current === `${requestedTask}:${requestedComment}`) return;
@@ -228,6 +235,31 @@ export function MarketingTasksTab() {
     });
   }, [tasks, searchQuery, assigneeFilter, statusFilter, sortFilter, labelFilter, subtaskTitles]);
 
+  // Selection never silently includes tasks hidden by a new filter or revoked access.
+  useEffect(() => {
+    const visible = new Set(filteredTasks.map((task) => task.id));
+    setSelectedTaskIds((previous) => {
+      const next = new Set([...previous].filter((id) => visible.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [filteredTasks]);
+  const selection = {
+    selectionMode, selectedTaskIds, selectionDisabled: isChangingTasks,
+    onSelectTask: (id: string) => { if (isChangingTasks) return; setSelectedTaskIds((previous) => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; }); },
+    onSelectTasks: (ids: string[], selected: boolean) => { if (isChangingTasks) return; setSelectedTaskIds((previous) => { const next = new Set(previous); ids.forEach((id) => { if (selected) next.add(id); else next.delete(id); }); return next; }); },
+  };
+  const cancelSelection = () => { setSelectionMode(false); setSelectedTaskIds(new Set()); };
+  const handleBulkAction = async (action: TaskBulkAction) => {
+    if (isChangingTasks) return;
+    const selected = filteredTasks.filter((task) => selectedTaskIds.has(task.id));
+    if (!selected.length) return;
+    try {
+      const result = await bulkUpdateTasks.mutateAsync(taskBulkChanges(selected, action, columns));
+      setSelectedTaskIds(new Set(result.failed.map((item) => item.id)));
+    } catch { /* The mutation presents its error without discarding selection. */ }
+  };
+  const handleUndo = () => { if (!isChangingTasks && canUndo) undoLastChange.mutate(); };
+
 
   const isSortManual = sortFilter === "manual";
 
@@ -265,7 +297,8 @@ export function MarketingTasksTab() {
   };
 
   const handleColumnChange = async (taskId: string, column: MarketingTaskColumn) => {
-    await updateTask.mutateAsync({
+    if (isChangingTasks) return;
+    updateTask.mutate({
       id: taskId,
       column_id: column.id,
       is_completed: column.is_done,
@@ -274,18 +307,9 @@ export function MarketingTasksTab() {
   };
 
   const handleToggleComplete = async (taskId: string, completed: boolean) => {
+    if (isChangingTasks) return;
     const task = tasks.find((t) => t.id === taskId);
-    const current = columns.find((c) => c.id === (task as any)?.column_id);
-    const target = completed
-      ? columns.find((c) => c.is_done)
-      : current?.is_done
-        ? columns.find((c) => !c.is_done)
-        : undefined;
-    if (target && target.id !== current?.id) {
-      await handleColumnChange(taskId, target);
-      return;
-    }
-    toggleComplete.mutate({ id: taskId, isCompleted: completed });
+    if (task) updateTask.mutate(taskCompletionChange(task, completed, columns));
   };
 
   if (isLoading) {
@@ -454,11 +478,14 @@ export function MarketingTasksTab() {
             </TooltipTrigger><TooltipContent>Quadro</TooltipContent></Tooltip>
           </div>
           {viewMode === "board" && !isFullscreen && expandControl}
+          {canUndo && <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Desfazer última alteração" disabled={isChangingTasks} onClick={handleUndo}><Undo2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>Desfazer última alteração desta sessão</TooltipContent></Tooltip>}
           <DropdownMenu>
             <Tooltip><TooltipTrigger asChild><DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Mais opções do quadro"><MoreHorizontal className="h-4 w-4" /></Button>
             </DropdownMenuTrigger></TooltipTrigger><TooltipContent>Mais opções</TooltipContent></Tooltip>
             <DropdownMenuContent align="end" className="max-w-[calc(100vw-1.5rem)]">
+              <DropdownMenuItem disabled={isChangingTasks} onSelect={() => selectionMode ? cancelSelection() : setSelectionMode(true)} className="min-h-10 gap-2"><ListChecks className="h-4 w-4" />{selectionMode ? "Cancelar seleção" : "Selecionar tarefas"}</DropdownMenuItem>
+              <DropdownMenuItem disabled={!canUndo || isChangingTasks} onSelect={handleUndo} className="min-h-10 gap-2"><Undo2 className="h-4 w-4" />Desfazer última alteração</DropdownMenuItem>
               {viewMode === "board" && <DropdownMenuItem onSelect={() => openSeparator()} className="min-h-10 gap-2"><ListMinus className="h-4 w-4" />Adicionar separador</DropdownMenuItem>}
               <DropdownMenuItem onSelect={() => setIsColumnsManagerOpen(true)} className="min-h-10 gap-2"><Settings2 className="h-4 w-4" />Gerenciar etapas</DropdownMenuItem>
               {selectedAssignee && <DropdownMenuItem onSelect={() => handleAddTask(undefined, undefined, selectedAssignee.id)} className="min-h-10 max-w-72 gap-2"><Plus className="h-4 w-4 shrink-0" /><span className="break-words">Nova tarefa para {selectedAssignee.name}</span></DropdownMenuItem>}
@@ -467,6 +494,8 @@ export function MarketingTasksTab() {
         </div>
       </div>
 
+      {selectionMode && <TaskBulkToolbar tasks={filteredTasks} columns={columns} {...selection} onApply={handleBulkAction} onCancel={cancelSelection} progress={changeProgress} />}
+      {isChangingTasks && !selectionMode && <p role="status" className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />{changeProgress?.completed} de {changeProgress?.total} tarefas</p>}
       {tasksError && <p role="alert" className="text-sm text-destructive">Não foi possível atualizar as tarefas. Tente novamente.</p>}
       {separatorsError && viewMode === "board" && <p role="alert" className="text-sm text-destructive">Não foi possível carregar os separadores.</p>}
       {!tasksError && tasks.length > 0 && filteredTasks.length === 0 && <div className="flex flex-wrap items-center gap-3 py-3 text-sm text-muted-foreground">
@@ -489,6 +518,7 @@ export function MarketingTasksTab() {
           onAddSeparator={(columnId) => openSeparator(columnId)}
           onEditSeparator={(separator) => openSeparator(separator.column_id, separator)}
           onMoveSeparator={(input) => saveSeparator.mutate(input)}
+          {...selection}
         />
       )}
 
@@ -513,6 +543,7 @@ export function MarketingTasksTab() {
               onEditTask={handleEditTask}
               onToggleComplete={handleToggleComplete}
               resetKey={listFiltersKey}
+              {...selection}
             />
           ))}
 
@@ -522,6 +553,7 @@ export function MarketingTasksTab() {
               onEditTask={handleEditTask}
               onToggleComplete={handleToggleComplete}
               resetKey={listFiltersKey}
+              {...selection}
             />
           )}
 

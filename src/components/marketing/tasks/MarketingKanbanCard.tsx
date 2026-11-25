@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { readTaskDetails } from "@/lib/marketing/taskDetails";
 import { TaskPeopleAndLabels } from "./TaskPeopleAndLabels";
 import { TaskCardCover } from "./TaskCover";
+import { Checkbox } from "@/components/ui/checkbox";
+import type { TaskSelectionProps } from "./TaskSelection";
 
 function isTaskOverdue(task: MarketingTask): boolean {
   if (!task.due_date || task.is_completed || task.status === "done") return false;
@@ -19,7 +21,7 @@ function isTaskOverdue(task: MarketingTask): boolean {
   return isPast(due) && !isToday(due);
 }
 
-interface MarketingKanbanCardProps {
+interface MarketingKanbanCardProps extends TaskSelectionProps {
   task: MarketingTask;
   onEdit: () => void;
   onToggleComplete: (completed: boolean) => void;
@@ -37,6 +39,10 @@ export function MarketingKanbanCard({
   onEdit,
   onToggleComplete,
   subtaskInfo,
+  selectionMode = false,
+  selectedTaskIds,
+  onSelectTask,
+  selectionDisabled = false,
 }: MarketingKanbanCardProps) {
   const {
     attributes,
@@ -45,7 +51,7 @@ export function MarketingKanbanCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ id: task.id, disabled: selectionMode || selectionDisabled });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -76,28 +82,30 @@ export function MarketingKanbanCard({
         "hover:shadow-md hover:border-primary/30",
         isDragging && "opacity-50 shadow-lg rotate-2",
         task.is_completed && "opacity-60",
-        isTaskOverdue(task) && "border-destructive/60 bg-destructive/5 hover:border-destructive"
+        isTaskOverdue(task) && "border-destructive/60 bg-destructive/5 hover:border-destructive",
+        selectionMode && selectedTaskIds?.has(task.id) && "ring-2 ring-primary border-primary"
       )}
-      onClick={onEdit}
+      onClick={() => { if (selectionDisabled) return; if (selectionMode) onSelectTask?.(task.id); else onEdit(); }}
     >
       <TaskCardCover task={task} />
       <div className="flex items-start gap-2">
         {/* Drag handle */}
-        <div
+        {!selectionMode && <div
           {...attributes}
           {...listeners}
           className="mt-0.5 cursor-grab active:cursor-grabbing"
           onClick={(e) => e.stopPropagation()}
         >
           <GripVertical className="h-4 w-4 text-muted-foreground/50" />
-        </div>
+        </div>}
 
         {/* Checkbox */}
-        <Button
+        {selectionMode ? <div className="flex h-7 w-7 shrink-0 items-center justify-center" onClick={(event) => event.stopPropagation()}><Checkbox aria-label={`Selecionar tarefa ${task.title}`} checked={selectedTaskIds?.has(task.id) ?? false} disabled={selectionDisabled} onCheckedChange={() => onSelectTask?.(task.id)} /></div> : <Button
           type="button"
           variant="ghost"
           size="icon"
           aria-label={task.is_completed ? "Reabrir tarefa" : "Concluir tarefa"}
+          disabled={selectionDisabled}
           onClick={(e) => {
             e.stopPropagation();
             onToggleComplete(!task.is_completed);
@@ -109,7 +117,7 @@ export function MarketingKanbanCard({
           ) : (
             <Circle className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
           )}
-        </Button>
+        </Button>}
 
         {/* Content */}
         <div className="flex-1 min-w-0">

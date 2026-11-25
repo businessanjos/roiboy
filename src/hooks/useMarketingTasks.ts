@@ -6,6 +6,7 @@ import { fetchAllRows } from "@/lib/fetchAllRows";
 import type { Json } from "@/integrations/supabase/types";
 import { taskCopySubtasks, type TaskCopySubtask } from "@/lib/marketing/taskDetails";
 import { readTaskRecurrence, type TaskRecurrence } from "@/lib/marketing/taskRecurrence";
+import { applyTaskChanges, undoTaskChanges, type TaskUndoEntry, type TaskChangeStore } from "@/lib/marketing/taskChanges";
 
 // Sanitiza valores que deveriam ser UUID mas podem vir como strings inválidas
 function sanitizeUuid(value: string | undefined | null): string | null {
@@ -105,6 +106,48 @@ export function useMarketingTasks() {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
   const queryKey = ["marketing-tasks", currentUser?.account_id, currentUser?.id];
+  const actionKey = ["marketing-task-actions", currentUser?.account_id, currentUser?.id];
+  type ActionState = { busy: boolean; undo: TaskUndoEntry[]; completed: number; total: number };
+  const emptyActions: ActionState = { busy: false, undo: [], completed: 0, total: 0 };
+  const { data: actionState = emptyActions } = useQuery<ActionState>({
+    queryKey: actionKey, queryFn: () => emptyActions, initialData: emptyActions, enabled: false, gcTime: Infinity,
+  });
+  const setActions = (patch: Partial<ActionState>) => queryClient.setQueryData<ActionState>(actionKey, (state) => ({ ...(state ?? emptyActions), ...patch }));
+  const taskStore: TaskChangeStore = {
+    read: async (id) => {
+      if (!currentUser?.account_id) throw new Error("Usuário não autenticado");
+      const { data, error } = await supabase.from("marketing_tasks").select("*, assignee:users!marketing_tasks_assignee_id_fkey(id, name, avatar_url)")
+        .eq("id", id).eq("account_id", currentUser.account_id).single();
+      if (error) throw error;
+      return { ...data, recurrence_rule: readTaskRecurrence(data.recurrence_rule), media_attachments: data.media_attachments as unknown as MediaAttachment[] | null } as MarketingTask;
+    },
+    write: async (id, patch, version) => {
+      if (!currentUser?.account_id) throw new Error("Usuário não autenticado");
+      const { data, error } = await supabase.from("marketing_tasks").update(patch)
+        .eq("id", id).eq("account_id", currentUser.account_id).eq("updated_at", version)
+        .select("*, assignee:users!marketing_tasks_assignee_id_fkey(id, name, avatar_url)").maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("A tarefa mudou depois desta ação ou você não pode mais editá-la. Nenhuma alteração foi sobrescrita.");
+      return { ...data, recurrence_rule: readTaskRecurrence(data.recurrence_rule), media_attachments: data.media_attachments as unknown as MediaAttachment[] | null } as MarketingTask;
+    },
+  };
+  const runChanges = async (inputs: UpdateMarketingTaskInput[]) => {
+    if (queryClient.getQueryData<ActionState>(actionKey)?.busy) throw new Error("Aguarde a alteração em andamento.");
+    setActions({ busy: true, completed: 0, total: inputs.length });
+    try {
+      const changes = inputs.map(({ id, copy_subtasks: _copy, ...raw }) => {
+        const patch: Record<string, unknown> = { ...raw };
+        for (const key of ["section_id", "column_id", "assignee_id"] as const) if (key in raw) patch[key] = sanitizeUuid(raw[key]);
+        return { id, patch };
+      });
+      const result = await applyTaskChanges(changes, taskStore, (completed, total) => setActions({ completed, total }));
+      if (result.applied.length) setActions({ undo: result.applied });
+      return result;
+    } finally {
+      setActions({ busy: false });
+      await queryClient.invalidateQueries({ queryKey });
+    }
+  };
 
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey,
@@ -211,43 +254,9 @@ export function useMarketingTasks() {
 
   const updateTask = useMutation({
     mutationFn: async (input: UpdateMarketingTaskInput) => {
-      const { id, copy_subtasks: _copySubtasks, ...rawData } = input;
-
-      // Sanitizar campos UUID antes de enviar
-      const updateData: Record<string, unknown> = { ...rawData };
-      if ('section_id' in rawData) {
-        updateData.section_id = sanitizeUuid(rawData.section_id);
-      }
-      if ('column_id' in rawData) {
-        updateData.column_id = sanitizeUuid(rawData.column_id);
-      }
-      if ('assignee_id' in rawData) {
-        updateData.assignee_id = sanitizeUuid(rawData.assignee_id);
-      }
-
-      // If completing task, set completed_at
-      if (input.is_completed === true) {
-        updateData.completed_at = new Date().toISOString();
-      } else if (input.is_completed === false) {
-        updateData.completed_at = null;
-      }
-
-      const { data, error } = await supabase
-        .from("marketing_tasks")
-        .update(updateData)
-        .eq("id", id)
-        .select(`
-          *,
-          assignee:users!marketing_tasks_assignee_id_fkey(id, name, avatar_url)
-        `)
-        .single();
-
-      if (error) throw error;
-      return {
-        ...data,
-        recurrence_rule: readTaskRecurrence(data.recurrence_rule),
-        media_attachments: data.media_attachments as unknown as MediaAttachment[] | null,
-      } as MarketingTask;
+      const result = await runChanges([input]);
+      if (result.failed[0]) throw result.failed[0].error;
+      return result.applied[0]?.after ?? await taskStore.read(input.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });
@@ -277,32 +286,19 @@ export function useMarketingTasks() {
 
   const toggleComplete = useMutation({
     mutationFn: async ({ id, isCompleted }: { id: string; isCompleted: boolean }) => {
-      const { error } = await supabase
-        .from("marketing_tasks")
-        .update({
-          is_completed: isCompleted,
-          completed_at: isCompleted ? new Date().toISOString() : null,
-          status: isCompleted ? "done" : "pending",
-        })
-        .eq("id", id);
-
-      if (error) throw error;
+      const result = await runChanges([{ id, is_completed: isCompleted, status: isCompleted ? "done" : "pending" }]);
+      if (result.failed[0]) throw result.failed[0].error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });
     },
+    onError: (error: Error) => toast.error(translateError(error)),
   });
 
   const reorderTasks = useMutation({
     mutationFn: async (updates: { id: string; display_order: number }[]) => {
-      for (const update of updates) {
-        const { error } = await supabase
-          .from("marketing_tasks")
-          .update({ display_order: update.display_order })
-          .eq("id", update.id);
-
-        if (error) throw error;
-      }
+      const result = await runChanges(updates);
+      if (result.failed.length) throw new Error(`${result.applied.length} tarefas reordenadas; ${result.failed.length} não foram alteradas.`);
     },
     onMutate: async (updates) => {
       await queryClient.cancelQueries({ queryKey: ["marketing-tasks"] });
@@ -329,6 +325,39 @@ export function useMarketingTasks() {
     },
   });
 
+  const bulkUpdateTasks = useMutation({
+    mutationFn: runChanges,
+    onSuccess: (result) => {
+      if (result.failed.length) toast.error(`${result.applied.length} tarefas alteradas; ${result.failed.length} não foram alteradas. As alterações aplicadas podem ser desfeitas.`);
+      else if (result.applied.length) toast.success(`${result.applied.length} tarefa${result.applied.length === 1 ? " alterada" : "s alteradas"}`);
+      else toast.info("As tarefas já estavam assim.");
+    },
+    onError: (error: Error) => toast.error(translateError(error)),
+  });
+
+  const undoLastChange = useMutation({
+    mutationFn: async () => {
+      const state = queryClient.getQueryData<ActionState>(actionKey);
+      if (state?.busy) throw new Error("Aguarde a alteração em andamento.");
+      if (!state?.undo.length) throw new Error("Nenhuma alteração para desfazer nesta sessão.");
+      setActions({ busy: true, completed: 0, total: state.undo.length });
+      try {
+        const result = await undoTaskChanges(state.undo, taskStore, (completed, total) => setActions({ completed, total }));
+        const failedIds = new Set(result.failed.map((item) => item.id));
+        setActions({ undo: state.undo.filter((entry) => failedIds.has(entry.id)) });
+        return result;
+      } finally {
+        setActions({ busy: false });
+        await queryClient.invalidateQueries({ queryKey });
+      }
+    },
+    onSuccess: (result) => {
+      if (result.failed.length) toast.error(`${result.applied.length} tarefas restauradas; ${result.failed.length} não puderam ser desfeitas por alteração posterior ou falta de acesso. Nenhuma edição posterior foi sobrescrita.`);
+      else toast.success("Última alteração desfeita");
+    },
+    onError: (error: Error) => toast.error(translateError(error)),
+  });
+
   return {
     tasks,
     isLoading,
@@ -338,5 +367,10 @@ export function useMarketingTasks() {
     deleteTask,
     toggleComplete,
     reorderTasks,
+    bulkUpdateTasks,
+    undoLastChange,
+    canUndo: actionState.undo.length > 0,
+    isChangingTasks: actionState.busy,
+    changeProgress: { completed: actionState.completed, total: actionState.total },
   };
 }

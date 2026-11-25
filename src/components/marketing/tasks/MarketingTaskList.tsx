@@ -2,8 +2,9 @@ import { MarketingTaskRow } from "./MarketingTaskRow";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import type { TaskSelectionProps } from "./TaskSelection";
 
-interface MarketingTaskListProps {
+interface MarketingTaskListProps extends TaskSelectionProps {
   tasks: MarketingTask[];
   onEditTask: (taskId: string) => void;
   onToggleComplete: (id: string, completed: boolean) => void;
@@ -11,7 +12,7 @@ interface MarketingTaskListProps {
   resetKey?: unknown;
 }
 
-export function MarketingTaskList({ tasks, onEditTask, onToggleComplete, resetKey }: MarketingTaskListProps) {
+export function MarketingTaskList({ tasks, onEditTask, onToggleComplete, resetKey, ...selection }: MarketingTaskListProps) {
   const pgTasks = usePagedList(tasks, { resetKey });
 
   if (tasks.length === 0) {
@@ -26,6 +27,7 @@ export function MarketingTaskList({ tasks, onEditTask, onToggleComplete, resetKe
           task={task}
           onEdit={() => onEditTask(task.id)}
           onToggleComplete={(completed) => onToggleComplete(task.id, completed)}
+          {...selection}
         />
       ))}
       <PagerFor state={pgTasks} itemLabel="tarefas" />

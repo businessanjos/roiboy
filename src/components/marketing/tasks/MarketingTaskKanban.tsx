@@ -19,8 +19,9 @@ import { MarketingKanbanCard } from "./MarketingKanbanCard";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
 import { MarketingTaskColumn } from "@/hooks/useMarketingTaskColumns";
 import type { TaskSeparator } from "@/lib/marketing/taskPresentation";
+import type { TaskSelectionProps } from "./TaskSelection";
 
-interface MarketingTaskKanbanProps {
+interface MarketingTaskKanbanProps extends TaskSelectionProps {
   fullHeight?: boolean;
   tasks: MarketingTask[];
   columns: MarketingTaskColumn[];
@@ -50,6 +51,7 @@ export function MarketingTaskKanban({
   onAddSeparator,
   onEditSeparator,
   onMoveSeparator,
+  ...selection
 }: MarketingTaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<MarketingTask | null>(null);
 
@@ -95,6 +97,7 @@ export function MarketingTaskKanban({
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     setActiveTask(null);
+    if (selection.selectionMode || selection.selectionDisabled) return;
     if (!over) return;
 
     const taskId = active.id as string;
@@ -170,6 +173,7 @@ export function MarketingTaskKanban({
             separators={separators.filter((separator) => separator.column_id === column.id)}
             onAddSeparator={() => onAddSeparator(column.id)}
             onEditSeparator={onEditSeparator}
+            {...selection}
           />
         ))}
       </div>

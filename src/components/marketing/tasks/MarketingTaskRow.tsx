@@ -12,8 +12,9 @@ import { TaskPeopleAndLabels } from "./TaskPeopleAndLabels";
 import { TaskCardCover } from "./TaskCover";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { taskPersonPresentation } from "@/lib/marketing/taskPresentation";
+import type { TaskSelectionProps } from "./TaskSelection";
 
-interface MarketingTaskRowProps {
+interface MarketingTaskRowProps extends TaskSelectionProps {
   task: MarketingTask;
   onEdit: () => void;
   onToggleComplete: (completed: boolean) => void;
@@ -37,7 +38,7 @@ function isTaskOverdue(task: MarketingTask): boolean {
   return isPast(due) && !isToday(due);
 }
 
-export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTaskRowProps) {
+export function MarketingTaskRow({ task, onEdit, onToggleComplete, selectionMode = false, selectedTaskIds, onSelectTask, selectionDisabled = false }: MarketingTaskRowProps) {
   const { currentUser } = useCurrentUser();
   const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
   const details = readTaskDetails(task);
@@ -64,21 +65,24 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
       className={cn(
         "grid grid-cols-[auto,1fr,140px,120px,100px,100px] gap-2 px-4 py-2 items-center hover:bg-muted/30 transition-colors cursor-pointer group border-b last:border-b-0",
         task.is_completed && "opacity-60",
-        isTaskOverdue(task) && "bg-destructive/5 hover:bg-destructive/10"
+        isTaskOverdue(task) && "bg-destructive/5 hover:bg-destructive/10",
+        selectionMode && selectedTaskIds?.has(task.id) && "bg-primary/10"
       )}
-      onClick={onEdit}
+      onClick={() => { if (selectionDisabled) return; if (selectionMode) onSelectTask?.(task.id); else onEdit(); }}
     >
       {/* Drag Handle + Checkbox */}
       <div className="flex items-center gap-1">
         <GripVertical className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 cursor-grab" />
         <Checkbox
-          checked={task.is_completed}
+          checked={selectionMode ? selectedTaskIds?.has(task.id) ?? false : task.is_completed}
+          disabled={selectionDisabled}
+          aria-label={selectionMode ? `Selecionar tarefa ${task.title}` : task.is_completed ? "Reabrir tarefa" : "Concluir tarefa"}
           onCheckedChange={(checked) => {
             // Prevent row click
-            onToggleComplete(!!checked);
+            if (selectionMode) onSelectTask?.(task.id); else onToggleComplete(!!checked);
           }}
           onClick={(e) => e.stopPropagation()}
-          className="rounded-full"
+          className={selectionMode ? undefined : "rounded-full"}
         />
       </div>
 

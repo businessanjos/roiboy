@@ -1,5 +1,11 @@
 # Roadmap — Processos do CS
 
+## Seleção e ações em grupo nas tarefas de Marketing
+- [x] Menu do quadro com seleção individual/todos os resultados filtrados e por coluna/seção no quadro, lista e tela ampliada; mover, concluir, reabrir e prioridade em grupo com confirmação; filtros removem tarefas ocultas da seleção.
+- [x] Desfazer a última edição/movimentação/conclusão/reordenação da própria sessão compartilhada pelo formulário e quadro, restaurando só campos alterados e horários originais; conta/ID/versão comparados sob RLS existente, erros parciais explícitos e alterações posteriores preservadas. Sem exclusão em grupo, migração, mudanças de permissões/backend ou publicação.
+- [x] 68 testes passaram; componentes e hooks originais com respostas locais TESTE QA: selecionar duas → mover → reler → desfazer; concluir todas → desfazer; lista → prioridade → desfazer. 390/803/1440 nos dois temas e ampliação com seleção preservada, sem rolagem lateral da página/erros; compilação OK. Só escritas locais fictícias; nenhum registro real alterado.
+- [ ] Conferir salvar/reler/desfazer na sessão autenticada: sessão própria indisponível (sem conta correspondente) e criação da sessão TESTE QA falhou; respostas locais não validam a sessão/RLS no servidor real.
+
 ## Distribuição do quadro ampliado
 - [x] Colunas igualmente distribuídas pela largura disponível apenas ao ampliar, mínimo 300px com rolagem local nas telas estreitas; quadro normal, ordem, filtros, dados e ações intactos.
 - [x] 46 testes passaram; componentes originais com TESTE QA no navegador em 1562/1920/1440/803/390: colunas iguais sem vazio lateral no desktop, rolagem local mobile, clique abre tarefa e reduzir restaura larguras originais. Compilação OK, sem erros de execução, alterações em tarefas ou publicação; conferência isolada não substitui sessão real.

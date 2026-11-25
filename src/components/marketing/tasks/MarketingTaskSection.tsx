@@ -7,6 +7,7 @@ import { useMarketingTaskSections, MarketingTaskSection as SectionType } from "@
 import { MarketingTask } from "@/hooks/useMarketingTasks";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { TaskGroupSelection, type TaskSelectionProps } from "./TaskSelection";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface MarketingTaskSectionProps {
+interface MarketingTaskSectionProps extends TaskSelectionProps {
   section: SectionType;
   tasks: MarketingTask[];
   onAddTask: () => void;
@@ -41,6 +42,7 @@ export function MarketingTaskSection({
   onEditTask,
   onToggleComplete,
   resetKey,
+  ...selection
 }: MarketingTaskSectionProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(section.name);
@@ -80,6 +82,7 @@ export function MarketingTaskSection({
     <div className="border-b last:border-b-0">
       {/* Section Header */}
       <div className="flex items-center gap-2 px-4 py-2 bg-muted/20 hover:bg-muted/40 transition-colors group">
+        {selection.selectionMode && <TaskGroupSelection tasks={tasks} label={`Selecionar tarefas de ${section.name}`} {...selection} />}
         <GripVertical className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 cursor-grab" />
         
         <Button
@@ -154,6 +157,7 @@ export function MarketingTaskSection({
               task={task}
               onEdit={() => onEditTask(task.id)}
               onToggleComplete={(completed) => onToggleComplete(task.id, completed)}
+              {...selection}
             />
           ))}
 
