@@ -1,5 +1,10 @@
 # Roadmap — Processos do CS
 
+## Tarefas recorrentes no Marketing
+- [x] Repetição diária/semanal/mensal no formulário, inclusive toda segunda-feira; rotina automática horária (calendário de Brasília), responsável/etiquetas/descrição/horário/capa/anexos preservados e subtarefas pendentes, sem reabrir concluídas. Campos e autoria validados no servidor, mesmo RLS de tarefas, chave única origem/data e cursor transacional, sem modificar registros reais.
+- [x] Alterar/parar no original e editar ocorrência sem afetar série; duplicar não inicia outra recorrência. 94 testes passaram, incluindo falha/recuperação, conta/autor forjados, datas, acesso negado e histórico; formulário original isolado com TESTE QA em 803/390/1440 e claro/escuro: criar report segunda, salvar/reabrir, mensal, cancelar e parar; sem erros ou pedidos ao backend. Rotina implantada, agenda ativa, função limitada a service_role, zero séries reais, compilação OK; sem publicar.
+- [ ] Conferência autenticada de salvar/reabrir e geração real: sessão própria indisponível (sem usuário correspondente) e criação da pessoa de teste falhou; exemplos isolados não verificam a conta real.
+
 ## Editar etiquetas no Marketing
 - [x] Lápis nos menus da tarefa e do filtro permite editar nome/cor; Salvar etiqueta atualiza todas as tarefas que a usam, inclusive concluídas, pela mesma conta e RLS existente. Duplicatas não mesclam, falha não salva parcialmente e rascunho/seleção são preservados; sem alterar responsáveis, situações, datas ou anexos.
 - [x] 83 testes passaram; sessão autenticada com duas tarefas TESTE QA: salvar nome/cor, reler ambas, reabrir a concluída, cancelar, rejeitar duplicata e renomear pelo filtro mantendo seleção; recarga conserva catálogo/nome/cor. 390/798/1440 nos dois temas sem cortes ou erros; somente tarefas QA conhecidas removidas, nenhuma tarefa real modificada. Permissões e acesso anônimo conferidos no banco; sem publicação.

@@ -20189,6 +20189,12 @@ export type Database = {
           is_completed: boolean
           media_attachments: Json | null
           priority: Database["public"]["Enums"]["marketing_task_priority"]
+          recurrence_author_auth_id: string | null
+          recurrence_creator_id: string | null
+          recurrence_next_date: string | null
+          recurrence_occurrence_date: string | null
+          recurrence_rule: Json | null
+          recurrence_source_id: string | null
           section_id: string | null
           status: Database["public"]["Enums"]["marketing_task_status"]
           tags: string[] | null
@@ -20210,6 +20216,12 @@ export type Database = {
           is_completed?: boolean
           media_attachments?: Json | null
           priority?: Database["public"]["Enums"]["marketing_task_priority"]
+          recurrence_author_auth_id?: string | null
+          recurrence_creator_id?: string | null
+          recurrence_next_date?: string | null
+          recurrence_occurrence_date?: string | null
+          recurrence_rule?: Json | null
+          recurrence_source_id?: string | null
           section_id?: string | null
           status?: Database["public"]["Enums"]["marketing_task_status"]
           tags?: string[] | null
@@ -20231,6 +20243,12 @@ export type Database = {
           is_completed?: boolean
           media_attachments?: Json | null
           priority?: Database["public"]["Enums"]["marketing_task_priority"]
+          recurrence_author_auth_id?: string | null
+          recurrence_creator_id?: string | null
+          recurrence_next_date?: string | null
+          recurrence_occurrence_date?: string | null
+          recurrence_rule?: Json | null
+          recurrence_source_id?: string | null
           section_id?: string | null
           status?: Database["public"]["Enums"]["marketing_task_status"]
           tags?: string[] | null
@@ -32037,6 +32055,10 @@ export type Database = {
       }
       marketing_task_label_key: { Args: { value: string }; Returns: string }
       marketing_task_mention_key: { Args: { value: string }; Returns: string }
+      marketing_task_recurrence_date: {
+        Args: { p_from: string; p_inclusive?: boolean; p_rule: Json }
+        Returns: string
+      }
       merge_deals_reversible: {
         Args: { p_data: Json; p_source: string; p_target: string }
         Returns: string
@@ -32060,6 +32082,10 @@ export type Database = {
       pipeline_rename_impact: { Args: { p_pipeline_id: string }; Returns: Json }
       pretty_person_name: { Args: { _name: string }; Returns: string }
       private_get_tech_projects_key: { Args: never; Returns: string }
+      process_marketing_task_recurrences: {
+        Args: { p_today?: string }
+        Returns: Json
+      }
       process_recurring_entries: { Args: never; Returns: number }
       reassign_user_records: {
         Args: { _from_user: string; _to_user: string }

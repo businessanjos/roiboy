@@ -37,6 +37,44 @@ function responsible() { return screen.getAllByRole("combobox")[1]; }
 function forceSubmit() { const form = document.querySelector("form"); if (!form) throw new Error("Form missing"); fireEvent.submit(form); }
 const oldTask = { id: "old-task", account_id: "account", title: "TESTE QA — Revisar arte", assignee_id: null, section_id: "existing-section", custom_fields: {}, tags: [], media_attachments: [], priority: "medium", status: "pending", is_completed: false };
 
+describe("Repetição das tarefas", () => {
+  function selectOption(value: string, option: string) {
+    const select = screen.getByRole("option", { name: option }).closest("select");
+    if (!select) throw new Error("Select missing");
+    fireEvent.change(select, { target: { value } });
+  }
+  it("report toda segunda-feira envia a regra e a primeira segunda ao criar", async () => {
+    render(<MarketingTaskDialog open onOpenChange={mocks.close} />);
+    fireEvent.change(screen.getByLabelText("Título *"), { target: { value: "TESTE QA — Report" } });
+    fireEvent.change(responsible(), { target: { value: "executor" } });
+    selectOption("weekly", "Semanalmente"); selectOption("1", "Segunda-feira"); forceSubmit();
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ title: "TESTE QA — Report", due_date: "2026-11-30", recurrence_rule: {frequency:"weekly",weekday:1}, assignee_id:"executor" })));
+  });
+  it("parar repetições salva regra nula sem reabrir a tarefa concluída", async () => {
+    mocks.tasks=[{...oldTask,assignee_id:"executor",due_date:"2026-11-30",recurrence_rule:{frequency:"weekly",weekday:1},status:"done",is_completed:true,column_id:"done"}];
+    mocks.columns.push({id:"done",title:"Concluídas",is_done:true});
+    render(<MarketingTaskDialog open taskId="old-task" onOpenChange={mocks.close} />);
+    selectOption("none","Não repetir"); forceSubmit();
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({id:"old-task",recurrence_rule:null,is_completed:true,status:"done"})));
+    mocks.columns.pop();
+  });
+  it("duplicar tarefa recorrente não inicia outra série sem escolha explícita", async () => {
+    mocks.tasks=[{...oldTask,assignee_id:"executor",due_date:"2026-11-30",recurrence_rule:{frequency:"weekly",weekday:1}}];
+    render(<MarketingTaskDialog open taskId="old-task" onOpenChange={mocks.close} />);
+    fireEvent.click(screen.getByRole("button",{name:"Duplicar tarefa"})); await screen.findByRole("button",{name:"Criar cópia"}); forceSubmit();
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({recurrence_rule:null})));
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+  it("editar ocorrência não altera a série; o botão leva à tarefa original", async () => {
+    mocks.tasks=[{...oldTask,assignee_id:"executor",due_date:"2026-11-30",recurrence_rule:{frequency:"weekly",weekday:1}},{...oldTask,id:"occurrence",title:"TESTE QA — Ocorrência",assignee_id:"executor",due_date:"2026-12-07",recurrence_source_id:"old-task"}];
+    render(<MarketingTaskDialog open taskId="occurrence" onOpenChange={mocks.close} />);
+    forceSubmit(); await waitFor(() => expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({id:"occurrence",due_date:"2026-12-07"})));
+    expect(mocks.update.mock.calls[0][0]).not.toHaveProperty("recurrence_rule");
+    fireEvent.click(screen.getByRole("button",{name:"Editar repetições futuras"}));
+    await waitFor(() => expect(screen.getByLabelText("Título *")).toHaveValue("TESTE QA — Revisar arte"));
+  });
+});
+
 describe("Entrega com horário antes da data", () => {
   function draft() {
     render(<MarketingTaskDialog open onOpenChange={mocks.close} />);

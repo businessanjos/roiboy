@@ -49,6 +49,8 @@ import { taskDescriptionContent, readTaskMarkerColors, writeTaskDescription } fr
 import type { JSONContent } from "@tiptap/react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { attachmentKey, readTaskCover, writeTaskCover, TASK_FILES_BUCKET, type TaskCover } from "@/lib/marketing/taskPresentation";
+import { TaskRecurrenceEditor } from "./TaskRecurrenceEditor";
+import { readTaskRecurrence, recurrenceDate, type TaskRecurrence } from "@/lib/marketing/taskRecurrence";
 
 interface MarketingTaskDialogProps {
   open: boolean;
@@ -73,7 +75,11 @@ export function MarketingTaskDialog({
   const { columns } = useMarketingTaskColumns();
   const { currentUser } = useCurrentUser();
 
-  const existingTask = taskId ? tasks.find((t) => t.id === taskId) : null;
+  const [recurrenceEditId, setRecurrenceEditId] = useState<string | null>(null);
+  const effectiveTaskId = recurrenceEditId ?? taskId;
+  const existingTask = effectiveTaskId ? tasks.find((t) => t.id === effectiveTaskId) : null;
+  const [recurrence, setRecurrence] = useState<TaskRecurrence | null>(null);
+  useEffect(() => { setRecurrenceEditId(null); }, [open, taskId]);
   const [copySource, setCopySource] = useState<MarketingTask | null>(null);
   const [copySubtasks, setCopySubtasks] = useState<TaskCopySubtask[]>([]);
   const isEditing = !!existingTask && !copySource;
@@ -127,6 +133,8 @@ export function MarketingTaskDialog({
       setPriority(draft.priority);
       setMediaAttachments(draft.media_attachments || []);
       setCover(readTaskCover(source));
+      // A manual duplicate is not a second automatic series.
+      setRecurrence(copySource ? null : readTaskRecurrence(source.recurrence_rule));
     } else {
       setTitle(""); setDescription("");
       setDescriptionDocument(taskDescriptionContent("", undefined)); setMarkerColors([]);
@@ -137,6 +145,7 @@ export function MarketingTaskDialog({
       setRequesterId(teamMembers.some((member) => member.id === currentUser?.id) ? currentUser?.id : undefined);
       setLabels([]); setPriority("medium"); setMediaAttachments([]);
       setCover(null);
+      setRecurrence(null);
     }
     inferredDeliveryDate.current = false;
     setDateValid(true); setEditorKey((key) => key + 1);
@@ -181,6 +190,10 @@ export function MarketingTaskDialog({
     }
 
     const deliveryDate = resolveTaskDeliveryDate(dueDate, dueTime);
+    if (recurrence && (!deliveryDate || recurrenceDate(recurrence, deliveryDate).getTime() !== new Date(deliveryDate.getFullYear(), deliveryDate.getMonth(), deliveryDate.getDate()).getTime())) {
+      toast.error("Escolha uma data de entrega que coincida com a repetição.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       const finalColumn = columns.find((column) => column.id === columnId);
@@ -207,8 +220,9 @@ export function MarketingTaskDialog({
         tags: labels.map((label) => label.name),
         custom_fields: writeTaskDescription(writeTaskCover(customFields, cover), description.trim(), descriptionDocument, markerColors),
         media_attachments: mediaAttachments,
+        ...(source?.recurrence_source_id && !copySource ? {} : { recurrence_rule: recurrence }),
       };
-      if (isEditing && taskId) await updateTask.mutateAsync({ id: taskId, ...input });
+      if (isEditing && effectiveTaskId) await updateTask.mutateAsync({ id: effectiveTaskId, ...input });
       else await createTask.mutateAsync({ ...input, ...(copySource ? { copy_subtasks: copySubtasks } : {}) });
       await cleanupUploads(mediaAttachments);
       onOpenChange(false);
@@ -220,8 +234,8 @@ export function MarketingTaskDialog({
   };
 
   const handleDelete = async () => {
-    if (!taskId) return;
-    await deleteTask.mutateAsync(taskId);
+    if (!effectiveTaskId) return;
+    await deleteTask.mutateAsync(effectiveTaskId);
     await cleanupUploads();
     setShowDeleteDialog(false);
     onOpenChange(false);
@@ -284,9 +298,9 @@ export function MarketingTaskDialog({
               </div>
               <div className="border-t pt-4">
                 {copySource ? <div className="space-y-2"><Label>Subtarefas ({copySubtasks.length})</Label>{copySubtasks.map((subtask, index) => <p key={index} className="border-b py-2 text-sm">{subtask.title}</p>)}</div>
-                  : <SubtaskList taskId={isEditing ? taskId : null} />}
+                  : <SubtaskList taskId={isEditing ? effectiveTaskId : null} />}
               </div>
-              <div className="border-t pt-4"><TaskComments key={copySource ? "copy" : taskId || "new"} taskId={isEditing ? taskId : null} focusCommentId={isEditing ? focusCommentId : null} /></div>
+              <div className="border-t pt-4"><TaskComments key={copySource ? "copy" : effectiveTaskId || "new"} taskId={isEditing ? effectiveTaskId : null} focusCommentId={isEditing ? focusCommentId : null} /></div>
             </div>
             <aside aria-label="Detalhes da tarefa" className="min-h-0 min-w-0 space-y-4 border-t bg-muted/15 p-4 sm:p-5 md:overflow-y-auto md:border-l md:border-t-0">
               <div className="space-y-3"><h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><Users className="h-4 w-4" />Pessoas</h3>{selectPeople("requester")}{selectPeople("assignee")}</div>
@@ -309,6 +323,12 @@ export function MarketingTaskDialog({
                 </div></div>
                 </div>
               </div>
+              <TaskRecurrenceEditor value={recurrence} onChange={(rule) => {
+                setRecurrence(rule);
+                if (rule) { setDueDate(recurrenceDate(rule, dueDate ?? new Date())); inferredDeliveryDate.current = false; }
+              }} date={dueDate} disabled={blocked} sourceId={copySource ? null : existingTask?.recurrence_source_id}
+                onEditSource={!copySource && tasks.some((task) => task.id === existingTask?.recurrence_source_id) ? () => setRecurrenceEditId(existingTask?.recurrence_source_id ?? null) : undefined}
+                nextDate={isEditing && JSON.stringify(recurrence) === JSON.stringify(readTaskRecurrence(existingTask?.recurrence_rule)) && existingTask?.due_date === (dueDate ? format(dueDate, "yyyy-MM-dd") : null) ? existingTask?.recurrence_next_date : null} />
               <div className="space-y-3 border-t pt-4">
                 <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><Settings2 className="h-4 w-4" />Organização</h3>
                 <div className="grid grid-cols-2 gap-3">
@@ -329,6 +349,6 @@ export function MarketingTaskDialog({
         </div>
       </DialogContent>
     </Dialog>
-    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir tarefa?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita. A tarefa e suas subtarefas serão permanentemente excluídas.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir tarefa?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita. A tarefa e suas subtarefas serão permanentemente excluídas.{existingTask?.recurrence_rule && " As repetições futuras serão interrompidas; as ocorrências já criadas serão mantidas."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </>;
 }

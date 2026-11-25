@@ -799,6 +799,20 @@
       "when": 1795621590483,
       "tag": "0113_marketing_task_label_complete_access",
       "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "7",
+      "when": 1795622040871,
+      "tag": "0114_marketing_task_recurrence",
+      "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1795622427566,
+      "tag": "0115_marketing_task_recurrence_atomic_counts",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import type { Json } from "@/integrations/supabase/types";
 import { taskCopySubtasks, type TaskCopySubtask } from "@/lib/marketing/taskDetails";
+import { readTaskRecurrence, type TaskRecurrence } from "@/lib/marketing/taskRecurrence";
 
 // Sanitiza valores que deveriam ser UUID mas podem vir como strings inválidas
 function sanitizeUuid(value: string | undefined | null): string | null {
@@ -65,6 +66,10 @@ export interface MarketingTask {
   created_at: string;
   updated_at: string;
   media_attachments: MediaAttachment[] | null;
+  recurrence_rule?: TaskRecurrence | null;
+  recurrence_next_date?: string | null;
+  recurrence_source_id?: string | null;
+  recurrence_occurrence_date?: string | null;
   assignee?: {
     id: string;
     name: string;
@@ -86,6 +91,7 @@ export interface CreateMarketingTaskInput {
   custom_fields?: Record<string, unknown>;
   is_completed?: boolean;
   copy_subtasks?: TaskCopySubtask[];
+  recurrence_rule?: TaskRecurrence | null;
 }
 
 export interface UpdateMarketingTaskInput extends Partial<CreateMarketingTaskInput> {
@@ -120,10 +126,12 @@ export function useMarketingTasks() {
       if (error) throw error;
       return (data || []).map((task: any) => ({
         ...task,
+        recurrence_rule: readTaskRecurrence(task.recurrence_rule),
         media_attachments: task.media_attachments as unknown as MediaAttachment[] | null,
       })) as MarketingTask[];
     },
     enabled: !!currentUser,
+    refetchInterval: 60_000,
   });
 
   const createTask = useMutation({
@@ -165,6 +173,7 @@ export function useMarketingTasks() {
           completed_at: input.is_completed ? new Date().toISOString() : null,
           display_order: nextOrder,
           created_by: currentUser.id,
+          recurrence_rule: input.recurrence_rule ?? null,
         })
         .select(`
           *,
@@ -186,6 +195,7 @@ export function useMarketingTasks() {
       }
       return {
         ...data,
+        recurrence_rule: readTaskRecurrence(data.recurrence_rule),
         media_attachments: data.media_attachments as unknown as MediaAttachment[] | null,
       } as MarketingTask;
     },
@@ -235,6 +245,7 @@ export function useMarketingTasks() {
       if (error) throw error;
       return {
         ...data,
+        recurrence_rule: readTaskRecurrence(data.recurrence_rule),
         media_attachments: data.media_attachments as unknown as MediaAttachment[] | null,
       } as MarketingTask;
     },
