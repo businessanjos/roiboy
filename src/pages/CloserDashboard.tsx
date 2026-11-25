@@ -41,7 +41,8 @@ import { cn } from "@/lib/utils";
 import { MetricBreakdownDialog, type BreakdownKind } from "@/components/sales/MetricBreakdownDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAccelerometerProgramGoal } from "@/hooks/useAccelerometerSales";
-import type { AccelerometerScope } from "@/lib/sales/accelerometer";
+import { useAccelerometerMeetings } from "@/hooks/useAccelerometerMeetings";
+import { hasAccelerometerIncentives, type AccelerometerScope } from "@/lib/sales/accelerometer";
 
 // Líderes que enxergam o acelerômetro de seus liderados
 const MANAGER_IDS = new Set<string>([
@@ -53,11 +54,12 @@ const MANAGER_IDS = new Set<string>([
 const MONTH_QUOTA_DEFAULT = 8; // 100% da meta = 8 vendas no mês (Closer)
 const isExpired = (endDate: string) => new Date(endDate) < new Date();
 
-function Speedometer({ value, max }: { value: number; max: number }) {
-  const safeMax = Math.max(1, max);
-  const turbo = value > safeMax;
+function Speedometer({ value, max }: { value: number; max: number | null }) {
+  const hasGoal = max !== null;
+  const safeMax = Math.max(1, max ?? 1);
+  const turbo = hasGoal && value > safeMax;
   const extras = turbo ? value - safeMax : 0;
-  const pct = Math.max(0, Math.min(1, value / safeMax));
+  const pct = hasGoal ? Math.max(0, Math.min(1, value / safeMax)) : 0;
   // Half-circle arc from 180° to 360° (left → right)
   const cx = 150;
   const cy = 150;
@@ -79,7 +81,7 @@ function Speedometer({ value, max }: { value: number; max: number }) {
   };
 
   // 3 color zones: red (0-33%), amber (33-66%), green (66-100%)
-  const zoneColors = ["hsl(0 80% 55%)", "hsl(40 90% 55%)", "hsl(140 65% 45%)"];
+  const zoneColors = ["hsl(var(--danger))", "hsl(var(--warning))", "hsl(var(--success))"];
   const zones = [
     [startAngle, startAngle + (endAngle - startAngle) / 3],
     [startAngle + (endAngle - startAngle) / 3, startAngle + (2 * (endAngle - startAngle)) / 3],
@@ -129,7 +131,7 @@ function Speedometer({ value, max }: { value: number; max: number }) {
           );
         })}
         {/* Tick labels */}
-        {ticks.map((t, i) => (
+        {hasGoal && ticks.map((t, i) => (
           <text
             key={i}
             x={t.x}
@@ -149,12 +151,12 @@ function Speedometer({ value, max }: { value: number; max: number }) {
           y1={cy}
           x2={needleX}
           y2={needleY}
-          stroke={turbo ? "hsl(20 95% 55%)" : "hsl(var(--foreground))"}
+          stroke={turbo ? "hsl(var(--warning))" : "hsl(var(--foreground))"}
           strokeWidth={turbo ? 5 : 4}
           strokeLinecap="round"
           filter={turbo ? "url(#turbo-arc-glow)" : undefined}
         />
-        <circle cx={cx} cy={cy} r={9} className={turbo ? "fill-orange-500" : "fill-foreground"} />
+        <circle cx={cx} cy={cy} r={9} className={turbo ? "fill-warning" : "fill-foreground"} />
         <circle cx={cx} cy={cy} r={4} className="fill-background" />
       </svg>
       <div className="-mt-2 text-center">
@@ -176,10 +178,10 @@ function Speedometer({ value, max }: { value: number; max: number }) {
           <>
             <div className="text-5xl font-bold tabular-nums leading-none">
               {value}
-              <span className="text-2xl text-muted-foreground font-medium"> / {safeMax}</span>
+              {hasGoal && <span className="text-2xl text-muted-foreground font-medium"> / {safeMax}</span>}
             </div>
             <div className="mt-1 text-sm text-muted-foreground">
-              {pctLabel}% da meta · {value === 1 ? "1 venda" : `${value} vendas`}
+              {hasGoal ? `${pctLabel}% da meta · ` : ""}{value === 1 ? "1 venda" : `${value} vendas`}
             </div>
           </>
         )}
@@ -359,9 +361,6 @@ export default function CloserDashboard() {
 
   // Reuniões realizadas vêm do mesmo agregador usado no Dashboard de Vendas
   // (internal_tasks com `completed_at` no período + dedupe por cliente).
-  const meetingsHeld = me?.meetings_held ?? 0;
-  const noShows = me?.noshow_calls ?? 0;
-  const wonValue = me?.won_value ?? 0;
 
   const { spiffs } = useQuotasIncentives(selYear, selMonth + 1);
   const visibleSpiffs = (spiffs ?? []).filter((s: any) => s.is_active && !isExpired(s.end_date));
@@ -373,6 +372,13 @@ export default function CloserDashboard() {
   const monthLabel = startOfMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
   const [accelerometerScope, setAccelerometerScope] = useState<AccelerometerScope>("mentorias");
+  const isProgram = accelerometerScope === "programas";
+  const showIncentives = hasAccelerometerIncentives(accelerometerScope);
+  const programMeetings = useAccelerometerMeetings(startOfMonth.toISOString(), endOfMonth.toISOString(), effectiveUserId, isProgram);
+  const meetingsHeld = isProgram ? programMeetings.data?.held ?? 0 : me?.meetings_held ?? 0;
+  const scheduledCalls = isProgram ? programMeetings.data?.scheduled ?? 0 : me?.scheduled_calls ?? 0;
+  const noShows = isProgram ? programMeetings.data?.noshow ?? 0 : me?.noshow_calls ?? 0;
+  const metricsLoading = isProgram ? programMeetings.isLoading : loading;
   const accelerometer = useUserMonthlyTier(selYear, selMonth, effectiveUserId, accelerometerScope);
   const { tier, sales: wonDeals } = accelerometer;
   const programGoal = useAccelerometerProgramGoal(selYear, selMonth, effectiveUserId, accelerometerScope === "programas");
@@ -380,7 +386,8 @@ export default function CloserDashboard() {
   const turbo = quota !== null && wonDeals > quota;
   const scopeLabel = accelerometerScope === "mentorias" ? "Mentorias" : "Programas";
   const totalWonDeals = me?.won_deals ?? 0;
-  const closeRate = meetingsHeld > 0 ? Math.round((totalWonDeals / meetingsHeld) * 100) : 0;
+  const conversionSales = isProgram ? wonDeals : totalWonDeals;
+  const closeRate = meetingsHeld > 0 ? Math.round((conversionSales / meetingsHeld) * 100) : 0;
   const { piggyValue, loading: statsLoading } =
     useCloserPersonalStats(selYear, selMonth, effectiveUserId);
   const [breakdown, setBreakdown] = useState<{ kind: BreakdownKind; title: string } | null>(null);
@@ -445,7 +452,7 @@ export default function CloserDashboard() {
                   </SelectContent>
                 </Select>
               )}
-              <Button
+              {showIncentives && <Button
                 variant="outline"
                 size="sm"
                 onClick={() => navigate("/sales-team/incentive-presentation/slideshow")}
@@ -453,8 +460,8 @@ export default function CloserDashboard() {
               >
                 <Presentation className="h-4 w-4" />
                 Apresentar plano
-              </Button>
-              {isManager && (
+              </Button>}
+              {isManager && showIncentives && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -539,7 +546,7 @@ export default function CloserDashboard() {
                 <Target className="h-4 w-4 text-primary" />
                 Velocímetro — {scopeLabel}
                 {turbo && (
-                  <Badge className="ml-1 bg-gradient-to-r from-warning via-warning to-danger text-white border-0 gap-1">
+                  <Badge className="ml-1 bg-warning/15 text-warning-strong dark:text-warning border-0 gap-1">
                     <Zap className="h-3 w-3 fill-current" /> TURBO
                   </Badge>
                 )}
@@ -555,41 +562,43 @@ export default function CloserDashboard() {
                 <Skeleton className="h-[220px] w-full" />
               ) : accelerometer.error && !accelerometer.isStaleResponse ? (
                 <p className="text-sm text-muted-foreground py-12">Vendas indisponíveis</p>
-              ) : quota !== null ? (
-                <Speedometer value={wonDeals} max={quota} />
               ) : (
-                <div className="flex flex-col items-center justify-center min-h-[220px] gap-2">
-                  <span className="text-5xl font-bold tabular-nums">{wonDeals}</span>
-                  <span className="text-sm text-muted-foreground">{wonDeals === 1 ? "venda de programa" : "vendas de programas"}</span>
-                  <span className="text-xs text-muted-foreground">{programGoal.error ? "Não foi possível consultar a meta" : "Sem meta de Programas cadastrada neste mês"}</span>
-                </div>
+                <>
+                  <Speedometer value={wonDeals} max={quota} />
+                  {quota === null && <p className="mt-3 text-center text-xs text-muted-foreground">{programGoal.error ? "Não foi possível consultar a meta" : "Sem meta de Programas cadastrada neste mês"}</p>}
+                </>
               )}
             </CardContent>
           </Card>
 
           <div className="lg:col-span-2 grid grid-cols-2 gap-3 sm:gap-4 content-start">
-            {loading ? (
+            {metricsLoading || (isProgram && accelerometer.isLoading) ? (
               <>
                 <Skeleton className="h-[88px]" />
                 <Skeleton className="h-[88px]" />
                 <Skeleton className="h-[88px]" />
                 <Skeleton className="h-[88px]" />
               </>
+            ) : isProgram && (programMeetings.error || accelerometer.error) ? (
+              <div role="alert" className="col-span-2 flex flex-wrap items-center justify-between gap-3 text-sm text-destructive">
+                <span>Não foi possível consultar os indicadores de Programas.</span>
+                <Button variant="outline" size="sm" onClick={() => { void programMeetings.refetch(); void accelerometer.refetch(); }}>Tentar novamente</Button>
+              </div>
             ) : (
               <>
                 <MetricCard
                   icon={Users}
                   label="Reuniões realizadas"
                   value={meetingsHeld}
-                  hint={`${me?.scheduled_calls ?? 0} agendadas`}
+                  hint={`${scheduledCalls} agendadas${isProgram ? " · Programas" : ""}`}
                   variant="default"
                   onClick={() => openBreakdown("held", "Reuniões realizadas — fonte dos dados")}
                 />
                 <MetricCard
                   icon={CalendarX}
                   label="Agendadas"
-                  value={me?.scheduled_calls ?? 0}
-                  hint="tasks de agendamento criadas no período"
+                  value={scheduledCalls}
+                  hint={isProgram ? "Agendamentos de Programas no período" : "Agendamentos criados no período"}
                   variant="default"
                   onClick={() => openBreakdown("scheduled", "Agendamentos — fonte dos dados")}
                 />
@@ -609,7 +618,7 @@ export default function CloserDashboard() {
                   icon={Percent}
                   label="Close Rate"
                   value={`${closeRate}%`}
-                  hint={`${totalWonDeals} fechadas / ${meetingsHeld} reuniões · geral`}
+                  hint={`${conversionSales} fechadas / ${meetingsHeld} reuniões · ${isProgram ? "Programas" : "geral"}`}
                   variant={closeRate >= 30 ? "success" : closeRate >= 15 ? "warning" : "danger"}
                   onClick={() => openBreakdown("won", "Vendas fechadas — fonte do close rate")}
                 />
@@ -619,18 +628,18 @@ export default function CloserDashboard() {
         </div>
 
         {/* Recorde + Cofrinho */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={cn("grid grid-cols-1 gap-4", showIncentives && "md:grid-cols-2")}>
           <SalesRecordCard
             record={accelerometer.record}
             monthLabel={accelerometer.recordMonthLabel}
             current={wonDeals}
             loading={accelerometer.isLoading || Boolean(accelerometer.error)}
           />
-          <PiggyBankCard value={piggyValue} salesCount={totalWonDeals} loading={statsLoading} />
+          {showIncentives && <PiggyBankCard value={piggyValue} salesCount={totalWonDeals} loading={statsLoading} />}
         </div>
 
         {/* SPIFFs */}
-        <div className="space-y-4">
+        {showIncentives && <div className="space-y-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -689,7 +698,7 @@ export default function CloserDashboard() {
               </TabsContent>
             </Tabs>
           )}
-        </div>
+        </div>}
       </div>
       </div>
       <MetricBreakdownDialog
@@ -701,7 +710,8 @@ export default function CloserDashboard() {
         accountId={currentUser?.account_id}
         startDate={startOfMonth}
         endDate={endOfMonth}
-        wonDealIds={breakdown?.title === `Vendas fechadas — ${scopeLabel}` ? accelerometer.dealIds : undefined}
+        wonDealIds={isProgram || breakdown?.title === `Vendas fechadas — ${scopeLabel}` ? accelerometer.dealIds : undefined}
+        meetingTaskIds={isProgram && breakdown && breakdown.kind !== "won" ? programMeetings.data?.ids[breakdown.kind] ?? [] : undefined}
       />
     </TooltipProvider>
   );

@@ -26,6 +26,7 @@ interface Props {
   endDate: Date;
   title: string;
   wonDealIds?: readonly string[];
+  meetingTaskIds?: readonly string[];
 }
 
 interface Row {
@@ -57,11 +58,11 @@ async function fetchLeadNames(ids: string[]): Promise<Map<string, string>> {
   return map;
 }
 
-export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accountId, startDate, endDate, title, wonDealIds }: Props) {
+export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accountId, startDate, endDate, title, wonDealIds, meetingTaskIds }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pg = usePagedList(rows, { resetKey: { kind, userId, accountId, wonDealIds, start: startDate.toISOString(), end: endDate.toISOString() }, isLoading: loading });
+  const pg = usePagedList(rows, { resetKey: { kind, userId, accountId, wonDealIds, meetingTaskIds, start: startDate.toISOString(), end: endDate.toISOString() }, isLoading: loading });
 
   const start = useMemo(() => startDate.toISOString(), [startDate]);
   const end = useMemo(() => endDate.toISOString(), [endDate]);
@@ -103,6 +104,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
             })),
           );
         } else {
+          if (meetingTaskIds?.length === 0) return;
           const useCompletedAt = kind === "held";
           const buildQuery = (from: number, to: number) => {
             let query = supabase
@@ -124,7 +126,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
           if (cancel) return;
 
           const filtered = (data || []).filter(
-            (t: any) => classifyMeetingTask((t.activity_types as any)?.name, t.title) === kind,
+            (t: any) => classifyMeetingTask((t.activity_types as any)?.name, t.title) === kind && (!meetingTaskIds || meetingTaskIds.includes(t.id)),
           );
           const clientIds = Array.from(new Set(filtered.map((t: any) => t.client_id).filter(Boolean)));
           const leadIds = Array.from(new Set(filtered.map((t: any) => t.lead_id).filter(Boolean)));
@@ -168,7 +170,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
     return () => {
       cancel = true;
     };
-  }, [open, kind, userId, accountId, start, end, wonDealIds]);
+  }, [open, kind, userId, accountId, start, end, wonDealIds, meetingTaskIds]);
 
   const sourceHelp =
     kind === "held"
@@ -186,6 +188,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
           <DialogTitle className="break-words leading-snug">{title}</DialogTitle>
           <DialogDescription className="text-xs">
             {sourceHelp}
+            {meetingTaskIds && " Apenas reuniões de Programas com negócio vinculado."}
             <br />
             Período: {startDate.toLocaleDateString("pt-BR")} → {endDate.toLocaleDateString("pt-BR")}
           </DialogDescription>

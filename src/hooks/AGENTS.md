@@ -1,5 +1,6 @@
 # AGENTS.md — src/hooks
 - Accelerometer counters and records share `useAccelerometerSales` (complete RLS-scoped won-deal reads, saved Item da Venda identity, stable monthly IDs); program goals read existing product-specific quantities only. Why: the dial and drilldown agree without mixing programs into mentorship, inventing goals or changing payouts.
+- Program meeting counts and drilldowns share `useAccelerometerMeetings` task IDs, matched through a visible non-deleted linked deal's saved Item da Venda; absent goals keep the shared dial without scale or percentages. Why: shared contacts must not misattribute mentorship calls or imply an invented target.
 - CS process access is shared by `useCsProcessAccess`: editing comes from `is_cs_process_editor`, all-client visibility also accepts the existing `cs/processos_ver_todas` grant. Why: the controls must match content RLS without promoting anyone or changing global management rules.
 - Content archive reads every source page through the current user's client and RLS. Why: one read-only catalogue without copies, scraper jobs or changed access.
 

@@ -1,6 +1,8 @@
 # Roadmap — Processos do CS
 
 ## Acelerômetro: Mentorias e Programas
+- [x] Mesmo mostrador colorido em Programas, sem inventar metas/percentuais; realizadas, agendadas, no-show, listas e conversão somente dos negócios vinculados a Programas. SPIFFs, cofrinho e acesso ao plano de incentivos ficam em Mentorias; nenhum backend, negócio ou comissão alterado.
+- [x] Regras testadas; sessão autenticada conferida (sem vendas/reuniões desse usuário). Cenário local preenchido: 1 venda CR, 1 realizada, 1 agendada, 1 no-show e conversão 100%; quatro listas excluem Mentorias. Dois temas em 390/668/1440, sem rolagem lateral; imagens conferidas. Sem publicação. Leitura real não vazia continua pendente abaixo.
 - [x] Mentorias (EM, EC, EP e Conselho, com identidades legadas de Mentoring) é padrão e exclui CR; Programas começa com CR, por registro extensível de identidades. Sem alterar negócios, comissões, permissões ou backend.
 - [x] Velocímetro, recorde e lista usam as mesmas vendas completas por Item da Venda; nível de Mentorias separado e metas de Programas somente pelas quantidades já cadastradas. Sem meta, mostra quantidade e aviso, sem inventar patamares; demais indicadores/SPIFFs permanecem gerais.
 - [x] 28 testes passaram; alternância e lista autenticada conferidas em 390/668/1440, temas claro/escuro, sem rolagem lateral ou erros. Compilação OK; não publicado.

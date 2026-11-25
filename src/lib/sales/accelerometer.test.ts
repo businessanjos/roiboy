@@ -1,8 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { ACCELEROMETER_PRODUCTS, isAccelerometerItem, programQuantityGoal, summarizeAccelerometer } from "./accelerometer";
+import { ACCELEROMETER_PRODUCTS, isAccelerometerItem, programQuantityGoal, summarizeAccelerometer, summarizeAccelerometerMeetings, hasAccelerometerIncentives } from "./accelerometer";
 import { PRODUCT_IDS } from "./itemVendaResolver";
 
 describe("accelerometer scope rules", () => {
+  it("does not offer SPIFFs for programs, preserving mentorship incentives", () => {
+    expect(hasAccelerometerIncentives("programas")).toBe(false);
+    expect(hasAccelerometerIncentives("mentorias")).toBe(true);
+  });
+  const start = "2026-11-01T00:00:00.000Z";
+  const end = "2026-11-30T23:59:59.000Z";
+  const task = (id: string, deal_id: string | null, title = "Reunião realizada") => ({
+    id, deal_id, title, client_id: "same-client", created_at: "2026-11-10T12:00:00.000Z",
+    completed_at: "2026-11-11T12:00:00.000Z", activity_types: null,
+  });
+  const items = new Map([["cr", PRODUCT_IDS.CLINICA_RYKA], ["em", PRODUCT_IDS.EM]]);
+  it("counts only meetings linked to Clínica Ryka, not mentorship or unlinked shared clients", () => {
+    const result = summarizeAccelerometerMeetings([task("em-task", "em"), task("unlinked", null), task("cr-task", "cr"), task("duplicate", "cr")], items, "programas", "seller", start, end);
+    expect(result.held).toBe(1);
+    expect(result.ids.held).toEqual(["cr-task"]);
+  });
+  it("filters scheduled and no-show meetings to the program too", () => {
+    const result = summarizeAccelerometerMeetings([task("em-scheduled", "em", "Call comercial agendada"), task("cr-scheduled", "cr", "Call comercial agendada"), task("em-noshow", "em", "No-show"), task("cr-noshow", "cr", "No-show")], items, "programas", "seller", start, end);
+    expect(result.ids).toEqual({ held: [], scheduled: ["cr-scheduled"], noshow: ["cr-noshow"] });
+  });
+  it("uses completion dates for held meetings and creation dates for schedules", () => {
+    const result = summarizeAccelerometerMeetings([{ ...task("held", "cr"), created_at: "2026-10-10T12:00:00.000Z" }, { ...task("schedule", "cr", "Call comercial agendada"), created_at: "2026-10-10T12:00:00.000Z" }], items, "programas", "seller", start, end);
+    expect(result.ids).toEqual({ held: ["held"], scheduled: [], noshow: [] });
+  });
+  it("keeps equivalent timezone timestamps at the start of the selected period", () => {
+    const result = summarizeAccelerometerMeetings([{ ...task("boundary", "cr"), completed_at: "2026-11-01T00:00:00+00:00" }], items, "programas", "seller", start, end);
+    expect(result.ids.held).toEqual(["boundary"]);
+  });
   it("counts EM, EC, EP and Conselho as mentorship", () => {
     for (const item of [PRODUCT_IDS.EM, PRODUCT_IDS.EC, PRODUCT_IDS.EP, PRODUCT_IDS.CA]) {
       expect(isAccelerometerItem(item, "mentorias")).toBe(true);
