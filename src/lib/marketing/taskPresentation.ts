@@ -1,6 +1,12 @@
 import type { MarketingTask, MediaAttachment } from "@/hooks/useMarketingTasks";
 import { TASK_LABEL_COLORS, type TaskLabelColor } from "./taskDetails";
 
+/** Viewer-relative presentation only; stored identity and names never change. */
+export function taskPersonPresentation(personId: string | null | undefined, name: string | null | undefined, currentUserId: string | null | undefined) {
+  const isSelf = !!currentUserId && !!personId && personId === currentUserId;
+  return { isSelf, name: isSelf ? "Você" : name?.trim().split(/\s+/)[0] || "Não disponível" };
+}
+
 export const TASK_FILES_BUCKET = "marketing-task-files";
 export const TASK_FILE_MAX_BYTES = 50 * 1024 * 1024;
 export const TASK_FILE_TYPES: Record<string, string> = {

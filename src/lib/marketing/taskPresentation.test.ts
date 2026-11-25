@@ -1,7 +1,35 @@
 import { describe, expect, it } from "vitest";
 import type { MarketingTask, MediaAttachment } from "@/hooks/useMarketingTasks";
 import { taskCopyDraft } from "./taskDetails";
-import { TASK_FILE_MAX_BYTES, taskFileError, taskFileType, attachmentKey, readTaskCover, writeTaskCover, taskBoardItems } from "./taskPresentation";
+import { TASK_FILE_MAX_BYTES, taskFileError, taskFileType, attachmentKey, readTaskCover, writeTaskCover, taskBoardItems, taskPersonPresentation } from "./taskPresentation";
+
+describe("Identidade pessoal na apresentação das tarefas", () => {
+  it("reconhece a pessoa logada tanto como responsável quanto como solicitante pelo ID do cadastro", () => {
+    const viewerId = "qa-jessica";
+    const task = { assignee_id: viewerId, custom_fields: { delivery_details: { requester_id: viewerId } } };
+    expect(taskPersonPresentation(task.assignee_id, "Jessica Campos", viewerId).isSelf).toBe(true);
+    expect(taskPersonPresentation(task.custom_fields.delivery_details.requester_id, "Jessica Campos", viewerId).isSelf).toBe(true);
+    expect(task).toEqual({ assignee_id: "qa-jessica", custom_fields: { delivery_details: { requester_id: "qa-jessica" } } });
+  });
+  it("nomes iguais de pessoas diferentes nunca identificam alguém como a pessoa logada", () => {
+    expect(taskPersonPresentation("qa-other-jessica", "Jessica Campos", "qa-jessica").isSelf).toBe(false);
+  });
+  it("responsável e solicitante continuam independentes", () => {
+    expect(taskPersonPresentation("qa-lincoln", "Lincoln Silva", "qa-jessica").isSelf).toBe(false);
+    expect(taskPersonPresentation("qa-jessica", "Jessica Campos", "qa-jessica").isSelf).toBe(true);
+  });
+  it("sem identidade carregada ou sem pessoa atribuída não marca uma pessoa como a própria", () => {
+    expect(taskPersonPresentation("qa-jessica", "Jessica Campos", undefined).isSelf).toBe(false);
+    expect(taskPersonPresentation(null, null, "qa-jessica").isSelf).toBe(false);
+    expect(taskPersonPresentation(undefined, null, undefined).isSelf).toBe(false);
+  });
+  it("acompanha a mudança de pessoa logada sem alterar a identidade guardada na tarefa", () => {
+    const personId = "qa-jessica";
+    expect(taskPersonPresentation(personId, "Jessica Campos", "qa-jessica").isSelf).toBe(true);
+    expect(taskPersonPresentation(personId, "Jessica Campos", "qa-lincoln").isSelf).toBe(false);
+    expect(taskPersonPresentation(personId, null, "qa-jessica").isSelf).toBe(true);
+  });
+});
 
 const image: MediaAttachment = { url: "", bucket: "marketing-task-files", path: "account/art.png", type: "image", name: "art.png", size: 20, uploaded_at: "2026-11-24" };
 describe("Anexos e capas das tarefas", () => {

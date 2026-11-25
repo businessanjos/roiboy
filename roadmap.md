@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Você nas pessoas das tarefas
+- [x] “Você” para responsável/solicitante da pessoa logada no quadro e na lista (incluindo seções, tela ampliada e cartão de arraste que reutilizam as mesmas apresentações); demais com primeiro nome, seletores completos, fotos/identidades/dados intactos.
+- [x] Comparação pelo ID de `useCurrentUser`, nunca nome; 63 testes passaram. Componentes originais com exemplos isolados em 390/803/1440 conferidos no navegador, incluindo funções independentes, nomes iguais de outras pessoas, troca de pessoa e identidade não carregada, sem erros ou escritas. Sem publicação; conferência em sessão real não executada (sessão indisponível no ajuste anterior).
+
 ## Project monitoring — notificações
 - [x] Conferidos avisos, sino, histórico, navegador, produtor de push e decisões do app/WhatsApp, incluindo funções atuais em leitura; inventário em `.lovable/reviews/notification-monitoring.md`, sem alterar registros enviados.
 - [x] Reproduzidos clique bloqueado no aviso WhatsApp e `/royzapp` → 404; avisos gerais já liberavam cliques, mas largura externa deixava X fora da tela.

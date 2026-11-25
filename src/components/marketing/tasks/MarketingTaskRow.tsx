@@ -10,6 +10,8 @@ import { GripVertical, AlertCircle } from "lucide-react";
 import { readTaskDetails } from "@/lib/marketing/taskDetails";
 import { TaskPeopleAndLabels } from "./TaskPeopleAndLabels";
 import { TaskCardCover } from "./TaskCover";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { taskPersonPresentation } from "@/lib/marketing/taskPresentation";
 
 interface MarketingTaskRowProps {
   task: MarketingTask;
@@ -36,6 +38,7 @@ function isTaskOverdue(task: MarketingTask): boolean {
 }
 
 export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTaskRowProps) {
+  const { currentUser } = useCurrentUser();
   const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
   const details = readTaskDetails(task);
   
@@ -112,7 +115,7 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
               </AvatarFallback>
             </Avatar>
             <span className="text-sm text-muted-foreground truncate max-w-[80px]">
-              {task.assignee.name?.split(" ")[0]}
+              {taskPersonPresentation(task.assignee_id, task.assignee.name, currentUser?.id).name}
             </span>
           </>
         ) : (
