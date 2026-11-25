@@ -64,7 +64,7 @@ async def main():
           function App(){const [required,setRequired]=React.useState(0);const [mode,setMode]=React.useState(true);const [header,setHeader]=React.useState(0);const [zoom,setZoom]=React.useState(60);const [revision,refresh]=React.useState(0);const {setPreset}=useInsightsFilters();
             React.useEffect(()=>setPreset('month'),[]);window.qaRefresh=()=>refresh(x=>x+1);window.qaSetMode=setMode;window.qaSetHeader=setHeader;window.qaSetZoom=setZoom;
             const grid=React.createElement(InsightsGrid,{visuals:window.qaVisuals,readOnly:true,fitHeight:mode,onLayoutChange:()=>{throw Error('No writes')},onRequiredHeight:h=>{window.qaRequired=h;window.qaRequirements.push(h);setRequired(h)}});
-            return React.createElement(React.Fragment,null,React.createElement('div',{style:{height:header,flexShrink:0}}),React.createElement('div',{className:'min-h-0 flex-1'},mode?React.createElement(TvFitStage,{requiredHeight:required,zoom},grid):grid));
+            return React.createElement(React.Fragment,null,React.createElement('div',{style:{height:header,flexShrink:0}}),React.createElement('div',{className:'min-h-0 flex-1'},mode?React.createElement(TvFitStage,{requiredHeight:required,zoom,presentation:true},grid):grid));
           }
           window.qaRoot=createRoot(host);window.qaRoot.render(React.createElement(MemoryRouter,null,React.createElement(InsightsFiltersProvider,null,React.createElement(App))));
         }''')
@@ -184,6 +184,76 @@ async def main():
         await page.wait_for_timeout(300); await check()
         assert await page.evaluate('JSON.stringify(window.qaVisuals)===window.qaOriginal')
         print('PASS original focus controls: old 100% preference replaced by 60%, slider to 70%, exit/reopen retains it, explicit 80% link preserved')
+
+        # Exact TV 1 URL: foco + zoom must fit even without a tv parameter.
+        await page.mouse.move(120,100)
+        await page.get_by_role('button',name='Sair do modo foco',exact=True).click()
+        await page.evaluate('''()=>{
+          window.qaStacked={data:[{name:'Darlan Ferreira',CR:59,CA:0,EC:0,'EM I Eternum Mentoring':59,'Eternum MVP':0,NI:0},{name:'Jonathan Marcato',CR:6,CA:9,EC:2,'EM I Eternum Mentoring':27,'Eternum MVP':1,NI:1},{name:'Everton Pieri',CR:0,CA:0,EC:5,'EM I Eternum Mentoring':0,'Eternum MVP':0,NI:0}],seriesKeys:['CR','CA','EC','EM I Eternum Mentoring','Eternum MVP','NI']};
+          window.qaData.cr=[{name:'Darlan Ferreira',value:4,count:15,salesMonth:5},{name:'Jonathan Marcato',value:0,count:5,salesMonth:0}];
+          history.replaceState(null,'','/insights/05fe3fc0-139f-4de2-b46c-da526bcd022a?periodo=este_mes&foco=1&zoom=75');window.qaRenderMain();
+        }''')
+        await page.get_by_role('button',name='Ajustado à TV',exact=True).wait_for()
+        assert await page.get_by_role('slider').get_attribute('aria-valuenow') == '75'
+
+        async def check_tv1():
+            await page.wait_for_function('''()=>{
+              const root=document.querySelector('.insights-tv-presentation');
+              return root && root.querySelectorAll('.tv-stacked-summary').length===3 && [...root.querySelectorAll('.commercial-calls')].every(el=>el.scrollHeight<=el.clientHeight+1);
+            }''')
+            await page.wait_for_timeout(600)
+            await page.screenshot(path=str(OUT/'tv1-latest.png'))
+            result=await page.evaluate('''()=>{
+              const root=document.querySelector('.insights-tv-presentation');
+              const r=el=>{const b=el.getBoundingClientRect();return {x:b.x,y:b.y,right:b.right,bottom:b.bottom,width:b.width,height:b.height}};
+              const scale=root.getBoundingClientRect().width/root.offsetWidth;
+              const cards=[...root.querySelectorAll('[data-tv-visual]')];
+              const columns=[...root.querySelectorAll('.company-ranking-column-content')];
+              return {scale,cards:cards.map(r),headers:cards.map(card=>{const header=card.querySelector('.tv-visual-header');return {bounds:r(header),title:r(header.querySelector('h3')),summary:header.children[1]?r(header.children[1]):null,padding:getComputedStyle(header).paddingLeft}}),columns:columns.map(c=>({bounds:r(c),header:r(c.querySelector('header')),list:r(c.querySelector('ol')),rows:[...c.querySelectorAll('li')].map(r)})),calls:[...root.querySelectorAll('.commercial-calls')].map(el=>({bounds:r(el),client:el.clientHeight,scroll:el.scrollHeight,metrics:[...el.querySelectorAll('.commercial-calls-metrics')].map(m=>({bounds:r(m),blocks:[...m.children].map(r)}))})),captions:[...root.querySelectorAll('.commercial-calls-label,.commercial-calls-conversion,.tv-visual-header > div,.company-ranking li [title]')].map(el=>({text:el.textContent,size:parseFloat(getComputedStyle(el).fontSize)*scale})),legend:[...root.querySelectorAll('[aria-label="Legenda do gráfico"] li')].map(el=>el.textContent),totals:[...root.querySelectorAll('.tv-stacked-summary')].map(el=>el.textContent),chart:r(root.querySelector('.recharts-wrapper')),barWidths:[...root.querySelectorAll('.recharts-bar-rectangle path')].map(el=>r(el).width)};
+            }''')
+            assert len(result['cards'])==4,result
+            assert all(c['right']<=1921 and c['bottom']<=1081 for c in result['cards']),result
+            assert result['cards'][-1]['bottom']>=1060,result
+            for column in result['columns']:
+                assert abs(column['list']['width']-column['bounds']['width'])<1,result
+                assert all(abs(row['width']-column['bounds']['width'])<1 for row in column['rows']),result
+                assert column['rows'][-1]['bottom']<=column['bounds']['bottom']+1,result
+            assert abs(result['columns'][0]['header']['y']-result['columns'][1]['header']['y'])<1,result
+            # The shorter company centers inside the seller region, not the header.
+            one=result['columns'][1];region_top=one['header']['bottom']+6
+            assert abs((one['rows'][0]['y']-region_top)-(one['bounds']['bottom']-one['rows'][0]['bottom']))<12,result
+            for header in result['headers']:
+                if header['summary']: assert header['summary']['y']>=header['title']['bottom'],result
+            assert len({header['padding'] for header in result['headers']})==1,result
+            for call in result['calls']:
+                assert call['scroll']<=call['client']+1,result
+                for metric in call['metrics']:
+                    assert abs(metric['bounds']['width']-call['bounds']['width'])<1,result
+                    assert max(b['width'] for b in metric['blocks'])-min(b['width'] for b in metric['blocks'])<1,result
+            assert all(c['size']>=16 for c in result['captions']),result
+            assert result['legend']==['CR','CA','EC','EM','MVP','NI'],result
+            assert result['totals'][0]=='118CR 59 · EM 59' and result['totals'][2]=='5EC 5',result
+            assert all(value in result['totals'][1] for value in ['46','CR 6','CA 9','EC 2','EM 27','MVP 1','NI 1']),result
+            assert result['chart']['width']>1800,result
+            assert max(result['barWidths'])>220,result
+            return result
+
+        for dark in [False,True]:
+            await page.evaluate('(dark)=>document.documentElement.classList.toggle("dark",dark)',dark)
+            await page.mouse.move(130,100)
+            result=await check_tv1()
+            await page.screenshot(path=str(OUT/f'tv1-1920-1080-75-dark{dark}-controls.png'))
+            await page.wait_for_function('document.querySelector(".insights-tv-presentation").getBoundingClientRect().height>1050',timeout=10000)
+            result=await check_tv1()
+            await page.screenshot(path=str(OUT/f'tv1-1920-1080-75-dark{dark}-full.png'))
+            print('PASS TV1 foco=1 zoom=75', 'dark',dark,'caption minimum',min(c['size'] for c in result['captions']),'visible category values',result['totals'])
+        await page.mouse.move(140,100)
+        await page.get_by_role('button',name='Sair do modo foco',exact=True).click()
+        assert await page.locator('.insights-tv-presentation').count()==0
+        assert await page.locator('[data-tv-visual]').count()==0
+        normal=await page.locator('.company-ranking-column-content').first.bounding_box()
+        assert normal and normal['width']<=513,normal
+        print('PASS leaving TV restores original bounded company cards and normal mode')
         assert not errors,errors
         assert not writes,writes
         print('PASS non-TV desktop/mobile unchanged; no runtime errors, layout writes or backend writes')

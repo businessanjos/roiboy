@@ -243,13 +243,14 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
         : Math.max(3, Math.floor((boxHeight - headerHeight) / rowHeight))
       : data.length;
   const rows = data.slice(0, visibleRows);
+  const presentationRatio = 1 / (tv.pixelScale ?? 1);
 
   if (compact) {
     return (
-      <div ref={containerRef} className={`h-full min-w-0 ${tv.tv ? 'overflow-hidden' : 'overflow-auto'}`}>
+      <div ref={containerRef} className={`${tv.presentation ? 'flex h-full flex-col justify-center' : 'h-full'} min-w-0 ${tv.tv ? 'overflow-hidden' : 'overflow-auto'}`}>
         <ol
           className={`grid w-full grid-cols-1 ${tv.tv ? 'max-w-[54rem] gap-2.5' : 'max-w-[40rem] gap-2'}`}
-          style={{ fontSize: `${Math.round((tv.tv ? (narrowTv ? 16 : denseTv ? 18 : 22) : 14) * m)}px` }}
+          style={{ fontSize: `${tv.presentation ? 22 * presentationRatio : Math.round((tv.tv ? (narrowTv ? 16 : denseTv ? 18 : 22) : 14) * m)}px` }}
         >
           {rows.map((item, index) => {
             const emoji = MEDAL_EMOJI[index];
@@ -261,7 +262,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
               <li
                 key={item.name}
                 className={`flex min-w-0 ${tv.tv ? 'items-center' : 'items-start'} rounded-lg border border-border/60 bg-card ${tv.tv && !narrowTv ? 'gap-3 px-4 py-3' : 'gap-2 px-3 py-2.5'}`}
-                style={{ ...(isTop ? { borderColor: `${rowColor}33`, backgroundColor: `${rowColor}0d` } : {}), ...(tv.tv ? { minHeight: narrowTv ? 90 : denseTv ? 84 : 124 } : {}) }}
+                style={{ ...(isTop ? { borderColor: `${rowColor}33`, backgroundColor: `${rowColor}0d` } : {}), ...(tv.tv ? { minHeight: tv.presentation ? 112 * presentationRatio : narrowTv ? 90 : denseTv ? 84 : 124 } : {}) }}
               >
                 <span className={`${tv.tv && !narrowTv ? 'w-7' : 'w-5'} shrink-0 text-center`}>
                   {emoji ? <span className={`${tv.tv ? 'text-2xl' : 'text-base'} leading-none`}>{emoji}</span> : (
@@ -279,7 +280,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                   <span className="min-w-0 break-words font-medium leading-snug text-foreground">
                     {privacy?.showNames === false ? '• • •' : item.name}
                   </span>
-                  <span style={tv.tv ? { fontSize: Math.round((narrowTv ? 18 : denseTv ? 20 : 28) * m) } : undefined} className={`shrink-0 font-bold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>
+                  <span style={tv.tv ? { fontSize: tv.presentation ? 28 * presentationRatio : Math.round((narrowTv ? 18 : denseTv ? 20 : 28) * m) } : undefined} className={`shrink-0 font-bold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>
                     {formatCurrency(item.value, formatting.type, formatting.decimals)}
                   </span>
                   </div>
@@ -293,7 +294,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                           key={g.short}
                           title={g.items.map(i => `${i.qty}x ${i.name}`).join('\n')}
                           className={`inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-semibold leading-none tabular-nums ${g.renewal ? 'border-renewal/30 bg-renewal/10 text-foreground' : 'border-primary/30 bg-primary/10 text-foreground'}`}
-                          style={{ fontSize: `${Math.round((tv.tv ? 14 : 11) * m)}px` }}
+                          style={{ fontSize: `${tv.presentation ? 20 * presentationRatio : Math.round((tv.tv ? 14 : 11) * m)}px` }}
                         >
                           <span className={g.renewal ? 'text-renewal' : 'text-primary'}>{g.qty}x</span>
                           {g.short}

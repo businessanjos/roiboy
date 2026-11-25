@@ -148,8 +148,10 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
                     title={salesMetric ? `${sales} venda(s) ganha(s) neste mês • ${conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das calls feitas` : undefined}
                   >
                     <span className={`commercial-calls-number font-bold tabular-nums ${salesMetric ? 'text-primary' : 'text-foreground'}`}>{value.toLocaleString('pt-BR')}</span>
-                    <span className="commercial-calls-label flex items-center justify-center gap-1 font-medium text-muted-foreground"><Icon className={`h-3 w-3 shrink-0 ${accent}`} />{label}</span>
-                    {salesMetric && <span className="commercial-calls-conversion font-semibold tabular-nums text-primary">{conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</span>}
+                    <span className="commercial-calls-label flex items-center justify-center gap-1 font-medium text-muted-foreground"><Icon className={`h-3 w-3 shrink-0 ${accent}`} />{label}
+                      {salesMetric && tv.presentation && <span className="commercial-calls-conversion font-semibold tabular-nums text-primary">{conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</span>}
+                    </span>
+                    {salesMetric && !tv.presentation && <span className="commercial-calls-conversion font-semibold tabular-nums text-primary">{conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</span>}
                   </div>
                 ))}
               </div>

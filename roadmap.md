@@ -1,5 +1,12 @@
 # Roadmap — Processos do CS
 
+## Layout exclusivo da TV 1 — 1920×1080, foco=1, zoom=75
+- [x] Apenas na apresentação do ranking: empresas usam toda a largura, lista menor centraliza abaixo do cabeçalho e Calls têm três colunas iguais; normal/compartilhado continuam limitados e hierarquia intacta.
+- [x] Margens e títulos uniformes, três faixas medidas por conteúdo e preenchendo a tela sem rolagem; conversão junto de Vendas, legendas/pílulas ampliadas (mínimo visual medido >18px no Full HD com 75%).
+- [x] Gráfico ocupa toda a largura, legenda CR/CA/EC/EM/MVP/NI, barras maiores e quebra completa por categoria acima dos totais (118/46/5), incluindo segmentos finos; mesmas chaves, valores, cores e filtros.
+- [x] 41 testes passaram; renderers e controles originais com exemplos locais conferidos em 1920×1080, foco=1 e zoom=75 sem tv explícito, claro/escuro e controles recolhidos/visíveis; 20 regressões de tamanhos/zoom, adicionar/remover vendedores e saída para normal/mobile sem cortes ou escritas. Imagens inspecionadas e compilação OK; sem publicação.
+- [ ] Conferência na sessão real e TV física: sessão própria indisponível e criação temporária falhou; aparelho não acessível. Validação de navegador com dados locais não substitui essas verificações.
+
 ## Mais cores e personalização das etiquetas
 - [x] Autorizado pelo usuário: ampliada somente a validação do salvamento compartilhado para aceitar HEX nas etiquetas existentes, mantendo identidade, RLS, concessões e atomicidade; nenhuma etiqueta alterada automaticamente. Função implantada e conferida em leitura.
 - [x] Paleta ampliada de seis para 18 cores e escolha livre por seletor/código HEX na criação e edição, preservando seleção, identidades antigas e paleta das capas. Bolinha mantém a cor exata; texto se adapta ao tema para continuar legível. Lista/quadro reutilizam a mesma apresentação.

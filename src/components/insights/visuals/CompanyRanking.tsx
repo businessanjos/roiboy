@@ -45,7 +45,7 @@ export function CompanyRanking({ data, companyIds, ...rankingProps }: Props) {
                 <h3 className={`${tv.tv ? 'text-xl' : 'text-base'} font-semibold text-foreground`}>{name}</h3>
                 <span className={`${tv.tv ? 'text-2xl font-bold' : 'text-sm font-semibold'} tabular-nums text-foreground ${rankingProps.privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>{format(total)}</span>
               </header>
-              <div className={`min-h-0 flex-1 ${tv.tv ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+              <div className={`min-h-0 flex-1 ${tv.presentation ? 'tv-company-sellers' : ''} ${tv.tv ? 'overflow-hidden' : 'overflow-y-auto'}`}>
                 {rows.length ? <ConfigurableRanking data={rows} {...rankingProps} compact fitRowCount={fitRowCount} /> : (
                   <p className="py-8 text-center text-sm text-muted-foreground">Sem vendas neste período</p>
                 )}

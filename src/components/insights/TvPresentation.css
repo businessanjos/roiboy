@@ -1,0 +1,95 @@
+.insights-tv-presentation {
+  --tv-caption-size: calc(20px * var(--tv-pixel-ratio));
+  --tv-title-size: calc(26px * var(--tv-pixel-ratio));
+  --tv-name-size: calc(22px * var(--tv-pixel-ratio));
+  --tv-card-inset: calc(18px * var(--tv-pixel-ratio));
+}
+
+.insights-tv-presentation .tv-visual-header {
+  padding: var(--tv-card-inset) var(--tv-card-inset) calc(10px * var(--tv-pixel-ratio));
+}
+
+.insights-tv-presentation .tv-visual-content {
+  padding: 0 var(--tv-card-inset) var(--tv-card-inset);
+}
+
+.insights-tv-presentation .company-ranking-column-content,
+.insights-tv-presentation .company-ranking ol {
+  max-width: none;
+}
+
+.insights-tv-presentation .company-ranking-column-content > header {
+  align-items: baseline;
+  min-height: calc(46px * var(--tv-pixel-ratio));
+}
+
+.insights-tv-presentation .company-ranking-column-content > header h3 {
+  font-size: var(--tv-name-size);
+  line-height: 1.2;
+}
+
+.insights-tv-presentation .company-ranking-column-content > header > span {
+  font-size: calc(28px * var(--tv-pixel-ratio));
+  line-height: 1.2;
+}
+
+.insights-tv-presentation .tv-company-sellers {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.insights-tv-presentation .commercial-calls {
+  overflow: hidden;
+}
+
+.insights-tv-presentation .commercial-calls-seller {
+  max-width: none;
+}
+
+.insights-tv-presentation .commercial-calls-sellers {
+  gap: calc(16px * var(--tv-pixel-ratio));
+}
+
+.insights-tv-presentation .commercial-calls-identity {
+  min-height: calc(44px * var(--tv-pixel-ratio));
+  margin-bottom: calc(8px * var(--tv-pixel-ratio));
+}
+
+.insights-tv-presentation .commercial-calls-name {
+  font-size: var(--tv-name-size);
+}
+
+.insights-tv-presentation .commercial-calls .commercial-calls-avatar {
+  width: calc(32px * var(--tv-pixel-ratio));
+  height: calc(32px * var(--tv-pixel-ratio));
+}
+
+.insights-tv-presentation .commercial-calls-metrics {
+  gap: calc(10px * var(--tv-pixel-ratio));
+}
+
+.insights-tv-presentation .commercial-calls-block {
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: calc(88px * var(--tv-pixel-ratio));
+  padding: calc(8px * var(--tv-pixel-ratio));
+}
+
+.insights-tv-presentation .commercial-calls-number {
+  font-size: 44px;
+}
+
+.insights-tv-presentation .commercial-calls-label,
+.insights-tv-presentation .commercial-calls-conversion {
+  font-size: var(--tv-caption-size);
+  line-height: 1.25;
+}
+
+.insights-tv-presentation .commercial-calls-label svg {
+  width: calc(16px * var(--tv-pixel-ratio));
+  height: calc(16px * var(--tv-pixel-ratio));
+}
+
+.insights-tv-presentation .commercial-calls-conversion {
+  margin-left: calc(6px * var(--tv-pixel-ratio));
+}

@@ -9,6 +9,7 @@ import { ConfigurableVisualCard } from "../visuals/ConfigurableVisualCard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { hasCompanyRanking, tvRowContentSizing, tvRowSizing } from "@/lib/insights/tvLayout";
 import { useTvRowContentHeight } from "./useTvRowContentHeight";
+import { useTvMode } from '../TvModeContext';
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -213,6 +214,7 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
   onRequiredHeight?: (px: number) => void;
 }) {
   const rows = useMemo(() => groupVisualsIntoRows(visuals), [visuals]);
+  const tv = useTvMode();
   const sellerBoard = visuals.some(hasCompanyRanking);
   const [contentHeights, setContentHeights] = useState<Record<string, number>>({});
   const reportContentHeight = useCallback((key: string, height: number) => {
@@ -221,7 +223,9 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
   const rowKey = (row: VisualRow) => row.visuals.map(visual => visual.id).join(':');
   const sizing = rows.map(row => tvRowContentSizing(
     tvRowSizing(row.visuals, sellerBoard, { minHeight: getRowMinHeight(row), weight: row.weight }),
-    contentHeights[rowKey(row)] ?? 0,
+    Math.max(contentHeights[rowKey(row)] ?? 0, tv.presentation
+      ? (row.visuals.some(hasCompanyRanking) ? 320 : row.visuals.some(v => v.chart_type === 'bar_stacked' || (v.chart_type === 'bar' && (v.config?.stackBy || v.config?.stackByCustomField))) ? 380 : 0) / (tv.pixelScale ?? 1)
+      : 0),
   ));
   const mins = useMemo(() => ({ ...DEFAULT_MIN_CARD_WIDTHS, ...(minCardWidths || {}) }), [minCardWidths]);
 

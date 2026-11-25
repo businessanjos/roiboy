@@ -334,14 +334,14 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
               Atualizando…
             </span>
           )}
-          <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2", tv.tv && "space-y-1 px-4 pt-3 pb-2", chartType === 'call_commercial' && "space-y-0 px-3 pt-2.5 pb-1.5")}>
+          <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2", tv.tv && "space-y-1 px-4 pt-3 pb-2", chartType === 'call_commercial' && "space-y-0 px-3 pt-2.5 pb-1.5", tv.presentation && "tv-visual-header")}>
             <CardTitle
               className={cn(
                 "text-base min-w-0 flex items-center justify-between gap-1",
                 isScorecard && "text-sm",
                 tv.tv && "font-semibold tracking-normal text-foreground",
               )}
-              style={tv.tv ? { fontSize: Math.round((isScorecard || chartType === 'call_commercial' ? 16 : 20) * (chartType === 'call_commercial' ? Math.min(tv.scale, 1.15) : tv.scale)) } : undefined}
+              style={tv.tv ? { fontSize: tv.presentation ? 'var(--tv-title-size)' : Math.round((isScorecard || chartType === 'call_commercial' ? 16 : 20) * (chartType === 'call_commercial' ? Math.min(tv.scale, 1.15) : tv.scale)), ...(tv.presentation ? { lineHeight: 1.2 } : {}) } : undefined}
             >
               <div className="flex items-center gap-1.5 min-w-0">
                 {!readOnly && <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />}
@@ -559,7 +559,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
             {summary && (
               <div
                 className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground"
-                style={tv.tv ? { fontSize: Math.round(12 * tv.scale) } : undefined}
+                style={tv.tv ? { fontSize: tv.presentation ? 'var(--tv-caption-size)' : Math.round(12 * tv.scale), ...(tv.presentation ? { lineHeight: 1.3 } : {}) } : undefined}
               >
                 {summary.showTotal && (
                   <span>
@@ -573,7 +573,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
               </div>
             )}
           </CardHeader>
-          <CardContent className={cn("flex-1 min-h-0", tv.tv ? "overflow-hidden px-4 pb-3" : "overflow-auto", chartType === 'call_commercial' && "overflow-hidden px-3 pb-2")}>
+          <CardContent className={cn("flex-1 min-h-0", tv.tv ? "overflow-hidden px-4 pb-3" : "overflow-auto", chartType === 'call_commercial' && "overflow-hidden px-3 pb-2", tv.presentation && "tv-visual-content")}>
            <ConfigurableChart
               type={effectiveChartType}
               data={processedData}

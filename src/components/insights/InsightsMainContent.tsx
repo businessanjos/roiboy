@@ -105,6 +105,11 @@ export function InsightsMainContent() {
   }, [visuals, fixedYear, selectedMonth]);
 
   const isSellerTvBoard = (visuals || []).some(hasCompanyRanking);
+  useEffect(() => {
+    // TV links can specify only foco + zoom. Keep those seller boards fitted;
+    // an explicit tv=0 and the user's subsequent manual toggle still win.
+    if (!isLoadingVisuals && isSellerTvBoard && initialView.foco && initialView.tv === null) setTvFit(true);
+  }, [isLoadingVisuals, isSellerTvBoard, activeDashboardId]);
 
   // Lembra o ajuste de TV (modo e zoom) de cada painel neste aparelho
   // Seller boards use MQL's compact zoom without inheriting the old full-size preference.
@@ -341,7 +346,7 @@ export function InsightsMainContent() {
           {tvFit ? (
             <div className="flex-1 min-h-0 overflow-hidden bg-background p-2">
               {hasVisuals && (
-                <TvFitStage requiredHeight={tvRequiredHeight} zoom={isSellerTvBoard ? focusZoom : 100}>
+                <TvFitStage requiredHeight={tvRequiredHeight} zoom={isSellerTvBoard ? focusZoom : 100} presentation={isSellerTvBoard}>
                   <InsightsGrid
                     visuals={filteredVisuals}
                     onLayoutChange={() => {}}

@@ -1,4 +1,5 @@
 import { productShortName } from "@/lib/insights/productShortName";
+import { tvSeriesShortName, tvStackedSummary } from '@/lib/insights/tvStackedSummary';
 import {
   ResponsiveContainer,
   BarChart,
@@ -69,18 +70,18 @@ const CustomTooltip = ({ active, payload, label, formatting, singleSeries }: any
   );
 };
 
-const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMultiplier: number, seriesName?: string) => {
+const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMultiplier: number, seriesName?: string, minimumFont = 8) => {
   const { x, y, width, height, value, fill } = props;
-  if (!value || value === 0 || height < 14) return null;
+  if (!value || value === 0 || height < Math.max(14, minimumFont + 4)) return null;
 
   const formatted = formatValueCompact(value, formatting.type);
-  const short = seriesName ? productShortName(seriesName) : '';
+  const short = seriesName ? (minimumFont > 8 ? tvSeriesShortName(seriesName) : productShortName(seriesName)) : '';
   // Tenta "EM · 45"; se não couber, só o número; diminui a fonte até 8px.
   const candidates = short ? [`${short} · ${formatted}`, formatted] : [formatted];
-  const base = Math.min(Math.round(10 * fontMultiplier), height - 2);
+  const base = Math.min(Math.max(minimumFont, Math.round(10 * fontMultiplier)), height - 2);
   for (const text of candidates) {
     let fs = base;
-    while (fs > 8 && text.length * fs * 0.6 + 4 > width) fs -= 1;
+    while (fs > minimumFont && text.length * fs * 0.6 + 4 > width) fs -= 1;
     if (text.length * fs * 0.6 + 4 <= width) {
       return (
         <text x={x + width / 2} y={y + height / 2} fill={readableTextOn(fill)} style={{ fill: readableTextOn(fill), letterSpacing: 0 }} textAnchor="middle" dominantBaseline="middle" fontSize={fs} fontWeight={600}>
@@ -124,18 +125,22 @@ export function StackedHorizontalBarChart({
   const isVertical = orientation === 'vertical';
 
   if (isVertical) {
+    const presentation = tvMode.presentation;
+    const captionFont = 20 / (tvMode.pixelScale ?? 1);
     const width = containerWidth || 0;
     const narrow = width > 0 && width < 520;
     // Rótulos de eixo (datas, siglas) não precisam crescer tanto quanto os
     // números: no modo TV limitamos para sobrar altura útil às barras.
-    const tickFont = Math.min(Math.round((tvMode.tv ? 16 : narrow ? 11 : 12) * m), tvMode.tv ? 18 : 16);
-    const valueFont = Math.min(Math.round((tvMode.tv ? 22 : 13) * m), tvMode.tv ? 24 : 17);
-    const legendFont = Math.min(Math.round((tvMode.tv ? 14 : 11) * m), tvMode.tv ? 16 : 15);
+    const tickFont = presentation ? captionFont : Math.min(Math.round((tvMode.tv ? 16 : narrow ? 11 : 12) * m), tvMode.tv ? 18 : 16);
+    const valueFont = presentation ? 32 / (tvMode.pixelScale ?? 1) : Math.min(Math.round((tvMode.tv ? 22 : 13) * m), tvMode.tv ? 24 : 17);
+    const legendFont = presentation ? captionFont : Math.min(Math.round((tvMode.tv ? 14 : 11) * m), tvMode.tv ? 16 : 15);
     // Largura do eixo de valores baseada no maior rótulo (evita corte tipo "0.000")
     const totals = data.map((d) =>
       seriesKeys.reduce((sum, k) => sum + (Number((d as any)[k]) || 0), 0)
     );
     const maxTotal = Math.max(0, ...totals);
+    const axisStep = Math.pow(10, Math.floor(Math.log10(Math.max(1, maxTotal)))) / 5;
+    const presentationAxisMax = Math.max(1, Math.ceil(maxTotal / axisStep) * axisStep);
     const longestTick = formatValueCompact(maxTotal, safeFormatting.type);
     const yWidth = Math.round(Math.min(120, Math.max(narrow ? 40 : 48, longestTick.length * tickFont * 0.62 + 12)));
     const lastKey = seriesKeys[seriesKeys.length - 1];
@@ -161,14 +166,29 @@ export function StackedHorizontalBarChart({
       ? Math.round(tickFont * (tvMode.tv ? 1.6 : 2.2))
       : Math.min(xAxisCap, Math.round(Math.min(longestName, maxNameChars) * tickFont * 0.5) + 18);
     const labelStep = Math.max(1, Math.ceil((approxTextWidth(longestTick, valueFont) + 16) / slot));
-    const barLimit = tvMode.tv ? 220 : 128;
+    const barLimit = presentation ? Math.min(400, slot * 0.65) : tvMode.tv ? 220 : 128;
     const tvLegendLabels = seriesKeys.map(key => {
+      if (presentation) return tvSeriesShortName(key);
       const short = productShortName(key);
       return seriesKeys.filter(other => productShortName(other) === short).length > 1 ? key : short;
     });
+    const breakdowns = presentation ? data.map(row => {
+      const { entries } = tvStackedSummary(row, seriesKeys);
+      const lines: string[] = [];
+      for (const entry of entries) {
+        const text = `${tvSeriesShortName(entry.key)} ${formatValueCompact(entry.value, safeFormatting.type)}`;
+        const previous = lines[lines.length - 1];
+        const combined = previous ? `${previous} · ${text}` : text;
+        if (previous && approxTextWidth(combined, captionFont) > slot - 24) lines.push(text);
+        else if (previous) lines[lines.length - 1] = combined;
+        else lines.push(text);
+      }
+      return lines;
+    }) : [];
+    const breakdownHeight = Math.max(0, ...breakdowns.map(lines => lines.length)) * captionFont * 1.3;
 
     return (
-      <div className={`mx-auto flex h-full w-full min-w-0 flex-col ${tvMode.tv ? 'gap-1.5 max-w-[1440px]' : 'gap-3 max-w-[1120px]'}`}>
+      <div className={`mx-auto flex h-full w-full min-w-0 flex-col ${presentation ? 'gap-3' : tvMode.tv ? 'gap-1.5 max-w-[1440px]' : 'gap-3 max-w-[1120px]'}`}>
         {/* A legenda ocupa sua altura real, independente do desenho das barras. */}
         <ul aria-label="Legenda do gráfico" className={`flex shrink-0 flex-wrap items-center justify-center gap-x-5 gap-y-1 border-b border-border/60 ${tvMode.tv ? 'pb-1.5' : 'pb-3'}`}>
           {seriesKeys.map((key, index) => (
@@ -182,7 +202,7 @@ export function StackedHorizontalBarChart({
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
-          margin={tvMode.tv ? { top: showTotals ? valueFont + 4 : 12, right: 12, left: 0, bottom: 2 } : { top: showTotals ? valueFont + 22 : 16, right: 16, left: 0, bottom: 8 }}
+          margin={tvMode.tv ? { top: showTotals ? valueFont + breakdownHeight + 16 : 12, right: 12, left: 0, bottom: 2 } : { top: showTotals ? valueFont + 22 : 16, right: 16, left: 0, bottom: 8 }}
           barCategoryGap={tvMode.tv ? '20%' : '32%'}
           maxBarSize={barLimit}
         >
@@ -207,6 +227,7 @@ export function StackedHorizontalBarChart({
           <YAxis
             tickFormatter={(value) => formatValueCompact(value, safeFormatting.type)}
             tick={{ fontSize: tickFont, fill: 'hsl(var(--muted-foreground))' }}
+            domain={presentation ? [0, presentationAxisMax] : undefined}
             tickLine={false}
             axisLine={false}
             width={yWidth}
@@ -233,7 +254,7 @@ export function StackedHorizontalBarChart({
               {/* Valor de cada fatia dentro do próprio bloco (azul, dourado...). */}
               <LabelList
                 dataKey={key}
-                content={(props: any) => renderInsideLabel({ ...props, fill: getSeriesColor(key, index) }, safeFormatting, tvMode.tv ? Math.min(m * 1.8, 2) : Math.min(m * 1.2, 1.6), key)}
+                content={(props: any) => renderInsideLabel({ ...props, fill: getSeriesColor(key, index) }, safeFormatting, tvMode.tv ? Math.min(m * 1.8, 2) : Math.min(m * 1.2, 1.6), key, presentation ? captionFont : 8)}
               />
 
               {showTotals && key === lastKey && (
@@ -247,11 +268,14 @@ export function StackedHorizontalBarChart({
                     if (!total || idx % labelStep !== 0) return null;
 
                     const text = formatValueCompact(total, safeFormatting.type);
+                    const lines = breakdowns[idx] ?? [];
+                    const totalY = Math.max(props.y - 10 - lines.length * captionFont * 1.3, valueFont);
 
                     return (
+                      <g className={presentation ? 'tv-stacked-summary' : undefined}>
                       <text
                         x={props.x + props.width / 2}
-                        y={Math.max(props.y - 10, valueFont)}
+                        y={presentation ? totalY : Math.max(props.y - 10, valueFont)}
                         fill="hsl(var(--foreground))"
                         textAnchor="middle"
                         fontSize={valueFont}
@@ -260,6 +284,13 @@ export function StackedHorizontalBarChart({
                       >
                         {text}
                       </text>
+                      {lines.map((line, lineIndex) => (
+                        <text key={lineIndex} x={props.x + props.width / 2} y={totalY + (lineIndex + 1) * captionFont * 1.3}
+                          fill="hsl(var(--foreground))" textAnchor="middle" fontSize={captionFont} fontWeight={500}>
+                          {line}
+                        </text>
+                      ))}
+                      </g>
                     );
                   }}
                 />

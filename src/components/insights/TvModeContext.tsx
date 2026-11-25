@@ -11,6 +11,10 @@ export interface TvModeValue {
   compact: boolean;
   /** Whole-board fitting reserves natural content height before scaling. */
   fitted?: boolean;
+  /** Full-width focus presentation; not enabled on normal or shared chart surfaces. */
+  presentation?: boolean;
+  /** Explicit zoom only, for distance-readable captions without a fitting feedback loop. */
+  pixelScale?: number;
 }
 
 const DEFAULT_TV_MODE: TvModeValue = { tv: false, scale: 1, maxCategories: 0, compact: false };
@@ -24,6 +28,8 @@ interface TvModeProviderProps {
   enabled?: boolean;
   compact?: boolean;
   fitted?: boolean;
+  presentation?: boolean;
+  pixelScale?: number;
 }
 
 export function TvModeProvider({
@@ -33,10 +39,12 @@ export function TvModeProvider({
   enabled = true,
   compact = false,
   fitted = false,
+  presentation = false,
+  pixelScale = 1,
 }: TvModeProviderProps) {
   const value = useMemo<TvModeValue>(
-    () => (enabled ? { tv: true, scale, maxCategories, compact, fitted } : DEFAULT_TV_MODE),
-    [enabled, scale, maxCategories, compact, fitted]
+    () => (enabled ? { tv: true, scale, maxCategories, compact, fitted, presentation, pixelScale } : DEFAULT_TV_MODE),
+    [enabled, scale, maxCategories, compact, fitted, presentation, pixelScale]
   );
   return <TvModeContext.Provider value={value}>{children}</TvModeContext.Provider>;
 }
