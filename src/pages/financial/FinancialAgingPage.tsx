@@ -4,6 +4,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
+import { CompanySelector } from "@/components/companies/CompanySelector";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -179,14 +180,17 @@ export default function FinancialAgingPage() {
     <div className="p-6 space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            <div>
-              <CardTitle>Relatório de Aging (Envelhecimento)</CardTitle>
-              <CardDescription>
-                Análise de contas a receber por tempo de atraso
-              </CardDescription>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              <div>
+                <CardTitle>Relatório de Aging (Envelhecimento)</CardTitle>
+                <CardDescription>
+                  Análise de contas a receber por tempo de atraso
+                </CardDescription>
+              </div>
             </div>
+            <CompanySelector />
           </div>
         </CardHeader>
         <CardContent className="space-y-6">

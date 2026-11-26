@@ -4,6 +4,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
+import { CompanySelector } from "@/components/companies/CompanySelector";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, parseISO, addMonths, isBefore, startOfQuarter, endOfQuarter, startOfYear, endOfYear, addQuarters, addYears, getQuarter } from "date-fns";
@@ -576,6 +577,7 @@ export default function FinancialEntriesPage() {
         description="Gerencie suas contas a pagar e a receber do mês."
         actions={
           <>
+            <CompanySelector className="h-9" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">

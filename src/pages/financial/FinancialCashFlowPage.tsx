@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
+import { CompanySelector } from "@/components/companies/CompanySelector";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -181,6 +182,7 @@ export default function FinancialCashFlowPage() {
         description="Acompanhe entradas, saídas e projeção do período selecionado."
         actions={
           <>
+            <CompanySelector className="h-9" />
             <Button variant="outline" size="sm" onClick={handleExportCsv} className="gap-1.5">
               <Download className="h-4 w-4" />
               Exportar CSV

@@ -98,7 +98,9 @@ Deno.serve(async (req) => {
         email: email.toLowerCase(),
         password,
         email_confirm: true,
-        user_metadata: { name: name || "Usuário Externo", is_external: true },
+        // is_team_member: o gatilho de cadastro só aceita logins criados pela equipe
+        // e, com essa marca, não abre uma conta nova; o registro "viewer" é criado abaixo.
+        user_metadata: { name: name || "Usuário Externo", is_external: true, is_team_member: "true" },
       });
 
       if (createErr || !newUser?.user) {
@@ -110,19 +112,15 @@ Deno.serve(async (req) => {
       authUserId = newUser.user.id;
     }
 
-    // Wait for the trigger to create the users record, then update it
-    for (let attempt = 0; attempt < 5; attempt++) {
-      await new Promise((r) => setTimeout(r, 1000));
+    // Garante o registro do usuário como "viewer" na conta de quem compartilhou.
+    const { data: appUser } = await adminClient
+      .from("users")
+      .select("id, account_id")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle();
 
-      const { data: appUser } = await adminClient
-        .from("users")
-        .select("id, account_id")
-        .eq("auth_user_id", authUserId)
-        .maybeSingle();
-
-      if (appUser) {
-        // Update account_id and force role to viewer
-        await adminClient
+    const { error: appUserErr } = appUser
+      ? await adminClient
           .from("users")
           .update({
             account_id: callerUser.account_id,
@@ -130,22 +128,20 @@ Deno.serve(async (req) => {
             role: "viewer",
             is_also_admin: false,
           })
-          .eq("id", appUser.id);
-        break;
-      }
+          .eq("id", appUser.id)
+      : await adminClient.from("users").insert({
+          auth_user_id: authUserId,
+          account_id: callerUser.account_id,
+          name: name || "Usuário Externo",
+          role: "viewer",
+          email: email.toLowerCase(),
+        });
 
-      // On last attempt, create manually
-      if (attempt === 4) {
-        await adminClient
-          .from("users")
-          .insert({
-            auth_user_id: authUserId,
-            account_id: callerUser.account_id,
-            name: name || "Usuário Externo",
-            role: "viewer",
-            email: email.toLowerCase(),
-          });
-      }
+    if (appUserErr) {
+      return new Response(
+        JSON.stringify({ error: "Failed to register user: " + appUserErr.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Upsert external_dashboard_access

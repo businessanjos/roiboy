@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCompany } from "@/contexts/CompanyContext";
+import { CompanySelector } from "@/components/companies/CompanySelector";
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
@@ -583,6 +584,7 @@ export default function FinancialInstallmentsPage() {
         icon={Receipt}
         title="Parcelas"
         description="Todas as parcelas das faturas. Clique em uma linha para ver o histórico da régua e renegociações."
+        actions={<CompanySelector className="h-9" />}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
