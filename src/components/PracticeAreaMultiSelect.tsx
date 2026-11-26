@@ -61,10 +61,32 @@ export function PracticeAreaMultiSelect({
     onChange(ordered.join(", "));
   };
 
-  const clear = (e: React.MouseEvent) => {
+  // Áreas já gravadas no cliente que não estão no catálogo: continuam visíveis
+  // na lista para poderem ser desmarcadas.
+  const knownLabels = new Set(areas.map((a) => a.label));
+  const extras = isLoading ? [] : selected.filter((l) => !knownLabels.has(l));
+
+  // Os controles ficam dentro do botão que abre a lista: o clique não pode subir.
+  const stop = (e: React.SyntheticEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    onChange("");
   };
+  const actionProps = (label: string, run: () => void) => ({
+    role: "button" as const,
+    tabIndex: 0,
+    "aria-label": label,
+    title: label,
+    onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+    onClick: (e: React.MouseEvent) => {
+      stop(e);
+      run();
+    },
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      stop(e);
+      run();
+    },
+  });
 
   const isDisabled = disabled || isLoading;
 
@@ -90,18 +112,28 @@ export function PracticeAreaMultiSelect({
               <span>{placeholder}</span>
             ) : (
               selected.map((l) => (
-                <Badge key={l} variant="secondary" className="text-xs">
+                <Badge key={l} variant="secondary" className="text-xs gap-1 pr-1">
                   {l}
+                  {!isDisabled && (
+                    <span
+                      {...actionProps(`Remover ${l}`, () => toggle(l))}
+                      className="pointer-events-auto inline-flex h-4 w-4 items-center justify-center rounded-full opacity-60 hover:opacity-100 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  )}
                 </Badge>
               ))
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {selected.length > 0 && !isDisabled && (
-              <X
-                className="h-4 w-4 opacity-60 hover:opacity-100"
-                onClick={clear}
-              />
+              <span
+                {...actionProps("Limpar áreas de atuação", () => onChange(""))}
+                className="pointer-events-auto inline-flex h-5 w-5 items-center justify-center rounded-full opacity-60 hover:opacity-100 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="h-4 w-4" />
+              </span>
             )}
             <ChevronsUpDown className="h-4 w-4 opacity-50" />
           </div>
@@ -116,6 +148,16 @@ export function PracticeAreaMultiSelect({
           <CommandInput placeholder="Buscar área..." />
           <CommandList>
             <CommandEmpty>Nenhuma área encontrada.</CommandEmpty>
+            {extras.length > 0 && (
+              <CommandGroup heading="Fora da lista oficial">
+                {extras.map((l) => (
+                  <CommandItem key={`extra-${l}`} value={l} onSelect={() => toggle(l)}>
+                    <Checkbox checked className="mr-2 pointer-events-none" tabIndex={-1} />
+                    {l}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
             <CommandGroup>
               {areas.map((a) => {
                 const isSelected = selected.includes(a.label);
