@@ -439,15 +439,15 @@ export default function ClinicaRyka() {
               Nenhum cliente encontrado para este filtro.
             </div>
           ) : (
-            <div className="overflow-x-auto"><Table className="table-fixed min-w-[1100px]">
+            <div className="overflow-x-auto"><Table className="table-fixed min-w-[1240px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[24%]">Cliente</TableHead>
+                  <TableHead>Cliente</TableHead>
                   <TableHead className="w-[150px]">Produto</TableHead>
                   <TableHead className="w-[170px]">Contrato</TableHead>
                   <TableHead className="w-[120px]">Acesso</TableHead>
                   <TableHead className="w-[100px]">Ryka</TableHead>
-                  <TableHead>E-mail acesso</TableHead>
+                  <TableHead className="w-[220px]">E-mail acesso</TableHead>
                   <TableHead className="w-[130px] whitespace-nowrap">Liberado</TableHead>
                   <TableHead className="w-[150px] text-right">Ações</TableHead>
                 </TableRow>
