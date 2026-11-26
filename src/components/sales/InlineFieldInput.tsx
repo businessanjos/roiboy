@@ -13,11 +13,45 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { LocationAutocomplete, LocationValue } from "@/components/custom-fields/LocationAutocomplete";
+import { formatReceivedDraft, parseReceivedInput, toReceivedDraft } from "@/lib/receivedValueFormat";
 
 interface InlineFieldInputProps {
   field: CustomField;
   value: any;
   onChange: (newValue: any) => void;
+  /** Mostra um campo numérico como dinheiro (R$ com milhar e centavos enquanto digita). */
+  money?: boolean;
+}
+
+/** Dinheiro em reais: os dígitos entram pelos centavos e a pontuação aparece sozinha. */
+export function MoneyInput({
+  value,
+  onChange,
+  ...props
+}: { value: number | null | undefined; onChange: (next: number | null) => void } & Omit<
+  React.ComponentProps<typeof Input>,
+  "value" | "onChange" | "type"
+>) {
+  const shown = formatReceivedDraft(toReceivedDraft(value));
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+      <Input
+        {...props}
+        type="text"
+        inputMode="numeric"
+        placeholder="0,00"
+        className={cn("pl-10 tabular-nums", props.className)}
+        value={shown}
+        onChange={(e) => {
+          const digits = parseReceivedInput(e.target.value);
+          // Apagar o último zero de "0,00" limpa o campo.
+          const cleared = !digits || (Number(digits) === 0 && e.target.value.length < shown.length);
+          onChange(cleared ? null : Number(digits) / 100);
+        }}
+      />
+    </div>
+  );
 }
 
 const colorClasses: Record<string, string> = {
@@ -42,7 +76,7 @@ const colorSelected: Record<string, string> = {
   gray: "bg-foreground text-background border-foreground",
 };
 
-export function InlineFieldInput({ field, value, onChange }: InlineFieldInputProps) {
+export function InlineFieldInput({ field, value, onChange, money = false }: InlineFieldInputProps) {
   const [teamUsers, setTeamUsers] = useState<Array<{ id: string; name: string }>>([]);
   const [draft, setDraft] = useState("");
 
@@ -154,14 +188,17 @@ export function InlineFieldInput({ field, value, onChange }: InlineFieldInputPro
   }
 
   // Number / Currency
-  if (field.field_type === "number" || field.field_type === "currency") {
+  if (field.field_type === "currency" || (field.field_type === "number" && money)) {
+    return <MoneyInput value={value} onChange={onChange} aria-label={field.name} />;
+  }
+  if (field.field_type === "number") {
     return (
       <Input
         type="number"
-        step={field.field_type === "currency" ? "0.01" : "1"}
+        step="1"
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
-        placeholder={field.field_type === "currency" ? "R$ 0,00" : "0"}
+        placeholder="0"
       />
     );
   }

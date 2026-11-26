@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +14,8 @@ import { Loader2, Check, RefreshCw, ShieldCheck, Repeat, Receipt, CalendarDays, 
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
-import { InlineFieldInput } from "@/components/sales/InlineFieldInput";
+import { InlineFieldInput, MoneyInput } from "@/components/sales/InlineFieldInput";
+import { toReceivedDraft, formatReceivedDraft } from "@/lib/receivedValueFormat";
 import {
   PaymentBreakdownComposer,
   PaymentBreakdownItem,
@@ -184,7 +184,7 @@ export function RequiredFieldsModal({
           .maybeSingle()
           .then(({ data }) => {
             if (data && (data as any).received_value !== null && (data as any).received_value !== undefined) {
-              setReceivedValue(String((data as any).received_value).replace(".", ","));
+              setReceivedValue(formatReceivedDraft(toReceivedDraft((data as any).received_value)));
             }
             if (data) {
               setDealContact({
@@ -647,6 +647,7 @@ export function RequiredFieldsModal({
             }
             value={values[field.id]}
             onChange={(newValue) => handleValueChange(field.id, newValue)}
+            money={/^valor\b/i.test(field.name)}
           />
         )}
         {field.id === paymentMethodField?.id && payChecking && !payGate && (
@@ -883,13 +884,12 @@ export function RequiredFieldsModal({
   const receivedValueSection = showBilling ? (
     <div className="space-y-2 rounded-lg border border-border p-3">
       <Label className="text-sm font-medium">
-        Valor recebido (R$) <span className="text-destructive">*</span>
+        Valor recebido <span className="text-destructive">*</span>
       </Label>
-      <Input
-        inputMode="decimal"
-        placeholder="0,00"
-        value={receivedValue}
-        onChange={(e) => setReceivedValue(e.target.value.replace(/[^0-9.,]/g, ""))}
+      <MoneyInput
+        aria-label="Valor recebido"
+        value={receivedValue.trim() === "" || !Number.isFinite(parsedReceived) ? null : parsedReceived}
+        onChange={(next) => setReceivedValue(next === null ? "" : formatReceivedDraft(toReceivedDraft(next)))}
       />
       <p className="text-xs text-muted-foreground">
         Quanto entrou de fato no caixa nesta venda. Alimenta o Cash Collect dos SPIFFs. Se ainda não entrou nada, informe 0.
