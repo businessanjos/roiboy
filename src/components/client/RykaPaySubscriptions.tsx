@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRykaPaySubscriptions } from "@/hooks/useRykaPaySubscriptions";
-import { payMetrics, payCycleLabel, type PaySubscription } from "@/lib/rykaPay";
+import { payMetrics, payCycleLabel, payRelationshipLabel, type PaySubscription } from "@/lib/rykaPay";
 import { orderPayInvoices } from "@/lib/sales/payInvoiceOrder";
 
 const money = (cents: number | null) => cents === null ? "—" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
@@ -47,7 +47,8 @@ export function RykaPaySubscriptions(target: { dealId?: string; clientId?: strin
     </div>}
     {data && <>
       {data.partial && <p role="status" className="border-l-2 border-warning pl-3 text-sm text-muted-foreground">Consulta parcial no RykaPay. Totais indisponíveis.</p>}
-      {data.matchedBy === "email" && subscriptions.length > 0 && <p role="status" className="border-l-2 border-border pl-3 text-sm text-muted-foreground">Vinculada pelo e-mail: o CPF/CNPJ do ROY não foi encontrado no RykaPay.</p>}
+      {data.paidBy && subscriptions.length > 0 && <p role="status" className="border-l-2 border-primary pl-3 text-sm">Pago por <span className="font-medium">{data.paidBy.name}</span> <span className="text-muted-foreground">· {payRelationshipLabel(data.paidBy)}</span></p>}
+      {data.matchedBy === "email" && !data.paidBy && subscriptions.length > 0 && <p role="status" className="border-l-2 border-border pl-3 text-sm text-muted-foreground">Vinculada pelo e-mail: o CPF/CNPJ do ROY não foi encontrado no RykaPay.</p>}
       {!subscriptions.length ? <div className="space-y-3 py-6 text-sm text-muted-foreground">
         <p>{emptyText}</p>
         {Boolean(data.skipped?.length) && <div className="space-y-1">

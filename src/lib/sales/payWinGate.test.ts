@@ -50,4 +50,21 @@ describe("trava de pagamento no ganho", () => {
   it("venda única aceita o pagamento de qualquer ciclo", () => {
     expect(payWinGate({ ...asked, isSubscription: false, cycle: null, result: paidMonthly }).status).toBe("paid");
   });
+
+  it("sem pagamento e com pedido ao gestor: segue bloqueado, aguardando o gestor", () => {
+    expect(payWinGate({ ...asked, pendingRequest: true, result: result([], { state: "not_found" }) }).status).toBe("awaiting_manager");
+    expect(payWinGate({ ...asked, pendingRequest: true, result: paidMonthly }).status).toBe("paid");
+  });
+
+  it("pagador vinculado pelo gestor a este negócio libera o ganho", () => {
+    const paidBy = { name: "TESTE QA Esposa", relationship: "spouse" as const, relationshipOther: null, forThisDeal: true };
+    const gate = payWinGate({ ...asked, result: { ...paidMonthly, paidBy } });
+    expect(gate).toMatchObject({ status: "paid", paidBy });
+  });
+
+  it("pagador guardado de outra venda só libera depois que o vendedor confirma", () => {
+    const paidBy = { name: "TESTE QA Esposa", relationship: "spouse" as const, relationshipOther: null, forThisDeal: false };
+    expect(payWinGate({ ...asked, result: { ...paidMonthly, paidBy } }).status).toBe("third_party");
+    expect(payWinGate({ ...asked, thirdPartyConfirmed: true, result: { ...paidMonthly, paidBy } }).status).toBe("paid");
+  });
 });

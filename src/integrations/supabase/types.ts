@@ -21572,6 +21572,240 @@ export type Database = {
         }
         Relationships: []
       }
+      pay_link_requests: {
+        Row: {
+          account_id: string
+          created_at: string
+          deal_id: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          id: string
+          note: string | null
+          requester_id: string
+          status: string
+          suggested_external_id: string | null
+          suggested_label: string | null
+          suggested_source: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          deal_id: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          note?: string | null
+          requester_id: string
+          status?: string
+          suggested_external_id?: string | null
+          suggested_label?: string | null
+          suggested_source?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          deal_id?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          note?: string | null
+          requester_id?: string
+          status?: string
+          suggested_external_id?: string | null
+          suggested_label?: string | null
+          suggested_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_link_requests_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_link_requests_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_orphan_seed: {
+        Row: {
+          account_id: string
+          amount_cents: number
+          created_at: string
+          external_id: string
+          id: string
+          payer_email: string
+          payer_name: string
+          started_on: string | null
+          status: string
+        }
+        Insert: {
+          account_id: string
+          amount_cents: number
+          created_at?: string
+          external_id: string
+          id?: string
+          payer_email: string
+          payer_name: string
+          started_on?: string | null
+          status: string
+        }
+        Update: {
+          account_id?: string
+          amount_cents?: number
+          created_at?: string
+          external_id?: string
+          id?: string
+          payer_email?: string
+          payer_name?: string
+          started_on?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_orphan_seed_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_sale_links: {
+        Row: {
+          account_id: string
+          amount_cents: number | null
+          created_at: string
+          created_by: string | null
+          deal_id: string
+          external_id: string
+          id: string
+          kind: string
+          paid_on: string | null
+          payer_name: string | null
+          request_id: string | null
+          source: string
+        }
+        Insert: {
+          account_id: string
+          amount_cents?: number | null
+          created_at?: string
+          created_by?: string | null
+          deal_id: string
+          external_id: string
+          id?: string
+          kind: string
+          paid_on?: string | null
+          payer_name?: string | null
+          request_id?: string | null
+          source: string
+        }
+        Update: {
+          account_id?: string
+          amount_cents?: number | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string
+          external_id?: string
+          id?: string
+          kind?: string
+          paid_on?: string | null
+          payer_name?: string | null
+          request_id?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_sale_links_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_sale_links_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_sale_links_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "pay_link_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_third_party_payers: {
+        Row: {
+          account_id: string
+          approved_by: string | null
+          client_id: string | null
+          created_at: string
+          document: string | null
+          email: string | null
+          id: string
+          lead_id: string | null
+          name: string
+          origin_deal_id: string | null
+          relationship: string
+          relationship_other: string | null
+        }
+        Insert: {
+          account_id: string
+          approved_by?: string | null
+          client_id?: string | null
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          lead_id?: string | null
+          name: string
+          origin_deal_id?: string | null
+          relationship: string
+          relationship_other?: string | null
+        }
+        Update: {
+          account_id?: string
+          approved_by?: string | null
+          client_id?: string | null
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          lead_id?: string | null
+          name?: string
+          origin_deal_id?: string | null
+          relationship?: string
+          relationship_other?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_third_party_payers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_third_party_payers_origin_deal_id_fkey"
+            columns: ["origin_deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payers: {
         Row: {
           account_id: string
@@ -31683,6 +31917,23 @@ export type Database = {
         }
         Returns: Json
       }
+      decide_pay_link: {
+        Args: {
+          _amount_cents?: number
+          _approve: boolean
+          _external_id?: string
+          _paid_on?: string
+          _payer_document?: string
+          _payer_email?: string
+          _payer_name?: string
+          _reason?: string
+          _relationship?: string
+          _relationship_other?: string
+          _request_id: string
+          _source?: string
+        }
+        Returns: undefined
+      }
       decide_spin_request_by_phone: {
         Args: { _approve: boolean; _phone: string; _request_id: string }
         Returns: Json
@@ -32096,6 +32347,15 @@ export type Database = {
           name: string
         }[]
       }
+      list_pay_orphan_seed: {
+        Args: never
+        Returns: {
+          amount_cents: number
+          external_id: string
+          payer_name: string
+          started_on: string
+        }[]
+      }
       marketing_task_label_key: { Args: { value: string }; Returns: string }
       marketing_task_mention_key: { Args: { value: string }; Returns: string }
       marketing_task_recurrence_date: {
@@ -32121,6 +32381,7 @@ export type Database = {
         Args: { _assignment_id: string }
         Returns: undefined
       }
+      pay_seed_emails: { Args: { _emails: string[] }; Returns: string[] }
       pda_is_hr_or_director: { Args: never; Returns: boolean }
       pda_synergy_pct: {
         Args: { _dominant: string; _role_profile: string; _secondary: string }
@@ -32174,6 +32435,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_pay_sale_links: {
+        Args: { _deal_id: string; _items: Json }
+        Returns: undefined
+      }
       record_rate_limit_hit: {
         Args: { p_action: string; p_identifier: string }
         Returns: undefined
@@ -32225,6 +32490,16 @@ export type Database = {
       request_integration_access: {
         Args: { _platform: string; _reason?: string }
         Returns: Json
+      }
+      request_pay_link: {
+        Args: {
+          _deal_id: string
+          _external_id?: string
+          _label?: string
+          _note?: string
+          _source?: string
+        }
+        Returns: string
       }
       request_zapp_conversation_transfer: {
         Args: { _assignment_id: string; _reason?: string }

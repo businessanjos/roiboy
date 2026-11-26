@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
-import { documentNumbers, matchesPayProduct, normalizePaySubscription, normalizeAnnualSale, activePaySubscription, record, type PayResult, type PaySubscription, type PaySkipped } from "../_shared/rykaPay.ts";
+import { documentNumbers, matchesPayProduct, normalizePaySubscription, normalizeAnnualSale, activePaySubscription, record, normalizeStripeLegacy, normalizeLinkedSale, CR_PRODUCT_ID, type PayPaidBy, type PayResult, type PaySubscription, type PaySkipped } from "../_shared/rykaPay.ts";
 
 const BASE = "https://rykapay.app/api/public/v1";
 // One company's credential must never become a cross-account lookup service.
@@ -106,7 +106,27 @@ Deno.serve(async req => {
         }
       }
     }
-    if (!docs.size && !emails.size) return reply(empty("needs_document"));
+    // Third-party payers a manager approved for this lead/client, and sales a manager linked to this deal.
+    const validEmail = (v: unknown): v is string => typeof v === "string" && v.length <= 254 && /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(v);
+    type Payer = { name: string; document: string | null; email: string | null; relationship: PayPaidBy["relationship"]; relationship_other: string | null; origin_deal_id: string | null };
+    let payers: Payer[] = [];
+    {
+      const ors = [linkedClientId && `client_id.eq.${linkedClientId}`, linkedLeadId && `lead_id.eq.${linkedLeadId}`, dealId && `origin_deal_id.eq.${dealId}`].filter(Boolean);
+      if (ors.length) {
+        const { data, error } = await db.from("pay_third_party_payers").select("name,document,email,relationship,relationship_other,origin_deal_id")
+          .eq("account_id", me.account_id).or(ors.join(",")).order("created_at", { ascending: false }).limit(10);
+        if (error) throw new Error("roy_read_failed");
+        payers = (data ?? []) as Payer[];
+      }
+    }
+    let linkedSales: string[] = [];
+    if (dealId) {
+      const { data, error } = await db.from("pay_sale_links").select("external_id").eq("deal_id", dealId).eq("account_id", me.account_id).eq("source", "rykapay").eq("kind", "manager").limit(5);
+      if (error) throw new Error("roy_read_failed");
+      linkedSales = (data ?? []).map(l => l.external_id).filter(id => /^[A-Za-z0-9_-]{8,128}$/.test(id));
+    }
+    const hasPayerKey = payers.some(p => documentNumbers(p.document) || validEmail(p.email));
+    if (!docs.size && !emails.size && !hasPayerKey && !linkedSales.length) return reply(empty("needs_document"));
     let partial = false;
     let matchedBy: "document" | "email" | null = null;
     let payerFound = false;
@@ -144,6 +164,19 @@ Deno.serve(async req => {
           skip("charge", typeof name === "string" ? name.trim().slice(0, 120) : "Cobrança avulsa", typeof r.status === "string" ? r.status.slice(0, 40) : "Não informado");
         }
       }
+      // Old Stripe subscriptions count only for payers on the closed legacy list of the Clínica Ryka program.
+      const stripe = record(data.stripe);
+      const stripeCharges = Array.isArray(stripe.cobrancas) ? stripe.cobrancas.map(record) : [];
+      if ((stripeCharges.length || (Array.isArray(stripe.assinaturas) && stripe.assinaturas.length)) && (!product || product.id === CR_PRODUCT_ID)) {
+        const candidates = [...new Set([...(param === "email" ? [value] : []), ...stripeCharges.map(c => c.email).filter(validEmail).map(e => e.toLowerCase())])].slice(0, 30);
+        const { data: seeded, error } = candidates.length ? await db.rpc("pay_seed_emails", { _emails: candidates }) : { data: [], error: null };
+        if (error) throw new Error("roy_read_failed");
+        if (seeded?.length) {
+          const legacy = normalizeStripeLegacy(stripe);
+          if (!legacy) partial = true;
+          else for (const sub of legacy) subscriptions.set(sub.id, sub);
+        }
+      }
       return null;
     };
     for (const documento of docs) { const failed = await lookup("documento", documento); if (failed) return failed; }
@@ -153,13 +186,34 @@ Deno.serve(async req => {
       for (const email of emails) { const failed = await lookup("email", email); if (failed) return failed; }
       if (subscriptions.size) matchedBy = "email";
     }
+    let paidBy: PayPaidBy | null = null;
+    const asPaidBy = (p: Payer): PayPaidBy => ({ name: p.name, relationship: p.relationship, relationshipOther: p.relationship_other, forThisDeal: Boolean(dealId && p.origin_deal_id === dealId) });
+    // The client's own data always comes first; a saved payer is only tried when it found nothing.
+    for (const payer of subscriptions.size ? [] : payers) {
+      const doc = documentNumbers(payer.document);
+      if (doc) { const failed = await lookup("documento", doc); if (failed) return failed; }
+      if (!subscriptions.size && validEmail(payer.email)) { const failed = await lookup("email", payer.email.toLowerCase()); if (failed) return failed; }
+      if (subscriptions.size) { paidBy = asPaidBy(payer); break; }
+    }
+    // A sale the manager picked from the ownerless list is re-read every time: it only counts while still paid.
+    for (const saleId of subscriptions.size ? [] : linkedSales) {
+      const response = await fetch(`${BASE}/cobrancas/${saleId}`, { headers: { Authorization: `Bearer ${key}`, Accept: "application/json" }, signal: AbortSignal.timeout(15000), redirect: "error" });
+      if (response.status === 404) continue;
+      if (!response.ok) return reply({ error: "RykaPay indisponível. Tente novamente.", providerStatus: response.status }, 502);
+      const sub = normalizeLinkedSale(record(await response.json()).dados);
+      if (sub) subscriptions.set(sub.id, sub);
+    }
+    if (subscriptions.size && !paidBy && [...subscriptions.values()].some(s => s.source === "linked_sale")) {
+      const payer = payers.find(p => p.origin_deal_id === dealId);
+      paidBy = payer ? asPaidBy(payer) : null;
+    }
     const { data: royProducts, error: productsError } = await db.from("products").select("id,name,color").eq("account_id", me.account_id);
     if (productsError) throw new Error("roy_read_failed");
     const presented = [...subscriptions.values()].map(sub => {
       const matched = product || royProducts?.find(p => matchesPayProduct(sub, p));
       return { ...sub, royProductColor: matched?.color && /^#[0-9a-f]{6}$/i.test(matched.color) ? matched.color : null };
     });
-    return reply({ ...empty(subscriptions.size ? "ready" : "not_found"), subscriptions: presented, partial, matchedBy, payerFound, skipped: subscriptions.size ? [] : skipped });
+    return reply({ ...empty(subscriptions.size ? "ready" : "not_found"), subscriptions: presented, partial, matchedBy, payerFound, paidBy, skipped: subscriptions.size ? [] : skipped });
   } catch {
     return reply({ error: "Não foi possível validar a consulta de assinaturas. Tente novamente." }, 502);
   }

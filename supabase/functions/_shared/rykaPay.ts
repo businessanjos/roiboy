@@ -15,7 +15,8 @@ export type PaySubscription = {
   status: string;
   period: string;
   invoices: PayInvoice[];
-  source?: "subscription" | "annual_sale";
+  /** "stripe_legacy": closed list of old Stripe subscriptions; "linked_sale": a RykaPay sale a manager linked to the deal. */
+  source?: "subscription" | "annual_sale" | "stripe_legacy" | "linked_sale";
   royProductColor?: string | null;
 };
 export type PayResult = {
@@ -28,9 +29,28 @@ export type PayResult = {
   matchedBy?: "document" | "email" | null;
   /** True when RykaPay has a payer for the document/e-mail, even if nothing is shown. */
   payerFound?: boolean;
+  /** Set when the payment was found through a third-party payer a manager approved, not the client's own data. */
+  paidBy?: PayPaidBy | null;
   /** RykaPay records left out (other product or not active), product/status only. */
   skipped?: PaySkipped[];
 };
+export type PayRelationship = "partner" | "spouse" | "company_card" | "other";
+export type PayPaidBy = {
+  name: string;
+  relationship: PayRelationship;
+  relationshipOther: string | null;
+  /** True when the manager approved this payer for the deal being read; otherwise the seller must confirm. */
+  forThisDeal: boolean;
+};
+export const PAY_RELATIONSHIP_LABEL: Record<PayRelationship, string> = {
+  partner: "Sócio",
+  spouse: "Marido/Esposa",
+  company_card: "Cartão da empresa",
+  other: "Outro",
+};
+export function payRelationshipLabel(paidBy: Pick<PayPaidBy, "relationship" | "relationshipOther">): string {
+  return paidBy.relationship === "other" && paidBy.relationshipOther ? paidBy.relationshipOther : PAY_RELATIONSHIP_LABEL[paidBy.relationship];
+}
 export type PaySkipped = { kind: "subscription" | "charge"; productName: string; status: string };
 export function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -142,4 +162,67 @@ export function payCycleLabel(period: string, cycle: number | null): string {
   if (["anual", "annual"].includes(period.toLowerCase())) return `${cycle}/12`;
   if (["mensal", "monthly"].includes(period.toLowerCase())) return `Ciclo ${cycle}`;
   return `Ciclo ${cycle}`;
+}
+/** Sale descriptions in RykaPay are free text; only the Clínica Ryka program can be an ownerless sale. */
+export function isClinicaRykaSale(description: unknown): boolean {
+  return typeof description === "string" && normalizeProduct(description).includes("clinica ryka");
+}
+/**
+ * Old Stripe subscriptions returned inside the RykaPay answer. Returns null when the Stripe part is
+ * unavailable or incomplete, so the caller treats the whole read as partial and never as "paid".
+ */
+export function normalizeStripeLegacy(rawStripe: unknown): PaySubscription[] | null {
+  const stripe = record(rawStripe);
+  if (stripe.disponivel !== true || stripe.completo !== true || !Array.isArray(stripe.assinaturas) || !Array.isArray(stripe.cobrancas)) return null;
+  const active = stripe.assinaturas.map(record).filter(a => typeof a.status === "string" && activePaySubscription(a.status));
+  if (!active.length) return [];
+  const paid = stripe.cobrancas.map(record)
+    .filter(c => c.situacao === "aprovado" && c.contestado !== true && c.reembolsado_centavos === 0)
+    .map(c => ({ id: text(c.id), amountCents: integer(c.bruto_centavos), paidAt: date(c.criada_em) }))
+    .sort((a, b) => String(a.paidAt).localeCompare(String(b.paidAt)));
+  if (paid.some(c => !c.id || !c.paidAt)) return null;
+  const first = active[0];
+  const id = text(first.id);
+  if (!id) return null;
+  return [{
+    id,
+    productId: null,
+    productName: "Programa Clínica Ryka (Stripe)",
+    status: text(first.status) || "ativa",
+    period: "mensal",
+    source: "stripe_legacy",
+    invoices: paid.map((c, i): PayInvoice => ({ id: c.id as string, cycle: i + 1, status: "aprovado", situation: "pago", amountCents: c.amountCents, dueDate: null, paidAt: c.paidAt })),
+  }];
+}
+/** A sale from the RykaPay charges list that a manager linked to a deal; null unless it is still paid. */
+export function normalizeLinkedSale(raw: unknown): PaySubscription | null {
+  const r = record(raw);
+  const id = text(r.id);
+  const name = text(r.descricao);
+  if (!id || !name || r.status !== "paga" || !Array.isArray(r.parcelas)) return null;
+  const invoices = r.parcelas.map((v): PayInvoice | null => {
+    const f = record(v);
+    const fid = text(f.id);
+    const status = text(f.status) || "Não informado";
+    if (!fid) return null;
+    return {
+      id: fid,
+      cycle: integer(f.numero_parcela),
+      status,
+      situation: status === "recebido" ? "pago" : ["estornado", "cancelado", "chargeback"].includes(status) ? "cancelado" : "pendente",
+      amountCents: integer(f.valor_bruto_centavos),
+      dueDate: date(f.vencimento),
+      paidAt: date(f.recebimento),
+    };
+  });
+  if (invoices.some(f => !f)) return null;
+  return {
+    id,
+    productId: null,
+    productName: name,
+    status: "paga",
+    period: /mensal|ciclo/.test(normalizeProduct(name)) ? "mensal" : "anual",
+    source: "linked_sale",
+    invoices: invoices as PayInvoice[],
+  };
 }

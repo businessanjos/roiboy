@@ -1,4 +1,4 @@
-import type { PayResult } from "@/lib/rykaPay";
+import type { PayPaidBy, PayResult } from "@/lib/rykaPay";
 import { PRODUCT_IDS, resolveItemVendaToProductId } from "./itemVendaResolver";
 import { paidPayCharge, type PaidPayCharge } from "./subscriptionPayCharge";
 import type { SubscriptionCycle } from "./subscriptionWin";
@@ -18,7 +18,11 @@ export function requiresPaidWin(itemVenda: string | null | undefined): boolean {
 
 export type PayWinGate =
   | { status: "idle" | "checking" | "unpaid" | "needs_document" | "needs_product" | "error" }
-  | { status: "paid"; charge: PaidPayCharge; cycle: SubscriptionCycle }
+  /** No payment found and the seller already asked the manager to link an ownerless sale. */
+  | { status: "awaiting_manager" }
+  | { status: "paid"; charge: PaidPayCharge; cycle: SubscriptionCycle; paidBy: PayPaidBy | null }
+  /** Paid by a saved third-party payer the manager approved for another deal: the seller must confirm it. */
+  | { status: "third_party"; charge: PaidPayCharge; cycle: SubscriptionCycle; paidBy: PayPaidBy }
   /** Paid in RykaPay, but in the cycle the seller did not choose. */
   | { status: "other_cycle"; cycle: SubscriptionCycle };
 
@@ -33,6 +37,10 @@ export function payWinGate(input: {
   result: PayResult | null | undefined;
   isSubscription: boolean | null;
   cycle: SubscriptionCycle | null;
+  /** A request to the manager is waiting for a decision. */
+  pendingRequest?: boolean;
+  /** The seller confirmed that the saved third-party payer paid this sale too. */
+  thirdPartyConfirmed?: boolean;
 }): PayWinGate {
   if (!input.requested) return { status: "idle" };
   if (input.checking) return { status: "checking" };
@@ -42,8 +50,12 @@ export function payWinGate(input: {
   const wanted = input.isSubscription === true ? (input.cycle ? [input.cycle] : []) : CYCLES;
   for (const cycle of wanted) {
     const charge = paidPayCharge(result, cycle);
-    if (charge) return { status: "paid", charge, cycle };
+    if (!charge) continue;
+    const paidBy = result.paidBy ?? null;
+    if (paidBy && !paidBy.forThisDeal && !input.thirdPartyConfirmed) return { status: "third_party", charge, cycle, paidBy };
+    return { status: "paid", charge, cycle, paidBy };
   }
   const other = CYCLES.find((cycle) => !wanted.includes(cycle) && paidPayCharge(result, cycle));
-  return other ? { status: "other_cycle", cycle: other } : { status: "unpaid" };
+  if (other) return { status: "other_cycle", cycle: other };
+  return input.pendingRequest ? { status: "awaiting_manager" } : { status: "unpaid" };
 }

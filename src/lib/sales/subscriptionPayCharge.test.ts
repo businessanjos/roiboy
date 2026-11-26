@@ -15,7 +15,7 @@ const result = (subscriptions: PaySubscription[], extra: Partial<PayResult> = {}
 describe("pagamento do RykaPay no ganho", () => {
   it("mensal já pago: valor da primeira cobrança e data do primeiro pagamento", () => {
     const r = result([sub("mensal", [inv("b", "pago", 49700, "2026-11-10"), inv("a", "pago", 49700, "2026-10-10"), inv("c", "pendente", 49700)])]);
-    expect(paidPayCharge(r, "monthly")).toEqual({ amount: 497, firstPaidDate: "2026-10-10", paidCount: 2, productName: "Programa TESTE QA" });
+    expect(paidPayCharge(r, "monthly")).toMatchObject({ amount: 497, firstPaidDate: "2026-10-10", paidCount: 2, productName: "Programa TESTE QA", source: "rykapay" });
   });
 
   it("anual já pago: total da venda, somando todas as parcelas", () => {

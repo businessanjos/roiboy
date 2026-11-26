@@ -9,6 +9,10 @@ export interface PaidPayCharge {
   firstPaidDate: string;
   paidCount: number;
   productName: string;
+  /** Where the payment lives, so the win can record "this sale belongs to this deal". */
+  source: "rykapay" | "stripe_legacy";
+  /** Provider ids of the sale and of its paid charges. */
+  saleIds: string[];
 }
 
 const CYCLE_PERIODS: Record<SubscriptionCycle, string[]> = {
@@ -48,6 +52,8 @@ export function paidPayCharge(
       firstPaidDate: saoPauloDay((paid[0].paidAt || paid[0].dueDate)!),
       paidCount: paid.length,
       productName: sub.productName,
+      source: sub.source === "stripe_legacy" ? "stripe_legacy" : "rykapay",
+      saleIds: sub.source === "stripe_legacy" ? [sub.id] : [sub.id, ...paid.map((f) => f.id)],
     };
   }
   return null;

@@ -37,6 +37,9 @@ import { fetchDealItemVenda, fetchSubscriptionWinState, type SubscriptionWinStat
 import { DEAL_DOCUMENT_FIELD_IDS, ITEM_VENDA_FIELD_ID, payWinGate, requiresPaidWin } from "@/lib/sales/payWinGate";
 import { useRykaPaySubscriptions } from "@/hooks/useRykaPaySubscriptions";
 import { paidPayCharge } from "@/lib/sales/subscriptionPayCharge";
+import { payRelationshipLabel } from "@/lib/rykaPay";
+import { PayLinkRequestDialog } from "@/components/sales/PayLinkRequestDialog";
+import { useQuery } from "@tanstack/react-query";
 import { clearLocalAutosaveDraft, readLocalAutosaveDraft, writeLocalAutosaveDraft } from "@/hooks/useLocalAutosaveDraft";
 
 interface RequiredFieldsModalProps {
@@ -110,6 +113,9 @@ export function RequiredFieldsModal({
   // Dados (documento + item) com que o vendedor clicou em verificar; mudou algo, verifica de novo.
   const [payVerifiedKey, setPayVerifiedKey] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [payRequestOpen, setPayRequestOpen] = useState(false);
+  // Pagador guardado de outra venda: o vendedor confirma que foi a mesma pessoa que pagou esta.
+  const [thirdPartyConfirmed, setThirdPartyConfirmed] = useState(false);
   const docPrefilledRef = useRef(false);
   // A trava de pagamento só existe no ganho.
   const isWinFlow = outcomeType === "won" || (subscriptionRequired && outcomeType !== "lost");
@@ -254,7 +260,27 @@ export function RequiredFieldsModal({
   );
   const payData = payGate && !payRequested ? undefined : payQuery.data;
   const payCharge = subscriptionActive ? paidPayCharge(payData, subscriptionCycle) : null;
+  // Pedido ao gestor para vincular um pagamento feito por outra pessoa.
+  const payRequestQuery = useQuery({
+    queryKey: ["pay-link-request", dealId],
+    enabled: open && payGate,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pay_link_requests")
+        .select("id, status, decision_reason")
+        .eq("deal_id", dealId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: (query) => (query.state.data?.status === "pending" ? 20000 : false),
+  });
+  const payRequest = payRequestQuery.data ?? null;
   const gate = payWinGate({
+    pendingRequest: payRequest?.status === "pending",
+    thirdPartyConfirmed,
     requested: payRequested,
     checking: verifying || payQuery.isLoading,
     failed: payQuery.isError,
@@ -417,7 +443,8 @@ export function RequiredFieldsModal({
     try {
       for (const field of itemField ? [...docFields, itemField] : docFields) await upsertFieldValue(field);
       setPayVerifiedKey(payKey);
-      await payQuery.refetch();
+      setThirdPartyConfirmed(false);
+      await Promise.all([payQuery.refetch(), payRequestQuery.refetch()]);
     } catch (error) {
       console.error("Erro ao verificar pagamento:", error);
       toast.error("Não foi possível verificar o pagamento. Tente novamente.");
@@ -571,6 +598,15 @@ export function RequiredFieldsModal({
           .update({ received_value: parsedReceived } as any)
           .eq("id", dealId);
         if (rvErr) throw rvErr;
+      }
+
+      // A venda confirmada passa a pertencer a este negócio e nunca aparece como venda sem dono.
+      if (payGate && gate.status === "paid") {
+        const { error: linkErr } = await supabase.rpc("record_pay_sale_links", {
+          _deal_id: dealId,
+          _items: gate.charge.saleIds.map((id) => ({ source: gate.charge.source, external_id: id })),
+        });
+        if (linkErr) throw linkErr;
       }
 
       clearLocalAutosaveDraft(draftKey);
@@ -843,6 +879,7 @@ export function RequiredFieldsModal({
             "success",
             <>
               <span className="font-semibold">Pagamento confirmado no RykaPay.</span>{" "}
+              {gate.paidBy && <>Pago por {gate.paidBy.name} ({payRelationshipLabel(gate.paidBy)}) · </>}
               {gate.charge.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
               {" · 1º pagamento em "}
               {gate.charge.firstPaidDate.split("-").reverse().join("/")}
@@ -858,6 +895,42 @@ export function RequiredFieldsModal({
               cliente concluir o pagamento. Depois que ela pagar, clique em "Verificar de novo".
             </>,
           )}
+        {!gateBusy && gate.status === "unpaid" && (
+          <div className="mt-2 space-y-2">
+            {payRequest?.status === "rejected" && gateNote(
+              "destructive",
+              <>O gestor recusou o último pedido{payRequest.decision_reason ? `: ${payRequest.decision_reason}` : "."}</>,
+            )}
+            <p className="text-xs text-muted-foreground">Outra pessoa pagou (sócio, marido/esposa, cartão da empresa)?</p>
+            <Button type="button" variant="outline" className="min-h-11 w-full" onClick={() => setPayRequestOpen(true)}>
+              Solicitar ao gestor
+            </Button>
+          </div>
+        )}
+        {!gateBusy && gate.status === "awaiting_manager" &&
+          gateNote(
+            "warning",
+            <>
+              <span className="font-semibold">Aguardando o gestor.</span> O pedido de vínculo do pagamento foi enviado. Quando ele
+              vincular, clique em "Verificar de novo".
+            </>,
+          )}
+        {!gateBusy && gate.status === "third_party" && (
+          <div className="space-y-2">
+            {gateNote(
+              "warning",
+              <>
+                Pagamento encontrado em nome de <span className="font-semibold">{gate.paidBy.name}</span> (
+                {payRelationshipLabel(gate.paidBy)}), {gate.charge.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                {" em "}
+                {gate.charge.firstPaidDate.split("-").reverse().join("/")}. Foi essa pessoa que pagou esta venda?
+              </>,
+            )}
+            <Button type="button" className="min-h-11 w-full" onClick={() => setThirdPartyConfirmed(true)}>
+              Sim, foi {gate.paidBy.name.split(" ")[0]} que pagou
+            </Button>
+          </div>
+        )}
         {!gateBusy && gate.status === "other_cycle" &&
           gateNote(
             "warning",
@@ -873,6 +946,12 @@ export function RequiredFieldsModal({
         {!gateBusy && gate.status === "error" &&
           gateNote("destructive", "Não foi possível consultar o RykaPay agora. Tente verificar de novo em instantes.")}
       </div>
+      <PayLinkRequestDialog
+        open={payRequestOpen}
+        onOpenChange={setPayRequestOpen}
+        dealId={dealId}
+        onRequested={() => void payRequestQuery.refetch()}
+      />
     </div>
   ) : null;
 

@@ -387,3 +387,12 @@
 ## Ranking por empresa enquadrado na TV
 - [x] Mais altura para o ranking no ajuste à TV (vários vendedores por empresa) e títulos/total das empresas grandes
 - [x] Conferido em 1920×1080 com o painel real; outros painéis não mudam
+
+## Vendas sem dono (Programa Clínica Ryka)
+- [x] Legado da Stripe (12 assinaturas vivas), vínculos venda↔negócio, solicitações e pagador terceiro
+- [x] Consulta: legado da Stripe libera o ganho; pagador guardado e vínculo do gestor entram na verificação
+- [x] Lista de vendas sem dono (RykaPay novas + legado Stripe), conferida com dados reais
+- [x] Ganho: "Solicitar ao gestor", "Aguardando o gestor" e confirmação de pagador guardado
+- [x] Gestor: notificação, lista inteira, relação (Sócio, Marido/Esposa, Cartão da empresa, Outro)
+- [x] Aba Assinaturas: linha "Pago por"
+- [ ] Pedido e vínculo de ponta a ponta com um negócio real (Saulo/Winny): não feito para não gravar em dados reais; aguarda o vendedor solicitar

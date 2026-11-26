@@ -25,6 +25,7 @@ export const SDR_VENDAS_ALLOWED_ROUTES = new Set<string>([
   "/pipeline",
   "/leads",
   "/sales-team/transfer-requests",
+  "/sales-team/pay-links",
   "/tasks",
   "/sales-calendar",
   "/clients",
