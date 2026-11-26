@@ -298,15 +298,15 @@ function ContentTab({ screen, status, dashboards }: { screen: any; status?: any;
             {!isTraffic && <Section title="Tamanho">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-4">
-                  <Slider min={50} max={120} step={5} value={[f.zoom]} onValueChange={(v) => set("zoom", v[0])} className="flex-1" aria-label="Zoom" />
-                  <span className="w-12 text-right text-sm font-medium tabular-nums">{f.zoom}%</span>
+                  <Slider min={50} max={120} step={5} value={[f.zoom]} onValueChange={(v) => set("zoom", v[0])} disabled={f.tvFit} className={cn("flex-1", f.tvFit && "opacity-40")} aria-label="Zoom" />
+                  <span className={cn("w-12 text-right text-sm font-medium tabular-nums", f.tvFit && "text-muted-foreground")}>{f.tvFit ? "Auto" : `${f.zoom}%`}</span>
                 </div>
                 <div className="relative mr-16 h-4 text-[10px] text-muted-foreground">
                   {ZOOM_TICKS.map((t) => (
                     <span key={t} className="absolute -translate-x-1/2" style={{ left: `${((t - 50) / 70) * 100}%` }}>{t}</span>
                   ))}
                 </div>
-                <Help>Diminua se o dashboard estiver cortado na TV.</Help>
+                <Help>{f.tvFit ? "Com “Ajustar à TV” ligado, o tamanho é calculado sozinho pela tela. Desligue para escolher o tamanho." : "Diminua se o dashboard estiver cortado na TV."}</Help>
               </div>
               <div className="space-y-4 pt-1">
                 <label className="flex items-start justify-between gap-4">
