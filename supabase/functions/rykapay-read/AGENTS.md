@@ -1,0 +1,2 @@
+- Read RykaPay only after verifying the user's active ROY profile, fixed integration account and RLS-readable deal/client; derive documents/product on the server and return an allowlisted payment view. Why: a shared API key must not allow arbitrary CPF lookups or cross-account access.
+- Use authoritative GET polling, not webhook payloads as receipts; unknown/partial values remain unavailable and products match exact IDs/names or the explicitly confirmed catalogue mapping in the shared read model. Why: do not fabricate totals, financial transitions or product attribution.

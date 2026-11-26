@@ -29,6 +29,7 @@ const navGroups: NavGroup[] = [
       { id: "agenda", label: "Agenda", icon: Calendar },
       { id: "deals", label: "Negócios", icon: TrendingUp },
       { id: "contracts", label: "Contratos", icon: FileSignature },
+      { id: "pay-subscriptions", label: "Assinaturas", icon: CreditCard },
       { id: "subscriptions", label: "Financeiro", icon: CreditCard },
     ],
   },

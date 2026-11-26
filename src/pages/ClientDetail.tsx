@@ -47,6 +47,7 @@ import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
 import { ClientLogoUpload } from "@/components/client/ClientLogoUpload";
 import { ContractTimer } from "@/components/client/ContractTimer";
 import { ClientContracts } from "@/components/client/ClientContracts";
+import { RykaPaySubscriptions } from "@/components/client/RykaPaySubscriptions";
 import { ClientFormResponses } from "@/components/client/ClientFormResponses";
 import { OperationBriefingForm } from "@/components/operations/OperationBriefingForm";
 import { ClientRelationships } from "@/components/client/ClientRelationships";
@@ -400,6 +401,7 @@ const CLIENT_SECTION_TITLES: Record<string, string> = {
   agenda: "Agenda",
   deals: "Negócios",
   contracts: "Contratos",
+  "pay-subscriptions": "Assinaturas",
   subscriptions: "Financeiro",
   negocio: "Perfil do Negócio",
   fichas: "Fichas (Formulário)",
@@ -2855,6 +2857,8 @@ export default function ClientDetail() {
                 </CardContent>
               </Card>
             );
+          case "pay-subscriptions":
+            return id ? <RykaPaySubscriptions key={id} clientId={id} /> : null;
           case "subscriptions":
             return (
               <Card className="shadow-card">

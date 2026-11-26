@@ -102,6 +102,7 @@ import { DealFieldValueEditor } from "@/components/custom-fields/DealFieldValueE
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
 import { ContractSummaryPanel } from "./contracts/ContractSummaryPanel";
+import { RykaPaySubscriptions } from "@/components/client/RykaPaySubscriptions";
 import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
 import { CallTimelineEvent, dedupeCalls, type ConversationCall } from "@/components/telephony/CallTimelineEvent";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -1985,22 +1986,26 @@ export function DealDetailSheet({
               {/* Right Column - Tabs for History and Tasks */}
               <div className="space-y-3">
                 <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab} className="w-full">
-                  <TabsList className="w-full grid grid-cols-4 h-[52px] sm:h-8">
-                    <TabsTrigger value="history" className="text-xs h-11 sm:h-7 min-w-0 px-1">
+                  <TabsList className="flex w-full justify-start overflow-x-auto h-[52px] sm:h-11">
+                    <TabsTrigger value="history" className="text-xs h-11 shrink-0 flex-1 px-2">
                       <Clock className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Histórico</span>
                     </TabsTrigger>
-                    <TabsTrigger value="activities" className="text-xs h-11 sm:h-7 min-w-0 px-1">
+                    <TabsTrigger value="activities" className="text-xs h-11 shrink-0 flex-1 px-2">
                       <ListTodo className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Atividades</span>
                     </TabsTrigger>
-                    <TabsTrigger value="briefing" className="text-xs h-11 sm:h-7 min-w-0 px-1">
+                    <TabsTrigger value="briefing" className="text-xs h-11 shrink-0 flex-1 px-2">
                       <icons.ClipboardList className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Briefing Op.</span>
                     </TabsTrigger>
-                    <TabsTrigger value="contract" className="text-xs h-11 sm:h-7 min-w-0 px-1">
+                    <TabsTrigger value="contract" className="text-xs h-11 shrink-0 flex-1 px-2">
                       <icons.FileSignature className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Contrato</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="pay-subscriptions" className="text-xs h-11 shrink-0 flex-1 px-2">
+                      <icons.CreditCard className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
+                      Assinaturas
                     </TabsTrigger>
                   </TabsList>
 
@@ -2343,6 +2348,9 @@ export function DealDetailSheet({
 
                   <TabsContent value="contract" className="mt-3">
                     <ContractSummaryPanel dealId={deal.id} />
+                  </TabsContent>
+                  <TabsContent value="pay-subscriptions" className="mt-3">
+                    <RykaPaySubscriptions key={deal.id} dealId={deal.id} />
                   </TabsContent>
                 </Tabs>
               </div>

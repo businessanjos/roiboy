@@ -1,5 +1,12 @@
 # Roadmap — Processos do CS
 
+## Assinaturas RykaPay
+- [x] Vincular os nove planos mensais/anuais Programa Clinica Ryka ao CR, confirmado por Lucas; incluir anuais vendidos como cobranças avulsas sem misturar Ryka IA/zApp/E-Pass.
+- [x] Consulta segura somente leitura por CPF/CNPJ, restrita à conta e ao acesso existente do negócio/cliente, sem expor credenciais ou respostas pessoais brutas. Chave validada em consulta real; documento arbitrário rejeitado e registro inexistente bloqueado.
+- [x] Aba Assinaturas junto de Contrato no negócio e junto de Contratos na ficha do cliente; recebido, faturas a vencer e histórico por produto com ciclos mensal/anual.
+- [x] Atualização a cada 30 segundos da aba aberta e ao retornar à janela; resultados parciais/falhas não viram zero. 15 testes passaram, consulta autenticada em negócio/cliente, retorno ao Contrato e atualização manual conferidos; histórico preenchido e pagamento atualizando 299→598 e 1→0 verificados com resposta fictícia em 390/1440, claro/escuro. Compilação OK, sem alterar pagamentos reais ou publicar; sem webhook nesta entrega.
+- [ ] Conferir assinatura/faturas reais preenchidas de Zildete Zanin e mudança após pagamento: bloqueado porque CPF/CNPJ estão vazios tanto no cliente quanto no lead do ROY; mensagem correspondente conferida na ficha autenticada. Nenhum cadastro alterado e não houve busca pelo nome/e-mail. Dados fictícios não validam o formato completo retornado pelo Pay nem o pagamento real.
+
 ## Acelerômetro: Mentorias e Programas
 - [x] Mesmo mostrador colorido em Programas, sem inventar metas/percentuais; realizadas, agendadas, no-show, listas e conversão somente dos negócios vinculados a Programas. SPIFFs, cofrinho e acesso ao plano de incentivos ficam em Mentorias; nenhum backend, negócio ou comissão alterado.
 - [x] Regras testadas; sessão autenticada conferida (sem vendas/reuniões desse usuário). Cenário local preenchido: 1 venda CR, 1 realizada, 1 agendada, 1 no-show e conversão 100%; quatro listas excluem Mentorias. Dois temas em 390/668/1440, sem rolagem lateral; imagens conferidas. Sem publicação. Leitura real não vazia continua pendente abaixo.
