@@ -1168,7 +1168,7 @@ export function DealDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} modal={!dialerOpen}>
-      <SheetContent className="w-full sm:max-w-3xl p-0 pt-[env(safe-area-inset-top)] flex flex-col">
+      <SheetContent className="w-full sm:max-w-3xl md:max-w-[min(96vw,60rem)] p-0 pt-[env(safe-area-inset-top)] flex flex-col">
         <SheetHeader className="px-4 py-3 sm:px-5 sm:py-4 border-b bg-muted/30 space-y-0">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0 pr-8 sm:pr-0">
@@ -1332,9 +1332,9 @@ export function DealDetailSheet({
         <ScrollArea className="flex-1">
           <div className="p-4">
             {/* Two Column Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-5">
               {/* Left Column - Deal Info */}
-              <div className="space-y-4">
+              <div className="space-y-4 min-w-0">
                 {/* Stats Cards - Compact Grid */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg border p-3 bg-muted/30">
@@ -1987,28 +1987,31 @@ export function DealDetailSheet({
               </div>
 
               {/* Right Column - Tabs for History and Tasks */}
-              <div className="space-y-3">
+              <div className="space-y-3 min-w-0">
                 <Tabs value={detailTab} onValueChange={setActiveDetailTab} className="w-full">
-                  <TabsList className="flex w-full justify-start overflow-x-auto h-[52px] sm:h-11">
-                    <TabsTrigger value="history" className="text-[11px] h-11 min-w-0 flex-auto px-1.5">
+                  <TabsList
+                    className="grid w-full h-11 gap-1"
+                    style={{ gridTemplateColumns: `repeat(${showPaySubscriptions ? 5 : 4}, minmax(0, 1fr))` }}
+                  >
+                    <TabsTrigger value="history" className="text-xs h-full min-w-0 px-1.5">
                       <Clock className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Histórico</span>
                     </TabsTrigger>
-                    <TabsTrigger value="activities" className="text-[11px] h-11 min-w-0 flex-auto px-1.5">
+                    <TabsTrigger value="activities" className="text-xs h-full min-w-0 px-1.5">
                       <ListTodo className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Atividades</span>
                     </TabsTrigger>
                     {showPaySubscriptions && (
-                      <TabsTrigger value="pay-subscriptions" className="text-[11px] h-11 min-w-0 flex-auto px-1.5">
+                      <TabsTrigger value="pay-subscriptions" className="text-xs h-full min-w-0 px-1.5">
                         <icons.CreditCard className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                         <span className="truncate">Assinaturas</span>
                       </TabsTrigger>
                     )}
-                    <TabsTrigger value="briefing" className="text-[11px] h-11 min-w-0 flex-auto px-1.5">
+                    <TabsTrigger value="briefing" className="text-xs h-full min-w-0 px-1.5">
                       <icons.ClipboardList className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Briefing Op.</span>
                     </TabsTrigger>
-                    <TabsTrigger value="contract" className="text-[11px] h-11 min-w-0 flex-auto px-1.5">
+                    <TabsTrigger value="contract" className="text-xs h-full min-w-0 px-1.5">
                       <icons.FileSignature className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Contrato</span>
                     </TabsTrigger>
