@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRykaPaySubscriptions } from "@/hooks/useRykaPaySubscriptions";
 import { payMetrics, payCycleLabel, type PaySubscription } from "@/lib/rykaPay";
+import { orderPayInvoices } from "@/lib/sales/payInvoiceOrder";
 
 const money = (cents: number | null) => cents === null ? "—" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 function day(value: string | null) {
@@ -70,7 +71,8 @@ export function RykaPaySubscriptions(target: { dealId?: string; clientId?: strin
 }
 
 function SubscriptionHistory({ subscription: s }: { subscription: PaySubscription }) {
-  const invoices = [...s.invoices].sort((a, b) => (b.cycle ?? 0) - (a.cycle ?? 0));
+  const annual = s.source === "annual_sale" || periods[s.period] === "Anual";
+  const invoices = orderPayInvoices(s.invoices, annual);
   return <div className="min-w-0 space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><Badge variant="outline" className="max-w-full whitespace-normal break-words text-xs font-medium" style={{ backgroundColor: `${s.royProductColor || "#6b7280"}20`, borderColor: s.royProductColor || "#6b7280", color: s.royProductColor || "#6b7280" }}>{s.productName}</Badge><Badge variant="outline" className="max-w-full break-words">{s.status}</Badge></div>
     {s.source === "annual_sale" && <p className="text-xs text-muted-foreground">Plano anual · cobrança do RykaPay</p>}

@@ -1524,23 +1524,25 @@ export function DealDetailSheet({
 
                 {/* Assinatura — respondida no ganho, somente leitura */}
                 {subscriptionSummaryLabel(subscriptionInfo.isSubscription, subscriptionInfo.cycle) && (
-                  <div className="rounded-lg border p-3 bg-muted/30">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-1.5">
-                        <icons.Repeat className="h-3.5 w-3.5 text-info" />
-                        <span className="text-xs font-semibold">É uma assinatura</span>
-                      </div>
-                      <span className="text-xs font-semibold text-foreground">
-                        {subscriptionInfo.isSubscription ? "Sim" : "Não"}
+                  <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-info/10">
+                        <icons.Repeat className="h-4 w-4 text-info" />
                       </span>
-                    </div>
-                    {subscriptionInfo.isSubscription && subscriptionInfo.cycle && (
-                      <div className="mt-2 flex items-center justify-between gap-3 text-[11px]">
-                        <span className="text-muted-foreground">Mensal ou anual</span>
-                        <span className="font-semibold text-foreground">
-                          {SUBSCRIPTION_CYCLE_LABEL[subscriptionInfo.cycle]}
-                        </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold leading-tight">Assinatura</p>
+                        <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">Respondido no ganho</p>
                       </div>
+                    </div>
+                    {subscriptionInfo.isSubscription ? (
+                      <Badge variant="outline" className="shrink-0 gap-1 border-info/30 bg-info/10 text-xs font-semibold text-info">
+                        <icons.Check className="h-3 w-3" />
+                        {subscriptionInfo.cycle ? `Sim · ${SUBSCRIPTION_CYCLE_LABEL[subscriptionInfo.cycle]}` : "Sim"}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="shrink-0 text-xs font-medium text-muted-foreground">
+                        Não é assinatura
+                      </Badge>
                     )}
                   </div>
                 )}
@@ -2007,9 +2009,9 @@ export function DealDetailSheet({
                         <span className="truncate">Assinaturas</span>
                       </TabsTrigger>
                     )}
-                    <TabsTrigger value="briefing" className="text-xs h-full min-w-0 px-1.5">
+                    <TabsTrigger value="briefing" title="Briefing Op." className="text-xs h-full min-w-0 px-1.5">
                       <icons.ClipboardList className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
-                      <span className="truncate">Briefing Op.</span>
+                      <span className="truncate">{showPaySubscriptions ? "Briefing" : "Briefing Op."}</span>
                     </TabsTrigger>
                     <TabsTrigger value="contract" className="text-xs h-full min-w-0 px-1.5">
                       <icons.FileSignature className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
