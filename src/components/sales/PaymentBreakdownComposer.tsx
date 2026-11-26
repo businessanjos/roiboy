@@ -9,6 +9,7 @@ import { CalendarIcon, X, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { withoutInstallmentChoice } from "@/lib/sales/subscriptionWin";
 
 export interface PaymentBreakdownItem {
   method: string;
@@ -25,6 +26,10 @@ interface PaymentBreakdownComposerProps {
   paymentMethodLabel: string;
   value: PaymentBreakdownItem[];
   onChange: (value: PaymentBreakdownItem[]) => void;
+  /** Assinatura: a cobrança vem do RykaPay, então o vendedor não informa parcelas. */
+  hideInstallments?: boolean;
+  /** Valor e data já vieram do RykaPay (pagamento feito): só leitura. */
+  lockedByPay?: boolean;
 }
 
 // Maps a "Forma da Pagamento" select value into the individual methods that need detailing.
@@ -78,12 +83,14 @@ export function PaymentBreakdownComposer({
   paymentMethodLabel,
   value,
   onChange,
+  hideInstallments = false,
+  lockedByPay = false,
 }: PaymentBreakdownComposerProps) {
   const methods = useMemo(() => getMethodsForPaymentOption(paymentMethodValue), [paymentMethodValue]);
 
   // Sync items: ensure there's an entry for each required method
   const items = useMemo<PaymentBreakdownItem[]>(() => {
-    return methods.map((m) => {
+    const synced = methods.map((m) => {
       const existing = value.find((v) => v.method === m.key);
       return (
         existing ?? {
@@ -96,7 +103,8 @@ export function PaymentBreakdownComposer({
         }
       );
     });
-  }, [methods, value]);
+    return hideInstallments ? withoutInstallmentChoice(synced) : synced;
+  }, [methods, value, hideInstallments]);
 
   const updateItem = (key: string, patch: Partial<PaymentBreakdownItem>) => {
     const next = items.map((item) => (item.method === key ? { ...item, ...patch } : item));
@@ -120,10 +128,16 @@ export function PaymentBreakdownComposer({
         )}
       </div>
 
+      {lockedByPay && (
+        <p className="text-xs text-muted-foreground">
+          Já pago no RykaPay — valor e data vêm de lá e não podem ser alterados aqui.
+        </p>
+      )}
+
       {items.map((item) => (
         <div key={item.method} className="rounded-xl bg-background border border-border p-3 space-y-2">
           <p className="text-sm font-semibold text-foreground">{item.method_label}</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className={cn("grid gap-2", hideInstallments ? "grid-cols-1" : "grid-cols-2")}>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Valor (R$)</Label>
               <Input
@@ -138,8 +152,10 @@ export function PaymentBreakdownComposer({
                 }
                 placeholder="0,00"
                 className="h-9"
+                disabled={lockedByPay}
               />
             </div>
+            {!hideInstallments && (
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Nº de parcelas</Label>
               <Input
@@ -156,9 +172,10 @@ export function PaymentBreakdownComposer({
                 className="h-9"
               />
             </div>
+            )}
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Data da 1ª parcela</Label>
+            <Label className="text-xs text-muted-foreground">{hideInstallments ? "Data da 1ª cobrança" : "Data da 1ª parcela"}</Label>
             <div className="flex items-center gap-1">
               <Popover>
                 <PopoverTrigger asChild>
@@ -166,6 +183,7 @@ export function PaymentBreakdownComposer({
                     type="button"
                     variant="outline"
                     size="sm"
+                    disabled={lockedByPay}
                     className={cn(
                       "flex-1 justify-start text-left font-normal h-9",
                       !item.first_due_date && "text-muted-foreground"
@@ -173,14 +191,14 @@ export function PaymentBreakdownComposer({
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {item.first_due_date
-                      ? format(new Date(item.first_due_date), "PPP", { locale: ptBR })
+                      ? format(new Date(`${item.first_due_date}T12:00:00`), "PPP", { locale: ptBR })
                       : "Selecionar data"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={item.first_due_date ? new Date(item.first_due_date) : undefined}
+                    selected={item.first_due_date ? new Date(`${item.first_due_date}T12:00:00`) : undefined}
                     onSelect={(date) =>
                       updateItem(item.method, {
                         first_due_date: date ? format(date, "yyyy-MM-dd") : null,
@@ -190,7 +208,7 @@ export function PaymentBreakdownComposer({
                   />
                 </PopoverContent>
               </Popover>
-              {item.first_due_date && (
+              {item.first_due_date && !lockedByPay && (
                 <Button
                   type="button"
                   variant="ghost"

@@ -33,6 +33,8 @@ import {
   type SubscriptionCycle,
 } from "@/lib/sales/subscriptionWin";
 import { fetchSubscriptionWinState, type SubscriptionWinState } from "@/lib/sales/subscriptionWinState";
+import { useRykaPaySubscriptions } from "@/hooks/useRykaPaySubscriptions";
+import { paidPayCharge } from "@/lib/sales/subscriptionPayCharge";
 import { clearLocalAutosaveDraft, readLocalAutosaveDraft, writeLocalAutosaveDraft } from "@/hooks/useLocalAutosaveDraft";
 
 interface RequiredFieldsModalProps {
@@ -215,6 +217,31 @@ export function RequiredFieldsModal({
     ? getMethodsForPaymentOption(paymentMethodValue as string)
     : [];
   const needsBreakdown = requiredMethods.length > 0;
+  // Assinatura já paga no RykaPay: valor e data aparecem só para leitura.
+  const payQuery = useRykaPaySubscriptions({ dealId }, open && subscriptionActive && !!subscriptionCycle);
+  const payCharge = subscriptionActive ? paidPayCharge(payQuery.data, subscriptionCycle) : null;
+  const payChecking = subscriptionActive && !!subscriptionCycle && payQuery.isLoading;
+  const payMethod = payCharge && requiredMethods.length === 1 ? requiredMethods[0] : null;
+  const payLocked = !!payMethod;
+  const payAmount = payCharge?.amount ?? null;
+  const payDate = payCharge?.firstPaidDate ?? null;
+  const payMethodKey = payMethod?.key ?? null;
+  const payMethodLabel = payMethod?.label ?? null;
+  useEffect(() => {
+    if (!payMethodKey || payAmount === null || !payDate) return;
+    setBreakdown((prev) => {
+      const current = prev.find((b) => b.method === payMethodKey);
+      if (prev.length === 1 && current && current.amount === payAmount && current.installments === 1 && current.first_due_date === payDate) return prev;
+      return [{
+        method: payMethodKey,
+        method_label: payMethodLabel ?? payMethodKey,
+        amount: payAmount,
+        installments: 1,
+        first_due_date: payDate,
+        is_cash_collect: current?.is_cash_collect ?? false,
+      }];
+    });
+  }, [payMethodKey, payMethodLabel, payAmount, payDate, breakdown]);
   const allowedPaymentValues = subscriptionActive && subscriptionCycle ? allowedSubscriptionPayments(subscriptionCycle) : null;
   const subscriptionOk =
     !subscriptionRequired ||
@@ -530,12 +557,32 @@ export function RequiredFieldsModal({
             onChange={(newValue) => handleValueChange(field.id, newValue)}
           />
         )}
-        {field.id === paymentMethodField?.id && needsBreakdown && (
+        {field.id === paymentMethodField?.id && payChecking && (
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Consultando o RykaPay…
+          </p>
+        )}
+        {field.id === paymentMethodField?.id && !payChecking && payCharge && !needsBreakdown && (
+          <div className="mt-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+            Já pago no RykaPay:{" "}
+            <span className="font-medium text-foreground">
+              {payCharge.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            </span>
+            {" · 1º pagamento em "}
+            <span className="font-medium text-foreground">
+              {payCharge.firstPaidDate.split("-").reverse().join("/")}
+            </span>
+          </div>
+        )}
+        {field.id === paymentMethodField?.id && needsBreakdown && !payChecking && (
           <PaymentBreakdownComposer
             paymentMethodValue={paymentMethodValue as string}
             paymentMethodLabel={paymentMethodLabel}
             value={breakdown}
             onChange={setBreakdown}
+            hideInstallments={subscriptionActive}
+            lockedByPay={payLocked}
           />
         )}
       </div>

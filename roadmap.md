@@ -364,3 +364,8 @@
 - [x] Seção "Mentorias Ao Vivo" na Agenda de Entregas do cliente, com os mesmos registros da tela Mentoria Ao Vivo
 - [x] Registrar participação, agendar e excluir direto na agenda; as duas telas se atualizam
 - [ ] Conferência visual na prévia: aguarda sessão do usuário (entrada automática recusada)
+
+## Ganho de assinatura: pagamento vem do RykaPay
+- [x] Assinatura (mensal ou anual) não pede "Nº de parcelas"
+- [x] Se já houver pagamento no RykaPay, valor e data aparecem só para leitura no ganho
+- [ ] Conferência visual do ganho na prévia com um negócio real já pago

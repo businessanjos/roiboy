@@ -4,6 +4,7 @@ import {
   isSubscriptionAnswerComplete,
   prefillSubscriptionPayment,
   requiresSubscriptionAnswer,
+  withoutInstallmentChoice,
 } from "./subscriptionWin";
 
 describe("assinatura no ganho", () => {
@@ -42,5 +43,14 @@ describe("assinatura no ganho", () => {
     expect(isSubscriptionAnswerComplete({ isSubscription: true, cycle: null, paymentValue: "pix" })).toBe(false);
     expect(isSubscriptionAnswerComplete({ isSubscription: true, cycle: "annual", paymentValue: "pix" })).toBe(true);
     expect(isSubscriptionAnswerComplete({ isSubscription: false, cycle: null, paymentValue: "cheques" })).toBe(true);
+  });
+
+  it("assinatura não pede número de parcelas: cada linha fica como cobrança única", () => {
+    const lines = withoutInstallmentChoice([
+      { method: "cartao_recorrencia", amount: 497, installments: null },
+      { method: "cartao", amount: 4970, installments: 12 },
+    ]);
+    expect(lines.map((l) => l.installments)).toEqual([1, 1]);
+    expect(lines.map((l) => l.amount)).toEqual([497, 4970]);
   });
 });

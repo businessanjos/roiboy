@@ -67,3 +67,11 @@ export function subscriptionSummaryLabel(
   if (isSubscription !== true) return null;
   return cycle ? `Sim · ${SUBSCRIPTION_CYCLE_LABEL[cycle]}` : "Sim";
 }
+
+/**
+ * Subscriptions never ask the seller for a number of installments (billing comes from
+ * RykaPay): each payment line is stored as a single charge so later steps stay valid.
+ */
+export function withoutInstallmentChoice<T extends { installments: number | null }>(items: T[]): T[] {
+  return items.map((item) => (item.installments === 1 ? item : { ...item, installments: 1 }));
+}
