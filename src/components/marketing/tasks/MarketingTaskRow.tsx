@@ -13,6 +13,7 @@ import { TaskCardCover } from "./TaskCover";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { taskPersonPresentation } from "@/lib/marketing/taskPresentation";
 import type { TaskSelectionProps } from "./TaskSelection";
+import { isTaskInReview } from "@/lib/marketing/taskReview";
 
 interface MarketingTaskRowProps extends TaskSelectionProps {
   task: MarketingTask;
@@ -42,6 +43,7 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete, selectionMode
   const { currentUser } = useCurrentUser();
   const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
   const details = readTaskDetails(task);
+  const inReview = isTaskInReview(task);
   
   const getDueDateDisplay = () => {
     if (!dueDate) return null;
@@ -66,6 +68,7 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete, selectionMode
         "grid grid-cols-[auto,1fr,140px,120px,100px,100px] gap-2 px-4 py-2 items-center hover:bg-muted/30 transition-colors cursor-pointer group border-b last:border-b-0",
         task.is_completed && "opacity-60",
         isTaskOverdue(task) && "bg-destructive/5 hover:bg-destructive/10",
+        inReview && "bg-warning-soft/60 hover:bg-warning-soft",
         selectionMode && selectedTaskIds?.has(task.id) && "bg-primary/10"
       )}
       onClick={() => { if (selectionDisabled) return; if (selectionMode) onSelectTask?.(task.id); else onEdit(); }}
@@ -76,13 +79,14 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete, selectionMode
         <Checkbox
           checked={selectionMode ? selectedTaskIds?.has(task.id) ?? false : task.is_completed}
           disabled={selectionDisabled}
-          aria-label={selectionMode ? `Selecionar tarefa ${task.title}` : task.is_completed ? "Reabrir tarefa" : "Concluir tarefa"}
+          aria-label={selectionMode ? `Selecionar tarefa ${task.title}` : task.is_completed ? "Reabrir tarefa" : inReview ? "Tirar da revisão" : "Enviar para revisão"}
+          title={selectionMode ? undefined : task.is_completed ? "Reabrir tarefa" : inReview ? "Tirar da revisão" : "Enviar para revisão"}
           onCheckedChange={(checked) => {
             // Prevent row click
             if (selectionMode) onSelectTask?.(task.id); else onToggleComplete(!!checked);
           }}
           onClick={(e) => e.stopPropagation()}
-          className={selectionMode ? undefined : "rounded-full"}
+          className={selectionMode ? undefined : cn("rounded-full", inReview && "border-warning bg-warning/40")}
         />
       </div>
 
@@ -141,8 +145,8 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete, selectionMode
 
       {/* Status */}
       <div>
-        <Badge variant="secondary" className={cn("text-xs", statusConfig[task.status].className)}>
-          {statusConfig[task.status].label}
+        <Badge variant="secondary" className={cn("text-xs", inReview ? "bg-warning-soft text-warning-strong" : statusConfig[task.status].className)}>
+          {inReview ? "Em revisão" : statusConfig[task.status].label}
         </Badge>
       </div>
 

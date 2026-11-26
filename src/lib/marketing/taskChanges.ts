@@ -1,5 +1,6 @@
 import type { MarketingTask, UpdateMarketingTaskInput } from "@/hooks/useMarketingTasks";
 import type { MarketingTaskColumn } from "@/hooks/useMarketingTaskColumns";
+import { hasReviewMark, isTaskInReview, withReview, withoutReview } from "./taskReview";
 
 export type TaskBulkAction =
   | { kind: "move"; column: MarketingTaskColumn }
@@ -10,12 +11,21 @@ export function taskCompletionChange(task: MarketingTask, completed: boolean, co
   const current = columns.find((column) => column.id === task.column_id);
   const target = completed ? columns.find((column) => column.is_done)
     : current?.is_done ? columns.find((column) => !column.is_done) : undefined;
-  return { id: task.id, ...(target ? { column_id: target.id } : {}), is_completed: completed, status: completed ? "done" : "pending" };
+  return { id: task.id, ...(target ? { column_id: target.id } : {}), is_completed: completed, status: completed ? "done" : "pending", ...clearReview(task) };
+}
+
+// Concluir ou reabrir encerra a revisão; sem marca, nada é enviado.
+const clearReview = (task: MarketingTask) => hasReviewMark(task.custom_fields) ? { custom_fields: withoutReview(task.custom_fields) } : {};
+
+/** Clique na bolinha: aberta → em revisão (mesma etapa); em revisão → volta ao normal; concluída → reabre. */
+export function taskCircleChange(task: MarketingTask, columns: MarketingTaskColumn[], now = new Date().toISOString()): UpdateMarketingTaskInput {
+  if (task.is_completed || task.status === "done") return taskCompletionChange(task, false, columns);
+  return { id: task.id, custom_fields: isTaskInReview(task) ? withoutReview(task.custom_fields) : withReview(task, now) };
 }
 
 export function taskBulkChanges(tasks: MarketingTask[], action: TaskBulkAction, columns: MarketingTaskColumn[]): UpdateMarketingTaskInput[] {
   return tasks.map((task) => {
-    if (action.kind === "move") return { id: task.id, column_id: action.column.id, is_completed: action.column.is_done, status: action.column.is_done ? "done" : "pending" };
+    if (action.kind === "move") return { id: task.id, column_id: action.column.id, is_completed: action.column.is_done, status: action.column.is_done ? "done" : "pending", ...(action.column.is_done ? clearReview(task) : {}) };
     if (action.kind === "priority") return { id: task.id, priority: action.priority };
     return taskCompletionChange(task, action.kind === "complete", columns);
   });

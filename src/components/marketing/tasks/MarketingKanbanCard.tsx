@@ -3,7 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { format, isToday, isTomorrow, isPast, startOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
-import { CalendarIcon, GripVertical, CheckCircle2, Circle, ListTodo, Paperclip, AlertCircle } from "lucide-react";
+import { CalendarIcon, GripVertical, CheckCircle2, Circle, CircleDot, Eye, ListTodo, Paperclip, AlertCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import { TaskPeopleAndLabels } from "./TaskPeopleAndLabels";
 import { TaskCardCover } from "./TaskCover";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { TaskSelectionProps } from "./TaskSelection";
+import { isTaskInReview } from "@/lib/marketing/taskReview";
 
 function isTaskOverdue(task: MarketingTask): boolean {
   if (!task.due_date || task.is_completed || task.status === "done") return false;
@@ -60,6 +61,7 @@ export function MarketingKanbanCard({
 
   const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
   const details = readTaskDetails(task);
+  const inReview = isTaskInReview(task);
   const isPastDue = dueDate && isPast(dueDate) && !isToday(dueDate) && !task.is_completed;
   const isDueToday = dueDate && isToday(dueDate);
   const isDueTomorrow = dueDate && isTomorrow(dueDate);
@@ -83,6 +85,7 @@ export function MarketingKanbanCard({
         isDragging && "opacity-50 shadow-lg rotate-2",
         task.is_completed && "opacity-60",
         isTaskOverdue(task) && "border-destructive/60 bg-destructive/5 hover:border-destructive",
+        inReview && "border-warning/70 bg-warning-soft/60 hover:border-warning",
         selectionMode && selectedTaskIds?.has(task.id) && "ring-2 ring-primary border-primary"
       )}
       onClick={() => { if (selectionDisabled) return; if (selectionMode) onSelectTask?.(task.id); else onEdit(); }}
@@ -104,7 +107,8 @@ export function MarketingKanbanCard({
           type="button"
           variant="ghost"
           size="icon"
-          aria-label={task.is_completed ? "Reabrir tarefa" : "Concluir tarefa"}
+          aria-label={task.is_completed ? "Reabrir tarefa" : inReview ? "Tirar da revisão" : "Enviar para revisão"}
+          title={task.is_completed ? "Reabrir tarefa" : inReview ? "Tirar da revisão" : "Enviar para revisão"}
           disabled={selectionDisabled}
           onClick={(e) => {
             e.stopPropagation();
@@ -114,6 +118,8 @@ export function MarketingKanbanCard({
         >
           {task.is_completed ? (
             <CheckCircle2 className="h-5 w-5 text-primary" />
+          ) : inReview ? (
+            <CircleDot className="h-5 w-5 text-warning" />
           ) : (
             <Circle className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
           )}
@@ -137,6 +143,13 @@ export function MarketingKanbanCard({
               </Badge>
             )}
           </div>
+
+          {inReview && (
+            <Badge variant="secondary" className="mt-1 h-5 gap-1 bg-warning-soft px-1.5 py-0 text-[10px] text-warning-strong hover:bg-warning-soft">
+              <Eye className="h-3 w-3" />
+              Em revisão
+            </Badge>
+          )}
 
           <TaskPeopleAndLabels task={task} />
 

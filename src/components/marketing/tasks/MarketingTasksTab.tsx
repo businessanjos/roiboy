@@ -38,7 +38,9 @@ import { useMarketingTaskSeparators } from "@/hooks/useMarketingTaskSeparators";
 import { TaskSeparatorDialog } from "./TaskSeparator";
 import type { TaskSeparator } from "@/lib/marketing/taskPresentation";
 import { TaskBulkToolbar } from "./TaskBulkToolbar";
-import { taskCompletionChange, taskBulkChanges, type TaskBulkAction } from "@/lib/marketing/taskChanges";
+import { taskCircleChange, taskBulkChanges, type TaskBulkAction } from "@/lib/marketing/taskChanges";
+import { isTaskInReview, reviewFirst } from "@/lib/marketing/taskReview";
+import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { TASK_SORT_LABELS, isTaskSort, sortMarketingTasks, type TaskSort } from "@/lib/marketing/taskSort";
 
@@ -229,7 +231,7 @@ export function MarketingTasksTab() {
       return matchesSearch && matchesAssignee && matchesStatus && matchesTaskLabels(t, labelFilter);
     });
 
-    return sortMarketingTasks(filtered, sortFilter);
+    return reviewFirst(sortMarketingTasks(filtered, sortFilter));
   }, [tasks, searchQuery, assigneeFilter, statusFilter, sortFilter, labelFilter, subtaskTitles]);
 
   // Selection never silently includes tasks hidden by a new filter or revoked access.
@@ -295,18 +297,19 @@ export function MarketingTasksTab() {
 
   const handleColumnChange = async (taskId: string, column: MarketingTaskColumn) => {
     if (isChangingTasks) return;
-    updateTask.mutate({
-      id: taskId,
-      column_id: column.id,
-      is_completed: column.is_done,
-      status: column.is_done ? "done" : "pending",
-    });
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) updateTask.mutate(taskBulkChanges([task], { kind: "move", column }, columns)[0]);
   };
 
-  const handleToggleComplete = async (taskId: string, completed: boolean) => {
+  // A bolinha não conclui: marca "Em revisão" na mesma etapa. Concluir é mover para a etapa final.
+  const handleToggleComplete = async (taskId: string) => {
     if (isChangingTasks) return;
     const task = tasks.find((t) => t.id === taskId);
-    if (task) updateTask.mutate(taskCompletionChange(task, completed, columns));
+    if (!task) return;
+    const sending = !task.is_completed && !isTaskInReview(task);
+    updateTask.mutate(taskCircleChange(task, columns), {
+      onSuccess: () => { if (sending) toast.success("Tarefa em revisão", { description: "Para concluir, mova para a etapa de concluído." }); },
+    });
   };
 
   if (isLoading) {

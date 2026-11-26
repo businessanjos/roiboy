@@ -1,3 +1,4 @@
+import { withoutReview } from "@/lib/marketing/taskReview";
 import { useEffect, useId, useRef, useState } from "react";
 import { parseLocalDate } from "@/lib/dateUtils";
 import {
@@ -218,7 +219,7 @@ export function MarketingTaskDialog({
         status: finalColumn?.is_done ? "done" as const : "pending" as const,
         is_completed: !!finalColumn?.is_done,
         tags: labels.map((label) => label.name),
-        custom_fields: writeTaskDescription(writeTaskCover(customFields, cover), description.trim(), descriptionDocument, markerColors),
+        custom_fields: writeTaskDescription(writeTaskCover(finalColumn?.is_done ? withoutReview(customFields) : customFields, cover), description.trim(), descriptionDocument, markerColors),
         media_attachments: mediaAttachments,
         ...(source?.recurrence_source_id && !copySource ? {} : { recurrence_rule: recurrence }),
       };
