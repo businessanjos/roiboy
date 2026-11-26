@@ -1,5 +1,15 @@
 import { memo, useMemo, useState } from "react";
-import { Users, Plus, MoreVertical, Pencil, Trash2, Globe } from "lucide-react";
+import { Users, Plus, MoreVertical, Pencil, Trash2, Globe, UserX, UserCheck } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { sectors } from "@/config/sectors";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +47,8 @@ interface ZappTeamListProps {
   onToggleAgentGlobalAccess?: (agent: Agent) => void;
   canManageGlobalAccess?: boolean;
   onDeleteAgent: (agentId: string) => void;
+  onSetAgentActive?: (agent: Agent, active: boolean) => void;
+  canManageAgents?: boolean;
   departments?: Department[];
   sectorId?: string | null;
 }
@@ -50,10 +62,14 @@ export const ZappTeamList = memo(function ZappTeamList({
   onToggleAgentGlobalAccess,
   canManageGlobalAccess = false,
   onDeleteAgent,
+  onSetAgentActive,
+  canManageAgents = false,
   departments = [],
   sectorId,
 }: ZappTeamListProps) {
   const [scope, setScope] = useState<"sector" | "all">("sector");
+  const [showInactive, setShowInactive] = useState(false);
+  const [deactivating, setDeactivating] = useState<Agent | null>(null);
 
   const sectorLabel = sectorId
     ? sectors.find((s) => s.id === sectorId)?.name ??
@@ -72,12 +88,21 @@ export const ZappTeamList = memo(function ZappTeamList({
 
   const canFilterBySector = !!sectorId && sectorDepartmentIds.size > 0;
 
-  const visibleAgents = useMemo(() => {
+  const scopedAgents = useMemo(() => {
     if (!canFilterBySector || scope === "all") return agents;
     return agents.filter(
       (a) => !a.department_id || sectorDepartmentIds.has(a.department_id)
     );
   }, [agents, canFilterBySector, scope, sectorDepartmentIds]);
+
+  // Inativos saem da aba; só aparecem (apagados, no fim) quando alguém pede para ver.
+  const inactiveCount = scopedAgents.filter((a) => a.is_active === false).length;
+  const visibleAgents = useMemo(() => {
+    const active = scopedAgents.filter((a) => a.is_active !== false);
+    if (!showInactive) return active;
+    return [...active, ...scopedAgents.filter((a) => a.is_active === false)];
+  }, [scopedAgents, showInactive]);
+  const activeTotal = agents.filter((a) => a.is_active !== false).length;
 
   return (
     <div className="p-4 space-y-4">
@@ -110,9 +135,19 @@ export const ZappTeamList = memo(function ZappTeamList({
             </SelectContent>
           </Select>
           <span className="text-zapp-text-muted text-xs">
-            {visibleAgents.length} de {agents.length}
+            {visibleAgents.filter((a) => a.is_active !== false).length} de {activeTotal}
           </span>
         </div>
+      )}
+
+      {inactiveCount > 0 && (
+        <button
+          type="button"
+          className="text-xs text-zapp-text-muted underline-offset-2 hover:underline"
+          onClick={() => setShowInactive((v) => !v)}
+        >
+          {showInactive ? "Ocultar inativos" : `Mostrar inativos (${inactiveCount})`}
+        </button>
       )}
 
 
@@ -120,8 +155,8 @@ export const ZappTeamList = memo(function ZappTeamList({
         <div className="text-center py-8">
           <Users className="h-12 w-12 text-zapp-text-muted mx-auto mb-3" />
           <p className="text-zapp-text-muted text-sm">
-            {agents.length === 0
-              ? "Nenhum atendente cadastrado"
+            {activeTotal === 0
+              ? "Nenhum atendente ativo"
               : `Nenhum atendente vinculado a ${sectorLabel}`}
           </p>
         </div>
@@ -129,10 +164,19 @@ export const ZappTeamList = memo(function ZappTeamList({
         <div className="space-y-2">
           {visibleAgents.map((agent) => {
             const teamUser = teamUsers.find(u => u.id === agent.user_id);
+            const inactive = agent.is_active === false;
+            const roleBadges = teamUser?.team_roles?.length
+              ? teamUser.team_roles
+              : teamUser?.team_role
+                ? [teamUser.team_role]
+                : [];
             return (
               <div
                 key={agent.id}
-                className="flex flex-wrap items-center gap-3 p-3 bg-zapp-panel rounded-lg"
+                className={cn(
+                  "flex flex-wrap items-center gap-3 p-3 bg-zapp-panel rounded-lg",
+                  inactive && "opacity-60"
+                )}
               >
                 <div className="relative">
                   <Avatar className="h-10 w-10">
@@ -153,16 +197,19 @@ export const ZappTeamList = memo(function ZappTeamList({
                     <span className="text-zapp-text text-sm font-medium truncate">
                       {agent.user?.name}
                     </span>
-                    {teamUser?.team_role && (
-                      <Badge 
-                        variant="outline" 
+                    {roleBadges.map((role) => (
+                      <Badge
+                        key={role.id}
+                        variant="outline"
                         className="text-[10px] px-1.5 py-0 border-zapp-border"
-                        style={{ 
-                          borderColor: teamUser.team_role.color,
-                          color: teamUser.team_role.color
-                        }}
+                        style={{ borderColor: role.color, color: role.color }}
                       >
-                        {teamUser.team_role.name}
+                        {role.name}
+                      </Badge>
+                    ))}
+                    {inactive && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-zapp-border text-zapp-text-muted">
+                        Inativo
                       </Badge>
                     )}
                     {agent.has_global_access && (
@@ -242,6 +289,19 @@ export const ZappTeamList = memo(function ZappTeamList({
                         <Pencil className="h-4 w-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
+                      {onSetAgentActive && canManageAgents && (
+                        inactive ? (
+                          <DropdownMenuItem className="text-zapp-text" onClick={() => onSetAgentActive(agent, true)}>
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            Reativar
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem className="text-zapp-text" onClick={() => setDeactivating(agent)}>
+                            <UserX className="h-4 w-4 mr-2" />
+                            Inativar
+                          </DropdownMenuItem>
+                        )
+                      )}
                       <DropdownMenuSeparator className="bg-zapp-border" />
                       <DropdownMenuItem 
                         className="text-destructive"
@@ -258,6 +318,29 @@ export const ZappTeamList = memo(function ZappTeamList({
           })}
         </div>
       )}
+
+      <AlertDialog open={!!deactivating} onOpenChange={(o) => !o && setDeactivating(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Inativar {deactivating?.user?.name ?? "atendente"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A pessoa sai desta aba e deixa de receber conversas. As conversas abertas dela ficam sem
+              dono, na fila, para quem quiser puxar. O histórico é mantido e dá para reativar depois.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deactivating) onSetAgentActive?.(deactivating, false);
+                setDeactivating(null);
+              }}
+            >
+              Inativar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 });

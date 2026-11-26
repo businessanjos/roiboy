@@ -237,6 +237,28 @@ export function useZappCrudOperations({
     }
   }, [fetchData]);
 
+  // Inativar tira a pessoa da aba e da distribuição; as conversas abertas ficam sem dono.
+  const setAgentActive = useCallback(async (agent: Agent, active: boolean) => {
+    try {
+      const { data, error } = await (supabase as any).rpc("set_zapp_agent_active", {
+        _agent_id: agent.id,
+        _active: active,
+      });
+      if (error) throw error;
+      const released = Number(data?.released ?? 0);
+      if (active) toast.success("Atendente reativado");
+      else if (released > 0)
+        toast.success(
+          `Atendente inativado. ${released} ${released === 1 ? "conversa ficou" : "conversas ficaram"} sem dono na fila.`,
+        );
+      else toast.success("Atendente inativado");
+      fetchData();
+    } catch (error: any) {
+      console.error("Error changing agent active state:", error);
+      toast.error(error.message || "Erro ao alterar o atendente");
+    }
+  }, [fetchData]);
+
   const toggleAgentGlobalAccess = useCallback(async (agent: Agent) => {
     try {
       const next = !agent.has_global_access;
@@ -435,6 +457,7 @@ export function useZappCrudOperations({
     deleteAgent,
     toggleAgentOnline,
     toggleAgentGlobalAccess,
+    setAgentActive,
 
     // Tag
     tagDialogOpen,

@@ -353,3 +353,9 @@
 - [x] Trocar o nome atualiza a lista e todas as fichas (clientes e leads), com aviso do que muda antes de salvar
 - [x] Excluir área em uso pede para mover as fichas, tirar das fichas ou editar o nome
 - [x] Nomes fora da lista oficial podem ser movidos ou oficializados; coluna "Em uso" na tabela
+
+## RoyZapp: aba Equipe
+- [x] Natiely inativada (sem conversas abertas para liberar); Amanda com cargo CX + Consultor
+- [x] Inativos fora da aba, com Inativar/Reativar no menu; conversas abertas ficam sem dono na fila
+- [x] Selo de cargo segue todos os cargos marcados na Equipe
+- [ ] Conferência visual da aba na prévia: aguarda sessão do usuário (entrada automática recusada nesta rodada)

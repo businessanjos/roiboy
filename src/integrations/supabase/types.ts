@@ -32379,6 +32379,10 @@ export type Database = {
         Args: { _phone: string; _user_id: string }
         Returns: undefined
       }
+      set_zapp_agent_active: {
+        Args: { _active: boolean; _agent_id: string }
+        Returns: Json
+      }
       set_zapp_queue_pull_approval: {
         Args: { _enabled: boolean }
         Returns: undefined

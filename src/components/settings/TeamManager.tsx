@@ -417,7 +417,7 @@ export function TeamManager() {
             user_id: selectedUser.id,
             team_role_id: roleId,
           })));
-        if (rolesError) console.error("Error syncing user roles:", rolesError);
+        if (rolesError) throw new Error("Não foi possível salvar as funções. Tente novamente.");
       }
 
       // If password was provided, update it via edge function

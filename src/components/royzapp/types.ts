@@ -63,6 +63,8 @@ export interface TeamUser {
     name: string;
     color: string;
   } | null;
+  /** Todos os cargos marcados em Configurações > Equipe. */
+  team_roles?: { id: string; name: string; color: string }[];
 }
 
 export interface Message {

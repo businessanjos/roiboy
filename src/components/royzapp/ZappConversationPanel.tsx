@@ -154,6 +154,7 @@ interface ZappConversationPanelProps {
   onToggleAgentGlobalAccess?: (agent: Agent) => void;
   canManageGlobalAccess?: boolean;
   onDeleteAgent: (agentId: string) => void;
+  onSetAgentActive?: (agent: Agent, active: boolean) => void;
   onOpenDepartmentDialog: (department: Department | null) => void;
   onDeleteDepartment: (departmentId: string) => void;
   onOpenTagDialog: (tag: ZappTag | null) => void;
@@ -255,6 +256,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onToggleAgentGlobalAccess,
   canManageGlobalAccess = false,
   onDeleteAgent,
+  onSetAgentActive,
   onOpenDepartmentDialog,
   onDeleteDepartment,
   onOpenTagDialog,
@@ -1003,6 +1005,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             onToggleAgentGlobalAccess={onToggleAgentGlobalAccess}
             canManageGlobalAccess={canManageGlobalAccess}
             onDeleteAgent={onDeleteAgent}
+            onSetAgentActive={onSetAgentActive}
+            canManageAgents={canManageGlobalAccess}
             departments={departments}
             sectorId={sectorId}
           />

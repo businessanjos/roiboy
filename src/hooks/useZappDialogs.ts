@@ -1,3 +1,4 @@
+import { resolveTeamRoleBadges } from "@/lib/royzapp/teamRoleBadges";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -80,7 +81,7 @@ export function useZappDialogs(options: UseZappDialogsOptions) {
           .order("created_at"),
         visiblePeopleQuery(supabase
           .from("users")
-          .select("id, name, email, avatar_url, role, team_role_id, is_also_admin, team_role:team_roles(id, name, color)"))
+          .select("id, name, email, avatar_url, role, team_role_id, is_also_admin, team_role:team_roles(id, name, color), user_team_roles(team_roles(id, name, color))"))
           .eq("account_id", accountId)
           .order("name"),
         supabase
@@ -140,7 +141,15 @@ export function useZappDialogs(options: UseZappDialogsOptions) {
     }
 
     setDepartments(finalDepartments);
-    setTeamUsers(filterVisiblePeople(usersData) as TeamUser[]);
+    setTeamUsers(
+      (filterVisiblePeople(usersData) as any[]).map((u) => ({
+        ...u,
+        team_roles: resolveTeamRoleBadges(
+          (u.user_team_roles ?? []).map((r: any) => r.team_roles),
+          u.team_role,
+        ),
+      })) as TeamUser[],
+    );
     setTeamRoles(rolesData || []);
 
     // Auto-register agent if needed

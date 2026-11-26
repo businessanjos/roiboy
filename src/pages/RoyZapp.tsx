@@ -2002,6 +2002,7 @@ export default function RoyZapp() {
           onToggleAgentGlobalAccess={crud.toggleAgentGlobalAccess}
           canManageGlobalAccess={isAdmin || isManagementUser(currentUser)}
           onDeleteAgent={crud.setDeletingAgentId}
+          onSetAgentActive={crud.setAgentActive}
           onOpenDepartmentDialog={crud.openDepartmentDialog}
           onDeleteDepartment={crud.setDeletingDepartmentId}
           onOpenTagDialog={crud.openTagDialog}
