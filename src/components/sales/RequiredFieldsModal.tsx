@@ -11,7 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, Repeat, Receipt, CalendarDays, CalendarRange, ArrowUp, type LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { InlineFieldInput } from "@/components/sales/InlineFieldInput";
@@ -25,7 +26,6 @@ import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from
 import { BonusSelector } from "@/components/sales/BonusSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BillingMentoreeSection, BillingMentoreeValues, isBillingMentoreeComplete } from "@/components/sales/BillingMentoreeSection";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   allowedSubscriptionPayments,
   isSubscriptionAnswerComplete,
@@ -504,13 +504,15 @@ export function RequiredFieldsModal({
     (f) => f.name !== PAYMENT_BREAKDOWN_FIELD_NAME && !(subscriptionActive && f.id === paymentMethodField?.id),
   );
 
-  const renderField = (field: CustomField) => {
+  const renderField = (field: CustomField, hideLabel = false) => {
     const bonusField = isBonusField(field.name);
     return (
       <div key={field.id} className="space-y-2">
-        <Label className="text-sm font-medium">
-          {field.name} <span className="text-destructive">*</span>
-        </Label>
+        {!hideLabel && (
+          <Label className="text-sm font-medium">
+            {field.name} <span className="text-destructive">*</span>
+          </Label>
+        )}
         {bonusField ? (
           <BonusSelector
             dealId={dealId}
@@ -541,60 +543,122 @@ export function RequiredFieldsModal({
   };
 
 
+  const stepHeader = (step: number, title: string, done: boolean) => (
+    <div className="flex items-center gap-2.5">
+      <span
+        className={cn(
+          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors",
+          done ? "bg-primary text-primary-foreground" : "border border-border bg-background text-muted-foreground",
+        )}
+      >
+        {done ? <Check className="h-3.5 w-3.5" /> : step}
+      </span>
+      <Label className="text-sm font-semibold leading-tight">
+        {title} <span className="text-destructive">*</span>
+      </Label>
+    </div>
+  );
+
+  const choiceCards = <T extends string>(
+    label: string,
+    selected: T | null,
+    onSelect: (value: T) => void,
+    options: { value: T; title: string; hint: string; icon: LucideIcon }[],
+    disabled = false,
+  ) => (
+    <div role="radiogroup" aria-label={label} className="grid grid-cols-2 gap-2">
+      {options.map(({ value, title, hint, icon: Icon }) => {
+        const active = selected === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            disabled={disabled}
+            onClick={() => onSelect(value)}
+            className={cn(
+              "relative flex min-h-[76px] flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              "disabled:cursor-not-allowed disabled:opacity-60",
+              active
+                ? "border-primary bg-primary/10 shadow-sm"
+                : "border-border bg-background hover:border-primary/50 hover:bg-muted/50",
+            )}
+          >
+            <span className="flex w-full items-center gap-2">
+              <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
+              <span className="text-sm font-semibold">{title}</span>
+              <span
+                className={cn(
+                  "ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                  active ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40",
+                )}
+              >
+                {active && <Check className="h-3 w-3" />}
+              </span>
+            </span>
+            <span className="text-xs leading-snug text-muted-foreground">{hint}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // O restante do ganho só abre depois da pergunta de assinatura (e do ciclo, quando for assinatura).
+  const subscriptionAnswered =
+    !subscriptionRequired || isSubscription === false || (isSubscription === true && subscriptionCycle !== null);
+
   const subscriptionSection = subscriptionRequired ? (
-    <div className="space-y-4 rounded-lg border border-border bg-muted/30 p-3">
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">
-          É uma assinatura? <span className="text-destructive">*</span>
-        </Label>
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          className="justify-start"
-          disabled={subscriptionState === null}
-          value={isSubscription === null ? "" : isSubscription ? "yes" : "no"}
-          onValueChange={(next) => {
-            if (!next) return;
+    <div className="space-y-4 rounded-xl border border-border bg-muted/30 p-4">
+      <div className="space-y-2.5">
+        {stepHeader(1, "É uma assinatura?", isSubscription !== null)}
+        {choiceCards<"yes" | "no">(
+          "É uma assinatura?",
+          isSubscription === null ? null : isSubscription ? "yes" : "no",
+          (next) => {
             const yes = next === "yes";
             setIsSubscription(yes);
             if (!yes) setSubscriptionCycle(null);
-          }}
-          aria-label="É uma assinatura?"
-        >
-          <ToggleGroupItem value="yes" className="h-11 min-w-20 sm:h-9">Sim</ToggleGroupItem>
-          <ToggleGroupItem value="no" className="h-11 min-w-20 sm:h-9">Não</ToggleGroupItem>
-        </ToggleGroup>
+          },
+          [
+            { value: "yes", title: "Sim", hint: "Cobrança que se repete", icon: Repeat },
+            { value: "no", title: "Não", hint: "Venda única", icon: Receipt },
+          ],
+          subscriptionState === null,
+        )}
       </div>
 
       {isSubscription === true && (
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">
-            É uma assinatura mensal ou anual? <span className="text-destructive">*</span>
-          </Label>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            className="justify-start"
-            value={subscriptionCycle ?? ""}
-            onValueChange={(next) => {
-              if (next) applyCycle(next as SubscriptionCycle);
-            }}
-            aria-label="É uma assinatura mensal ou anual?"
-          >
-            <ToggleGroupItem value="monthly" className="h-11 min-w-20 sm:h-9">Mensal</ToggleGroupItem>
-            <ToggleGroupItem value="annual" className="h-11 min-w-20 sm:h-9">Anual</ToggleGroupItem>
-          </ToggleGroup>
-          <p className="text-xs text-muted-foreground">
-            {subscriptionCycle === "annual"
-              ? "Assinatura anual: Pix ou Cartão de crédito."
-              : subscriptionCycle === "monthly"
-                ? "Assinatura mensal: Cartão recorrência."
-                : "A forma de pagamento disponível depende dessa escolha."}
-          </p>
+        <div className="space-y-2.5 border-t border-border pt-4">
+          {stepHeader(2, "Mensal ou anual?", subscriptionCycle !== null)}
+          {choiceCards<SubscriptionCycle>(
+            "É uma assinatura mensal ou anual?",
+            subscriptionCycle,
+            (next) => applyCycle(next),
+            [
+              { value: "monthly", title: "Mensal", hint: "Cartão recorrência", icon: CalendarDays },
+              { value: "annual", title: "Anual", hint: "Pix ou Cartão de crédito", icon: CalendarRange },
+            ],
+          )}
         </div>
       )}
 
-      {subscriptionActive && subscriptionCycle && paymentMethodField && renderField(paymentMethodField)}
+      {subscriptionActive && subscriptionCycle && paymentMethodField && (
+        <div className="space-y-2.5 border-t border-border pt-4">
+          {stepHeader(3, "Forma de pagamento", !!paymentMethodValue)}
+          {renderField(paymentMethodField, true)}
+        </div>
+      )}
+
+      {!subscriptionAnswered && (
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <ArrowUp className="h-3.5 w-3.5 shrink-0" />
+          {isSubscription === true
+            ? "Escolha mensal ou anual para liberar o restante do ganho."
+            : "Responda primeiro para liberar o restante do ganho."}
+        </p>
+      )}
     </div>
   ) : null;
 
@@ -635,15 +699,15 @@ export function RequiredFieldsModal({
 
               <TabsContent value="fields" className="space-y-6 mt-4">
                 {subscriptionSection}
-                {displayedFields.length > 0 && (
+                {subscriptionAnswered && displayedFields.length > 0 && (
                   <div className="space-y-4">
                     {displayedFields.map((field) => renderField(field))}
                   </div>
                 )}
 
-                {receivedValueSection}
+                {subscriptionAnswered && receivedValueSection}
 
-                {showBilling && draftHydrated && (
+                {subscriptionAnswered && showBilling && draftHydrated && (
                   <BillingMentoreeSection
                     dealId={dealId}
                     accountId={accountId}
@@ -670,14 +734,14 @@ export function RequiredFieldsModal({
           ) : (
             <div className="space-y-6">
               {subscriptionSection}
-              {displayedFields.length > 0 && (
+              {subscriptionAnswered && displayedFields.length > 0 && (
                 <div className="space-y-4">
                   {displayedFields.map((field) => renderField(field))}
                 </div>
               )}
-              {receivedValueSection}
+              {subscriptionAnswered && receivedValueSection}
 
-              {showBilling && draftHydrated && (
+              {subscriptionAnswered && showBilling && draftHydrated && (
                 <BillingMentoreeSection
                   dealId={dealId}
                   accountId={accountId}

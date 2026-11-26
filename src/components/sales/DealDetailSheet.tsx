@@ -103,6 +103,7 @@ import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
 import { ContractSummaryPanel } from "./contracts/ContractSummaryPanel";
 import { RykaPaySubscriptions } from "@/components/client/RykaPaySubscriptions";
+import { canShowPaySubscriptions, resolveDealDetailTab } from "@/lib/sales/paySubscriptionsTab";
 import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
 import { CallTimelineEvent, dedupeCalls, type ConversationCall } from "@/components/telephony/CallTimelineEvent";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -242,6 +243,8 @@ export function DealDetailSheet({
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeDetailTab, setActiveDetailTab] = useState("history");
+  const showPaySubscriptions = canShowPaySubscriptions(deal?.status);
+  const detailTab = resolveDealDetailTab(activeDetailTab, deal?.status);
   const [activities, setActivities] = useState<DealActivity[]>([]);
   const [dealCalls, setDealCalls] = useState<ConversationCall[]>([]);
 
@@ -1985,27 +1988,29 @@ export function DealDetailSheet({
 
               {/* Right Column - Tabs for History and Tasks */}
               <div className="space-y-3">
-                <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab} className="w-full">
+                <Tabs value={detailTab} onValueChange={setActiveDetailTab} className="w-full">
                   <TabsList className="flex w-full justify-start overflow-x-auto h-[52px] sm:h-11">
-                    <TabsTrigger value="history" className="text-xs h-11 shrink-0 flex-1 px-2">
+                    <TabsTrigger value="history" className="text-[11px] h-11 min-w-0 flex-auto px-1.5">
                       <Clock className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Histórico</span>
                     </TabsTrigger>
-                    <TabsTrigger value="activities" className="text-xs h-11 shrink-0 flex-1 px-2">
+                    <TabsTrigger value="activities" className="text-[11px] h-11 min-w-0 flex-auto px-1.5">
                       <ListTodo className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Atividades</span>
                     </TabsTrigger>
-                    <TabsTrigger value="briefing" className="text-xs h-11 shrink-0 flex-1 px-2">
+                    {showPaySubscriptions && (
+                      <TabsTrigger value="pay-subscriptions" className="text-[11px] h-11 min-w-0 flex-auto px-1.5">
+                        <icons.CreditCard className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
+                        <span className="truncate">Assinaturas</span>
+                      </TabsTrigger>
+                    )}
+                    <TabsTrigger value="briefing" className="text-[11px] h-11 min-w-0 flex-auto px-1.5">
                       <icons.ClipboardList className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Briefing Op.</span>
                     </TabsTrigger>
-                    <TabsTrigger value="contract" className="text-xs h-11 shrink-0 flex-1 px-2">
+                    <TabsTrigger value="contract" className="text-[11px] h-11 min-w-0 flex-auto px-1.5">
                       <icons.FileSignature className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
                       <span className="truncate">Contrato</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="pay-subscriptions" className="text-xs h-11 shrink-0 flex-1 px-2">
-                      <icons.CreditCard className="h-3 w-3 mr-1 shrink-0 hidden 2xl:block" />
-                      Assinaturas
                     </TabsTrigger>
                   </TabsList>
 
@@ -2349,9 +2354,11 @@ export function DealDetailSheet({
                   <TabsContent value="contract" className="mt-3">
                     <ContractSummaryPanel dealId={deal.id} />
                   </TabsContent>
-                  <TabsContent value="pay-subscriptions" className="mt-3">
-                    <RykaPaySubscriptions key={deal.id} dealId={deal.id} />
-                  </TabsContent>
+                  {showPaySubscriptions && (
+                    <TabsContent value="pay-subscriptions" className="mt-3">
+                      <RykaPaySubscriptions key={deal.id} dealId={deal.id} />
+                    </TabsContent>
+                  )}
                 </Tabs>
               </div>
             </div>
