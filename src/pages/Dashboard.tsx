@@ -1154,7 +1154,7 @@ export default function Dashboard() {
                 className="h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0"
                 onClick={() => navigate("/contracts?status=active")}
               >
-                Contratos abertos
+                Contratos ativos
                 {typeof shownActiveClients === "number" && (
                   <Badge variant="secondary" className="ml-2">{shownActiveClients}</Badge>
                 )}
