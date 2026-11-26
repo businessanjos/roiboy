@@ -283,14 +283,17 @@ export function RequiredFieldsModal({
     return value !== null && value !== undefined && value !== "";
   });
 
-  const breakdownOk = !needsBreakdown || isBreakdownComplete(breakdown);
+  // Em assinatura o vendedor não digita valor/data: ou vem do RykaPay, ou fica em branco.
+  const sellerFillsBreakdown = needsBreakdown && !subscriptionActive;
+  const payBreakdownReady = subscriptionActive && payLocked && isBreakdownComplete(breakdown);
+  const breakdownOk = !sellerFillsBreakdown || isBreakdownComplete(breakdown);
   // Briefing operacional é OBRIGATÓRIO em todo ganho (inclui carteira/renovação)
   const briefingOk = !showBriefing || briefingComplete;
   const billingOk = !showBilling || isBillingMentoreeComplete(billingValues);
   // Valor recebido (cash collect) é obrigatório no ganho — pode ser 0, mas precisa ser informado.
   const parsedReceived = Number(String(receivedValue).replace(/\./g, "").replace(",", "."));
   const receivedOk = !showBilling || (receivedValue.trim() !== "" && Number.isFinite(parsedReceived) && parsedReceived >= 0);
-  const canSave = subscriptionOk && allFieldsFilled && breakdownOk && briefingOk && billingOk && receivedOk;
+  const canSave = subscriptionOk && allFieldsFilled && breakdownOk && briefingOk && billingOk && receivedOk && !payChecking;
 
   const handleSave = async () => {
     setSaving(true);
@@ -356,8 +359,11 @@ export function RequiredFieldsModal({
 
       // Save the payment breakdown into "Detalhamento de Pagamento" if applicable.
       // Em assinatura, trocar para uma forma sem detalhamento (Pix) limpa o detalhamento da forma anterior.
-      const clearStaleBreakdown = !!subscriptionPaymentField && !paymentKeptFromDeal && !needsBreakdown;
-      if (needsBreakdown || clearStaleBreakdown) {
+      // Sem pagamento no RykaPay, nada digitado à mão é gravado: o detalhamento antigo é limpo.
+      const clearStaleBreakdown = subscriptionActive
+        ? !!paymentMethodField && !paymentKeptFromDeal && !payBreakdownReady
+        : !!subscriptionPaymentField && !paymentKeptFromDeal && !needsBreakdown;
+      if (sellerFillsBreakdown || payBreakdownReady || clearStaleBreakdown) {
         const breakdownField = missingFields.find((f) => f.name === PAYMENT_BREAKDOWN_FIELD_NAME);
         // Fall back to fetching it if it's not part of missingFields (e.g. already filled but still required)
         let breakdownFieldId = breakdownField?.id;
@@ -563,7 +569,13 @@ export function RequiredFieldsModal({
             Consultando o RykaPay…
           </p>
         )}
-        {field.id === paymentMethodField?.id && !payChecking && payCharge && !needsBreakdown && (
+        {field.id === paymentMethodField?.id && subscriptionActive && !payChecking && !payCharge && !!paymentMethodValue && (
+          <div className="mt-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+            Valor e data da cobrança vêm do RykaPay. Ainda não há pagamento registrado lá — quando houver,
+            aparece na aba Assinaturas do negócio.
+          </div>
+        )}
+        {field.id === paymentMethodField?.id && subscriptionActive && !payChecking && payCharge && (
           <div className="mt-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
             Já pago no RykaPay:{" "}
             <span className="font-medium text-foreground">
@@ -575,14 +587,12 @@ export function RequiredFieldsModal({
             </span>
           </div>
         )}
-        {field.id === paymentMethodField?.id && needsBreakdown && !payChecking && (
+        {field.id === paymentMethodField?.id && sellerFillsBreakdown && (
           <PaymentBreakdownComposer
             paymentMethodValue={paymentMethodValue as string}
             paymentMethodLabel={paymentMethodLabel}
             value={breakdown}
             onChange={setBreakdown}
-            hideInstallments={subscriptionActive}
-            lockedByPay={payLocked}
           />
         )}
       </div>

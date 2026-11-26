@@ -368,4 +368,5 @@
 ## Ganho de assinatura: pagamento vem do RykaPay
 - [x] Assinatura (mensal ou anual) não pede "Nº de parcelas"
 - [x] Se já houver pagamento no RykaPay, valor e data aparecem só para leitura no ganho
+- [x] Em assinatura o bloco de detalhamento (valor, data, cash collect) não aparece mais para o vendedor
 - [ ] Conferência visual do ganho na prévia com um negócio real já pago
