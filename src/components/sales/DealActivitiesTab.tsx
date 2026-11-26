@@ -40,6 +40,7 @@ import {
   CheckSquare,
 } from "lucide-react";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
+import { selectAllActivityIds } from "@/lib/sales/activitySelection";
 
 type SortMode = "due_asc" | "due_desc" | "created_desc";
 
@@ -323,7 +324,8 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
   };
 
   const visibleCompleted = showAllCompleted ? completedTasks : completedTasks.slice(0, 5);
-  const selectableIds = [...pendingTasks, ...visibleCompleted].map(t => t.id);
+  // "Marcar todas" pega só as pendentes; concluídas só saem se marcadas uma a uma.
+  const selectableIds = selectAllActivityIds(tasks);
   const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedIds.has(id));
 
   const exitSelection = () => {
