@@ -6,6 +6,8 @@ import { documentNumbers, matchesPayProduct, normalizePaySubscription, normalize
 const BASE = "https://rykapay.app/api/public/v1";
 // One company's credential must never become a cross-account lookup service.
 const ROY_ACCOUNT = "796e7970-fd93-4574-a871-6090624cace6";
+// Deal custom fields "CPF ou CNPJ" and "CPF/CNPJ (NF)".
+const DEAL_DOCUMENT_FIELDS = ["de5d8543-287e-4ad9-917a-813d48d0d3eb", "d177b69b-b95c-439c-b52e-8f7117866619"];
 const Input = z.object({ dealId: z.string().uuid().optional(), clientId: z.string().uuid().optional() }).strict()
   .refine(v => Boolean(v.dealId) !== Boolean(v.clientId));
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
@@ -71,6 +73,21 @@ Deno.serve(async req => {
       const { data, error } = await db.from("leads").select("cpf,cnpj").eq("id", linkedLeadId).eq("account_id", me.account_id).maybeSingle();
       if (error || !data) return reply({ error: "Lead não disponível para você." }, 404);
       for (const v of [data.cpf, data.cnpj]) { const doc = documentNumbers(v); if (doc) docs.add(doc); }
+    }
+    // The sales team records the payer document on the deal ("CPF ou CNPJ" / "CPF/CNPJ (NF)"),
+    // often before the client profile has it. Both reads stay under the caller's RLS.
+    if (!docs.size) {
+      let dealIds: string[] = dealId ? [dealId] : [];
+      if (!dealId && linkedClientId) {
+        const { data, error } = await db.from("deals").select("id").eq("client_id", linkedClientId).eq("account_id", me.account_id).is("deleted_at", null).limit(50);
+        if (error) throw new Error("roy_read_failed");
+        dealIds = (data ?? []).map(d => d.id);
+      }
+      if (dealIds.length) {
+        const { data, error } = await db.from("deal_field_values").select("value_text").in("deal_id", dealIds).in("field_id", DEAL_DOCUMENT_FIELDS).eq("account_id", me.account_id);
+        if (error) throw new Error("roy_read_failed");
+        for (const row of data ?? []) { const doc = documentNumbers(row.value_text); if (doc) docs.add(doc); }
+      }
     }
     if (!docs.size) return reply(empty("needs_document"));
     let partial = false;
