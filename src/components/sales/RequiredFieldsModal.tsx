@@ -119,6 +119,8 @@ export function RequiredFieldsModal({
   // Pagador guardado de outra venda: o vendedor confirma que foi a mesma pessoa que pagou esta.
   const [thirdPartyConfirmed, setThirdPartyConfirmed] = useState(false);
   const docPrefilledRef = useRef(false);
+  // Documento do cadastro: só vira valor do campo quando o vendedor clica para usar.
+  const [docSuggestion, setDocSuggestion] = useState<string | null>(null);
   // A trava de pagamento só existe no ganho.
   const isWinFlow = outcomeType === "won" || (subscriptionRequired && outcomeType !== "lost");
 
@@ -148,6 +150,7 @@ export function RequiredFieldsModal({
       setStoredItem(null);
       setPayVerifiedKey(null);
       docPrefilledRef.current = false;
+      setDocSuggestion(null);
 
       if (isWinFlow && dealId) {
         fetchDealItemVenda(dealId)
@@ -306,7 +309,7 @@ export function RequiredFieldsModal({
   const gateBusy = verifying || gate.status === "checking";
   const payChecking = payGate ? gateBusy : subscriptionActive && !!subscriptionCycle && payQuery.isLoading;
 
-  // CPF/CNPJ já cadastrado no cliente ou no lead entra preenchido (o vendedor ainda pode trocar).
+  // CPF/CNPJ do cadastro nunca entra preenchido sozinho: aparece como sugestão que o vendedor escolhe usar.
   const docFieldId = docFields[0]?.id;
   useEffect(() => {
     if (!open || !docFieldId || docPrefilledRef.current) return;
@@ -322,7 +325,7 @@ export function RequiredFieldsModal({
         const { data } = await supabase.from("leads").select("cpf, cnpj").eq("id", deal.lead_id).maybeSingle();
         doc = data?.cpf || data?.cnpj || null;
       }
-      if (doc) setValues((prev) => (prev[docFieldId] ? prev : { ...prev, [docFieldId]: doc }));
+      if (doc) setDocSuggestion(doc);
     })().catch((err) => console.error("Erro ao buscar CPF/CNPJ do cadastro:", err));
   }, [open, docFieldId, dealId]);
   const payMethod = payCharge && requiredMethods.length === 1 ? requiredMethods[0] : null;
@@ -882,6 +885,17 @@ export function RequiredFieldsModal({
         </p>
       </div>
       {docFields.map((field) => renderField(field))}
+      {docFieldId && docSuggestion && !values[docFieldId] && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="min-h-11 w-full justify-start whitespace-normal text-left text-xs text-muted-foreground"
+          onClick={() => setValues((prev) => ({ ...prev, [docFieldId]: docSuggestion }))}
+        >
+          Usar o documento do cadastro: <span className="ml-1 font-medium text-foreground">{docSuggestion}</span>
+        </Button>
+      )}
       <Button type="button" variant="outline" className="min-h-11 w-full" onClick={handleVerifyPay} disabled={gateBusy}>
         {gateBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
         {gateBusy ? "Consultando o RykaPay…" : gate.status === "idle" ? "Verificar pagamento no RykaPay" : "Verificar de novo"}

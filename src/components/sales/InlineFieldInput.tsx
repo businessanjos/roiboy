@@ -311,6 +311,7 @@ export function InlineFieldInput({ field, value, onChange, money = false }: Inli
   }
   return (
     <Input
+      autoComplete="off"
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value || null)}
       placeholder={isUrlLike ? "https://..." : "Digite..."}
