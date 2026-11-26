@@ -10,6 +10,8 @@ import {
 } from "@/lib/receivedValueFormat";
 import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
+import { RetroactiveWinDialog } from "@/components/sales/RetroactiveWinDialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SUBSCRIPTION_CYCLE_LABEL, subscriptionSummaryLabel, type SubscriptionCycle } from "@/lib/sales/subscriptionWin";
 import { fetchSubscriptionWinState } from "@/lib/sales/subscriptionWinState";
 import { MarkAsLostDialog } from "@/components/sales/MarkAsLostDialog";
@@ -174,6 +176,7 @@ interface DealDetailSheetProps {
   allDeals?: Deal[];
   onEdit: () => void;
   onMarkAsWon: (dealId: string) => Promise<void>;
+  onRetroactiveWin?: (dealId: string, day: string) => Promise<void>;
   onMarkAsLost: (dealId: string, reason?: string, lossData?: { lossReasonId?: string; lossSubReasonId?: string; lossNotes?: string }) => Promise<void>;
   onReopen: (dealId: string) => Promise<void>;
   onStageChange: (dealId: string, stageId: string, pipelineId?: string) => Promise<boolean>;
@@ -230,6 +233,7 @@ export function DealDetailSheet({
   allDeals = [],
   onEdit,
   onMarkAsWon,
+  onRetroactiveWin,
   onMarkAsLost,
   onReopen,
   onStageChange,
@@ -264,6 +268,7 @@ export function DealDetailSheet({
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [requiredFieldsModalOpen, setRequiredFieldsModalOpen] = useState(false);
+  const [retroactiveWinOpen, setRetroactiveWinOpen] = useState(false);
   const [pendingStageId, setPendingStageId] = useState<string | null>(null);
   const [missingFields, setMissingFields] = useState<CustomField[]>([]);
   const [pendingStageName, setPendingStageName] = useState("");
@@ -1282,6 +1287,16 @@ export function DealDetailSheet({
                     )}
                     {processingWonDealId === deal.id ? "Processando..." : "Ganha"}
                   </Button>
+                  {isAdmin && onRetroactiveWin && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-11 w-11 sm:h-8 sm:w-8 shrink-0 text-success" aria-label="Lançar ganho retroativo" disabled={processingWonDealId === deal.id || checkingSubscription} onClick={() => setRetroactiveWinOpen(true)}>
+                          <Calendar className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Lançar ganho retroativo</TooltipContent>
+                    </Tooltip>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -2388,6 +2403,18 @@ export function DealDetailSheet({
         )}
 
         {/* Lost Reason Dialog */}
+        {deal && isAdmin && onRetroactiveWin && (
+          <RetroactiveWinDialog
+            key={deal.id}
+            open={retroactiveWinOpen}
+            onOpenChange={setRetroactiveWinOpen}
+            dealTitle={deal.title}
+            onConfirm={async day => {
+              setRetroactiveWinOpen(false);
+              await onRetroactiveWin(deal.id, day);
+            }}
+          />
+        )}
         <MarkAsLostDialog
           open={lostDialogOpen}
           onOpenChange={setLostDialogOpen}

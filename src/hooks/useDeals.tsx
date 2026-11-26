@@ -6,6 +6,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
 import { withRetry } from "@/lib/retryFetch";
 import { DEAL_FIELD_IDS } from "@/utils/dealToClientContractMapping";
+import { canLaunchRetroactiveWin, retroactiveWinAt } from "@/lib/sales/retroactiveWin";
 
 /** Traduz erros técnicos do carregamento para frases que qualquer pessoa entende. */
 function friendlyLoadError(error: any): string {
@@ -573,8 +574,8 @@ export function useDeals(pipelineId?: string | null) {
       let statusChanged = false;
       let newStatus = '';
       
-      if (data.status === 'won' && !data.won_at) {
-        updateData.won_at = new Date().toISOString();
+      if (data.status === 'won') {
+        updateData.won_at = data.won_at || new Date().toISOString();
         statusChanged = true;
         newStatus = 'won';
       } else if (data.status === 'lost' && !data.lost_at) {
@@ -609,7 +610,7 @@ export function useDeals(pipelineId?: string | null) {
           title: newStatus === 'won' ? 'Negócio ganho' : 'Negócio perdido',
           old_value: 'Em aberto',
           new_value: statusLabels[newStatus],
-          content: newStatus === 'lost' ? (data.lost_reason || null) : null,
+          content: newStatus === 'lost' ? (data.lost_reason || null) : data.won_at ? `Ganho retroativo: ${data.won_at.slice(0, 10).split('-').reverse().join('/')}. Lançado em ${new Date().toISOString()}.` : null,
           user_id: currentUser.id,
         });
         queryClient.invalidateQueries({ queryKey: ['batch-deal-activity-status'] });
@@ -895,8 +896,9 @@ export function useDeals(pipelineId?: string | null) {
     }
   };
 
-  const markAsWon = async (dealId: string): Promise<boolean> => {
-    return updateDeal(dealId, { status: 'won' });
+  const markAsWon = async (dealId: string, retroactiveDay?: string): Promise<boolean> => {
+    const wonAt = retroactiveDay ? retroactiveWinAt(retroactiveDay, canLaunchRetroactiveWin(currentUser)) : undefined;
+    return updateDeal(dealId, { status: 'won', ...(wonAt ? { won_at: wonAt } : {}) });
   };
 
   const markAsLost = async (dealId: string, reason?: string, lossData?: { lossReasonId?: string; lossSubReasonId?: string; lossNotes?: string }): Promise<boolean> => {

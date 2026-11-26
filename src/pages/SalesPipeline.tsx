@@ -122,6 +122,7 @@ import LeadsTab from "@/components/sales/LeadsTab";
 import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingScheduleDialog";
 import { DeletedDealsDrawer } from "@/components/sales/DeletedDealsDrawer";
 import { isManagementUser } from "@/lib/access/managementRoles";
+import { retroactiveWinAt } from "@/lib/sales/retroactiveWin";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Trash2 as Trash2Icon } from "lucide-react";
 import { dealSkipsBriefing } from "@/lib/sales/renewalBriefing";
@@ -692,6 +693,7 @@ export default function SalesPipeline() {
     pendingLostReason?: string;
     clientId?: string | null;
     skipBriefing?: boolean;
+    retroactiveDay?: string;
   }>({
     open: false,
     dealId: "",
@@ -1689,7 +1691,11 @@ export default function SalesPipeline() {
     setIsNewDealOpen(false);
   };
 
-  const handleMarkAsWon = async (dealId: string, skipValidation = false) => {
+  const handleMarkAsWon = async (dealId: string, skipValidation = false, retroactiveDay?: string) => {
+    if (retroactiveDay) {
+      try { retroactiveWinAt(retroactiveDay, isAdmin); }
+      catch (error) { toast.error(error instanceof Error ? error.message : "Data do ganho inválida."); return; }
+    }
     // CRITICAL FIX: Prevent double-click
     if (processingWonDealId) {
       toast.warning("Aguarde, processando negócio anterior...");
@@ -1762,6 +1768,7 @@ export default function SalesPipeline() {
           clientId: deal.client_id ?? null,
           skipBriefing: isRenewal,
           subscriptionRequired: subscriptionState.required,
+          retroactiveDay,
         } as any);
         return;
       }
@@ -2266,7 +2273,8 @@ export default function SalesPipeline() {
       }
 
       // STEP 6: NOW mark as won (only after all validations passed)
-      await markAsWon(dealId);
+      const won = await markAsWon(dealId, retroactiveDay);
+      if (!won) return;
       
 
       // STEP 7: (Omie OS integration removed)
@@ -2325,13 +2333,13 @@ export default function SalesPipeline() {
 
   // Callback when required fields are filled for won/lost outcome
   const handleOutcomeRequiredFieldsComplete = async () => {
-    const { dealId, outcomeType, pendingLostReason } = outcomeRequiredFieldsModal;
+    const { dealId, outcomeType, pendingLostReason, retroactiveDay } = outcomeRequiredFieldsModal;
     
     setOutcomeRequiredFieldsModal(prev => ({ ...prev, open: false }));
     
     if (outcomeType === "won") {
       // Re-call handleMarkAsWon with skip validation flag
-      await handleMarkAsWon(dealId, true);
+      await handleMarkAsWon(dealId, true, retroactiveDay);
     } else {
       // Re-call handleMarkAsLost with skip validation flag
       await handleMarkAsLost(dealId, pendingLostReason, true);
@@ -3239,6 +3247,7 @@ export default function SalesPipeline() {
         allDeals={deals}
         onEdit={handleEditFromDetail}
         onMarkAsWon={handleMarkAsWon}
+        onRetroactiveWin={(dealId, day) => handleMarkAsWon(dealId, false, day)}
         onMarkAsLost={handleMarkAsLost}
         onReopen={handleReopen}
         onStageChange={handleDealMove}

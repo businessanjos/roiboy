@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Ganho retroativo para administradores
+- [x] Ação no card do Pipeline com calendário ROY; preservar validações, pagamento, contratos e responsável original.
+- [x] 18 testes passaram; data passada, calendário e passagem aos campos obrigatórios conferidos em sessão autenticada, sem gravações em negócios reais. Compilação OK; não publicado.
+
 ## Assinaturas RykaPay
 - [x] Vincular os nove planos mensais/anuais Programa Clinica Ryka ao CR, confirmado por Lucas; incluir anuais vendidos como cobranças avulsas sem misturar Ryka IA/zApp/E-Pass.
 - [x] Consulta segura somente leitura por CPF/CNPJ, restrita à conta e ao acesso existente do negócio/cliente, sem expor credenciais ou respostas pessoais brutas. Chave validada em consulta real; documento arbitrário rejeitado e registro inexistente bloqueado.
