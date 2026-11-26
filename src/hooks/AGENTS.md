@@ -8,3 +8,4 @@
 - RoyZapp tag badges update live: `zapp_conversation_tags` and `zapp_tags` are in the `supabase_realtime` publication and `useZappConversations` patches `assignments.conversation_tags` from those events. Why: the badge next to the name must change without reloading the screen.
 
 - RoyZapp media uploads retry transient storage failures through `withZappRetry` (src/lib/zappTransientErrors.ts) and treat "already exists" as success; WhatsApp send calls are not auto-retried, and errors shown to the team go through `friendlyZappError`. Why: a storage 504 must not surface raw "Unexpected token <" text, and retrying the send itself could deliver twice.
+- Win flows decide whether the operation briefing is required only through `dealSkipsBriefing` (src/lib/sales/renewalBriefing.ts: renewal rules or the manual `deals.is_portfolio` flag). Why: every win entry point must exempt the same deals.

@@ -27,7 +27,7 @@ import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { ZappLeadDataEditor } from "./ZappLeadDataEditor";
 import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
-import { isRenewalDeal } from "@/lib/sales/renewalBriefing";
+import { dealSkipsBriefing } from "@/lib/sales/renewalBriefing";
 import { fetchSubscriptionWinState } from "@/lib/sales/subscriptionWinState";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 
@@ -440,8 +440,8 @@ export function ZappDealDetailSheet({
                       onClick={async () => {
                         if (currentUser?.account_id && deal) {
                           const result = await validateDealOutcome(dealId, "won", currentUser.account_id);
-                          // Briefing para operação é obrigatório no ganho, exceto em renovações
-                          const isRenewal = await isRenewalDeal(dealId, (deal as any).is_renewal);
+                          // Briefing para operação é obrigatório no ganho, exceto em renovações e carteira
+                          const isRenewal = await dealSkipsBriefing(dealId, deal as any);
                           const { data: briefingRow } = await supabase
                             .from("deal_operation_briefings")
                             .select("is_complete")

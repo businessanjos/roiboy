@@ -43,3 +43,28 @@ export async function isRenewalDeal(
 
   return !!product?.is_renewal;
 }
+
+/** Regra pura: renovação ou carteira dispensam o Briefing para Operação. */
+export function briefingExempt(flags: { isRenewal?: boolean | null; isPortfolio?: boolean | null }): boolean {
+  return !!flags.isRenewal || !!flags.isPortfolio;
+}
+
+/**
+ * Negócio de carteira (cliente que já está na operação) marcado manualmente
+ * em `deals.is_portfolio`. Lê o valor atual do banco para não depender de cache.
+ */
+export async function isPortfolioDeal(dealId: string, localFlag?: boolean | null): Promise<boolean> {
+  if (localFlag) return true;
+  const { data } = await supabase.from("deals").select("is_portfolio").eq("id", dealId).maybeSingle();
+  return !!data?.is_portfolio;
+}
+
+/** Ponto único usado pelos fluxos de ganho para saber se o briefing é dispensado. */
+export async function dealSkipsBriefing(
+  dealId: string,
+  local?: { is_renewal?: boolean | null; is_portfolio?: boolean | null } | null,
+): Promise<boolean> {
+  const isPortfolio = await isPortfolioDeal(dealId, local?.is_portfolio);
+  if (isPortfolio) return true;
+  return briefingExempt({ isRenewal: await isRenewalDeal(dealId, local?.is_renewal), isPortfolio });
+}

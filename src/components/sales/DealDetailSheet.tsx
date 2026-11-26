@@ -284,12 +284,17 @@ export function DealDetailSheet({
   const [subscriptionGateOpen, setSubscriptionGateOpen] = useState(false);
   const [checkingSubscription, setCheckingSubscription] = useState(false);
 
+  // Carteira — dispensa o briefing operacional no ganho, como a renovação
+  const [isPortfolioDeal, setIsPortfolioDeal] = useState(false);
+  const [savingPortfolio, setSavingPortfolio] = useState(false);
+
   const loadSubscriptionInfo = async (dealId: string) => {
     const { data } = await supabase
       .from("deals")
-      .select("is_subscription, subscription_cycle")
+      .select("is_subscription, subscription_cycle, is_portfolio")
       .eq("id", dealId)
       .maybeSingle();
+    setIsPortfolioDeal(!!data?.is_portfolio);
     setSubscriptionInfo({
       isSubscription: data?.is_subscription ?? null,
       cycle: (data?.subscription_cycle as SubscriptionCycle | null) ?? null,
@@ -298,6 +303,7 @@ export function DealDetailSheet({
 
   useEffect(() => {
     setSubscriptionInfo({ isSubscription: null, cycle: null });
+    setIsPortfolioDeal(false);
     if (open && deal?.id) void loadSubscriptionInfo(deal.id);
   }, [open, deal?.id, (deal as any)?.status]);
 
@@ -426,6 +432,23 @@ export function DealDetailSheet({
       );
     }
     toast.success(checked ? "Renovação salva — briefing não será exigido" : "Renovação desmarcada");
+    queryClient.invalidateQueries({ queryKey: ["deal-activities"] });
+    onDealUpdated?.();
+  };
+
+  const handleTogglePortfolio = async (checked: boolean) => {
+    if (!deal) return;
+    setSavingPortfolio(true);
+    const { error } = await supabase.from("deals").update({ is_portfolio: checked }).eq("id", deal.id);
+    setSavingPortfolio(false);
+    if (error) {
+      toast.error("Erro ao atualizar marcação de carteira");
+      return;
+    }
+    setIsPortfolioDeal(checked);
+    (deal as any).is_portfolio = checked;
+    await logRenewalActivity(checked ? "Marcou como carteira" : "Desmarcou carteira", null, null);
+    toast.success(checked ? "Carteira salva — briefing não será exigido" : "Carteira desmarcada");
     queryClient.invalidateQueries({ queryKey: ["deal-activities"] });
     onDealUpdated?.();
   };
@@ -1472,6 +1495,27 @@ export function DealDetailSheet({
                       await saveRenewal(true, u);
                     }}
                   />
+                </div>
+
+                {/* Carteira — dispensa briefing operacional */}
+                <div className="rounded-lg border p-3 bg-muted/30">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <icons.Briefcase className="h-3.5 w-3.5 text-info" />
+                        <span className="text-xs font-semibold">É carteira</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Ao marcar, o briefing para operação não será exigido no ganho.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={isPortfolioDeal}
+                      disabled={savingPortfolio}
+                      onCheckedChange={handleTogglePortfolio}
+                      aria-label="É carteira"
+                    />
+                  </div>
                 </div>
 
                 {/* Assinatura — respondida no ganho, somente leitura */}

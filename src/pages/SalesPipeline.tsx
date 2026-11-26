@@ -124,7 +124,7 @@ import { DeletedDealsDrawer } from "@/components/sales/DeletedDealsDrawer";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Trash2 as Trash2Icon } from "lucide-react";
-import { isRenewalDeal } from "@/lib/sales/renewalBriefing";
+import { dealSkipsBriefing } from "@/lib/sales/renewalBriefing";
 import { fetchSubscriptionWinState } from "@/lib/sales/subscriptionWinState";
 
 
@@ -1704,7 +1704,7 @@ export default function SalesPipeline() {
     }
 
     // Validate required fields for "won" outcome (unless skipping after modal fill)
-    // Briefing operacional é OBRIGATÓRIO em todo ganho (inclui carteira/renovação)
+    // Briefing operacional é obrigatório no ganho, exceto renovação e carteira marcada
     if (!skipValidation && currentUser?.account_id) {
       const validation = await validateDealOutcome(dealId, "won", currentUser.account_id);
 
@@ -1712,7 +1712,8 @@ export default function SalesPipeline() {
 
       // Renovação dispensa o briefing operacional (marcação manual no negócio
       // ou produto marcado como renovação no Item da Venda)
-      const isRenewal = await isRenewalDeal(dealId, (deal as any).is_renewal);
+      // Carteira (marcação manual) também dispensa o briefing
+      const isRenewal = await dealSkipsBriefing(dealId, deal as any);
 
 
       const { data: briefingRow } = await supabase
