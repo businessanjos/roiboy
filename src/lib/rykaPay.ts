@@ -1,2 +1,2 @@
 export { payMetrics, payCycleLabel, activePaySubscription, matchesPayProduct, normalizePaySubscription, normalizeAnnualSale, documentNumbers, CR_PAY_PRODUCTS, CR_PRODUCT_ID } from "../../supabase/functions/_shared/rykaPay";
-export type { PayResult, PaySubscription, PayInvoice } from "../../supabase/functions/_shared/rykaPay";
+export type { PayResult, PaySubscription, PayInvoice, PaySkipped } from "../../supabase/functions/_shared/rykaPay";

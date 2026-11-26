@@ -25,6 +25,7 @@ export function RykaPaySubscriptions(target: { dealId?: string; clientId?: strin
   const metrics = payMetrics(visible, Boolean(data?.partial));
   const emptyText = data?.state === "needs_document" ? "Cadastre o CPF, CNPJ ou e-mail para consultar a assinatura."
     : data?.state === "needs_product" ? "Selecione o Item da Venda para consultar a assinatura do produto."
+    : data?.payerFound === false ? "Cliente não encontrado no RykaPay com o CPF, CNPJ ou e-mail cadastrados no ROY."
     : data?.productName ? `Nenhuma assinatura ativa correspondente a ${data.productName} no RykaPay.`
     : "Nenhuma assinatura ativa encontrada no RykaPay para este CPF/CNPJ ou e-mail.";
 
@@ -46,7 +47,13 @@ export function RykaPaySubscriptions(target: { dealId?: string; clientId?: strin
     {data && <>
       {data.partial && <p role="status" className="border-l-2 border-warning pl-3 text-sm text-muted-foreground">Consulta parcial no RykaPay. Totais indisponíveis.</p>}
       {data.matchedBy === "email" && subscriptions.length > 0 && <p role="status" className="border-l-2 border-border pl-3 text-sm text-muted-foreground">Vinculada pelo e-mail: o CPF/CNPJ do ROY não foi encontrado no RykaPay.</p>}
-      {!subscriptions.length ? <p className="py-6 text-sm text-muted-foreground">{emptyText}</p> : <>
+      {!subscriptions.length ? <div className="space-y-3 py-6 text-sm text-muted-foreground">
+        <p>{emptyText}</p>
+        {Boolean(data.skipped?.length) && <div className="space-y-1">
+          <p>O RykaPay tem estes registros do cliente, que não entram aqui por serem de outro produto ou não estarem ativos:</p>
+          <ul className="list-disc space-y-0.5 pl-5">{data.skipped!.map((item, i) => <li key={i} className="break-words">{item.productName} · {item.kind === "charge" ? "cobrança avulsa" : "assinatura"} · {item.status}</li>)}</ul>
+        </div>}
+      </div> : <>
         {target.clientId && subscriptions.length > 1 && <Select value={selectionExists ? selected : "all"} onValueChange={setSelected}>
           <SelectTrigger className="h-11 min-w-0 text-base sm:text-sm" aria-label="Filtrar assinatura"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Todas as assinaturas</SelectItem>{subscriptions.map((s, i) => <SelectItem key={s.id} value={s.id}>{s.productName} · {periods[s.period] || s.period} · {i + 1}</SelectItem>)}</SelectContent>

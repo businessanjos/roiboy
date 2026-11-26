@@ -26,7 +26,12 @@ export type PayResult = {
   productName: string | null;
   /** How the payer was found; "email" means the document found nothing. */
   matchedBy?: "document" | "email" | null;
+  /** True when RykaPay has a payer for the document/e-mail, even if nothing is shown. */
+  payerFound?: boolean;
+  /** RykaPay records left out (other product or not active), product/status only. */
+  skipped?: PaySkipped[];
 };
+export type PaySkipped = { kind: "subscription" | "charge"; productName: string; status: string };
 export function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
@@ -49,7 +54,8 @@ export function normalizeProduct(value: string): string {
 }
 export function matchesPayProduct(subscription: PaySubscription, product: { id: string; name: string }): boolean {
   return subscription.productId === product.id || normalizeProduct(subscription.productName) === normalizeProduct(product.name)
-    || (product.id === CR_PRODUCT_ID && Boolean(subscription.productId && CR_PAY_PRODUCTS[subscription.productId]));
+    || (product.id === CR_PRODUCT_ID && (Boolean(subscription.productId && CR_PAY_PRODUCTS[subscription.productId])
+      || (subscription.source === "annual_sale" && CR_PAY_ANNUAL_NAMES.has(normalizeProduct(subscription.productName)))));
 }
 export const CR_PRODUCT_ID = "feb34040-ba60-417a-a5d3-66dbdf1cfc02";
 // Catalogue IDs inspected on 26/11/2026; Lucas confirmed these plans are the ROY CR program.
@@ -64,6 +70,13 @@ export const CR_PAY_PRODUCTS: Record<string, "mensal" | "anual"> = {
   "be8132b2-adda-4468-93bb-6388b75632d7": "mensal",
   "9904ef28-1d56-4433-b7e1-0dd72ff9ac98": "mensal",
 };
+// The payments-by-customer route returns annual sales without a product ID: only the
+// description, which is the catalogue name of the plan sold (inspected on 26/11/2026).
+export const CR_PAY_ANNUAL_NAMES = new Set([
+  "[ANUAL] Programa Clinica Ryka",
+  "[ANUAL] Programa Clinica Ryka - A Vista",
+  "[ANUAL] Programa Clinica Ryka 12x",
+].map(normalizeProduct));
 export function activePaySubscription(status: string): boolean {
   return ["ativa", "ativo", "active", "inadimplente", "suspensa", "suspended", "past_due"].includes(status.toLowerCase());
 }
@@ -99,7 +112,8 @@ export function normalizeAnnualSale(raw: unknown): PaySubscription | null {
   const r = record(raw);
   const p = record(r.produto);
   const productId = text(r.produto_id) || text(p.id);
-  if (!productId || CR_PAY_PRODUCTS[productId] !== "anual") return null;
+  const soldName = text(r.produto_nome) || text(p.nome) || text(r.descricao);
+  if (productId ? CR_PAY_PRODUCTS[productId] !== "anual" : !(soldName && CR_PAY_ANNUAL_NAMES.has(normalizeProduct(soldName)))) return null;
   if (["cancelada", "cancelado", "expirada", "estornada", "chargeback"].includes(String(r.status).toLowerCase())) return null;
   if (!Array.isArray(r.parcelas)) throw new Error("invalid_pay_response");
   return {
@@ -107,7 +121,7 @@ export function normalizeAnnualSale(raw: unknown): PaySubscription | null {
       ...r,
       id: text(r.id) || text(r.venda_id),
       produto_id: productId,
-      produto_nome: text(r.produto_nome) || text(p.nome) || text(r.descricao),
+      produto_nome: soldName,
       periodicidade: "anual",
       faturas: r.parcelas.map(v => { const f = record(v); return { ...f, ciclo: f.parcela }; }),
     }),

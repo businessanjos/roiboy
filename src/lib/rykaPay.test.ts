@@ -20,6 +20,15 @@ describe("Assinaturas RykaPay", () => {
     expect(s?.period).toBe("anual"); expect(s?.invoices).toHaveLength(1); expect(s?.invoices[0].cycle).toBe(1);
     expect(normalizeAnnualSale({ produto_id: "db63d383-3530-407b-84a2-b0905aac8e06" })).toBeNull();
   });
+  it("venda anual sem ID de produto é reconhecida pelo nome do plano CR", () => {
+    const sale = { id: "qa-sale-2", descricao: "[ANUAL] Programa Clinica Ryka 12x", status: "paga", parcelas: [{ id: "qa-p1", parcela: 1, situacao: "pago", status: "recebido", valor_centavos: 291666 }, { id: "qa-p2", parcela: 2, situacao: "pendente", status: "aberta", valor_centavos: 291666 }] };
+    const s = normalizeAnnualSale(sale);
+    expect(s && matchesPayProduct(s, { id: CR_PRODUCT_ID, name: "CR l Programa de Aceleração" })).toBe(true);
+    expect(s && payCycleLabel(s.period, s.invoices[1].cycle)).toBe("2/12");
+    expect(payMetrics([s!], false)).toEqual({ paidCents: 291666, upcoming: 1 });
+    expect(normalizeAnnualSale({ ...sale, descricao: "Consulta TESTE QA" })).toBeNull();
+    expect(matchesPayProduct(s!, { id: "other", name: "Outro produto" })).toBe(false);
+  });
   it("mensal apresenta Ciclo 1 e Ciclo 2", () => { expect(payCycleLabel("mensal", 1)).toBe("Ciclo 1"); expect(payCycleLabel("mensal", 2)).toBe("Ciclo 2"); });
   it("anual apresenta 1/12 e 2/12", () => { expect(payCycleLabel("anual", 1)).toBe("1/12"); expect(payCycleLabel("annual", 2)).toBe("2/12"); });
   it("recebido soma só faturas pagas, em centavos", () => { expect(payMetrics([normalizePaySubscription(raw)], false).paidCents).toBe(29900); });

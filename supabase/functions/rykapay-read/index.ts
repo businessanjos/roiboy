@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
-import { documentNumbers, matchesPayProduct, normalizePaySubscription, normalizeAnnualSale, activePaySubscription, record, type PayResult, type PaySubscription } from "../_shared/rykaPay.ts";
+import { documentNumbers, matchesPayProduct, normalizePaySubscription, normalizeAnnualSale, activePaySubscription, record, type PayResult, type PaySubscription, type PaySkipped } from "../_shared/rykaPay.ts";
 
 const BASE = "https://rykapay.app/api/public/v1";
 // One company's credential must never become a cross-account lookup service.
@@ -68,7 +68,7 @@ Deno.serve(async req => {
     const docs = new Set<string>();
     // Plan B: RykaPay also finds the payer by e-mail when no document matches.
     const emails = new Set<string>();
-    const addDoc = (v: unknown) => { const doc = documentNumbers(v); if (doc) docs.add(doc); };
+    const addDoc = (v: unknown) => { const doc = documentNumbers(v); if (doc && docs.size < 6) docs.add(doc); };
     const addEmail = (v: unknown) => {
       for (const part of Array.isArray(v) ? v : [v]) {
         const email = typeof part === "string" ? part.trim().toLowerCase() : "";
@@ -84,10 +84,10 @@ Deno.serve(async req => {
       const { data, error } = await db.from("leads").select("cpf,cnpj,email,emails").eq("id", linkedLeadId).eq("account_id", me.account_id).maybeSingle();
       if (error) throw new Error("roy_read_failed");
       if (!data && !linkedClientId) return reply({ error: "Lead não disponível para você." }, 404);
-      if (data) { if (!docs.size) { addDoc(data.cpf); addDoc(data.cnpj); } addEmail(data.email); addEmail(data.emails); }
+      if (data) { addDoc(data.cpf); addDoc(data.cnpj); addEmail(data.email); addEmail(data.emails); }
     }
-    // The sales team records the payer document and e-mail on the deal, often before the
-    // client profile has them. All reads stay under the caller's RLS.
+    // The sales team records the payer document and e-mail on the deal, often different from
+    // (or ahead of) the client profile. All reads stay under the caller's RLS.
     {
       let dealIds: string[] = dealId ? [dealId] : [];
       if (!dealId && linkedClientId) {
@@ -98,17 +98,19 @@ Deno.serve(async req => {
       if (dealIds.length) {
         const { data, error } = await db.from("deal_field_values").select("field_id,value_text").in("deal_id", dealIds).in("field_id", [...DEAL_DOCUMENT_FIELDS, ...DEAL_EMAIL_FIELDS]).eq("account_id", me.account_id);
         if (error) throw new Error("roy_read_failed");
-        const fromDeal = new Set<string>();
+        // The deal may carry the company CNPJ while the profile only has the person's CPF
+        // (or the reverse), and RykaPay knows the payer by just one of them: try them all.
         for (const row of data ?? []) {
           if (DEAL_EMAIL_FIELDS.includes(row.field_id)) addEmail(row.value_text);
-          else { const doc = documentNumbers(row.value_text); if (doc) fromDeal.add(doc); }
+          else addDoc(row.value_text);
         }
-        if (!docs.size) for (const doc of fromDeal) docs.add(doc);
       }
     }
     if (!docs.size && !emails.size) return reply(empty("needs_document"));
     let partial = false;
     let matchedBy: "document" | "email" | null = null;
+    let payerFound = false;
+    const skipped: PaySkipped[] = [];
     const subscriptions = new Map<string, PaySubscription>();
     const lookup = async (param: "documento" | "email", value: string): Promise<Response | null> => {
       const endpoint = new URL(`${BASE}/clientes/pagamentos`);
@@ -124,13 +126,23 @@ Deno.serve(async req => {
       const data = record(payload.dados);
       if (!Array.isArray(data.assinaturas) || !Array.isArray(data.cobrancas_avulsas) || typeof data.parcial !== "boolean") throw new Error("invalid_pay_response");
       partial ||= data.parcial;
+      payerFound = true;
+      // Records left out of the tab are reported by product/status only, so the user can tell
+      // "not in RykaPay" from "in RykaPay under another plan or no longer active".
+      const skip = (kind: PaySkipped["kind"], productName: string, status: string) => { if (skipped.length < 10) skipped.push({ kind, productName, status }); };
       for (const raw of data.assinaturas) {
         const sub = normalizePaySubscription(raw);
         if (activePaySubscription(sub.status) && (!product || matchesPayProduct(sub, product))) subscriptions.set(sub.id, sub);
+        else skip("subscription", sub.productName, sub.status);
       }
       for (const raw of data.cobrancas_avulsas) {
         const sub = normalizeAnnualSale(raw);
         if (sub && (!product || matchesPayProduct(sub, product))) subscriptions.set(sub.id, sub);
+        else {
+          const r = record(raw);
+          const name = [r.produto_nome, record(r.produto).nome].find(v => typeof v === "string" && v.trim());
+          skip("charge", typeof name === "string" ? name.trim().slice(0, 120) : "Cobrança avulsa", typeof r.status === "string" ? r.status.slice(0, 40) : "Não informado");
+        }
       }
       return null;
     };
@@ -147,7 +159,7 @@ Deno.serve(async req => {
       const matched = product || royProducts?.find(p => matchesPayProduct(sub, p));
       return { ...sub, royProductColor: matched?.color && /^#[0-9a-f]{6}$/i.test(matched.color) ? matched.color : null };
     });
-    return reply({ ...empty(subscriptions.size ? "ready" : "not_found"), subscriptions: presented, partial, matchedBy });
+    return reply({ ...empty(subscriptions.size ? "ready" : "not_found"), subscriptions: presented, partial, matchedBy, payerFound, skipped: subscriptions.size ? [] : skipped });
   } catch {
     return reply({ error: "Não foi possível validar a consulta de assinaturas. Tente novamente." }, 502);
   }
