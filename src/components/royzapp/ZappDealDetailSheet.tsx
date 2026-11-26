@@ -231,7 +231,8 @@ export function ZappDealDetailSheet({
         .order("created_at", { ascending: false });
       
       if (dealId && leadId) {
-        query = query.or(`deal_id.eq.${dealId},lead_id.eq.${leadId}`);
+        // Tarefas de outro negócio do mesmo lead não entram aqui.
+        query = query.or(`deal_id.eq.${dealId},and(lead_id.eq.${leadId},deal_id.is.null)`);
       } else if (dealId) {
         query = query.eq("deal_id", dealId);
       } else if (leadId) {

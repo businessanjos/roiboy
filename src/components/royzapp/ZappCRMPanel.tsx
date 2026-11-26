@@ -309,7 +309,8 @@ export function ZappCRMPanel({
         .limit(5);
       
       if (activeDeal?.id && conversationLeadId) {
-        query = query.or(`deal_id.eq.${activeDeal.id},lead_id.eq.${conversationLeadId}`);
+        // Tarefas de outro negócio do mesmo lead não entram aqui.
+        query = query.or(`deal_id.eq.${activeDeal.id},and(lead_id.eq.${conversationLeadId},deal_id.is.null)`);
       } else if (activeDeal?.id) {
         query = query.eq("deal_id", activeDeal.id);
       } else if (conversationLeadId) {
