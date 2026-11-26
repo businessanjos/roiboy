@@ -93,7 +93,7 @@ Deno.serve(async req => {
       if (!seed) return reply({ error: "Somente gestores podem vincular esta venda." }, 403);
       const response = await pay(`/clientes/pagamentos?email=${encodeURIComponent(seed.payer_email)}`);
       if (!response.ok && response.status !== 404) return reply({ error: "RykaPay indisponível. Tente novamente." }, 502);
-      const legacy = response.ok ? normalizeStripeLegacy(record(record(await response.json()).dados).stripe) : [];
+      const legacy = response.ok ? normalizeStripeLegacy(record(record(await response.json()).dados).stripe, input.externalId) : [];
       if (!legacy) return reply({ error: "O RykaPay não conseguiu ler a Stripe agora. Tente novamente." }, 502);
       const paid = legacy.flatMap(s => s.invoices).filter(f => f.situation === "pago");
       if (!paid.length) return reply({ error: "Esta assinatura não tem pagamento aprovado." }, 409);

@@ -167,17 +167,22 @@ export function payCycleLabel(period: string, cycle: number | null): string {
 export function isClinicaRykaSale(description: unknown): boolean {
   return typeof description === "string" && normalizeProduct(description).includes("clinica ryka");
 }
+/** Monthly price of every subscription on the closed Stripe legacy list of the Clínica Ryka program. */
+export const CR_STRIPE_LEGACY_CYCLE_CENTS = 250000;
 /**
  * Old Stripe subscriptions returned inside the RykaPay answer. Returns null when the Stripe part is
  * unavailable or incomplete, so the caller treats the whole read as partial and never as "paid".
  */
-export function normalizeStripeLegacy(rawStripe: unknown): PaySubscription[] | null {
+export function normalizeStripeLegacy(rawStripe: unknown, onlyId?: string): PaySubscription[] | null {
   const stripe = record(rawStripe);
   if (stripe.disponivel !== true || stripe.completo !== true || !Array.isArray(stripe.assinaturas) || !Array.isArray(stripe.cobrancas)) return null;
-  const active = stripe.assinaturas.map(record).filter(a => typeof a.status === "string" && activePaySubscription(a.status));
+  // Stripe brings no product name and its charges carry no subscription id, so the program is told apart
+  // by its monthly price: other plans of the same payer (Ryka zApp etc.) and their charges are left out.
+  const active = stripe.assinaturas.map(record).filter(a => typeof a.status === "string" && activePaySubscription(a.status)
+    && a.valor_ciclo_centavos === CR_STRIPE_LEGACY_CYCLE_CENTS && (!onlyId || a.id === onlyId));
   if (!active.length) return [];
   const paid = stripe.cobrancas.map(record)
-    .filter(c => c.situacao === "aprovado" && c.contestado !== true && c.reembolsado_centavos === 0)
+    .filter(c => c.situacao === "aprovado" && c.contestado !== true && c.reembolsado_centavos === 0 && c.bruto_centavos === CR_STRIPE_LEGACY_CYCLE_CENTS)
     .map(c => ({ id: text(c.id), amountCents: integer(c.bruto_centavos), paidAt: date(c.criada_em) }))
     .sort((a, b) => String(a.paidAt).localeCompare(String(b.paidAt)));
   if (paid.some(c => !c.id || !c.paidAt)) return null;

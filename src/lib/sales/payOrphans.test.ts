@@ -5,7 +5,7 @@ const charge = (over: Record<string, unknown> = {}) => ({
   id: "ch_qa", situacao: "aprovado", contestado: false, reembolsado_centavos: 0, bruto_centavos: 250000, criada_em: "2026-10-06T13:05:45.000Z", ...over,
 });
 const stripe = (over: Record<string, unknown> = {}) => ({
-  disponivel: true, completo: true, assinaturas: [{ id: "sub_qa", status: "ativa" }], cobrancas: [charge()], ...over,
+  disponivel: true, completo: true, assinaturas: [{ id: "sub_qa", status: "ativa", valor_ciclo_centavos: 250000 }], cobrancas: [charge()], ...over,
 });
 
 describe("vendas sem dono", () => {
@@ -28,9 +28,21 @@ describe("vendas sem dono", () => {
   });
 
   it("legado da Stripe: assinatura cancelada, cobrança contestada ou reembolsada não contam", () => {
-    expect(normalizeStripeLegacy(stripe({ assinaturas: [{ id: "sub_qa", status: "cancelada" }] }))).toEqual([]);
+    expect(normalizeStripeLegacy(stripe({ assinaturas: [{ id: "sub_qa", status: "cancelada", valor_ciclo_centavos: 250000 }] }))).toEqual([]);
     expect(normalizeStripeLegacy(stripe({ cobrancas: [charge({ contestado: true })] }))![0].invoices).toEqual([]);
     expect(normalizeStripeLegacy(stripe({ cobrancas: [charge({ reembolsado_centavos: 250000 })] }))![0].invoices).toEqual([]);
+  });
+
+  it("legado da Stripe: outro plano do mesmo pagador (Ryka zApp R$ 197) não entra", () => {
+    const both = stripe({
+      assinaturas: [{ id: "sub_zapp", status: "ativa", valor_ciclo_centavos: 19700 }, { id: "sub_cr", status: "ativa", valor_ciclo_centavos: 250000 }],
+      cobrancas: [charge({ id: "ch_zapp", bruto_centavos: 19700 }), charge({ id: "ch_cr" })],
+    });
+    const subs = normalizeStripeLegacy(both)!;
+    expect(subs.map(s => s.id)).toEqual(["sub_cr"]);
+    expect(subs[0].invoices.map(f => f.id)).toEqual(["ch_cr"]);
+    expect(normalizeStripeLegacy(stripe({ assinaturas: [{ id: "sub_zapp", status: "ativa", valor_ciclo_centavos: 19700 }] }))).toEqual([]);
+    expect(normalizeStripeLegacy(both, "sub_zapp")).toEqual([]);
   });
 
   it("venda vinculada pelo gestor só vale enquanto estiver paga", () => {
