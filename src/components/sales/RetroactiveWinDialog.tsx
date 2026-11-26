@@ -29,7 +29,7 @@ export function RetroactiveWinDialog({ open, onOpenChange, dealTitle, onConfirm 
           <Label htmlFor="retroactive-win-day">Data do ganho</Label>
           <Input id="retroactive-win-day" aria-label="Data do ganho" type="date" value={day} max={saoPauloDay()} required onChange={event => setDay(event.target.value)} className="h-11" />
           {day && !valid && <p role="alert" className="text-sm text-destructive">Escolha uma data anterior a hoje.</p>}
-          <p className="text-sm text-muted-foreground">As validações do ganho continuam obrigatórias. A data de início do contrato não será alterada.</p>
+          <p className="text-sm text-muted-foreground">O briefing para operação não é exigido; as demais validações do ganho continuam obrigatórias. A data de início do contrato não será alterada.</p>
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cancelar</Button>

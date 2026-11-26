@@ -44,9 +44,9 @@ export async function isRenewalDeal(
   return !!product?.is_renewal;
 }
 
-/** Regra pura: renovação ou carteira dispensam o Briefing para Operação. */
-export function briefingExempt(flags: { isRenewal?: boolean | null; isPortfolio?: boolean | null }): boolean {
-  return !!flags.isRenewal || !!flags.isPortfolio;
+/** Regra pura: renovação, carteira ou ganho retroativo dispensam o Briefing para Operação. */
+export function briefingExempt(flags: { isRenewal?: boolean | null; isPortfolio?: boolean | null; isRetroactive?: boolean | null }): boolean {
+  return !!flags.isRenewal || !!flags.isPortfolio || !!flags.isRetroactive;
 }
 
 /**
@@ -63,7 +63,9 @@ export async function isPortfolioDeal(dealId: string, localFlag?: boolean | null
 export async function dealSkipsBriefing(
   dealId: string,
   local?: { is_renewal?: boolean | null; is_portfolio?: boolean | null } | null,
+  isRetroactive = false,
 ): Promise<boolean> {
+  if (briefingExempt({ isRetroactive })) return true;
   const isPortfolio = await isPortfolioDeal(dealId, local?.is_portfolio);
   if (isPortfolio) return true;
   return briefingExempt({ isRenewal: await isRenewalDeal(dealId, local?.is_renewal), isPortfolio });

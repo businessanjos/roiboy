@@ -1719,7 +1719,8 @@ export default function SalesPipeline() {
       // Renovação dispensa o briefing operacional (marcação manual no negócio
       // ou produto marcado como renovação no Item da Venda)
       // Carteira (marcação manual) também dispensa o briefing
-      const isRenewal = await dealSkipsBriefing(dealId, deal as any);
+      // Ganho retroativo (lançado pelo administrador) também dispensa o briefing
+      const isRenewal = await dealSkipsBriefing(dealId, deal as any, !!retroactiveDay);
 
 
       const { data: briefingRow } = await supabase
