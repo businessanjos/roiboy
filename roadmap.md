@@ -379,3 +379,7 @@
 ## Aba Assinaturas: parar consultas desnecessárias
 - [x] Plano anual quitado não consulta mais sozinho; só pelo botão de atualizar
 - [x] Trocar de aba no card não refaz a consulta
+
+## Ranking por empresa enquadrado na TV
+- [x] Mais altura para o ranking no ajuste à TV (vários vendedores por empresa) e títulos/total das empresas grandes
+- [x] Conferido em 1920×1080 com o painel real; outros painéis não mudam

@@ -7,6 +7,7 @@ import { getCompactor } from "react-grid-layout/core";
 import { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { ConfigurableVisualCard } from "../visuals/ConfigurableVisualCard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { hasCompanyRanking, tvRowSizing } from "@/lib/insights/tvLayout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -211,11 +212,17 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
   const rows = useMemo(() => groupVisualsIntoRows(visuals), [visuals]);
   const mins = useMemo(() => ({ ...DEFAULT_MIN_CARD_WIDTHS, ...(minCardWidths || {}) }), [minCardWidths]);
 
+  // Na TV, painéis com ranking por empresa priorizam a altura do ranking.
+  const sizing = useMemo(() => {
+    const sellerBoard = visuals.some(hasCompanyRanking);
+    return rows.map((row) => tvRowSizing(row.visuals, sellerBoard, { minHeight: getRowMinHeight(row), weight: row.weight }));
+  }, [rows, visuals]);
+
   const requiredHeight = useMemo(
     () =>
-      rows.reduce((sum, row) => sum + getRowMinHeight(row), 0) +
+      sizing.reduce((sum, row) => sum + row.minHeight, 0) +
       Math.max(0, rows.length - 1) * TV_ROW_GAP,
-    [rows]
+    [rows, sizing]
   );
 
   useEffect(() => {
@@ -234,13 +241,14 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
           readOnly={readOnly}
           minWidth={getRowMinWidth(row, mins)}
           fitHeight={fitHeight}
+          tvSizing={sizing[rowIdx]}
         />
       ))}
     </div>
   );
 }
 
-function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly, minWidth, fitHeight }: {
+function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly, minWidth, fitHeight, tvSizing }: {
   row: VisualRow;
   containerWidth: number;
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
@@ -248,6 +256,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
   readOnly?: boolean;
   minWidth: number;
   fitHeight?: boolean;
+  tvSizing: { minHeight: number; weight: number };
 }) {
   const { visuals } = row;
 
@@ -283,10 +292,10 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
           ? {
               // Altura proporcional: usa a altura salva (ou o peso por tipo),
               // então linhas de scorecards ficam baixas e tabelas ganham espaço.
-              flex: `${row.weight} 1 0%`,
+              flex: `${tvSizing.weight} 1 0%`,
               // Piso de altura: sem ele, linhas de scorecard podem ficar tão
               // baixas que o número estoura o card e cobre o título.
-              minHeight: getRowMinHeight(row),
+              minHeight: tvSizing.minHeight,
               gridAutoRows: "1fr",
             }
           : {}),

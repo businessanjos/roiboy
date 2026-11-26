@@ -228,7 +228,8 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
   const colors = insightPaletteColors(appearance?.colorPalette);
 
   // Na TV não existe rolagem: exibe só as posições que cabem na altura do card.
-  const rowHeight = Math.round((compact ? 104 : 44) * m);
+  // Compact rows measure ~85px per scale unit on the TV; 88 keeps a small safety margin.
+  const rowHeight = Math.round((compact ? 88 : 44) * m);
   const headerHeight = Math.round(30 * m);
   const visibleRows =
     tv.tv && boxHeight > 0

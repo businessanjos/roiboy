@@ -8,14 +8,19 @@ export function hasCompanyRanking(visual: TvVisualShape): boolean {
   return visual.chart_type === 'ranking' && Array.isArray(visual.config?.rankingCompanyIds) && visual.config.rankingCompanyIds.length > 0;
 }
 
+/**
+ * Seller boards (company ranking present) give the ranking most of the TV height,
+ * so several sellers per company stay visible; calls and charts keep only their natural size.
+ */
 export function tvRowSizing(visuals: TvVisualShape[], sellerBoard: boolean, fallback: { minHeight: number; weight: number }) {
   if (!sellerBoard) return fallback;
-  if (visuals.some(hasCompanyRanking)) return { minHeight: 320, weight: 1.05 };
-  if (visuals.every(v => v.chart_type === 'call_commercial')) return { minHeight: 180, weight: 0.65 };
+  if (visuals.some(hasCompanyRanking)) return { minHeight: 560, weight: 1.9 };
+  if (visuals.every(v => v.chart_type === 'call_commercial')) return { minHeight: 250, weight: 0.7 };
   // Stacked bars also need room for their legend, totals and seller labels.
   if (visuals.some(v => v.chart_type === 'bar_stacked' || (v.chart_type === 'bar' && (v.config?.stackBy || v.config?.stackByCustomField)))) return { minHeight: 300, weight: 1 };
-  if (visuals.every(v => ['bar', 'bar_horizontal', 'bar_stacked'].includes(v.chart_type || ''))) return { minHeight: 220, weight: 1 };
-  return fallback;
+  if (visuals.every(v => ['bar', 'bar_horizontal', 'bar_stacked'].includes(v.chart_type || ''))) return { minHeight: 260, weight: 1 };
+  // Saved grid heights use another unit; keep unknown rows comparable to the weights above.
+  return { minHeight: fallback.minHeight, weight: fallback.minHeight / 300 };
 }
 
 /** A fitted row must reserve its natural content before distributing spare space. */

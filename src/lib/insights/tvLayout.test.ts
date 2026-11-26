@@ -1,36 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import { tvPresentationDefault, tvRowContentSizing, tvRowSizing, tvStageSizing } from './tvLayout';
 
-describe('content-aware TV row allocation', () => {
-  it('reserves the complete two-seller call list instead of the old 180px floor', () => {
+describe('seller board TV row allocation', () => {
+  const ranking = [{ chart_type: 'ranking', config: { rankingCompanyIds: ['eternum', 'anjos'] } }];
+
+  it('gives the company ranking more height than the calls and the chart together need individually', () => {
+    const r = tvRowSizing(ranking, true, { minHeight: 300, weight: 10 });
     const calls = tvRowSizing([{ chart_type: 'call_commercial' }], true, { minHeight: 300, weight: 9 });
-    expect(calls).toEqual({ minHeight: 180, weight: 0.65 });
-    expect(tvRowContentSizing(calls, 264)).toEqual({ minHeight: 264, weight: 0.65 });
+    const stacked = tvRowSizing([{ chart_type: 'bar', config: { stackBy: '_custom' } }], true, { minHeight: 300, weight: 14 });
+    expect(r).toEqual({ minHeight: 560, weight: 1.9 });
+    expect(calls).toEqual({ minHeight: 250, weight: 0.7 });
+    expect(stacked).toEqual({ minHeight: 300, weight: 1 });
+    expect(tvRowSizing([{ chart_type: 'bar_stacked' }], true, { minHeight: 300, weight: 14 })).toEqual(stacked);
   });
 
-  it('grows and shrinks again when the visible seller count changes', () => {
-    const base = { minHeight: 180, weight: 0.65 };
-    expect(tvRowContentSizing(base, 380).minHeight).toBe(380);
-    expect(tvRowContentSizing(base, 148).minHeight).toBe(180);
-    expect(base.minHeight).toBe(180);
+  it('keeps other rows of a seller board comparable to those weights', () => {
+    expect(tvRowSizing([{ chart_type: 'scorecard' }], true, { minHeight: 150, weight: 6 })).toEqual({ minHeight: 150, weight: 0.5 });
   });
 
-  it('rounds content upward so fractional pixels cannot clip the bottom edge', () => {
-    expect(tvRowContentSizing({ minHeight: 180, weight: 0.65 }, 264.3).minHeight).toBe(265);
+  it('leaves dashboards without a company ranking exactly as saved', () => {
+    const saved = { minHeight: 300, weight: 14 };
+    expect(tvRowSizing(ranking, false, saved)).toBe(saved);
+    expect(tvRowSizing([{ chart_type: 'call_commercial' }], false, saved)).toBe(saved);
   });
 
-  it('keeps ranking and bar proportions and minimums when no calls need more space', () => {
-    const ranking = tvRowSizing([{ chart_type: 'ranking', config: { rankingCompanyIds: ['eternum', 'anjos'] } }], true, { minHeight: 340, weight: 10 });
-    const bars = tvRowSizing([{ chart_type: 'bar' }], true, { minHeight: 300, weight: 14 });
-    expect(tvRowContentSizing(ranking, 0)).toEqual({ minHeight: 320, weight: 1.05 });
-    expect(tvRowContentSizing(bars, 0)).toEqual({ minHeight: 220, weight: 1 });
-  });
-
-  it('reserves 300px for stacked charts so calls cannot squeeze away the plot', () => {
-    expect(tvRowSizing([{ chart_type: 'bar', config: { stackBy: '_custom' } }], true, { minHeight: 300, weight: 14 }))
-      .toEqual({ minHeight: 300, weight: 1 });
-    expect(tvRowSizing([{ chart_type: 'bar_stacked' }], true, { minHeight: 300, weight: 14 }))
-      .toEqual({ minHeight: 300, weight: 1 });
+  it('still reserves measured content above the floor, rounding upward', () => {
+    expect(tvRowContentSizing({ minHeight: 250, weight: 0.7 }, 264.3)).toEqual({ minHeight: 265, weight: 0.7 });
+    expect(tvRowContentSizing({ minHeight: 250, weight: 0.7 }, 148).minHeight).toBe(250);
   });
 });
 
