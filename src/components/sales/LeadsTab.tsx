@@ -82,6 +82,7 @@ import { LeadTimeline } from "@/components/leads/LeadTimeline";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { LeadDetailSheet } from "@/components/leads/LeadDetailSheet";
 import { toast } from "sonner";
+import { CreateDealExtras, emptyCreateDealExtras, saveCreateDealExtras } from "@/components/sales/CreateDealExtras";
 import { LeadImportPreview, ImportLeadRow } from "@/components/leads/LeadImportPreview";
 import { useZappNavigation } from "@/hooks/useZappNavigation";
 import { ZappLeadPhonePickerDialog } from "@/components/royzapp/dialogs";
@@ -171,6 +172,7 @@ export default function LeadsTab() {
   const [checkingPhone, setCheckingPhone] = useState(false);
   const [existingClient, setExistingClient] = useState<{ id: string; full_name: string; phone_e164: string } | null>(null);
   const [creatingDeal, setCreatingDeal] = useState(false);
+  const [dealExtras, setDealExtras] = useState(emptyCreateDealExtras);
   const [leadForDeal, setLeadForDeal] = useState<Lead | null>(null);
 
   // Helper: open zapp conversation, showing phone picker if lead has multiple phones
@@ -268,6 +270,7 @@ export default function LeadsTab() {
     setDialogStep('phone');
     clearLeadDuplicates();
     setSelectedProductId("");
+    setDealExtras(emptyCreateDealExtras);
   };
 
   // Load products when deal-form dialog opens
@@ -426,9 +429,13 @@ export default function LeadsTab() {
           value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
           notes: dealFormData.notes || undefined,
           product_id: productId,
+          responsible_user_id: dealExtras.sellerId || undefined,
         });
 
         if (deal) {
+          if (currentUser?.account_id && !(await saveCreateDealExtras(currentUser.account_id, deal.id, dealExtras))) {
+            toast.warning("Negócio criado, mas as informações da venda não foram salvas. Preencha no card.");
+          }
           toast.success("Negócio criado com sucesso!");
           setIsDialogOpen(false);
           resetForm();
@@ -445,9 +452,13 @@ export default function LeadsTab() {
           notes: dealFormData.notes || leadForDeal.notes || undefined,
           source: leadForDeal.source || undefined,
           product_id: productId,
+          responsible_user_id: dealExtras.sellerId || undefined,
         });
 
         if (deal) {
+          if (currentUser?.account_id && !(await saveCreateDealExtras(currentUser.account_id, deal.id, dealExtras))) {
+            toast.warning("Negócio criado, mas as informações da venda não foram salvas. Preencha no card.");
+          }
           await markAsConvertedToDeal(leadForDeal.id, deal.id);
           toast.success("Lead convertido em negócio!");
           setIsDialogOpen(false);
@@ -1341,7 +1352,7 @@ export default function LeadsTab() {
           </DialogHeader>
 
           {dialogStep === 'phone' && !selectedLead && (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[calc(100dvh-9rem)] overflow-y-auto overscroll-contain px-1 -mx-1">
               <div className="space-y-2">
                 <Label>Telefone</Label>
                 <Input
@@ -1466,6 +1477,8 @@ export default function LeadsTab() {
                   </SelectContent>
                 </Select>
               </div>
+              <CreateDealExtras value={dealExtras} onChange={setDealExtras}  />
+
               <div className="space-y-2">
                 <Label>Observações</Label>
                 <Textarea

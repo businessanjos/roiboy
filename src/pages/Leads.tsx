@@ -84,6 +84,7 @@ import { ptBR } from "date-fns/locale";
 import { LeadTimeline } from "@/components/leads/LeadTimeline";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { toast } from "sonner";
+import { CreateDealExtras, emptyCreateDealExtras, saveCreateDealExtras } from "@/components/sales/CreateDealExtras";
 import { LeadFieldValueEditor, type LeadCustomField, FieldValueBadge, type FieldOption } from "@/components/custom-fields";
 import { CustomField } from "@/components/custom-fields";
 import { LeadImportPreview, ImportLeadRow, ExistingLeadInfo, DuplicateMatchType } from "@/components/leads/LeadImportPreview";
@@ -209,6 +210,7 @@ export default function Leads() {
   const [checkingPhone, setCheckingPhone] = useState(false);
   const [existingClient, setExistingClient] = useState<{ id: string; full_name: string; phone_e164: string } | null>(null);
   const [creatingDeal, setCreatingDeal] = useState(false);
+  const [dealExtras, setDealExtras] = useState(emptyCreateDealExtras);
   const [leadForDeal, setLeadForDeal] = useState<Lead | null>(null);
 
   // Products for "Item da Venda"
@@ -380,6 +382,7 @@ export default function Leads() {
     setDialogStep('phone');
     clearLeadDuplicates();
     setSelectedProductId("");
+    setDealExtras(emptyCreateDealExtras);
   };
 
   const openNewDialog = () => {
@@ -527,10 +530,14 @@ export default function Leads() {
           value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
           notes: dealFormData.notes || undefined,
           product_id: productId,
+          responsible_user_id: dealExtras.sellerId || undefined,
           pipeline_id: effectiveDealPipelineId || undefined,
         });
 
         if (deal) {
+          if (currentUser?.account_id && !(await saveCreateDealExtras(currentUser.account_id, deal.id, dealExtras))) {
+            toast.warning("Negócio criado, mas as informações da venda não foram salvas. Preencha no card.");
+          }
           toast.success("Negócio criado com sucesso!");
           setIsDialogOpen(false);
           resetForm();
@@ -549,10 +556,14 @@ export default function Leads() {
           notes: dealFormData.notes || leadForDeal.notes || undefined,
           source: leadForDeal.source || undefined,
           product_id: productId,
+          responsible_user_id: dealExtras.sellerId || undefined,
           pipeline_id: effectiveDealPipelineId || undefined,
         });
 
         if (deal) {
+          if (currentUser?.account_id && !(await saveCreateDealExtras(currentUser.account_id, deal.id, dealExtras))) {
+            toast.warning("Negócio criado, mas as informações da venda não foram salvas. Preencha no card.");
+          }
           await markAsConvertedToDeal(leadForDeal.id, deal.id);
           toast.success("Lead convertido em negócio!");
           setIsDialogOpen(false);
@@ -1884,7 +1895,7 @@ export default function Leads() {
 
           {/* Step 2b: Deal Form (if existing client found OR converting from lead) */}
           {dialogStep === 'deal-form' && (existingClient || leadForDeal) && !selectedLead && (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[calc(100dvh-9rem)] overflow-y-auto overscroll-contain px-1 -mx-1">
               {/* Client/Lead Info */}
               <div className="p-4 rounded-lg bg-muted/50 border">
                 <div className="flex items-center gap-3">
@@ -2020,6 +2031,8 @@ export default function Leads() {
                   </Select>
                 </div>
               </div>
+
+              <CreateDealExtras value={dealExtras} onChange={setDealExtras} leadFieldValues={leadForDeal ? fieldValues[leadForDeal.id] : undefined} />
 
               <div className="space-y-2">
                 <Label htmlFor="deal_notes">Observações</Label>
