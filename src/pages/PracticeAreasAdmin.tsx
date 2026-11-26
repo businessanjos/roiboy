@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Plus, ShieldAlert, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, Plus, ShieldAlert, ArrowUp, ArrowDown, Pencil, Check, X } from "lucide-react";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 
@@ -39,6 +39,8 @@ export default function PracticeAreasAdmin() {
   const { hasSectorAccess, isLoading: sectorsLoading } = useSectorAccess();
   const qc = useQueryClient();
   const [newLabel, setNewLabel] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
 
   // Liberado para qualquer usuário com acesso ao setor de Customer Success.
   const canManage =
@@ -88,6 +90,36 @@ export default function PracticeAreasAdmin() {
     },
     onError: (e: any) => toast.error(e.message ?? "Falha ao adicionar"),
   });
+
+  // Troca só o nome exibido; o slug continua sendo a identidade da área.
+  const renameMut = useMutation({
+    mutationFn: async ({ row, label }: { row: PracticeAreaRow; label: string }) => {
+      const trimmed = label.trim().replace(/\s+/g, " ");
+      if (!trimmed) throw new Error("Informe um nome");
+      if (trimmed === row.label) return;
+      const { data, error } = await supabase
+        .from("practice_areas")
+        .update({ label: trimmed })
+        .eq("id", row.id)
+        .select("id");
+      if (error) {
+        if ((error as any).code === "23505") throw new Error("Já existe uma área com esse nome");
+        throw error;
+      }
+      if (!data || data.length === 0) throw new Error("Você não tem permissão para editar esta área");
+    },
+    onSuccess: () => {
+      toast.success("Nome atualizado");
+      setEditingId(null);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha ao renomear"),
+  });
+
+  const startEdit = (row: PracticeAreaRow) => {
+    setEditingId(row.id);
+    setEditLabel(row.label);
+  };
 
   const toggleMut = useMutation({
     mutationFn: async (row: PracticeAreaRow) => {
@@ -150,7 +182,7 @@ export default function PracticeAreasAdmin() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
+    <div className="w-full p-4 sm:p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Áreas de Atuação</h1>
         <p className="text-sm text-muted-foreground">
@@ -201,14 +233,14 @@ export default function PracticeAreasAdmin() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <Table>
+            <Table className="min-w-[640px] table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-16">Ordem</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="w-[12%]">Ordem</TableHead>
+                  <TableHead className="w-[38%]">Nome</TableHead>
+                  <TableHead className="w-[22%]">Slug</TableHead>
+                  <TableHead className="w-[12%]">Status</TableHead>
+                  <TableHead className="w-[16%] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -223,6 +255,7 @@ export default function PracticeAreasAdmin() {
                         <Button
                           size="icon"
                           variant="ghost"
+                          aria-label={`Subir ${row.label}`}
                           disabled={i === 0 || moveMut.isPending}
                           onClick={() => moveMut.mutate({ row, dir: -1 })}
                         >
@@ -231,6 +264,7 @@ export default function PracticeAreasAdmin() {
                         <Button
                           size="icon"
                           variant="ghost"
+                          aria-label={`Descer ${row.label}`}
                           disabled={i === arr.length - 1 || moveMut.isPending}
                           onClick={() => moveMut.mutate({ row, dir: 1 })}
                         >
@@ -238,8 +272,53 @@ export default function PracticeAreasAdmin() {
                         </Button>
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium">{row.label}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="font-medium">
+                      {editingId === row.id ? (
+                        <form
+                          className="flex items-center gap-1"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            renameMut.mutate({ row, label: editLabel });
+                          }}
+                        >
+                          <Input
+                            autoFocus
+                            value={editLabel}
+                            onChange={(e) => setEditLabel(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") setEditingId(null);
+                            }}
+                            aria-label={`Novo nome para ${row.label}`}
+                            className="h-9"
+                          />
+                          <Button
+                            type="submit"
+                            size="icon"
+                            variant="ghost"
+                            aria-label="Salvar nome"
+                            disabled={renameMut.isPending || !editLabel.trim()}
+                          >
+                            {renameMut.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Check className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label="Cancelar edição"
+                            onClick={() => setEditingId(null)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </form>
+                      ) : (
+                        <span className="block truncate">{row.label}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="truncate font-mono text-xs text-muted-foreground">
                       {row.slug}
                     </TableCell>
                     <TableCell>
@@ -251,10 +330,16 @@ export default function PracticeAreasAdmin() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {row.active ? "Ativa" : "Inativa"}
-                        </span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Editar nome de ${row.label}`}
+                          onClick={() => startEdit(row)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         <Switch
+                          aria-label={row.active ? `Desativar ${row.label}` : `Ativar ${row.label}`}
                           checked={row.active}
                           onCheckedChange={() => toggleMut.mutate(row)}
                           disabled={toggleMut.isPending}
