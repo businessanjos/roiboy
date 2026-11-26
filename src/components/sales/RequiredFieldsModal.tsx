@@ -325,7 +325,11 @@ export function RequiredFieldsModal({
         const { data } = await supabase.from("leads").select("cpf, cnpj").eq("id", deal.lead_id).maybeSingle();
         doc = data?.cpf || data?.cnpj || null;
       }
-      if (doc) setDocSuggestion(doc);
+      if (!doc) return;
+      setDocSuggestion(doc);
+      // Rascunho antigo neste navegador pode ter guardado o preenchimento automático: volta a ser só sugestão.
+      const same = (v: unknown) => typeof v === "string" && v.replace(/\D/g, "") === doc!.replace(/\D/g, "");
+      setValues((prev) => (same(prev[docFieldId]) ? { ...prev, [docFieldId]: null } : prev));
     })().catch((err) => console.error("Erro ao buscar CPF/CNPJ do cadastro:", err));
   }, [open, docFieldId, dealId]);
   const payMethod = payCharge && requiredMethods.length === 1 ? requiredMethods[0] : null;

@@ -232,6 +232,7 @@ export function BillingMentoreeSection({ dealId, accountId, contactDefaults, val
           </Label>
           <div className="flex gap-2">
             <Input
+              autoComplete="off"
               value={formatDoc(values.doc, values.tipo_pessoa)}
               onChange={(e) => update({ doc: e.target.value })}
               onBlur={(e) => persist("doc", e.target.value)}

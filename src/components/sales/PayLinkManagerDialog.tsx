@@ -101,7 +101,7 @@ export function PayLinkManagerDialog({ open, onOpenChange, dealId, onLinked }: P
             <div className="space-y-2">
               <Label>CPF/CNPJ ou e-mail de quem pagou (opcional)</Label>
               <div className="grid gap-2 sm:grid-cols-2">
-                <Input value={document} inputMode="numeric" maxLength={18} placeholder="CPF ou CNPJ" aria-label="CPF ou CNPJ de quem pagou" onChange={(e) => setDocument(e.target.value)} />
+                <Input value={document} autoComplete="off" inputMode="numeric" maxLength={18} placeholder="CPF ou CNPJ" aria-label="CPF ou CNPJ de quem pagou" onChange={(e) => setDocument(e.target.value)} />
                 <Input value={email} type="email" maxLength={254} placeholder="E-mail" aria-label="E-mail de quem pagou" onChange={(e) => setEmail(e.target.value)} />
               </div>
               <p className="text-xs text-muted-foreground">Com isso, as próximas vendas desse pagador são reconhecidas sozinhas.</p>
