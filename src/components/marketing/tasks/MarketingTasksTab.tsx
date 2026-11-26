@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp, ListMinus, Maximize2, Minimize2, MoreHorizontal, X, ListChecks, Undo2, Loader2 } from "lucide-react";
+import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp, ListMinus, Maximize2, Minimize2, MoreHorizontal, X, ListChecks, Undo2, Loader2, Clock, History, Flag, ArrowDownAZ } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -31,7 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { isPast, isToday, parseISO, startOfDay } from "date-fns";
-import { matchesTaskLabels, deliverySortKey } from "@/lib/marketing/taskDetails";
+import { matchesTaskLabels } from "@/lib/marketing/taskDetails";
 import { useMarketingTaskLabelCatalog } from "@/hooks/useMarketingTaskLabelCatalog";
 import { TaskLabelFilter } from "./TaskLabels";
 import { useMarketingTaskSeparators } from "@/hooks/useMarketingTaskSeparators";
@@ -40,12 +40,12 @@ import type { TaskSeparator } from "@/lib/marketing/taskPresentation";
 import { TaskBulkToolbar } from "./TaskBulkToolbar";
 import { taskCompletionChange, taskBulkChanges, type TaskBulkAction } from "@/lib/marketing/taskChanges";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { TASK_RECENCY_OPTIONS, isTaskRecent, type TaskRecency } from "@/lib/marketing/taskRecency";
+import { TASK_SORT_LABELS, isTaskSort, sortMarketingTasks, type TaskSort } from "@/lib/marketing/taskSort";
 
 type ViewMode = "list" | "board";
 
 type StatusFilter = "all" | MarketingTask["status"];
-type SortFilter = "manual" | "due_date_asc" | "due_date_desc";
+type SortFilter = TaskSort;
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: React.ReactNode }[] = [
   { value: "all", label: "Todas as etapas", icon: <Filter className="h-4 w-4 mr-2 text-muted-foreground" /> },
@@ -54,11 +54,17 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: React.ReactNod
   { value: "done", label: "Concluídas", icon: <CheckCircle2 className="h-4 w-4 mr-2 text-muted-foreground" /> },
 ];
 
-const SORT_OPTIONS: { value: SortFilter; label: string; icon: React.ReactNode }[] = [
-  { value: "manual", label: "Ordem manual", icon: <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" /> },
-  { value: "due_date_asc", label: "Vencimento ↑", icon: <CalendarArrowUp className="h-4 w-4 mr-2 text-muted-foreground" /> },
-  { value: "due_date_desc", label: "Vencimento ↓", icon: <CalendarArrowDown className="h-4 w-4 mr-2 text-muted-foreground" /> },
-];
+const SORT_ICONS: Record<SortFilter, React.ReactNode> = {
+  manual: <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" />,
+  created_desc: <Clock className="h-4 w-4 mr-2 text-muted-foreground" />,
+  created_asc: <Clock className="h-4 w-4 mr-2 text-muted-foreground" />,
+  updated_desc: <History className="h-4 w-4 mr-2 text-muted-foreground" />,
+  due_date_asc: <CalendarArrowUp className="h-4 w-4 mr-2 text-muted-foreground" />,
+  due_date_desc: <CalendarArrowDown className="h-4 w-4 mr-2 text-muted-foreground" />,
+  priority_desc: <Flag className="h-4 w-4 mr-2 text-muted-foreground" />,
+  title_asc: <ArrowDownAZ className="h-4 w-4 mr-2 text-muted-foreground" />,
+};
+const SORT_OPTIONS = (Object.keys(TASK_SORT_LABELS) as SortFilter[]).map((value) => ({ value, label: TASK_SORT_LABELS[value], icon: SORT_ICONS[value] }));
 
 export function isTaskOverdue(task: MarketingTask): boolean {
   if (!task.due_date || task.is_completed || task.status === "done") return false;
@@ -77,9 +83,8 @@ export function MarketingTasksTab() {
   const assigneeFilter = isHiddenTechnicalPerson({ id: savedAssigneeFilter }) ? "all" : savedAssigneeFilter;
   const [savedStatusFilter, setStatusFilter] = usePersistedFilter<StatusFilter>("marketing-tasks", "status", "pending");
   const statusFilter = STATUS_OPTIONS.some((option) => option.value === savedStatusFilter) ? savedStatusFilter : "pending";
-  const [sortFilter, setSortFilter] = usePersistedFilter<SortFilter>("marketing-tasks", "sort", "manual");
-  const [savedRecency, setRecencyFilter] = usePersistedFilter<TaskRecency>("marketing-tasks", "created", "all");
-  const recencyFilter = TASK_RECENCY_OPTIONS.some((option) => option.value === savedRecency) ? savedRecency : "all";
+  const [savedSortFilter, setSortFilter] = usePersistedFilter<SortFilter>("marketing-tasks", "sort", "manual");
+  const sortFilter: SortFilter = isTaskSort(savedSortFilter) ? savedSortFilter : "manual";
   const [labelFilter, setLabelFilter] = usePersistedFilter<string[]>("marketing-tasks", "labels", []);
   const [isBoardExpanded, setIsBoardExpanded] = useState(false);
   const expandButtonRef = useRef<HTMLButtonElement>(null);
@@ -195,9 +200,9 @@ export function MarketingTasksTab() {
     return tasks.filter((t) => {
       const matchesSearch = matchesTaskSearch(t, searchQuery, subtaskTitles[t.id]);
       const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-      return matchesSearch && matchesStatus && matchesTaskLabels(t, labelFilter) && isTaskRecent(t.created_at, recencyFilter);
+      return matchesSearch && matchesStatus && matchesTaskLabels(t, labelFilter);
     });
-  }, [tasks, searchQuery, statusFilter, labelFilter, subtaskTitles, recencyFilter]);
+  }, [tasks, searchQuery, statusFilter, labelFilter, subtaskTitles]);
 
   const assigneeCounts = useMemo(() => {
     const counts: Record<string, number> = { all: baseFilteredForCounts.length, none: 0 };
@@ -221,22 +226,11 @@ export function MarketingTasksTab() {
         assigneeFilter === "all" ||
         (assigneeFilter === "none" ? !t.assignee_id : t.assignee_id === assigneeFilter);
       const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-      return matchesSearch && matchesAssignee && matchesStatus && matchesTaskLabels(t, labelFilter) && isTaskRecent(t.created_at, recencyFilter);
+      return matchesSearch && matchesAssignee && matchesStatus && matchesTaskLabels(t, labelFilter);
     });
 
-    if (sortFilter === "manual") {
-      return filtered.sort((a, b) => a.display_order - b.display_order);
-    }
-
-    return filtered.sort((a, b) => {
-      const aDue = deliverySortKey(a);
-      const bDue = deliverySortKey(b);
-      if (aDue === bDue) return a.display_order - b.display_order;
-      if (!aDue) return 1;
-      if (!bDue) return -1;
-      return sortFilter === "due_date_asc" ? aDue.localeCompare(bDue) : bDue.localeCompare(aDue);
-    });
-  }, [tasks, searchQuery, assigneeFilter, statusFilter, sortFilter, labelFilter, subtaskTitles, recencyFilter]);
+    return sortMarketingTasks(filtered, sortFilter);
+  }, [tasks, searchQuery, assigneeFilter, statusFilter, sortFilter, labelFilter, subtaskTitles]);
 
   // Selection never silently includes tasks hidden by a new filter or revoked access.
   useEffect(() => {
@@ -274,7 +268,7 @@ export function MarketingTasksTab() {
   const uncategorizedTasks = filteredTasks.filter((t) => !t.section_id);
 
   // Critérios de busca/filtro/ordenação do modo lista — ao mudar, cada seção volta à página 1.
-  const listFiltersKey = [searchQuery, assigneeFilter, statusFilter, sortFilter, labelFilter, recencyFilter];
+  const listFiltersKey = [searchQuery, assigneeFilter, statusFilter, sortFilter, labelFilter];
 
   const handleAddTask = (sectionId?: string, columnId?: string, assigneeId?: string) => {
     setAddingToSection(sectionId || null);
@@ -327,7 +321,7 @@ export function MarketingTasksTab() {
     );
   }
 
-  const activeFilterCount = Number(assigneeFilter !== "all") + Number(statusFilter !== "all") + Number(recencyFilter !== "all") + labelFilter.length;
+  const activeFilterCount = Number(assigneeFilter !== "all") + Number(statusFilter !== "all") + labelFilter.length;
 
   const expandControl = (
     <Tooltip>
@@ -425,18 +419,6 @@ export function MarketingTasksTab() {
           </Select>
 
           </div>
-          <div className="space-y-1.5"><p className="text-xs font-medium text-muted-foreground">Recentes</p>
-          <Select value={recencyFilter} onValueChange={(value) => setRecencyFilter(value as TaskRecency)}>
-            <SelectTrigger aria-label="Filtrar por tarefas recentes" className="w-full">
-              <SelectValue placeholder="Qualquer data" />
-            </SelectTrigger>
-            <SelectContent>
-              {TASK_RECENCY_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          </div>
           <div className="space-y-1.5"><p className="text-xs font-medium text-muted-foreground">Responsável</p>
           <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
             <SelectTrigger aria-label="Filtrar por responsável" className="w-full">
@@ -480,7 +462,7 @@ export function MarketingTasksTab() {
                 </div>
               </div>
               <div className="border-t px-3 py-2">
-                <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground" disabled={!activeFilterCount && !searchQuery} onClick={() => { setSearchQuery(""); setAssigneeFilter("all"); setStatusFilter("all"); setRecencyFilter("all"); setLabelFilter([]); }}><X className="h-3.5 w-3.5" />Limpar filtros</Button>
+                <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground" disabled={!activeFilterCount && !searchQuery} onClick={() => { setSearchQuery(""); setAssigneeFilter("all"); setStatusFilter("all"); setLabelFilter([]); }}><X className="h-3.5 w-3.5" />Limpar filtros</Button>
               </div>
             </PopoverContent>
           </Popover>
@@ -515,7 +497,7 @@ export function MarketingTasksTab() {
       {separatorsError && viewMode === "board" && <p role="alert" className="text-sm text-destructive">Não foi possível carregar os separadores.</p>}
       {!tasksError && tasks.length > 0 && filteredTasks.length === 0 && <div className="flex flex-wrap items-center gap-3 py-3 text-sm text-muted-foreground">
         <span>Nenhuma tarefa encontrada com estes filtros.</span>
-        <Button variant="ghost" onClick={() => { setSearchQuery(""); setAssigneeFilter("all"); setStatusFilter("all"); setRecencyFilter("all"); setLabelFilter([]); }}>Limpar filtros</Button>
+        <Button variant="ghost" onClick={() => { setSearchQuery(""); setAssigneeFilter("all"); setStatusFilter("all"); setLabelFilter([]); }}>Limpar filtros</Button>
       </div>}
 
       {viewMode === "board" && (
