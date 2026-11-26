@@ -869,6 +869,13 @@
       "when": 1795721679114,
       "tag": "0123_pay_orphan_sales",
       "breakpoints": true
+    },
+    {
+      "idx": 124,
+      "version": "7",
+      "when": 1795723747266,
+      "tag": "0124_manager_opens_pay_link",
+      "breakpoints": true
     }
   ]
 }

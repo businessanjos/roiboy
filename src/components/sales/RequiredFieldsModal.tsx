@@ -39,6 +39,8 @@ import { useRykaPaySubscriptions } from "@/hooks/useRykaPaySubscriptions";
 import { paidPayCharge } from "@/lib/sales/subscriptionPayCharge";
 import { payRelationshipLabel } from "@/lib/rykaPay";
 import { PayLinkRequestDialog } from "@/components/sales/PayLinkRequestDialog";
+import { PayLinkManagerDialog } from "@/components/sales/PayLinkManagerDialog";
+import { payLinkAction } from "@/lib/sales/payWinGate";
 import { useQuery } from "@tanstack/react-query";
 import { clearLocalAutosaveDraft, readLocalAutosaveDraft, writeLocalAutosaveDraft } from "@/hooks/useLocalAutosaveDraft";
 
@@ -278,6 +280,19 @@ export function RequiredFieldsModal({
     refetchInterval: (query) => (query.state.data?.status === "pending" ? 20000 : false),
   });
   const payRequest = payRequestQuery.data ?? null;
+  // Gestor vincula direto pela lista; os demais pedem ao gestor. A permissão real é conferida no servidor.
+  const payManagerQuery = useQuery({
+    queryKey: ["can-manage-pay-links"],
+    enabled: open && payGate,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return false;
+      const { data } = await (supabase as any).rpc("can_manage_spiff_payments", { _auth_user_id: auth.user.id });
+      return data === true;
+    },
+  });
+  const payLinkMode = payManagerQuery.isSuccess ? payLinkAction(payManagerQuery.data) : null;
   const gate = payWinGate({
     pendingRequest: payRequest?.status === "pending",
     thirdPartyConfirmed,
@@ -902,12 +917,14 @@ export function RequiredFieldsModal({
               <>O gestor recusou o último pedido{payRequest.decision_reason ? `: ${payRequest.decision_reason}` : "."}</>,
             )}
             <p className="text-xs text-muted-foreground">Outra pessoa pagou (sócio, marido/esposa, cartão da empresa)?</p>
-            <Button type="button" variant="outline" className="min-h-11 w-full" onClick={() => setPayRequestOpen(true)}>
-              Solicitar ao gestor
-            </Button>
+            {payLinkMode && (
+              <Button type="button" variant="outline" className="min-h-11 w-full" onClick={() => setPayRequestOpen(true)}>
+                {payLinkMode === "link" ? "Ver vendas sem dono e vincular" : "Solicitar ao gestor"}
+              </Button>
+            )}
           </div>
         )}
-        {!gateBusy && gate.status === "awaiting_manager" &&
+        {!gateBusy && gate.status === "awaiting_manager" && payLinkMode !== "link" &&
           gateNote(
             "warning",
             <>
@@ -915,6 +932,14 @@ export function RequiredFieldsModal({
               vincular, clique em "Verificar de novo".
             </>,
           )}
+        {!gateBusy && gate.status === "awaiting_manager" && payLinkMode === "link" && (
+          <div className="space-y-2">
+            {gateNote("warning", <>Há um pedido de vínculo de pagamento aberto para este negócio. Escolha a venda para vincular.</>)}
+            <Button type="button" variant="outline" className="min-h-11 w-full" onClick={() => setPayRequestOpen(true)}>
+              Ver vendas sem dono e vincular
+            </Button>
+          </div>
+        )}
         {!gateBusy && gate.status === "third_party" && (
           <div className="space-y-2">
             {gateNote(
@@ -946,12 +971,21 @@ export function RequiredFieldsModal({
         {!gateBusy && gate.status === "error" &&
           gateNote("destructive", "Não foi possível consultar o RykaPay agora. Tente verificar de novo em instantes.")}
       </div>
-      <PayLinkRequestDialog
-        open={payRequestOpen}
-        onOpenChange={setPayRequestOpen}
-        dealId={dealId}
-        onRequested={() => void payRequestQuery.refetch()}
-      />
+      {payLinkMode === "link" ? (
+        <PayLinkManagerDialog
+          open={payRequestOpen}
+          onOpenChange={setPayRequestOpen}
+          dealId={dealId}
+          onLinked={() => void Promise.all([payQuery.refetch(), payRequestQuery.refetch()])}
+        />
+      ) : (
+        <PayLinkRequestDialog
+          open={payRequestOpen}
+          onOpenChange={setPayRequestOpen}
+          dealId={dealId}
+          onRequested={() => void payRequestQuery.refetch()}
+        />
+      )}
     </div>
   ) : null;
 

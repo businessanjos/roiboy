@@ -59,3 +59,8 @@ export function payWinGate(input: {
   if (other) return { status: "other_cycle", cycle: other };
   return input.pendingRequest ? { status: "awaiting_manager" } : { status: "unpaid" };
 }
+
+/** Managers link the ownerless payment themselves, from the full list; everyone else asks a manager. */
+export function payLinkAction(canManage: boolean): "link" | "request" {
+  return canManage ? "link" : "request";
+}

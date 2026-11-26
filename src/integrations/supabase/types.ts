@@ -32381,6 +32381,7 @@ export type Database = {
         Args: { _assignment_id: string }
         Returns: undefined
       }
+      open_pay_link_as_manager: { Args: { _deal_id: string }; Returns: string }
       pay_seed_emails: { Args: { _emails: string[] }; Returns: string[] }
       pda_is_hr_or_director: { Args: never; Returns: boolean }
       pda_synergy_pct: {

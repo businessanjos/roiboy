@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { orphanKey, usePayOrphans } from "@/hooks/usePayOrphans";
+import { notifyPayLink, orphanKey, usePayOrphans } from "@/hooks/usePayOrphans";
 import { PayOrphanList } from "@/components/sales/PayOrphanList";
 
 interface Props {
@@ -26,7 +26,7 @@ export function PayLinkRequestDialog({ open, onOpenChange, dealId, onRequested }
   const send = async () => {
     const orphan = query.data?.orphans.find((o) => orphanKey(o) === selected);
     setSending(true);
-    const { error } = await supabase.rpc("request_pay_link", {
+    const { data: requestId, error } = await supabase.rpc("request_pay_link", {
       _deal_id: dealId,
       _source: orphan?.source ?? null,
       _external_id: orphan?.id ?? null,
@@ -35,6 +35,7 @@ export function PayLinkRequestDialog({ open, onOpenChange, dealId, onRequested }
     });
     setSending(false);
     if (error) return toast.error(error.message || "Não foi possível enviar a solicitação.");
+    if (requestId) void notifyPayLink("notify", requestId);
     toast.success("Solicitação enviada ao gestor.");
     setSelected(null);
     setNote("");

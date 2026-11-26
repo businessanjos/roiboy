@@ -64,6 +64,12 @@ export function approvePayLink(input: {
   });
 }
 
+/** WhatsApp notice to the managers (new request) or to the seller (decision); a failed notice never blocks the flow. */
+export async function notifyPayLink(action: "notify" | "decided", requestId: string) {
+  const { error } = await supabase.functions.invoke("pay-link-whatsapp", { body: { action, request_id: requestId } });
+  if (error) console.error("[pay-link-whatsapp]", error);
+}
+
 export const orphanKey = (o: Pick<PayOrphan, "source" | "id">) => `${o.source}:${o.id}`;
 export const orphanMoney = (cents: number | null) =>
   cents === null ? "—" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);

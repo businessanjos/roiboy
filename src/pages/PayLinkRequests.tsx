@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { PAY_RELATIONSHIP_LABEL, payRelationshipLabel, type PayRelationship } from "@/lib/rykaPay";
-import { approvePayLink, orphanDay, orphanKey, orphanMoney, usePayOrphans } from "@/hooks/usePayOrphans";
+import { approvePayLink, notifyPayLink, orphanDay, orphanKey, orphanMoney, usePayOrphans } from "@/hooks/usePayOrphans";
 import { PayOrphanList } from "@/components/sales/PayOrphanList";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -115,6 +115,7 @@ export default function PayLinkRequests() {
     setBusy("approve");
     try {
       await approvePayLink({ requestId: current.id, orphan: picked, relationship, relationshipOther: other, payerDocument: document, payerEmail: email });
+      void notifyPayLink("decided", current.id);
       done("Pagamento vinculado. O vendedor já pode dar o ganho.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível vincular.");
@@ -129,6 +130,7 @@ export default function PayLinkRequests() {
     const { error } = await supabase.rpc("decide_pay_link", { _request_id: current.id, _approve: false, _reason: reason.trim() });
     setBusy(null);
     if (error) return toast.error(error.message || "Não foi possível recusar.");
+    void notifyPayLink("decided", current.id);
     done("Solicitação recusada.");
   };
 

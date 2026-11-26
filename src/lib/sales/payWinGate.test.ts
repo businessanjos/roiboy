@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PayResult, PaySubscription } from "@/lib/rykaPay";
 import { PRODUCT_IDS } from "./itemVendaResolver";
-import { payWinGate, requiresPaidWin } from "./payWinGate";
+import { payLinkAction, payWinGate, requiresPaidWin } from "./payWinGate";
 
 const inv = (situation: string, paidAt: string | null = null) => ({
   id: "qa-" + situation, cycle: 1, status: situation, situation, amountCents: 49700, dueDate: null, paidAt,
@@ -66,5 +66,14 @@ describe("trava de pagamento no ganho", () => {
     const paidBy = { name: "TESTE QA Esposa", relationship: "spouse" as const, relationshipOther: null, forThisDeal: false };
     expect(payWinGate({ ...asked, result: { ...paidMonthly, paidBy } }).status).toBe("third_party");
     expect(payWinGate({ ...asked, thirdPartyConfirmed: true, result: { ...paidMonthly, paidBy } }).status).toBe("paid");
+  });
+});
+
+describe("vínculo de pagamento de terceiro", () => {
+  it("gestor vincula direto pela lista, sem solicitar a si mesmo", () => {
+    expect(payLinkAction(true)).toBe("link");
+  });
+  it("vendedor continua solicitando ao gestor", () => {
+    expect(payLinkAction(false)).toBe("request");
   });
 });
