@@ -23,10 +23,10 @@ export function RykaPaySubscriptions(target: { dealId?: string; clientId?: strin
   const selectionExists = subscriptions.some(s => s.id === selected);
   const visible = selected === "all" || !selectionExists ? subscriptions : subscriptions.filter(s => s.id === selected);
   const metrics = payMetrics(visible, Boolean(data?.partial));
-  const emptyText = data?.state === "needs_document" ? "Cadastre o CPF ou CNPJ para consultar a assinatura."
+  const emptyText = data?.state === "needs_document" ? "Cadastre o CPF, CNPJ ou e-mail para consultar a assinatura."
     : data?.state === "needs_product" ? "Selecione o Item da Venda para consultar a assinatura do produto."
     : data?.productName ? `Nenhuma assinatura ativa correspondente a ${data.productName} no RykaPay.`
-    : "Nenhuma assinatura ativa encontrada no RykaPay para este CPF/CNPJ.";
+    : "Nenhuma assinatura ativa encontrada no RykaPay para este CPF/CNPJ ou e-mail.";
 
   return <section className="min-w-0 space-y-4" aria-label="Assinaturas RykaPay">
     <header className="flex items-center justify-between gap-2">
@@ -45,6 +45,7 @@ export function RykaPaySubscriptions(target: { dealId?: string; clientId?: strin
     </div>}
     {data && <>
       {data.partial && <p role="status" className="border-l-2 border-warning pl-3 text-sm text-muted-foreground">Consulta parcial no RykaPay. Totais indisponíveis.</p>}
+      {data.matchedBy === "email" && subscriptions.length > 0 && <p role="status" className="border-l-2 border-border pl-3 text-sm text-muted-foreground">Vinculada pelo e-mail: o CPF/CNPJ do ROY não foi encontrado no RykaPay.</p>}
       {!subscriptions.length ? <p className="py-6 text-sm text-muted-foreground">{emptyText}</p> : <>
         {target.clientId && subscriptions.length > 1 && <Select value={selectionExists ? selected : "all"} onValueChange={setSelected}>
           <SelectTrigger className="h-11 min-w-0 text-base sm:text-sm" aria-label="Filtrar assinatura"><SelectValue /></SelectTrigger>

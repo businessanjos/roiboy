@@ -24,6 +24,8 @@ export type PayResult = {
   partial: boolean;
   generatedAt: string;
   productName: string | null;
+  /** How the payer was found; "email" means the document found nothing. */
+  matchedBy?: "document" | "email" | null;
 };
 export function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};

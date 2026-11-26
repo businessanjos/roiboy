@@ -8,6 +8,8 @@ const BASE = "https://rykapay.app/api/public/v1";
 const ROY_ACCOUNT = "796e7970-fd93-4574-a871-6090624cace6";
 // Deal custom fields "CPF ou CNPJ" and "CPF/CNPJ (NF)".
 const DEAL_DOCUMENT_FIELDS = ["de5d8543-287e-4ad9-917a-813d48d0d3eb", "d177b69b-b95c-439c-b52e-8f7117866619"];
+// Deal custom fields "E-mail para envio da NF" and "Mentorado - E-mail".
+const DEAL_EMAIL_FIELDS = ["60ecd631-99b1-44c5-8bda-48b7ac2372b5", "383e0309-652a-428c-9ac7-6fca0b79f56a"];
 const Input = z.object({ dealId: z.string().uuid().optional(), clientId: z.string().uuid().optional() }).strict()
   .refine(v => Boolean(v.dealId) !== Boolean(v.clientId));
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
@@ -64,19 +66,29 @@ Deno.serve(async req => {
     const empty = (state: PayResult["state"]): PayResult => ({ state, subscriptions: [], partial: false, generatedAt: new Date().toISOString(), productName: product?.name ?? null });
     if (dealId && !product) return reply(empty("needs_product"));
     const docs = new Set<string>();
+    // Plan B: RykaPay also finds the payer by e-mail when no document matches.
+    const emails = new Set<string>();
+    const addDoc = (v: unknown) => { const doc = documentNumbers(v); if (doc) docs.add(doc); };
+    const addEmail = (v: unknown) => {
+      for (const part of Array.isArray(v) ? v : [v]) {
+        const email = typeof part === "string" ? part.trim().toLowerCase() : "";
+        if (email.length <= 254 && /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(email) && emails.size < 6) emails.add(email);
+      }
+    };
     if (linkedClientId) {
-      const { data, error } = await db.from("clients").select("cpf,cnpj").eq("id", linkedClientId).eq("account_id", me.account_id).maybeSingle();
+      const { data, error } = await db.from("clients").select("cpf,cnpj,emails").eq("id", linkedClientId).eq("account_id", me.account_id).maybeSingle();
       if (error || !data) return reply({ error: "Cliente não disponível para você." }, 404);
-      for (const v of [data.cpf, data.cnpj]) { const doc = documentNumbers(v); if (doc) docs.add(doc); }
+      addDoc(data.cpf); addDoc(data.cnpj); addEmail(data.emails);
     }
-    if (!docs.size && linkedLeadId) {
-      const { data, error } = await db.from("leads").select("cpf,cnpj").eq("id", linkedLeadId).eq("account_id", me.account_id).maybeSingle();
-      if (error || !data) return reply({ error: "Lead não disponível para você." }, 404);
-      for (const v of [data.cpf, data.cnpj]) { const doc = documentNumbers(v); if (doc) docs.add(doc); }
+    if (linkedLeadId) {
+      const { data, error } = await db.from("leads").select("cpf,cnpj,email,emails").eq("id", linkedLeadId).eq("account_id", me.account_id).maybeSingle();
+      if (error) throw new Error("roy_read_failed");
+      if (!data && !linkedClientId) return reply({ error: "Lead não disponível para você." }, 404);
+      if (data) { if (!docs.size) { addDoc(data.cpf); addDoc(data.cnpj); } addEmail(data.email); addEmail(data.emails); }
     }
-    // The sales team records the payer document on the deal ("CPF ou CNPJ" / "CPF/CNPJ (NF)"),
-    // often before the client profile has it. Both reads stay under the caller's RLS.
-    if (!docs.size) {
+    // The sales team records the payer document and e-mail on the deal, often before the
+    // client profile has them. All reads stay under the caller's RLS.
+    {
       let dealIds: string[] = dealId ? [dealId] : [];
       if (!dealId && linkedClientId) {
         const { data, error } = await db.from("deals").select("id").eq("client_id", linkedClientId).eq("account_id", me.account_id).is("deleted_at", null).limit(50);
@@ -84,22 +96,28 @@ Deno.serve(async req => {
         dealIds = (data ?? []).map(d => d.id);
       }
       if (dealIds.length) {
-        const { data, error } = await db.from("deal_field_values").select("value_text").in("deal_id", dealIds).in("field_id", DEAL_DOCUMENT_FIELDS).eq("account_id", me.account_id);
+        const { data, error } = await db.from("deal_field_values").select("field_id,value_text").in("deal_id", dealIds).in("field_id", [...DEAL_DOCUMENT_FIELDS, ...DEAL_EMAIL_FIELDS]).eq("account_id", me.account_id);
         if (error) throw new Error("roy_read_failed");
-        for (const row of data ?? []) { const doc = documentNumbers(row.value_text); if (doc) docs.add(doc); }
+        const fromDeal = new Set<string>();
+        for (const row of data ?? []) {
+          if (DEAL_EMAIL_FIELDS.includes(row.field_id)) addEmail(row.value_text);
+          else { const doc = documentNumbers(row.value_text); if (doc) fromDeal.add(doc); }
+        }
+        if (!docs.size) for (const doc of fromDeal) docs.add(doc);
       }
     }
-    if (!docs.size) return reply(empty("needs_document"));
+    if (!docs.size && !emails.size) return reply(empty("needs_document"));
     let partial = false;
+    let matchedBy: "document" | "email" | null = null;
     const subscriptions = new Map<string, PaySubscription>();
-    for (const documento of docs) {
+    const lookup = async (param: "documento" | "email", value: string): Promise<Response | null> => {
       const endpoint = new URL(`${BASE}/clientes/pagamentos`);
-      endpoint.searchParams.set("documento", documento);
+      endpoint.searchParams.set(param, value);
       const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${key}`, Accept: "application/json" }, signal: AbortSignal.timeout(15000), redirect: "error" });
       // Never return/log the raw body: it contains payer identities and provider tokens.
       if (response.status === 404) {
         const payload = await response.json().catch(() => null);
-        if (record(payload).codigo === "cliente_nao_encontrado") continue;
+        if (record(payload).codigo === "cliente_nao_encontrado") return null;
       }
       if (!response.ok) return reply({ error: response.status === 401 ? "RykaPay recusou a consulta: confira a chave ou o limite de consultas." : response.status === 403 ? "A chave RykaPay não permite esta consulta." : "RykaPay indisponível. Tente novamente.", providerStatus: response.status }, 502);
       const payload = record(await response.json());
@@ -114,6 +132,14 @@ Deno.serve(async req => {
         const sub = normalizeAnnualSale(raw);
         if (sub && (!product || matchesPayProduct(sub, product))) subscriptions.set(sub.id, sub);
       }
+      return null;
+    };
+    for (const documento of docs) { const failed = await lookup("documento", documento); if (failed) return failed; }
+    if (subscriptions.size) matchedBy = "document";
+    else {
+      // E-mail is only tried when the document brought nothing, so it never overrides a document match.
+      for (const email of emails) { const failed = await lookup("email", email); if (failed) return failed; }
+      if (subscriptions.size) matchedBy = "email";
     }
     const { data: royProducts, error: productsError } = await db.from("products").select("id,name,color").eq("account_id", me.account_id);
     if (productsError) throw new Error("roy_read_failed");
@@ -121,7 +147,7 @@ Deno.serve(async req => {
       const matched = product || royProducts?.find(p => matchesPayProduct(sub, p));
       return { ...sub, royProductColor: matched?.color && /^#[0-9a-f]{6}$/i.test(matched.color) ? matched.color : null };
     });
-    return reply({ ...empty(subscriptions.size ? "ready" : "not_found"), subscriptions: presented, partial });
+    return reply({ ...empty(subscriptions.size ? "ready" : "not_found"), subscriptions: presented, partial, matchedBy });
   } catch {
     return reply({ error: "Não foi possível validar a consulta de assinaturas. Tente novamente." }, 502);
   }
