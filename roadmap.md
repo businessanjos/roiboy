@@ -370,3 +370,8 @@
 - [x] Se já houver pagamento no RykaPay, valor e data aparecem só para leitura no ganho
 - [x] Em assinatura o bloco de detalhamento (valor, data, cash collect) não aparece mais para o vendedor
 - [ ] Conferência visual do ganho na prévia com um negócio real já pago
+
+## Trava de pagamento no ganho do Programa Clínica Ryka
+- [x] Botão "Verificar pagamento no RykaPay" no ganho, só nesse produto; sem pagamento confirmado o ganho fica bloqueado para todos
+- [x] CPF/CNPJ do cadastro já vem preenchido; vendedor segue informando assinatura, ciclo, forma e valor
+- [ ] Conferência na tela com um negócio real do programa: não feita para não gravar dados em negócio real

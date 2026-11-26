@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Check, Repeat, Receipt, CalendarDays, CalendarRange, ArrowUp, type LucideIcon } from "lucide-react";
+import { Loader2, Check, RefreshCw, ShieldCheck, Repeat, Receipt, CalendarDays, CalendarRange, ArrowUp, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
@@ -30,9 +30,11 @@ import {
   allowedSubscriptionPayments,
   isSubscriptionAnswerComplete,
   prefillSubscriptionPayment,
+  SUBSCRIPTION_CYCLE_LABEL,
   type SubscriptionCycle,
 } from "@/lib/sales/subscriptionWin";
-import { fetchSubscriptionWinState, type SubscriptionWinState } from "@/lib/sales/subscriptionWinState";
+import { fetchDealItemVenda, fetchSubscriptionWinState, type SubscriptionWinState } from "@/lib/sales/subscriptionWinState";
+import { DEAL_DOCUMENT_FIELD_IDS, ITEM_VENDA_FIELD_ID, payWinGate, requiresPaidWin } from "@/lib/sales/payWinGate";
 import { useRykaPaySubscriptions } from "@/hooks/useRykaPaySubscriptions";
 import { paidPayCharge } from "@/lib/sales/subscriptionPayCharge";
 import { clearLocalAutosaveDraft, readLocalAutosaveDraft, writeLocalAutosaveDraft } from "@/hooks/useLocalAutosaveDraft";
@@ -104,6 +106,13 @@ export function RequiredFieldsModal({
   const [receivedValue, setReceivedValue] = useState<string>("");
   const [dealContact, setDealContact] = useState<{ name?: string | null; phone?: string | null; email?: string | null } | undefined>(undefined);
   const skipAutosaveRef = useRef(false);
+  const [storedItem, setStoredItem] = useState<string | null>(null);
+  // Dados (documento + item) com que o vendedor clicou em verificar; mudou algo, verifica de novo.
+  const [payVerifiedKey, setPayVerifiedKey] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const docPrefilledRef = useRef(false);
+  // A trava de pagamento só existe no ganho.
+  const isWinFlow = outcomeType === "won" || (subscriptionRequired && outcomeType !== "lost");
 
   const showBriefing = outcomeType === "won" && !skipBriefing;
   // Dados de faturamento / emissão de NF só fazem sentido quando a venda é dada como ganha.
@@ -128,6 +137,15 @@ export function RequiredFieldsModal({
       setSubscriptionState(null);
       setIsSubscription(null);
       setSubscriptionCycle(null);
+      setStoredItem(null);
+      setPayVerifiedKey(null);
+      docPrefilledRef.current = false;
+
+      if (isWinFlow && dealId) {
+        fetchDealItemVenda(dealId)
+          .then(setStoredItem)
+          .catch((err) => console.error("Erro ao carregar o item da venda:", err));
+      }
 
       if (subscriptionRequired && dealId) {
         fetchSubscriptionWinState(dealId)
@@ -183,7 +201,7 @@ export function RequiredFieldsModal({
         setDraftHydrated(true);
       }, 0);
     }
-  }, [open, dealId, showBriefing, showBilling, draftKey, subscriptionRequired]);
+  }, [open, dealId, showBriefing, showBilling, draftKey, subscriptionRequired, isWinFlow]);
 
   useEffect(() => {
     if (!open || !draftKey || skipAutosaveRef.current) return;
@@ -217,10 +235,55 @@ export function RequiredFieldsModal({
     ? getMethodsForPaymentOption(paymentMethodValue as string)
     : [];
   const needsBreakdown = requiredMethods.length > 0;
+  // Programa Clínica Ryka: o ganho só é liberado com pagamento confirmado no RykaPay,
+  // consultado quando o vendedor clica em verificar. Outros produtos não passam por isso.
+  const itemField = missingFields.find((f) => f.id === ITEM_VENDA_FIELD_ID);
+  const itemValue = ((itemField ? values[itemField.id] : null) as string | null) || storedItem;
+  const payGate = isWinFlow && requiresPaidWin(itemValue);
+  const docFields = payGate
+    ? missingFields.filter(
+        (f) => DEAL_DOCUMENT_FIELD_IDS.includes(f.id) || (f.field_type === "text" && /\b(cpf|cnpj)\b/i.test(f.name)),
+      )
+    : [];
+  const payKey = JSON.stringify([itemValue, ...docFields.map((f) => values[f.id] ?? "")]);
+  const payRequested = payGate && payVerifiedKey === payKey;
   // Assinatura já paga no RykaPay: valor e data aparecem só para leitura.
-  const payQuery = useRykaPaySubscriptions({ dealId }, open && subscriptionActive && !!subscriptionCycle);
-  const payCharge = subscriptionActive ? paidPayCharge(payQuery.data, subscriptionCycle) : null;
-  const payChecking = subscriptionActive && !!subscriptionCycle && payQuery.isLoading;
+  const payQuery = useRykaPaySubscriptions(
+    { dealId },
+    open && (payGate ? payRequested : subscriptionActive && !!subscriptionCycle),
+  );
+  const payData = payGate && !payRequested ? undefined : payQuery.data;
+  const payCharge = subscriptionActive ? paidPayCharge(payData, subscriptionCycle) : null;
+  const gate = payWinGate({
+    requested: payRequested,
+    checking: verifying || payQuery.isLoading,
+    failed: payQuery.isError,
+    result: payData,
+    isSubscription,
+    cycle: subscriptionCycle,
+  });
+  const gateBusy = verifying || gate.status === "checking";
+  const payChecking = payGate ? gateBusy : subscriptionActive && !!subscriptionCycle && payQuery.isLoading;
+
+  // CPF/CNPJ já cadastrado no cliente ou no lead entra preenchido (o vendedor ainda pode trocar).
+  const docFieldId = docFields[0]?.id;
+  useEffect(() => {
+    if (!open || !docFieldId || docPrefilledRef.current) return;
+    docPrefilledRef.current = true;
+    (async () => {
+      const { data: deal } = await supabase.from("deals").select("client_id, lead_id").eq("id", dealId).maybeSingle();
+      let doc: string | null = null;
+      if (deal?.client_id) {
+        const { data } = await supabase.from("clients").select("cpf, cnpj").eq("id", deal.client_id).maybeSingle();
+        doc = data?.cpf || data?.cnpj || null;
+      }
+      if (!doc && deal?.lead_id) {
+        const { data } = await supabase.from("leads").select("cpf, cnpj").eq("id", deal.lead_id).maybeSingle();
+        doc = data?.cpf || data?.cnpj || null;
+      }
+      if (doc) setValues((prev) => (prev[docFieldId] ? prev : { ...prev, [docFieldId]: doc }));
+    })().catch((err) => console.error("Erro ao buscar CPF/CNPJ do cadastro:", err));
+  }, [open, docFieldId, dealId]);
   const payMethod = payCharge && requiredMethods.length === 1 ? requiredMethods[0] : null;
   const payLocked = !!payMethod;
   const payAmount = payCharge?.amount ?? null;
@@ -293,7 +356,75 @@ export function RequiredFieldsModal({
   // Valor recebido (cash collect) é obrigatório no ganho — pode ser 0, mas precisa ser informado.
   const parsedReceived = Number(String(receivedValue).replace(/\./g, "").replace(",", "."));
   const receivedOk = !showBilling || (receivedValue.trim() !== "" && Number.isFinite(parsedReceived) && parsedReceived >= 0);
-  const canSave = subscriptionOk && allFieldsFilled && breakdownOk && briefingOk && billingOk && receivedOk && !payChecking;
+  const payGateOk = !payGate || gate.status === "paid";
+  const canSave = subscriptionOk && allFieldsFilled && breakdownOk && briefingOk && billingOk && receivedOk && !payChecking && payGateOk;
+
+  const upsertFieldValue = async (field: CustomField) => {
+    const value = values[field.id];
+    if (value === undefined || value === null || value === "") return;
+
+    let valueData: any = {
+      account_id: accountId,
+      deal_id: dealId,
+      field_id: field.id,
+      value_text: null,
+      value_number: null,
+      value_boolean: null,
+      value_date: null,
+      value_json: null,
+    };
+
+    switch (field.field_type) {
+      case "boolean":
+        valueData.value_boolean = value;
+        break;
+      case "number":
+      case "currency":
+        valueData.value_number = value;
+        break;
+      case "date":
+        valueData.value_date = value;
+        break;
+      case "select":
+      case "text":
+      case "instagram":
+        valueData.value_text = value;
+        break;
+      case "multi_select":
+      case "user":
+      case "location":
+      case "multi_instagram":
+        valueData.value_json = value;
+        break;
+    }
+
+    // Bonus fields are always stored as JSON arrays of selected labels
+    if (isBonusField(field.name)) {
+      valueData.value_json = Array.isArray(value) ? value : [];
+      valueData.value_text = null;
+    }
+
+    const { error } = await supabase
+      .from("deal_field_values")
+      .upsert(valueData, { onConflict: "deal_id,field_id" });
+
+    if (error) throw error;
+  };
+
+  // O RykaPay é consultado pelo que está salvo no negócio: grava o documento antes de consultar.
+  const handleVerifyPay = async () => {
+    setVerifying(true);
+    try {
+      for (const field of itemField ? [...docFields, itemField] : docFields) await upsertFieldValue(field);
+      setPayVerifiedKey(payKey);
+      await payQuery.refetch();
+    } catch (error) {
+      console.error("Erro ao verificar pagamento:", error);
+      toast.error("Não foi possível verificar o pagamento. Tente novamente.");
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -306,55 +437,7 @@ export function RequiredFieldsModal({
         // Skip the breakdown field — handled separately so we always write the latest composer state.
         if (field.name === PAYMENT_BREAKDOWN_FIELD_NAME) continue;
 
-        const value = values[field.id];
-        if (value === undefined || value === null || value === "") continue;
-
-        let valueData: any = {
-          account_id: accountId,
-          deal_id: dealId,
-          field_id: field.id,
-          value_text: null,
-          value_number: null,
-          value_boolean: null,
-          value_date: null,
-          value_json: null,
-        };
-
-        switch (field.field_type) {
-          case "boolean":
-            valueData.value_boolean = value;
-            break;
-          case "number":
-          case "currency":
-            valueData.value_number = value;
-            break;
-          case "date":
-            valueData.value_date = value;
-            break;
-          case "select":
-          case "text":
-          case "instagram":
-            valueData.value_text = value;
-            break;
-          case "multi_select":
-          case "user":
-          case "location":
-          case "multi_instagram":
-            valueData.value_json = value;
-            break;
-        }
-
-        // Bonus fields are always stored as JSON arrays of selected labels
-        if (isBonusField(field.name)) {
-          valueData.value_json = Array.isArray(value) ? value : [];
-          valueData.value_text = null;
-        }
-
-        const { error } = await supabase
-          .from("deal_field_values")
-          .upsert(valueData, { onConflict: "deal_id,field_id" });
-
-        if (error) throw error;
+        await upsertFieldValue(field);
       }
 
       // Save the payment breakdown into "Detalhamento de Pagamento" if applicable.
@@ -534,7 +617,10 @@ export function RequiredFieldsModal({
   // Filter out the auto-managed breakdown field from the displayed list
   // Em assinatura, a forma de pagamento sai da lista comum e aparece junto da pergunta, só com as opções permitidas.
   const displayedFields = missingFields.filter(
-    (f) => f.name !== PAYMENT_BREAKDOWN_FIELD_NAME && !(subscriptionActive && f.id === paymentMethodField?.id),
+    (f) =>
+      f.name !== PAYMENT_BREAKDOWN_FIELD_NAME &&
+      !(subscriptionActive && f.id === paymentMethodField?.id) &&
+      !docFields.some((d) => d.id === f.id),
   );
 
   const renderField = (field: CustomField, hideLabel = false) => {
@@ -563,19 +649,19 @@ export function RequiredFieldsModal({
             onChange={(newValue) => handleValueChange(field.id, newValue)}
           />
         )}
-        {field.id === paymentMethodField?.id && payChecking && (
+        {field.id === paymentMethodField?.id && payChecking && !payGate && (
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             Consultando o RykaPay…
           </p>
         )}
-        {field.id === paymentMethodField?.id && subscriptionActive && !payChecking && !payCharge && !!paymentMethodValue && (
+        {field.id === paymentMethodField?.id && subscriptionActive && !payGate && !payChecking && !payCharge && !!paymentMethodValue && (
           <div className="mt-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
             Valor e data da cobrança vêm do RykaPay. Ainda não há pagamento registrado lá — quando houver,
             aparece na aba Assinaturas do negócio.
           </div>
         )}
-        {field.id === paymentMethodField?.id && subscriptionActive && !payChecking && payCharge && (
+        {field.id === paymentMethodField?.id && subscriptionActive && !payGate && !payChecking && payCharge && (
           <div className="mt-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
             Já pago no RykaPay:{" "}
             <span className="font-medium text-foreground">
@@ -719,6 +805,81 @@ export function RequiredFieldsModal({
     </div>
   ) : null;
 
+  const gateNote = (tone: "success" | "warning" | "destructive", text: ReactNode) => (
+    <p
+      className={cn(
+        "rounded-lg border p-3 text-xs leading-relaxed text-foreground",
+        tone === "success" && "border-success/40 bg-success/10",
+        tone === "warning" && "border-warning/40 bg-warning/10",
+        tone === "destructive" && "border-destructive/40 bg-destructive/10",
+      )}
+    >
+      {text}
+    </p>
+  );
+
+  const payGateSection = payGate && subscriptionAnswered ? (
+    <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
+      <div className="space-y-1">
+        <p className="flex items-center gap-2 text-sm font-semibold">
+          <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
+          Pagamento no RykaPay <span className="text-destructive">*</span>
+        </p>
+        <p className="text-xs text-muted-foreground">
+          O ganho do Programa Clínica Ryka só é liberado com o pagamento confirmado no RykaPay.
+        </p>
+      </div>
+      {docFields.map((field) => renderField(field))}
+      <Button type="button" variant="outline" className="min-h-11 w-full" onClick={handleVerifyPay} disabled={gateBusy}>
+        {gateBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+        {gateBusy ? "Consultando o RykaPay…" : gate.status === "idle" ? "Verificar pagamento no RykaPay" : "Verificar de novo"}
+      </Button>
+      <div role="status" aria-live="polite">
+        {!gateBusy && gate.status === "idle" && payVerifiedKey !== null &&
+          gateNote("warning", "Os dados mudaram depois da última consulta. Verifique o pagamento de novo.")}
+        {!gateBusy && gate.status === "paid" &&
+          gateNote(
+            "success",
+            <>
+              <span className="font-semibold">Pagamento confirmado no RykaPay.</span>{" "}
+              {gate.charge.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              {" · 1º pagamento em "}
+              {gate.charge.firstPaidDate.split("-").reverse().join("/")}
+              {" · Plano "}
+              {SUBSCRIPTION_CYCLE_LABEL[gate.cycle]}. Pode seguir com o ganho.
+            </>,
+          )}
+        {!gateBusy && gate.status === "unpaid" &&
+          gateNote(
+            "warning",
+            <>
+              <span className="font-semibold">Nenhum pagamento confirmado no RykaPay.</span> O ganho fica bloqueado até a
+              cliente concluir o pagamento. Depois que ela pagar, clique em "Verificar de novo".
+            </>,
+          )}
+        {!gateBusy && gate.status === "other_cycle" &&
+          gateNote(
+            "warning",
+            <>
+              O RykaPay tem pagamento do plano <span className="font-semibold">{SUBSCRIPTION_CYCLE_LABEL[gate.cycle]}</span>,
+              diferente do que foi marcado acima. Ajuste a resposta para liberar o ganho.
+            </>,
+          )}
+        {!gateBusy && gate.status === "needs_document" &&
+          gateNote("warning", "Informe o CPF ou CNPJ de quem pagou para consultar o pagamento.")}
+        {!gateBusy && gate.status === "needs_product" &&
+          gateNote("warning", "Não foi possível identificar o Item da Venda deste negócio. Confira o item e verifique de novo.")}
+        {!gateBusy && gate.status === "error" &&
+          gateNote("destructive", "Não foi possível consultar o RykaPay agora. Tente verificar de novo em instantes.")}
+      </div>
+    </div>
+  ) : null;
+
+  // Depois da verificação é que o restante do ganho aparece. Sem campo de documento nesta
+  // janela, o restante abre para o vendedor informar o CPF/CNPJ nos dados de faturamento.
+  const restOpen =
+    subscriptionAnswered && (payGateOk || (gate.status === "needs_document" && docFields.length === 0));
+
   const receivedValueSection = showBilling ? (
     <div className="space-y-2 rounded-lg border border-border p-3">
       <Label className="text-sm font-medium">
@@ -749,22 +910,23 @@ export function RequiredFieldsModal({
             <Tabs defaultValue="fields" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="fields">Dados da Negociação</TabsTrigger>
-                <TabsTrigger value="briefing">
+                <TabsTrigger value="briefing" disabled={!payGateOk}>
                   Briefing para Operação {briefingComplete ? "✓" : "*"}
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="fields" className="space-y-6 mt-4">
                 {subscriptionSection}
-                {subscriptionAnswered && displayedFields.length > 0 && (
+                {payGateSection}
+                {restOpen && displayedFields.length > 0 && (
                   <div className="space-y-4">
                     {displayedFields.map((field) => renderField(field))}
                   </div>
                 )}
 
-                {subscriptionAnswered && receivedValueSection}
+                {restOpen && receivedValueSection}
 
-                {subscriptionAnswered && showBilling && draftHydrated && (
+                {restOpen && showBilling && draftHydrated && (
                   <BillingMentoreeSection
                     dealId={dealId}
                     accountId={accountId}
@@ -791,14 +953,15 @@ export function RequiredFieldsModal({
           ) : (
             <div className="space-y-6">
               {subscriptionSection}
-              {subscriptionAnswered && displayedFields.length > 0 && (
+              {payGateSection}
+              {restOpen && displayedFields.length > 0 && (
                 <div className="space-y-4">
                   {displayedFields.map((field) => renderField(field))}
                 </div>
               )}
-              {subscriptionAnswered && receivedValueSection}
+              {restOpen && receivedValueSection}
 
-              {subscriptionAnswered && showBilling && draftHydrated && (
+              {restOpen && showBilling && draftHydrated && (
                 <BillingMentoreeSection
                   dealId={dealId}
                   accountId={accountId}
