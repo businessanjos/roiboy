@@ -261,16 +261,17 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
               const emoji = MEDAL_EMOJI[index];
               const rowColor = colors[index % colors.length];
               const isTop = index < 3;
+              const topCell = isTop ? { backgroundColor: `${rowColor}1f` } : undefined;
               const progress = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
               const userAvatar = avatars[item.name];
 
               return (
                 <tr
                   key={item.name}
-                  className="border-b border-border/50 transition-colors hover:bg-muted/30"
-                  style={isTop ? { backgroundColor: `${rowColor}1f` } : undefined}
+                  className={`border-b transition-colors hover:bg-muted/30 ${isTop ? 'border-transparent' : 'border-border/50'}`}
                 >
-                  <td className="py-2.5 px-1">
+                  {/* O destaque fica nas células: cantos arredondados não funcionam na linha da tabela. */}
+                  <td className={`py-2.5 px-1 rounded-l-xl`} style={topCell}>
                     {emoji ? (
                       <span className="text-base">{emoji}</span>
                     ) : (
@@ -279,7 +280,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                       </span>
                     )}
                   </td>
-                  <td className="py-2.5 px-1">
+                  <td className={`py-2.5 px-1 ${compact ? 'rounded-r-xl' : ''}`} style={topCell}>
                     <div className={`flex gap-2.5 ${compact ? 'items-start' : 'items-center'}`}>
                       {privacy?.showPhotos !== false && <Avatar className="shrink-0" style={{ height: Math.round(32 * m), width: Math.round(32 * m) }}>
                         <AvatarImage src={userAvatar?.avatar_url || undefined} alt={privacy?.showNames === false ? 'Vendedor' : item.name} />
@@ -319,7 +320,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                       </div>
                     </div>
                   </td>
-                  {!compact && <td className="py-2.5 px-1 text-right">
+                  {!compact && <td className="py-2.5 px-1 text-right rounded-r-xl" style={topCell}>
                     <span
                       className="font-semibold tabular-nums"
                       style={{ color: isTop ? rowColor : undefined }}
