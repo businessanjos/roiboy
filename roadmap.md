@@ -348,3 +348,8 @@
 - [x] Formas de pagamento restritas por ciclo, com preenchimento automático da forma compatível
 - [x] Conferência em todos os pontos de ganho (Pipeline, RoyZapp, Leads, Tarefas, ficha do cliente)
 - [x] Exibição somente leitura no card abaixo de "É uma renovação"
+
+## Áreas de Atuação: trocar nome e excluir com segurança
+- [x] Trocar o nome atualiza a lista e todas as fichas (clientes e leads), com aviso do que muda antes de salvar
+- [x] Excluir área em uso pede para mover as fichas, tirar das fichas ou editar o nome
+- [x] Nomes fora da lista oficial podem ser movidos ou oficializados; coluna "Em uso" na tabela

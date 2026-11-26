@@ -31410,6 +31410,20 @@ export type Database = {
       }
     }
     Functions: {
+      _practice_area_audit: {
+        Args: {
+          _account: string
+          _action: string
+          _details: Json
+          _entity_id: string
+          _entity_name: string
+        }
+        Returns: undefined
+      }
+      _practice_area_rewrite_records: {
+        Args: { _account: string; _new_label: string; _old_key: string }
+        Returns: Json
+      }
       _tech_project_owner_check: {
         Args: { _project_id: string }
         Returns: boolean
@@ -31698,6 +31712,14 @@ export type Database = {
           tags: string[]
           updated_at: string
         }[]
+      }
+      delete_practice_area: {
+        Args: {
+          _area_id: string
+          _move_to?: string
+          _remove_from_records?: boolean
+        }
+        Returns: Json
       }
       dunning_default_sla: { Args: { p_stage: string }; Returns: string }
       edit_marketing_task_label: {
@@ -32085,6 +32107,10 @@ export type Database = {
         Returns: string
       }
       mi_tier_ticket_range: { Args: { _tier: string }; Returns: number[] }
+      move_practice_area_label: {
+        Args: { _from_label: string; _move_to: string }
+        Returns: Json
+      }
       next_digital_contract_number: {
         Args: { p_account_id: string }
         Returns: string
@@ -32101,6 +32127,22 @@ export type Database = {
         Returns: number
       }
       pipeline_rename_impact: { Args: { p_pipeline_id: string }; Returns: Json }
+      practice_area_can_manage: { Args: never; Returns: boolean }
+      practice_area_key: { Args: { _v: string }; Returns: string }
+      practice_area_rewrite: {
+        Args: { _new_label: string; _old_key: string; _raw: string }
+        Returns: string
+      }
+      practice_areas_usage: {
+        Args: never
+        Returns: {
+          area_id: string
+          area_key: string
+          clients_count: number
+          label: string
+          leads_count: number
+        }[]
+      }
       pretty_person_name: { Args: { _name: string }; Returns: string }
       private_get_tech_projects_key: { Args: never; Returns: string }
       process_marketing_task_recurrences: {
@@ -32159,6 +32201,10 @@ export type Database = {
       release_zapp_assignments_for_user: {
         Args: { _user_id: string }
         Returns: undefined
+      }
+      rename_practice_area: {
+        Args: { _area_id: string; _new_label: string }
+        Returns: Json
       }
       renegotiate_installment: {
         Args: {
