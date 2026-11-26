@@ -17,7 +17,7 @@ const periods: Record<string, string> = { mensal: "Mensal", monthly: "Mensal", a
 const situations: Record<string, string> = { pago: "Pago", pendente: "Não pago", vencido: "Não pago · em atraso", cancelado: "Cancelado", outro: "Não informado" };
 
 export function RykaPaySubscriptions(target: { dealId?: string; clientId?: string }) {
-  const query = useRykaPaySubscriptions(target);
+  const query = useRykaPaySubscriptions(target, true, true);
   const [selected, setSelected] = useState("all");
   const data = query.data;
   const subscriptions = data?.subscriptions ?? [];

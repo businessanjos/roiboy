@@ -375,3 +375,7 @@
 - [x] Botão "Verificar pagamento no RykaPay" no ganho, só nesse produto; sem pagamento confirmado o ganho fica bloqueado para todos
 - [x] CPF/CNPJ do cadastro já vem preenchido; vendedor segue informando assinatura, ciclo, forma e valor
 - [ ] Conferência na tela com um negócio real do programa: não feita para não gravar dados em negócio real
+
+## Aba Assinaturas: parar consultas desnecessárias
+- [x] Plano anual quitado não consulta mais sozinho; só pelo botão de atualizar
+- [x] Trocar de aba no card não refaz a consulta
