@@ -178,15 +178,19 @@ export function normalizeStripeLegacy(rawStripe: unknown, onlyId?: string): PayS
   if (stripe.disponivel !== true || stripe.completo !== true || !Array.isArray(stripe.assinaturas) || !Array.isArray(stripe.cobrancas)) return null;
   // Stripe brings no product name and its charges carry no subscription id, so the program is told apart
   // by its monthly price: other plans of the same payer (Ryka zApp etc.) and their charges are left out.
-  const active = stripe.assinaturas.map(record).filter(a => typeof a.status === "string" && activePaySubscription(a.status)
+  const program = stripe.assinaturas.map(record).filter(a => typeof a.status === "string"
     && a.valor_ciclo_centavos === CR_STRIPE_LEGACY_CYCLE_CENTS && (!onlyId || a.id === onlyId));
-  if (!active.length) return [];
+  // The work is retroactive: a subscription cancelled later still proves the sale through its approved
+  // charges. A running one comes first, then a really cancelled one, never before a never-paid attempt.
+  const rank = (a: Record<string, unknown>) => activePaySubscription(a.status as string) ? 0 : a.status_stripe === "canceled" ? 1 : 2;
+  const first = [...program].sort((a, b) => rank(a) - rank(b))[0];
+  if (!first) return [];
   const paid = stripe.cobrancas.map(record)
     .filter(c => c.situacao === "aprovado" && c.contestado !== true && c.reembolsado_centavos === 0 && c.bruto_centavos === CR_STRIPE_LEGACY_CYCLE_CENTS)
     .map(c => ({ id: text(c.id), amountCents: integer(c.bruto_centavos), paidAt: date(c.criada_em) }))
     .sort((a, b) => String(a.paidAt).localeCompare(String(b.paidAt)));
   if (paid.some(c => !c.id || !c.paidAt)) return null;
-  const first = active[0];
+  if (!activePaySubscription(first.status as string) && !paid.length) return [];
   const id = text(first.id);
   if (!id) return null;
   return [{

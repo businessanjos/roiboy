@@ -27,10 +27,21 @@ describe("vendas sem dono", () => {
     expect(normalizeStripeLegacy(stripe({ disponivel: false }))).toBeNull();
   });
 
-  it("legado da Stripe: assinatura cancelada, cobrança contestada ou reembolsada não contam", () => {
-    expect(normalizeStripeLegacy(stripe({ assinaturas: [{ id: "sub_qa", status: "cancelada", valor_ciclo_centavos: 250000 }] }))).toEqual([]);
+  it("legado da Stripe: cobrança contestada ou reembolsada não conta", () => {
     expect(normalizeStripeLegacy(stripe({ cobrancas: [charge({ contestado: true })] }))![0].invoices).toEqual([]);
     expect(normalizeStripeLegacy(stripe({ cobrancas: [charge({ reembolsado_centavos: 250000 })] }))![0].invoices).toEqual([]);
+  });
+
+  it("legado da Stripe: quem já teve o programa entra mesmo com a assinatura cancelada, se pagou alguma parcela", () => {
+    const cancelled = [{ id: "sub_tentativa", status: "cancelada", status_stripe: "incomplete_expired", valor_ciclo_centavos: 250000 },
+      { id: "sub_cancelada", status: "cancelada", status_stripe: "canceled", valor_ciclo_centavos: 250000 }];
+    const [sub] = normalizeStripeLegacy(stripe({ assinaturas: cancelled, cobrancas: [charge({ situacao: "recusado", id: "ch_no" }), charge()] }))!;
+    expect(sub).toMatchObject({ id: "sub_cancelada", status: "cancelada" });
+    expect(sub.invoices.map(f => f.id)).toEqual(["ch_qa"]);
+    // Cancelada sem nenhuma parcela aprovada nunca vira pagamento.
+    expect(normalizeStripeLegacy(stripe({ assinaturas: cancelled, cobrancas: [charge({ situacao: "recusado" })] }))).toEqual([]);
+    // Assinatura em vigor continua na frente da cancelada.
+    expect(normalizeStripeLegacy(stripe({ assinaturas: [...cancelled, { id: "sub_viva", status: "ativa", valor_ciclo_centavos: 250000 }] }))![0].id).toBe("sub_viva");
   });
 
   it("legado da Stripe: outro plano do mesmo pagador (Ryka zApp R$ 197) não entra", () => {
