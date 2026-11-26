@@ -27,7 +27,16 @@ import {
   Loader2,
   Send,
   RefreshCw,
+  Download,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { useContractCatalogRows } from "@/hooks/useContractCatalog";
+import { CATALOG_COLOR_CLASSES, mergeCatalog, type CatalogRow } from "@/lib/contracts/contractCatalog";
+import {
+  CONTRACT_FILTER_LABEL, brDate, contractGroup, matchesContractFilter, pickClientContract,
+  type ClientContractLite, type ContractBucket, type ContractFilter,
+} from "@/lib/ryka/contractStatus";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { usePagedList } from "@/hooks/usePagedList";
@@ -37,6 +46,9 @@ import { ptBR } from "date-fns/locale";
 import { RykaUsageDashboard } from "@/components/ryka/RykaUsageDashboard";
 
 const RYKA_ELIGIBLE_KEYWORDS = ["rykas mentoring", "eternum club"];
+const NO_CATALOG_ROWS: CatalogRow[] = [];
+const CONTRACT_FILTERS: ContractFilter[] = ["active", "hold", "ended", "none", "all"];
+const ACCESS_LABEL = { provisioned: "Com acesso", pending: "Falta liberar", failed: "Falhou" } as const;
 
 type Filter = "all" | "provisioned" | "pending" | "failed" | "ryka_active" | "ryka_inactive";
 
@@ -74,6 +86,12 @@ export default function ClinicaRyka() {
   const [search, setSearch] = useState("");
   const [provisioningId, setProvisioningId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [contractFilter, setContractFilter] = useState<ContractFilter>("active");
+  const { data: catalogRows } = useContractCatalogRows();
+  const statusMeta = useMemo(
+    () => new Map(mergeCatalog("contract_status", catalogRows ?? NO_CATALOG_ROWS).map((i) => [i.value, i])),
+    [catalogRows],
+  );
 
   const clientsQuery = useQuery({
     queryKey: ["ryka-eligible-clients", accountId],
@@ -124,6 +142,53 @@ export default function ClinicaRyka() {
     },
   });
 
+  const contractsQuery = useQuery({
+    queryKey: ["ryka-client-contracts", accountId],
+    enabled: !!accountId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await fetchAllRows<ClientContractLite>((from, to) =>
+        supabase
+          .from("client_contracts")
+          .select("id, client_id, status, start_date, end_date, created_at, product_id")
+          .eq("account_id", accountId!)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to) as any,
+      );
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const productsQuery = useQuery({
+    queryKey: ["ryka-contract-products", accountId],
+    enabled: !!accountId,
+    staleTime: 300_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("products").select("id, name, color").eq("account_id", accountId!);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const productById = useMemo(
+    () => new Map((productsQuery.data ?? []).map((p: any) => [p.id as string, p as { id: string; name: string; color: string | null }])),
+    [productsQuery.data],
+  );
+
+  // Contrato que representa cada cliente (o em vigor vence; senão o mais recente)
+  const contractByClient = useMemo(() => {
+    const bucketOf = (status: string | null) => (statusMeta.get(status || "")?.metric_bucket ?? "neutral") as ContractBucket;
+    const grouped = new Map<string, ClientContractLite[]>();
+    for (const c of contractsQuery.data ?? []) grouped.set(c.client_id, [...(grouped.get(c.client_id) ?? []), c]);
+    const map = new Map<string, { contract: ClientContractLite; bucket: ContractBucket }>();
+    for (const [clientId, list] of grouped) {
+      const contract = pickClientContract(list, bucketOf);
+      if (contract) map.set(clientId, { contract, bucket: bucketOf(contract.status) });
+    }
+    return map;
+  }, [contractsQuery.data, statusMeta]);
+
   // Latest provision per client
   const provisionByClient = useMemo(() => {
     const map = new Map<string, Provision>();
@@ -133,7 +198,7 @@ export default function ClinicaRyka() {
     return map;
   }, [provisionsQuery.data]);
 
-  const enriched = useMemo(() => {
+  const enrichedAll = useMemo(() => {
     return (clientsQuery.data ?? []).map((client) => {
       const prov = provisionByClient.get(client.id) ?? null;
       const state: "provisioned" | "pending" | "failed" =
@@ -148,9 +213,22 @@ export default function ClinicaRyka() {
           : prov?.ryka_response?.ryka_status === "inactive"
             ? "inactive"
             : null;
-      return { client, prov, state, rykaStatus };
+      const picked = contractByClient.get(client.id) ?? null;
+      return { client, prov, state, rykaStatus, contract: picked?.contract ?? null, contractBucket: picked?.bucket ?? null };
     });
-  }, [clientsQuery.data, provisionByClient]);
+  }, [clientsQuery.data, provisionByClient, contractByClient]);
+
+  const contractCounts = useMemo(() => {
+    const n: Record<ContractFilter, number> = { active: 0, hold: 0, ended: 0, none: 0, all: enrichedAll.length };
+    for (const e of enrichedAll) n[contractGroup(e.contractBucket)] += 1;
+    return n;
+  }, [enrichedAll]);
+
+  // A aba inteira (painel e lista) segue a situação do contrato escolhida.
+  const enriched = useMemo(
+    () => enrichedAll.filter((e) => matchesContractFilter(e.contractBucket, contractFilter)),
+    [enrichedAll, contractFilter],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -207,6 +285,34 @@ export default function ClinicaRyka() {
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["ryka-eligible-clients", accountId] });
     queryClient.invalidateQueries({ queryKey: ["ryka-provisions", accountId] });
+    queryClient.invalidateQueries({ queryKey: ["ryka-client-contracts", accountId] });
+  };
+
+  const handleExport = () => {
+    const list = view === "clientes" ? filtered : enriched;
+    const cell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const header = ["Cliente", "Empresa", "Produto", "Status do contrato", "Produto do contrato", "Início do contrato", "Fim do contrato", "Acesso no ROY", "Situação na Ryka", "E-mail de acesso"];
+    const lines = list.map(({ client, prov, state, rykaStatus, contract }) => {
+      const products = client.client_products.map((cp) => cp.products?.name).filter(Boolean).join(" / ");
+      const firstEmail = client.emails?.[0];
+      const email = prov?.email || (typeof firstEmail === "string" ? firstEmail : (firstEmail as any)?.email) || "";
+      return [
+        client.full_name, client.company_name, products,
+        contract ? statusMeta.get(contract.status || "")?.label ?? contract.status : "Sem contrato",
+        contract?.product_id ? productById.get(contract.product_id)?.name : "",
+        contract ? brDate(contract.start_date) : "", contract ? brDate(contract.end_date) : "",
+        ACCESS_LABEL[state], rykaStatus === "active" ? "Ativo" : rykaStatus === "inactive" ? "Inativo" : "",
+        email,
+      ].map(cell).join(";");
+    });
+    const blob = new Blob(["\ufeff" + [header.map(cell).join(";"), ...lines].join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clinica-ryka-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Relatório gerado com ${list.length} clientes.`);
   };
 
   const handleSyncFromRyka = async () => {
@@ -230,8 +336,8 @@ export default function ClinicaRyka() {
     }
   };
 
-  const loading = clientsQuery.isLoading || provisionsQuery.isLoading;
-  const pg = usePagedList(filtered, { resetKey: [filter, search], isLoading: loading });
+  const loading = clientsQuery.isLoading || provisionsQuery.isLoading || contractsQuery.isLoading;
+  const pg = usePagedList(filtered, { resetKey: [filter, search, contractFilter], isLoading: loading });
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -242,7 +348,7 @@ export default function ClinicaRyka() {
             Clínica Ryka
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Clientes com produto Rykas Mentoring ou Eternum Club e o status do acesso ao sistema Ryka.
+            Clientes com produto Rykas Mentoring ou Eternum Club, pela situação do contrato e do acesso ao sistema Ryka.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -254,6 +360,10 @@ export default function ClinicaRyka() {
             )}
             Sincronizar com Ryka
           </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={loading || enriched.length === 0}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar relatório
+          </Button>
           <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Atualizar
@@ -261,12 +371,26 @@ export default function ClinicaRyka() {
         </div>
       </div>
 
-      <Tabs value={view} onValueChange={(v) => setView(v as any)}>
-        <TabsList>
-          <TabsTrigger value="painel">Painel</TabsTrigger>
-          <TabsTrigger value="clientes">Clientes</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Tabs value={view} onValueChange={(v) => setView(v as any)}>
+          <TabsList>
+            <TabsTrigger value="painel">Painel</TabsTrigger>
+            <TabsTrigger value="clientes">Clientes</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Select value={contractFilter} onValueChange={(v) => setContractFilter(v as ContractFilter)}>
+          <SelectTrigger className="h-9 w-full sm:w-[260px]" aria-label="Situação do contrato">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CONTRACT_FILTERS.map((f) => (
+              <SelectItem key={f} value={f}>
+                {CONTRACT_FILTER_LABEL[f]} ({contractCounts[f]})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {view === "painel" ? <RykaUsageDashboard rows={enriched as any} accountId={accountId} /> : (<>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -315,11 +439,12 @@ export default function ClinicaRyka() {
               Nenhum cliente encontrado para este filtro.
             </div>
           ) : (
-            <div className="overflow-x-auto"><Table className="table-fixed min-w-[960px]">
+            <div className="overflow-x-auto"><Table className="table-fixed min-w-[1100px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[28%]">Cliente</TableHead>
+                  <TableHead className="w-[24%]">Cliente</TableHead>
                   <TableHead className="w-[150px]">Produto</TableHead>
+                  <TableHead className="w-[170px]">Contrato</TableHead>
                   <TableHead className="w-[120px]">Acesso</TableHead>
                   <TableHead className="w-[100px]">Ryka</TableHead>
                   <TableHead>E-mail acesso</TableHead>
@@ -328,7 +453,8 @@ export default function ClinicaRyka() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pg.items.map(({ client, prov, state, rykaStatus }) => {
+                {pg.items.map(({ client, prov, state, rykaStatus, contract }) => {
+                  const contractMeta = contract ? statusMeta.get(contract.status || "") : null;
                   const initials = client.full_name
                     ?.split(" ")
                     .slice(0, 2)
@@ -377,6 +503,24 @@ export default function ClinicaRyka() {
                           >
                             {rykaProduct.name}
                           </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {contract ? (
+                          <div className="min-w-0">
+                            <Badge
+                              variant="outline"
+                              className={cn("whitespace-nowrap max-w-full truncate", CATALOG_COLOR_CLASSES[contractMeta?.color ?? "muted"])}
+                              title={contract.product_id ? productById.get(contract.product_id)?.name : undefined}
+                            >
+                              {contractMeta?.label ?? contract.status ?? "—"}
+                            </Badge>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground whitespace-nowrap">
+                              {brDate(contract.start_date)} → {brDate(contract.end_date)}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Sem contrato</span>
                         )}
                       </TableCell>
                       <TableCell>
