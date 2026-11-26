@@ -7,6 +7,7 @@ import { GraduationCap, CheckCircle2, Clock, CalendarClock, Search, ArrowUp, Arr
 
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import { mentoringSessionStatus } from "@/lib/mentoring/sessionStatus";
 import { fetchInChunks, fetchAllInChunks } from "@/lib/fetchInChunks";
 import { usePracticeAreas } from "@/hooks/usePracticeAreas";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -176,7 +177,7 @@ export default function MentoriaEC() {
       const attMap = new Map<string, { last: string | null; next: string | null; count: number }>();
       (attendance || []).forEach((a) => {
         const cur = attMap.get(a.client_id) ?? { last: null, next: null, count: 0 };
-        const isFuture = a.session_date > todayStr;
+        const isFuture = mentoringSessionStatus(a.session_date, todayStr) === "scheduled";
         if (isFuture) {
           if (!cur.next || a.session_date < cur.next) cur.next = a.session_date;
         } else {
@@ -260,6 +261,7 @@ export default function MentoriaEC() {
           : "Movida para a aba Realizadas.",
       });
       qc.invalidateQueries({ queryKey: ["ec-mentoring-members", accountId] });
+      qc.invalidateQueries({ queryKey: ["ec-mentoring-client"] });
       setDialogState(null);
       setSessionNotes("");
     },
@@ -298,6 +300,7 @@ export default function MentoriaEC() {
       toast.success("Registro de mentoria excluído");
       qc.invalidateQueries({ queryKey: ["ec-mentoring-history", historyMember?.clientId] });
       qc.invalidateQueries({ queryKey: ["ec-mentoring-members", accountId] });
+      qc.invalidateQueries({ queryKey: ["ec-mentoring-client"] });
     },
     onError: (err: any) => toast.error(err?.message || "Não foi possível excluir o registro"),
   });

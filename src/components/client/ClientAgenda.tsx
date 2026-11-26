@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { ClientTasks } from "./ClientTasks";
 import { ClientIndividualEventDialog } from "./ClientIndividualEventDialog";
+import { ClientMentoringDeliveries } from "./ClientMentoringDeliveries";
 import { format, isPast, isFuture, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -779,6 +780,14 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
           </div>
         )}
       </div>
+
+      {/* Mentorias Ao Vivo: mesmos registros da tela "Mentoria Ao Vivo" */}
+      <ClientMentoringDeliveries
+        clientId={clientId}
+        linkedClientIds={linkedClientIds}
+        accountId={accountId}
+        renderLinkedBadge={getLinkedBadge}
+      />
 
       {/* SECTION 3: Delivery Schedule (shared/product events) - READ ONLY */}
       {clientProductIds.length > 0 && (

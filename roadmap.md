@@ -359,3 +359,8 @@
 - [x] Inativos fora da aba, com Inativar/Reativar no menu; conversas abertas ficam sem dono na fila
 - [x] Selo de cargo segue todos os cargos marcados na Equipe
 - [ ] Conferência visual da aba na prévia: aguarda sessão do usuário (entrada automática recusada nesta rodada)
+
+## Mentoria Ao Vivo na agenda do cliente (Andréia)
+- [x] Seção "Mentorias Ao Vivo" na Agenda de Entregas do cliente, com os mesmos registros da tela Mentoria Ao Vivo
+- [x] Registrar participação, agendar e excluir direto na agenda; as duas telas se atualizam
+- [ ] Conferência visual na prévia: aguarda sessão do usuário (entrada automática recusada)
