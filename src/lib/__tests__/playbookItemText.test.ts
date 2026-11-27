@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { playbookItemRawText } from "../playbookItemText";
+import { markButtonsClickable, playbookItemRawText, templateButtonsClickable, templateMenu } from "../playbookItemText";
 
 describe("playbookItemRawText", () => {
   it("template sem text_content vira mensagem com cabeçalho, corpo, rodapé e botões", () => {
@@ -31,5 +31,37 @@ describe("playbookItemRawText", () => {
 
   it("texto comum continua igual", () => {
     expect(playbookItemRawText({ content_type: "text", text_content: " Olá " })).toBe("Olá");
+  });
+});
+
+describe("templateMenu (botões clicáveis)", () => {
+  const base = {
+    content_type: "template", template_header: "Novidade", template_body: "Oi {{nome}}", template_footer: "Equipe",
+    template_buttons: [
+      { type: "quick_reply", text: "EU QUERO" },
+      { type: "url", text: "Site", value: "https://iamroy.app" },
+      { type: "phone", text: "Ligar", value: "+55 (11) 99999-9999" },
+    ],
+  };
+
+  it("sem a opção ligada, o template segue como texto", () => {
+    expect(templateButtonsClickable(base.template_buttons)).toBe(false);
+    expect(templateMenu(base, playbookItemRawText(base))).toBeNull();
+  });
+
+  it("com a opção ligada separa mensagem, rodapé e botões, e o texto volta inteiro se os botões falharem", () => {
+    const item = { ...base, template_buttons: markButtonsClickable(base.template_buttons, true) };
+    const full = playbookItemRawText(item).replace("{{nome}}", "Ana");
+    const menu = templateMenu(item, full)!;
+    expect(menu.text).toBe("*Novidade*\n\nOi Ana");
+    expect(menu.footer).toBe("Equipe");
+    expect(menu.labels).toEqual(["EU QUERO", "Site", "Ligar"]);
+    expect(menu.choices).toEqual(["EU QUERO|EU QUERO", "Site|https://iamroy.app", "Ligar|call:+5511999999999"]);
+    expect(menu.text + menu.fallbackSuffix).toBe(full);
+  });
+
+  it("desligar a opção remove a marca dos botões", () => {
+    const on = markButtonsClickable(base.template_buttons, true);
+    expect(templateButtonsClickable(markButtonsClickable(on, false))).toBe(false);
   });
 });

@@ -48,6 +48,8 @@ import {
 } from 'lucide-react';
 import { usePlaybook, PlaybookItem, PlaybookContentType, PlaybookFolder, CreatePlaybookItemInput, TemplateButton, PlaybookVisibility } from '@/hooks/usePlaybook';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
+import { markButtonsClickable, templateButtonsClickable } from '@/lib/playbookItemText';
 import { toast } from 'sonner';
 
 interface PlaybookItemFormProps {
@@ -109,6 +111,7 @@ export function PlaybookItemForm({
   const [templateBody, setTemplateBody] = useState('');
   const [templateFooter, setTemplateFooter] = useState('');
   const [templateButtons, setTemplateButtons] = useState<TemplateButton[]>([]);
+  const [buttonsClickable, setButtonsClickable] = useState(false);
   // Visibility
   const [visibility, setVisibility] = useState<PlaybookVisibility>('sector');
   // Media caption for images
@@ -169,6 +172,7 @@ export function PlaybookItemForm({
         setTemplateBody(editingItem.template_body || '');
         setTemplateFooter(editingItem.template_footer || '');
         setTemplateButtons(editingItem.template_buttons || []);
+        setButtonsClickable(templateButtonsClickable(editingItem.template_buttons));
         // Visibility
         setVisibility(editingItem.visibility || 'sector');
       } else {
@@ -196,6 +200,7 @@ export function PlaybookItemForm({
         setTemplateBody('');
         setTemplateFooter('');
         setTemplateButtons([]);
+        setButtonsClickable(false);
         // Visibility
         setVisibility('sector');
       }
@@ -424,7 +429,7 @@ export function PlaybookItemForm({
         template_header: contentType === 'template' ? templateHeader : null,
         template_body: contentType === 'template' ? templateBody : null,
         template_footer: contentType === 'template' ? templateFooter : null,
-        template_buttons: contentType === 'template' ? templateButtons : null,
+        template_buttons: contentType === 'template' ? markButtonsClickable(templateButtons, buttonsClickable) : null,
         // Visibility
         visibility,
       };
@@ -796,6 +801,19 @@ export function PlaybookItemForm({
                     )}
                   </div>
 
+                  {templateButtons.length > 0 && (
+                    <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="buttonsClickable">Enviar como botões clicáveis</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Ligado: o cliente toca no botão para responder. Desligado: os botões vão escritos no texto.
+                          Em grupos, nas sequências e no WhatsApp oficial (Meta) eles sempre vão como texto.
+                        </p>
+                      </div>
+                      <Switch id="buttonsClickable" checked={buttonsClickable} onCheckedChange={setButtonsClickable} />
+                    </div>
+                  )}
+
                   {templateButtons.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-3 border border-dashed rounded-lg">
                       Clique nos ícones acima para adicionar botões
@@ -1093,7 +1111,7 @@ export function PlaybookItemForm({
               template_body: contentType === 'template' ? templateBody : null,
               template_header: contentType === 'template' ? templateHeader : null,
               template_footer: contentType === 'template' ? templateFooter : null,
-              template_buttons: contentType === 'template' ? templateButtons : null,
+              template_buttons: contentType === 'template' ? markButtonsClickable(templateButtons, buttonsClickable) : null,
               media_caption: mediaCaption || null,
               media_url: mediaPreview || existingMediaUrl,
             } as unknown as PlaybookItem;
@@ -1102,6 +1120,7 @@ export function PlaybookItemForm({
                 <p className="mb-2 text-center text-xs font-medium text-muted-foreground">Como o cliente vai receber hoje</p>
                 <PlaybookSequencePreview
                   messageOnly
+                  clickableButtons
                   steps={[{ playbook_item_id: '__draft__', delay_seconds: 0 } as any]}
                   items={[draft]}
                   replaceVariables={(t) => ev(t)}

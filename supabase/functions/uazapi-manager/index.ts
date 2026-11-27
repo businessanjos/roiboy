@@ -1720,10 +1720,30 @@ Deno.serve(async (req) => {
       }
       if (payload.mentions) textBody.mentions = payload.mentions;
       
+      // Template do Playbook com botões clicáveis: tenta o envio com botões e,
+      // se o WhatsApp recusar, manda a mesma mensagem inteira como texto.
+      const menu = (payload.menu || null) as { choices?: unknown; footer?: unknown; fallback_message?: unknown } | null;
+      const menuChoices = Array.isArray(menu?.choices)
+        ? (menu!.choices as unknown[]).filter((c): c is string => typeof c === "string" && c.trim().length > 0).slice(0, 3)
+        : [];
       try {
-        result = await enqueueSend(token!, `send_text user=${userData.name}`, () =>
-          uazapiInstance("/send/text", "POST", token!, textBody, sectorServer)
-        );
+        result = await enqueueSend(token!, `send_text user=${userData.name}`, async () => {
+          if (menuChoices.length > 0) {
+            try {
+              const menuBody: Record<string, unknown> = { number: cleanPhone, type: "button", text: textBody.text, choices: menuChoices };
+              if (typeof menu?.footer === "string" && menu.footer.trim()) menuBody.footerText = menu.footer.trim().slice(0, 60);
+              if (textBody.replyid) menuBody.replyid = textBody.replyid;
+              const sent = await uazapiInstance("/send/menu", "POST", token!, menuBody, sectorServer);
+              return { ...sent, menu_sent: true };
+            } catch (menuErr) {
+              console.warn("[uazapi] /send/menu recusado, enviando como texto:", (menuErr as Error).message);
+              if (typeof menu?.fallback_message === "string" && menu.fallback_message.trim()) {
+                textBody.text = applySignature(menu.fallback_message);
+              }
+            }
+          }
+          return await uazapiInstance("/send/text", "POST", token!, textBody, sectorServer);
+        });
       } catch (err) {
         const response = await invalidTokenResponse(err);
         if (response) return response;

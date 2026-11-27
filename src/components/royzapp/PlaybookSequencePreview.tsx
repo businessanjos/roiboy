@@ -1,4 +1,4 @@
-import { playbookItemRawText } from "@/lib/playbookItemText";
+import { playbookItemRawText, templateMenu } from "@/lib/playbookItemText";
 import { useEffect, useMemo, useRef } from "react";
 import { applyWhatsAppFormatting } from "@/lib/whatsappFormatting";
 import {
@@ -16,6 +16,8 @@ interface Props {
   replaceVariables?: (text: string, vars: Record<string, string>, item?: PlaybookItem) => string;
   signText?: (text: string) => string;
   messageOnly?: boolean;
+  /** Mostra os botões do template como botões clicáveis (envio direto no chat). */
+  clickableButtons?: boolean;
   tags?: { id: string; name: string; color: string }[];
   stages?: { id: string; name: string; color: string; pipeline_name?: string }[];
 }
@@ -71,7 +73,7 @@ function MediaBlock({ item }: { item: PlaybookItem }) {
   }
 }
 
-export function PlaybookSequencePreview({ steps, items, variables = {}, replaceVariables, signText, messageOnly = false, tags = [], stages = [] }: Props) {
+export function PlaybookSequencePreview({ steps, items, variables = {}, replaceVariables, signText, messageOnly = false, clickableButtons = false, tags = [], stages = [] }: Props) {
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const tagById = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags]);
   const stageById = useMemo(() => new Map(stages.map((t) => [t.id, t])), [stages]);
@@ -171,7 +173,10 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
             </p>
           ) : (
             resolved.map(({ item, step, index }, pos) => {
-              const text = applyVars(playbookItemRawText(item), pos === 0, item);
+              const full = applyVars(playbookItemRawText(item), false, item);
+              const menu = clickableButtons && full ? templateMenu(item, full) : null;
+              const body = menu ? menu.text : full;
+              const text = body && pos === 0 && signText ? signText(body) : body;
               const caption = applyVars(item.media_caption, pos === 0, item);
               const isMedia = item.content_type !== "text";
               return (
@@ -192,11 +197,21 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
                     {isMedia && <div className="mb-1"><MediaBlock item={item} /></div>}
                     {text && <p className="whitespace-pre-wrap break-words leading-snug">{applyWhatsAppFormatting(text, `t-${pos}`)}</p>}
                     {isMedia && caption && <p className="whitespace-pre-wrap break-words leading-snug">{applyWhatsAppFormatting(caption, `c-${pos}`)}</p>}
+                    {menu?.footer && <p className="mt-0.5 text-[10px]" style={{ color: wa("meta") }}>{menu.footer}</p>}
                     <div className="mt-0.5 flex items-center justify-end gap-0.5 text-[9px]" style={{ color: wa("meta") }}>
                       <span>9:41</span>
                       <CheckCheck className="h-3 w-3" style={{ color: wa("tick") }} />
                     </div>
                   </div>
+                  {menu && (
+                    <div className="ml-auto mt-0.5 w-[85%] space-y-0.5" data-testid="preview-buttons">
+                      {menu.labels.map((label, k) => (
+                        <div key={k} className="truncate rounded-lg px-2 py-1.5 text-center text-[12px] font-medium shadow-sm" style={{ background: wa("bubble-out"), color: wa("tick") }}>
+                          {label}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })

@@ -200,6 +200,9 @@ interface ZappMessageInputProps {
   onOpenContactPicker: () => void;
   onOpenQuickReplies: () => void;
   onCancelReply?: () => void;
+  /** Botões clicáveis do template que vão junto com a mensagem da caixa de texto. */
+  pendingMenuLabels?: string[];
+  onCancelMenu?: () => void;
   onMentionInsert?: (mention: MentionData) => void;
   onToggleSignature?: () => void;
   onOpenPlaybook?: () => void;
@@ -272,6 +275,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onOpenContactPicker,
   onOpenQuickReplies,
   onCancelReply,
+  pendingMenuLabels,
+  onCancelMenu,
   onMentionInsert,
   onToggleSignature,
   onOpenPlaybook,
@@ -478,6 +483,30 @@ export const ZappMessageInput = memo(function ZappMessageInput({
             size="icon"
             className="h-7 w-7 text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
             onClick={onCancelReply}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Botões clicáveis do template do Playbook */}
+      {pendingMenuLabels && pendingMenuLabels.length > 0 && (
+        <div className="bg-zapp-panel border-b border-zapp-border px-4 py-2 flex items-center gap-2">
+          <span className="text-xs text-zapp-text-muted flex-shrink-0">Vai com botões:</span>
+          <div className="flex flex-1 min-w-0 flex-wrap gap-1.5">
+            {pendingMenuLabels.map((label, i) => (
+              <span key={i} className="max-w-full truncate rounded-full border border-zapp-border px-2.5 py-0.5 text-xs font-medium text-zapp-accent">
+                {label}
+              </span>
+            ))}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
+            onClick={onCancelMenu}
+            aria-label="Enviar sem botões"
+            title="Enviar sem botões"
           >
             <X className="h-4 w-4" />
           </Button>

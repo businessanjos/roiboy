@@ -92,6 +92,8 @@ interface ZappChatViewProps {
   onOpenQuickReplies: () => void;
   onReplyMessage: (message: Message) => void;
   onCancelReply: () => void;
+  pendingMenuLabels?: string[];
+  onCancelMenu?: () => void;
   onDeleteMessage?: (messageId: string) => void;
   onEditMessage?: (messageId: string, newContent: string) => Promise<void>;
   onRetryMessage?: (message: Message) => void;
@@ -181,6 +183,8 @@ export function ZappChatView({
   onOpenQuickReplies,
   onReplyMessage,
   onCancelReply,
+  pendingMenuLabels,
+  onCancelMenu,
   onDeleteMessage,
   onEditMessage,
   onRetryMessage,
@@ -527,6 +531,8 @@ export function ZappChatView({
         onOpenContactPicker={onOpenContactPicker}
         onOpenQuickReplies={onOpenQuickReplies}
         onCancelReply={onCancelReply}
+        pendingMenuLabels={pendingMenuLabels}
+        onCancelMenu={onCancelMenu}
         onMentionInsert={onMentionInsert}
         signatureEnabled={signatureEnabled}
         hasSignature={hasSignature}

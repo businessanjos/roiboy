@@ -121,6 +121,14 @@ const uploadZappMediaFile = async (bucket: string, fileName: string, file: File)
   });
 };
 
+/** Botões clicáveis de um template, enviados junto com a próxima mensagem de texto. */
+export interface PendingZappMenu {
+  choices: string[];
+  labels: string[];
+  footer: string;
+  fallbackSuffix: string;
+}
+
 export function useZappMessaging({
   selectedConversation,
   currentUser,
@@ -149,6 +157,17 @@ export function useZappMessaging({
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ id: string; content: string | null; sender_name: string | null; is_from_client: boolean; external_message_id?: string | null } | null>(null);
   const [pendingMentions, setPendingMentions] = useState<{ phone: string; jid: string; name?: string; is_lid?: boolean }[]>([]);
+  // Botões clicáveis de um template do Playbook, presos à mensagem que está na caixa de texto.
+  const [pendingMenu, setPendingMenuState] = useState<PendingZappMenu | null>(null);
+  const pendingMenuRef = useRef<PendingZappMenu | null>(null);
+  const setPendingMenu = useCallback((menu: PendingZappMenu | null) => {
+    pendingMenuRef.current = menu;
+    setPendingMenuState(menu);
+  }, []);
+  useEffect(() => {
+    // Caixa vazia = a mensagem do template saiu ou foi apagada; os botões não passam para a próxima.
+    if (!messageInput.trim() && pendingMenuRef.current) setPendingMenu(null);
+  }, [messageInput, setPendingMenu]);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -434,6 +453,9 @@ export function useZappMessaging({
     
     const baseMessage = messageInput.trim();
     const messageContent = buildSignedText(baseMessage);
+    const menuToSend = !isGroup ? pendingMenuRef.current : null;
+    const menuFallback = menuToSend ? buildSignedText(baseMessage + menuToSend.fallbackSuffix) : messageContent;
+    let storedContent = menuToSend ? `${messageContent}\n\n[Botões: ${menuToSend.labels.join(" · ")}]` : messageContent;
     const tempMessageId = `temp-${Date.now()}`;
     const now = new Date().toISOString();
     const conversationId = selectedConversation.zapp_conversation_id;
@@ -457,7 +479,7 @@ export function useZappMessaging({
     
     const optimisticMessage: Message = {
       id: tempMessageId,
-      content: messageContent,
+      content: storedContent,
       is_from_client: false,
       created_at: now,
       message_type: "text",
@@ -479,6 +501,7 @@ export function useZappMessaging({
     setMessages(prev => [...prev, optimisticMessage]);
     setMessageInput("");
     setReplyingTo(null);
+    setPendingMenu(null);
     
     const mentionsToSend = [...pendingMentions];
     setPendingMentions([]);
@@ -503,6 +526,9 @@ export function useZappMessaging({
           }
         } else {
           payload.phone = phone;
+          if (menuToSend) {
+            payload.menu = { choices: menuToSend.choices, footer: menuToSend.footer, fallback_message: menuFallback };
+          }
         }
         
         if (replyContext?.external_message_id) {
@@ -524,6 +550,8 @@ export function useZappMessaging({
           throw new Error(sendResult.error);
         }
         console.log("[ZAPP-SEND] Edge function OK");
+        // Se o WhatsApp recusou os botões, a mensagem saiu inteira como texto.
+        if (menuToSend && !(sendResult?.data as { menu_sent?: boolean } | undefined)?.menu_sent) storedContent = menuFallback;
         
         const externalId = sendResult?.data?.id || sendResult?.data?.messageid || sendResult?.id || sendResult?.messageid || null;
 
@@ -538,7 +566,7 @@ export function useZappMessaging({
             account_id: accountId,
             zapp_conversation_id: conversationId,
             direction: "outbound",
-            content: messageContent,
+            content: storedContent,
             message_type: "text",
             sent_at: now,
             external_message_id: externalId,
@@ -558,7 +586,7 @@ export function useZappMessaging({
           
           if (insertedMessage) {
             setMessages(prev => prev.map(m => 
-              m.id === tempMessageId ? { ...m, id: insertedMessage.id, send_status: "sent" as const, delivery_status: "sent" as const, external_message_id: externalId } : m
+              m.id === tempMessageId ? { ...m, id: insertedMessage.id, content: storedContent, send_status: "sent" as const, delivery_status: "sent" as const, external_message_id: externalId } : m
             ));
           }
           
@@ -1666,6 +1694,8 @@ export function useZappMessaging({
     uploadingMedia,
     replyingTo,
     setReplyingTo,
+    pendingMenu,
+    setPendingMenu,
     messageInputRef,
     imageInputRef,
     fileInputRef,

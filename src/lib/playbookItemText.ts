@@ -52,3 +52,61 @@ export function playbookItemRawText(item: PlaybookTextSource): string {
   }
   return clean(item.text_content);
 }
+
+/** Botões clicáveis: escolha de quem criou o template, marcada nos próprios botões. */
+export const templateButtonsClickable = (buttons?: Btn[] | null): boolean =>
+  !!buttons?.some((b) => (b as Record<string, unknown>).clickable === "1");
+
+export function markButtonsClickable<T extends Btn>(buttons: T[], on: boolean): T[] {
+  return buttons.map((b) => {
+    const { clickable: _drop, ...rest } = b as T & { clickable?: string };
+    return (on ? { ...rest, clickable: "1" } : rest) as T;
+  });
+}
+
+export interface PlaybookMenu {
+  /** Texto da mensagem, sem rodapé e sem a lista de botões. */
+  text: string;
+  footer: string;
+  /** Opções no formato do WhatsApp ("Texto|destino"). */
+  choices: string[];
+  labels: string[];
+  /** O que volta ao texto quando os botões não puderem ser enviados. */
+  fallbackSuffix: string;
+}
+
+/**
+ * Separa o template em mensagem + botões clicáveis. Devolve null quando o template
+ * não pediu botões clicáveis ou o texto final não permite separar com segurança
+ * (nesse caso a mensagem segue inteira como texto).
+ */
+export function templateMenu(item: PlaybookTextSource, processedFull: string): PlaybookMenu | null {
+  if (item.content_type !== "template" || !templateButtonsClickable(item.template_buttons)) return null;
+  const label = (b: Btn) => clean(b.text).replace(/\|/g, "/");
+  const buttons = (item.template_buttons || [])
+    .filter((b) => clean(b.text) && (b.type === "url" || b.type === "phone" ? clean(b.value) : true))
+    .slice(0, 3);
+  if (!buttons.length) return null;
+  const tail = buttonsText(item.template_buttons || []);
+  const full = (processedFull || "").trim();
+  if (!tail || !full.endsWith(tail)) return null;
+  let text = full.slice(0, full.length - tail.length).trimEnd();
+  const footerRaw = clean(item.template_footer);
+  let footer = "";
+  if (footerRaw && text.endsWith(`_${footerRaw}_`)) {
+    text = text.slice(0, text.length - footerRaw.length - 2).trimEnd();
+    footer = footerRaw;
+  }
+  if (!text) return null;
+  return {
+    text,
+    footer,
+    labels: buttons.map(label),
+    choices: buttons.map((b) => {
+      if (b.type === "url") return `${label(b)}|${clean(b.value)}`;
+      if (b.type === "phone") return `${label(b)}|call:${clean(b.value).replace(/[^\d+]/g, "")}`;
+      return `${label(b)}|${label(b)}`;
+    }),
+    fallbackSuffix: full.slice(text.length),
+  };
+}

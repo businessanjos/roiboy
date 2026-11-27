@@ -1,5 +1,5 @@
 import { ZappTransferRequestDialog } from "@/components/royzapp/dialogs/ZappTransferRequestDialog";
-import { playbookItemRawText } from "@/lib/playbookItemText";
+import { playbookItemRawText, templateMenu } from "@/lib/playbookItemText";
 import { resolveZappHistorySelection, zappSelectionHistoryStates } from "@/lib/navigation/zappMobileSelection";
 import { getZappConversationReturn } from "@/lib/navigation/zappAnalyticsReturn";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
@@ -1102,11 +1102,21 @@ export default function RoyZapp() {
     return base;
   }, []);
 
+  // Botões clicáveis só em conversa individual pelo WhatsApp conectado por QR Code.
+  const playbookMenuFor = useCallback((item: PlaybookItem, textPayload: string) => {
+    const conv = selectedConversation?.zapp_conversation;
+    const intId = conv?.integration_id || selectedIntegrationId;
+    if (conv?.is_group || (intId && integrationProviders[intId] === "meta_official")) return null;
+    return templateMenu(item, textPayload);
+  }, [selectedConversation, selectedIntegrationId, integrationProviders]);
+
   // Helper to send a single playbook item
   const sendSinglePlaybookItem = useCallback(async (item: PlaybookItem, processedText?: string) => {
     const textPayload = buildPlaybookText(item, processedText);
     if (['text', 'link', 'list', 'template'].includes(item.content_type) && textPayload) {
-      messaging.setMessageInput(textPayload);
+      const menu = playbookMenuFor(item, textPayload);
+      messaging.setPendingMenu(menu);
+      messaging.setMessageInput(menu ? menu.text : textPayload);
       // Wait a tick for state to update, then trigger send
       await new Promise(resolve => setTimeout(resolve, 100));
       await messaging.sendMessage();
@@ -1137,13 +1147,15 @@ export default function RoyZapp() {
       toast.error("Item do playbook sem conteúdo para enviar.");
       throw new Error('Playbook item has no sendable content');
     }
-  }, [messaging, buildPlaybookText]);
+  }, [messaging, buildPlaybookText, playbookMenuFor]);
 
   const handlePlaybookItemInChat = useCallback(async (item: PlaybookItem, processedText?: string) => {
           // For single send: text/link goes to input, media sends directly
           const textPayload = buildPlaybookText(item, processedText);
           if (['text', 'link', 'list', 'template'].includes(item.content_type) && textPayload) {
-            messaging.setMessageInput(textPayload);
+            const menu = playbookMenuFor(item, textPayload);
+      messaging.setPendingMenu(menu);
+      messaging.setMessageInput(menu ? menu.text : textPayload);
             messaging.messageInputRef.current?.focus();
           } else if (item.content_type === 'image' && item.media_url) {
             try {
@@ -1168,7 +1180,7 @@ export default function RoyZapp() {
               toast.error("Erro ao enviar item do playbook");
             }
           }
-        }, [buildPlaybookText, messaging, sendSinglePlaybookItem]);
+        }, [buildPlaybookText, messaging, sendSinglePlaybookItem, playbookMenuFor]);
 
   // Atalho "/" no chat: sugestões de sequências e mensagens do Playbook
   const { items: slashPlaybookItems, replaceVariables: slashReplaceVars } = usePlaybook({ sectorId: selectedSectorId });
@@ -2213,6 +2225,8 @@ export default function RoyZapp() {
            replyingTo={messaging.replyingTo}
            onReplyMessage={messaging.handleReplyMessage}
            onCancelReply={() => messaging.setReplyingTo(null)}
+           pendingMenuLabels={messaging.pendingMenu?.labels}
+           onCancelMenu={() => messaging.setPendingMenu(null)}
            onDeleteMessage={messaging.handleDeleteMessage}
            onEditMessage={messaging.handleEditMessage}
            onRetryMessage={messaging.retryMessage}
