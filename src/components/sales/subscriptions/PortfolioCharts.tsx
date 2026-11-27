@@ -94,17 +94,24 @@ export function RankingBars({ data }: { data: PortfolioMetrics["ranking"] }) {
   const max = Math.max(...data.map(d => d.receivedCents), 0);
   if (!data.length) return <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Sem vendas pagas no RykaPay ainda.</div>;
   return (
-    <ul className="space-y-2.5">
-      {data.map(row => (
-        <li key={row.seller} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_auto] items-center gap-3 text-sm">
-          <span className="truncate" title={row.seller}>{row.seller}</span>
-          <span className="h-2.5 rounded-full bg-muted">
+    <ol className="divide-y" data-testid="ranking-rows">
+      {data.map((row, index) => (
+        <li key={row.seller} className="flex items-center gap-3 py-2.5 text-sm first:pt-0 last:pb-0">
+          <span className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{index + 1}</span>
+          <span className="min-w-0 flex-1 break-words font-medium leading-tight sm:w-36 sm:flex-none sm:truncate" title={row.seller}>{row.seller}</span>
+          <span className="hidden h-2 min-w-0 flex-1 rounded-full bg-muted sm:block">
             <span className="block h-full rounded-full bg-foreground/80" style={{ width: max ? `${Math.max(2, (row.receivedCents / max) * 100)}%` : "0%" }} />
           </span>
-          <span className="tabular-nums font-medium">{formatBRL(row.receivedCents)}</span>
+          <span className="shrink-0 text-right font-semibold tabular-nums sm:w-28">{formatBRL(row.receivedCents)}</span>
+          <span
+            className="w-[4.75rem] shrink-0 rounded-full bg-muted px-2 py-0.5 text-center text-xs tabular-nums text-muted-foreground"
+            title={`${row.activeClinics} ${row.activeClinics === 1 ? "clínica ativa" : "clínicas ativas"}`}
+          >
+            {row.activeClinics} {row.activeClinics === 1 ? "ativa" : "ativas"}
+          </span>
         </li>
       ))}
-    </ul>
+    </ol>
   );
 }
 

@@ -199,14 +199,9 @@ export default function SalesSubscriptions() {
             table={<MiniTable head={["Mês", "Recebido", "A receber"]} rows={metrics.cashflow.map(r => [`${monthLabel(r.month)}/${r.month.slice(2, 4)}${r.projected ? " (previsto)" : ""}`, formatBRL(r.receivedCents), formatBRL(r.receivableCents)])} />} />
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard title="Ranking de membros" subtitle="Top 8 por receita gerada no período"
+            <ChartCard title="Ranking de membros" subtitle="Top 8 por receita gerada no período, com as clínicas ativas de cada um"
               chart={<RankingBars data={metrics.ranking} />}
-              table={<MiniTable head={["Membro", "Receita", "Clínicas ativas"]} rows={metrics.ranking.map(r => [r.seller, formatBRL(r.receivedCents), r.activeClinics])} />}
-              footer={metrics.ranking.length > 0 && (
-                <ul className="grid gap-x-4 gap-y-1 border-t pt-3 text-xs text-muted-foreground sm:grid-cols-2">
-                  {metrics.ranking.map(r => <li key={r.seller} className="flex justify-between gap-2"><span className="truncate">{r.seller}</span><span className="shrink-0 tabular-nums">{r.activeClinics} {r.activeClinics === 1 ? "clínica ativa" : "clínicas ativas"}</span></li>)}
-                </ul>
-              )} />
+              table={<MiniTable head={["Membro", "Receita", "Clínicas ativas"]} rows={metrics.ranking.map(r => [r.seller, formatBRL(r.receivedCents), r.activeClinics])} />} />
             <ChartCard title="Saúde da carteira" subtitle="Adimplência da carteira ativa"
               chart={
                 <div className="flex flex-wrap items-center gap-6">
