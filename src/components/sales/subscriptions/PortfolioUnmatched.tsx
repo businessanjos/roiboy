@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, ExternalLink, Link2 } from "lucide-react";
+import { CheckCircle2, Link2, PanelRightOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { PortfolioClinic } from "@/lib/sales/payPortfolio";
 import { PayLinkManagerDialog } from "@/components/sales/PayLinkManagerDialog";
@@ -16,7 +15,7 @@ const REASON: Record<string, string> = {
 };
 
 /** Negócios ganhos de CR que ficaram fora dos números: quem são, por quê e o atalho para vincular o pagamento. */
-export function PortfolioUnmatched({ clinics, onLinked }: { clinics: PortfolioClinic[]; onLinked: () => void }) {
+export function PortfolioUnmatched({ clinics, onLinked, onOpenDeal }: { clinics: PortfolioClinic[]; onLinked: () => void; onOpenDeal: (dealId: string) => void }) {
   const [linkDeal, setLinkDeal] = useState<string | null>(null);
   // Mesmo critério do ganho: só a gestão vincula direto; o servidor confere de novo.
   const { data: canLink } = useQuery({
@@ -44,15 +43,15 @@ export function PortfolioUnmatched({ clinics, onLinked }: { clinics: PortfolioCl
             {clinics.map(c => (
               <li key={c.dealId} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
-                  <Link to={`/pipeline?deal=${c.dealId}`} title="Abrir o negócio" className="block truncate text-sm font-semibold hover:underline">{c.name}</Link>
+                  <button type="button" onClick={() => onOpenDeal(c.dealId)} title="Abrir o negócio" className="block max-w-full truncate text-left text-sm font-semibold hover:underline">{c.name}</button>
                   <p className="truncate text-xs text-muted-foreground">
                     {[c.sellerName || "Sem vendedor", dayBR(c.wonAt) ? `Ganho em ${dayBR(c.wonAt)}` : null].filter(Boolean).join(" · ")}
                   </p>
                   <Badge variant="outline" className="mt-1 font-normal">{REASON[c.state] ?? REASON.not_found}</Badge>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button asChild variant="outline" size="sm" className="h-11 sm:h-9">
-                    <Link to={`/pipeline?deal=${c.dealId}`}><ExternalLink className="h-4 w-4" strokeWidth={1.5} /> Abrir negócio</Link>
+                  <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={() => onOpenDeal(c.dealId)}>
+                    <PanelRightOpen className="h-4 w-4" strokeWidth={1.5} /> Abrir negócio
                   </Button>
                   {canLink && (
                     <Button size="sm" className="h-11 sm:h-9" onClick={() => setLinkDeal(c.dealId)}>

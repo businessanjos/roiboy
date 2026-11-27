@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AlertTriangle, CalendarDays, CheckCircle2, Loader2, Lock, MonitorPlay, Package, RefreshCw, Repeat, TrendingUp, X, XCircle } from "lucide-react";
@@ -7,6 +7,8 @@ import { usePayPortfolio, useCanSeePayPortfolio } from "@/hooks/usePayPortfolio"
 import { PERIOD_LABELS, formatBRL, formatPercent, monthLabel, monthLongLabel, payDay, periodFor, portfolioMetrics, type PeriodKey } from "@/lib/sales/payPortfolio";
 import { ChartCard, IndicatorCard, MiniTable, SectionHeader } from "@/components/sales/subscriptions/PortfolioParts";
 import { PortfolioUnmatched } from "@/components/sales/subscriptions/PortfolioUnmatched";
+import { ActiveClinicsDialog } from "@/components/sales/subscriptions/ActiveClinicsDialog";
+import { DealSheetById } from "@/components/sales/DealSheetById";
 import { PayLinkRequestsPanel } from "@/pages/PayLinkRequests";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CashflowChart, CashflowLegend, CountBars, HealthDonut, MrrChart, RankingBars } from "@/components/sales/subscriptions/PortfolioCharts";
@@ -24,6 +26,8 @@ export default function SalesSubscriptions() {
   const tab = params.get("aba") === "pagamentos" ? "pagamentos" : "painel";
   const setTab = (value: string) => setParams(prev => { const next = new URLSearchParams(prev); if (value === "pagamentos") next.set("aba", "pagamentos"); else next.delete("aba"); return next; }, { replace: true });
   const [periodKey, setPeriodKey] = useState<PeriodKey>("12m");
+  const [openDealId, setOpenDealId] = useState<string | null>(null);
+  const [activeOpen, setActiveOpen] = useState(false);
   const access = useCanSeePayPortfolio();
   const query = usePayPortfolio(access.data === true, tv);
   const today = payDay(new Date().toISOString()) as string;
@@ -151,7 +155,7 @@ export default function SalesSubscriptions() {
       {tab === "pagamentos" && query.data && (
         <div className="max-w-4xl space-y-4">
           {notices}
-          <PortfolioUnmatched clinics={unmatched} onLinked={() => void query.refetch()} />
+          <PortfolioUnmatched clinics={unmatched} onLinked={() => void query.refetch()} onOpenDeal={setOpenDealId} />
           <PayLinkRequestsPanel embedded />
         </div>
       )}
@@ -160,16 +164,10 @@ export default function SalesSubscriptions() {
       {tab === "painel" && metrics && query.data && (
         <>
           {notices}
-          {metrics.notFound > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {metrics.notFound} {metrics.notFound === 1 ? "negócio ganho de CR não foi localizado" : "negócios ganhos de CR não foram localizados"} no RykaPay e não {metrics.notFound === 1 ? "entra" : "entram"} nos números.{" "}
-              <button type="button" className="font-medium text-foreground underline underline-offset-2" onClick={() => setTab("pagamentos")}>Ver quem {metrics.notFound === 1 ? "é" : "são"}</button>
-            </p>
-          )}
-
           <div className="grid gap-4 md:grid-cols-2">
             <IndicatorCard label="MRR Consolidado" value={formatBRL(metrics.mrrCents)} description="Anual + mensal, receita recorrente mensal total" icon={Repeat} />
-            <IndicatorCard label="Clínicas Ativas" value={metrics.activeClinics} icon={CheckCircle2} />
+            <IndicatorCard label="Clínicas Ativas" value={metrics.activeClinics} icon={CheckCircle2}
+              onClick={metrics.activeClinics > 0 ? () => setActiveOpen(true) : undefined} actionLabel="Ver quem são" />
           </div>
 
           <SectionHeader icon={Package} title="Contratos anuais" />
@@ -233,7 +231,7 @@ export default function SalesSubscriptions() {
                   <ul className="max-h-72 divide-y overflow-y-auto">
                     {metrics.cancellations.list.map(row => (
                       <li key={row.dealId}>
-                       <Link to={`/pipeline?deal=${row.dealId}`} title="Abrir o negócio" className="-mx-2 flex items-start justify-between gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                       <button type="button" onClick={() => setOpenDealId(row.dealId)} title="Abrir o negócio" className="-mx-2 flex w-[calc(100%+1rem)] items-start justify-between gap-3 rounded-md px-2 py-2.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold">{row.clinic}</p>
                           <p className="truncate text-xs text-muted-foreground">{[dayBR(row.date), "Cancelamento", row.kind, row.seller || "Sem vendedor"].join(" · ")}</p>
@@ -242,7 +240,7 @@ export default function SalesSubscriptions() {
                           <p className="text-sm font-semibold tabular-nums text-destructive">−{formatBRL(row.lostMrrCents)}</p>
                           <p className="text-xs text-muted-foreground">{formatBRL(row.receivedCents)} recebidos</p>
                         </div>
-                       </Link>
+                       </button>
                       </li>
                     ))}
                   </ul>
@@ -250,6 +248,11 @@ export default function SalesSubscriptions() {
           </div>
         </>
       )}
+
+      {metrics && (
+        <ActiveClinicsDialog open={activeOpen} onOpenChange={setActiveOpen} clinics={metrics.activeList} onOpenDeal={setOpenDealId} />
+      )}
+      <DealSheetById dealId={openDealId} onClose={() => setOpenDealId(null)} />
     </div>
   );
 }

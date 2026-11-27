@@ -29,6 +29,20 @@ describe("painel de assinaturas (RykaPay)", () => {
     expect(m.activeClinics).toBe(2);
   });
 
+  it("a lista de clínicas ativas traz as mesmas clínicas do contador, com tipo, início e receita mensal", () => {
+    const m = portfolioMetrics(portfolio([
+      clinic("A", "Ana", [monthly("a", "2026-11-12")]),
+      clinic("B", "Bia", [annual("b", "2026-10-01")]),
+      clinic("C", "Ana", [annual("c", "2025-11-01")]),
+      clinic("D", "Ana", []),
+    ]), TODAY, all);
+    expect(m.activeList).toHaveLength(m.activeClinics);
+    expect(m.activeList).toEqual([
+      { dealId: "A", clinic: "A", seller: "Ana", kind: "Mensal", since: "2026-11-12", mrrCents: 350000, receivedCents: 350000, overdue: false },
+      { dealId: "B", clinic: "B", seller: "Bia", kind: "Anual", since: "2026-10-01", mrrCents: 300000, receivedCents: 3600000, overdue: false },
+    ]);
+  });
+
   it("anual deixa de contar depois de 12 meses e isso não é cancelamento", () => {
     const m = portfolioMetrics(portfolio([clinic("B", "Bia", [annual("b", "2025-11-01")])]), TODAY, all);
     expect(m.activeClinics).toBe(0);

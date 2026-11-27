@@ -15,16 +15,25 @@ export const INK = {
   loss: "hsl(var(--destructive))",
 };
 
-export function IndicatorCard({ label, value, description, icon: Icon, tone, tv }: {
+export function IndicatorCard({ label, value, description, icon: Icon, tone, tv, onClick, actionLabel }: {
   label: string; value: ReactNode; description?: string; icon: LucideIcon; tone?: "loss"; tv?: boolean;
+  /** Torna o cartão clicável (abre os detalhes do número). */
+  onClick?: () => void; actionLabel?: string;
 }) {
   return (
-    <Card className="min-w-0">
+    <Card
+      className={cn("min-w-0", onClick && "cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}
+      {...(onClick ? {
+        role: "button", tabIndex: 0, "aria-label": actionLabel ?? label, onClick,
+        onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } },
+      } : {})}
+    >
       <CardContent className={cn("flex items-start justify-between gap-3", tv ? "p-6" : "p-5")}>
         <div className="min-w-0 flex-1">
           <p className={cn("font-medium uppercase tracking-wider text-muted-foreground", tv ? "text-base" : "text-xs")}>{label}</p>
           <p className={cn("mt-1 font-bold tabular-nums leading-tight", tv ? "text-4xl 2xl:text-5xl" : "text-2xl sm:text-3xl", tone === "loss" ? "text-destructive" : "text-foreground")}>{value}</p>
           {description && <p className={cn("mt-1 text-muted-foreground", tv ? "text-lg" : "text-xs")}>{description}</p>}
+          {onClick && !tv && <p className="mt-1 text-xs font-medium text-primary">{actionLabel ?? "Ver detalhes"}</p>}
         </div>
         <div className={cn("flex shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground", tv ? "h-14 w-14" : "h-9 w-9")}>
           <Icon className={tv ? "h-7 w-7" : "h-4 w-4"} strokeWidth={1.5} />

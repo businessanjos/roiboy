@@ -145,7 +145,8 @@ Deno.serve(async req => {
       const hasKey = docs.size || emails.size || dealPayers.length || dealLinks.length;
       return {
         dealId: deal.id,
-        name: (client?.company_name || client?.full_name || lead?.company_name || lead?.full_name || deal.title || "Clínica sem nome").trim().slice(0, 160),
+        // A name needs at least one letter: placeholders typed into the record ("0", "-") are skipped.
+        name: ([client?.company_name, client?.full_name, lead?.company_name, lead?.full_name, deal.title].find(v => typeof v === "string" && /\p{L}/u.test(v)) || "Clínica sem nome").trim().slice(0, 160),
         sellerId: deal.responsible_user_id,
         sellerName: (deal.responsible_user_id && sellerMap.get(deal.responsible_user_id)?.name?.trim()) || null,
         wonAt: deal.won_at,

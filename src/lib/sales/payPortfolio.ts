@@ -93,9 +93,23 @@ export interface PortfolioCancellation {
   lostMrrCents: number;
   receivedCents: number;
 }
+/** Clínica com contrato vigente hoje, para a lista aberta pelo cartão "Clínicas Ativas". */
+export interface PortfolioActiveClinic {
+  dealId: string;
+  clinic: string;
+  seller: string | null;
+  kind: "Mensal" | "Anual";
+  /** Início do contrato vigente mais antigo. */
+  since: string | null;
+  mrrCents: number;
+  receivedCents: number;
+  overdue: boolean;
+}
 export interface PortfolioMetrics {
   mrrCents: number;
   activeClinics: number;
+  /** As mesmas clínicas contadas em `activeClinics`, da maior receita mensal para a menor. */
+  activeList: PortfolioActiveClinic[];
   annual: { mrrCents: number; arrCents: number };
   monthly: { mrrCents: number; arrCents: number };
   mrrSeries: { month: string; mrrCents: number }[];
@@ -182,9 +196,24 @@ export function portfolioMetrics(portfolio: PayPortfolio, today: string, period:
     : clinicLive(c, period.from) || inPeriod(firstStart(c), period)).length;
   const churn = base > 0 ? (list.length / base) * 100 : null;
 
+  const activeList: PortfolioActiveClinic[] = live.map(clinic => {
+    const running = clinic.contracts.filter(c => isLiveOn(c, today));
+    return {
+      dealId: clinic.dealId,
+      clinic: clinic.name,
+      seller: clinic.sellerName,
+      kind: running.some(c => c.kind === "anual") ? "Anual" as const : "Mensal" as const,
+      since: running.map(startDay).filter((v): v is string => Boolean(v)).sort()[0] ?? null,
+      mrrCents: clinicMrr(clinic, today),
+      receivedCents: paidCents(clinic),
+      overdue: running.some(c => isOverdue(c, today)),
+    };
+  }).sort((a, b) => b.mrrCents - a.mrrCents || a.clinic.localeCompare(b.clinic, "pt-BR"));
+
   return {
     mrrCents: monthlyMrr + annualMrr,
     activeClinics: live.length,
+    activeList,
     annual: { mrrCents: annualMrr, arrCents: annualArr },
     monthly: { mrrCents: monthlyMrr, arrCents: monthlyMrr * 12 },
     mrrSeries,
