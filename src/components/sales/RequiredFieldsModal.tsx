@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { PAY_RELEASE_NOTE_TITLE } from "../../../supabase/functions/_shared/rykaPayPortfolio";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -650,7 +651,8 @@ export function RequiredFieldsModal({
           account_id: accountId,
           deal_id: dealId,
           type: "note",
-          title: "Ganho liberado sem pagamento no RykaPay",
+          // O painel de Assinaturas reconhece a liberação por este título (PAY_RELEASE_NOTE_TITLE).
+          title: PAY_RELEASE_NOTE_TITLE,
           content: `${currentUser?.name ?? "Gestor"} liberou o ganho do Programa Clínica Ryka depois de a consulta ao RykaPay não encontrar pagamento confirmado.`,
           user_id: currentUser?.id ?? null,
         } as any);

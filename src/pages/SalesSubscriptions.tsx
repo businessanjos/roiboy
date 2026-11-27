@@ -4,7 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AlertTriangle, CalendarDays, CheckCircle2, Loader2, Lock, MonitorPlay, Package, RefreshCw, Repeat, TrendingUp, X, XCircle } from "lucide-react";
 import { usePayPortfolio, useCanSeePayPortfolio } from "@/hooks/usePayPortfolio";
-import { PERIOD_LABELS, formatBRL, formatPercent, monthLabel, monthLongLabel, payDay, periodFor, portfolioMetrics, type PeriodKey } from "@/lib/sales/payPortfolio";
+import { PERIOD_LABELS, formatBRL, formatPercent, monthLabel, monthLongLabel, payDay, periodFor, portfolioMetrics, unmatchedClinics, type PeriodKey } from "@/lib/sales/payPortfolio";
 import { ChartCard, IndicatorCard, MiniTable, SectionHeader } from "@/components/sales/subscriptions/PortfolioParts";
 import { PortfolioUnmatched } from "@/components/sales/subscriptions/PortfolioUnmatched";
 import { ActiveClinicsDialog } from "@/components/sales/subscriptions/ActiveClinicsDialog";
@@ -44,7 +44,7 @@ export default function SalesSubscriptions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tv]);
 
-  const unmatched = useMemo(() => (query.data?.clinics ?? []).filter(c => !c.contracts.length), [query.data]);
+  const unmatched = useMemo(() => unmatchedClinics(query.data?.clinics ?? []), [query.data]);
   const updated = query.data ? `Atualizado ${formatDistanceToNow(new Date(query.data.generatedAt), { addSuffix: true, locale: ptBR })}` : null;
   const notices = query.data && metrics ? (
     <>

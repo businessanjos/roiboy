@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { CR_PRODUCT_ID, documentNumbers, record } from "../_shared/rykaPay.ts";
-import { hasPaidInvoice, portfolioContractFromSale, portfolioContractFromStripe, portfolioContractsFromPay, type PayPortfolio, type PortfolioClinic, type PortfolioContract } from "../_shared/rykaPayPortfolio.ts";
+import { hasPaidInvoice, PAY_RELEASE_NOTE_TITLE, portfolioContractFromSale, portfolioContractFromStripe, portfolioContractsFromPay, type PayPortfolio, type PortfolioClinic, type PortfolioContract } from "../_shared/rykaPayPortfolio.ts";
 
 const BASE = "https://rykapay.app/api/public/v1";
 // Same fixed account as rykapay-read: one company's credential must never serve another account.
@@ -94,6 +94,19 @@ Deno.serve(async req => {
     const clientMap = byId(clients), leadMap = byId(leads), sellerMap = byId(sellers);
     const seedMap = new Map(seeds.map(s => [s.external_id, s.payer_email]));
 
+    // Wins a manager released without a located payment: the note the win flow writes, counted only when
+    // its author still passes the same manager check that shows the release button.
+    const releaseNotes = await load<{ deal_id: string; user_id: string | null }>(dealIds, p => db.from("deal_activities").select("deal_id,user_id").in("deal_id", p).eq("type", "note").eq("title", PAY_RELEASE_NOTE_TITLE).eq("account_id", me.account_id));
+    const authors = await load<{ id: string; name: string | null; auth_user_id: string | null }>([...new Set(releaseNotes.map(n => n.user_id).filter((v): v is string => Boolean(v)))], p => db.from("users").select("id,name,auth_user_id").in("id", p).eq("account_id", me.account_id));
+    const managerNames = new Map<string, string>();
+    for (const author of authors) {
+      if (!author.auth_user_id) continue;
+      const { data: isManager } = await db.rpc("can_manage_spiff_payments", { _auth_user_id: author.auth_user_id });
+      if (isManager === true) managerNames.set(author.id, author.name?.trim() || "Gestão");
+    }
+    const releasedBy = new Map<string, string>();
+    for (const note of releaseNotes) { const name = note.user_id && managerNames.get(note.user_id); if (name) releasedBy.set(note.deal_id, name); }
+
     // A contract belongs to one clinic only: the most recently won deal that reaches it.
     const claimed = new Set<string>();
     const readDeal = async (deal: Deal): Promise<PortfolioClinic> => {
@@ -163,6 +176,7 @@ Deno.serve(async req => {
         sellerName: (deal.responsible_user_id && sellerMap.get(deal.responsible_user_id)?.name?.trim()) || null,
         wonAt: deal.won_at,
         state: contracts.length ? "found" : hasKey ? "not_found" : "needs_document",
+        releasedBy: contracts.length ? null : releasedBy.get(deal.id) ?? null,
         contracts,
       };
     };

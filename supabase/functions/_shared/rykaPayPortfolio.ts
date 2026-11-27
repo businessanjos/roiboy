@@ -36,8 +36,12 @@ export type PortfolioClinic = {
   wonAt: string | null;
   /** "needs_document": ROY has no CPF/CNPJ/e-mail to look this clinic up. */
   state: "found" | "not_found" | "needs_document";
+  /** A manager released this win without a located payment: the manager took it on, so it is not a pending "sem dono" item. */
+  releasedBy?: string | null;
   contracts: PortfolioContract[];
 };
+/** Activity title written by the win flow when a manager releases a CR win without a located payment. */
+export const PAY_RELEASE_NOTE_TITLE = "Ganho liberado sem pagamento no RykaPay";
 export type PayPortfolio = { generatedAt: string; partial: boolean; clinics: PortfolioClinic[] };
 
 const text = (v: unknown, max = 200) => typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;

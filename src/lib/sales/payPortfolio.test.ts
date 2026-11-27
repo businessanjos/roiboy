@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatBRL, formatPercent, monthLabel, periodFor, portfolioMetrics, type PayPortfolio, type PortfolioClinic, type PortfolioContract } from "./payPortfolio";
+import { formatBRL, formatPercent, monthLabel, periodFor, portfolioMetrics, unmatchedClinics, type PayPortfolio, type PortfolioClinic, type PortfolioContract } from "./payPortfolio";
 import { portfolioContractsFromPay } from "../../../supabase/functions/_shared/rykaPayPortfolio";
 
 const TODAY = "2026-11-27";
@@ -110,5 +110,13 @@ describe("painel de assinaturas (RykaPay)", () => {
     expect(formatBRL(3500000).replace(/\s/g, " ")).toBe("R$ 35.000,00");
     expect(formatPercent(36.44)).toBe("36.4%");
     expect(monthLabel("2026-12")).toBe("dez");
+  });
+});
+
+describe("pagamentos sem dono", () => {
+  it("ganho liberado pela gestão sai da lista; sem liberação continua", () => {
+    const pending = clinic("Sem pagamento", "Everton", []);
+    const released = { ...clinic("Liberada", "Everton", []), releasedBy: "Jonathan Marcato" };
+    expect(unmatchedClinics([pending, released]).map(c => c.name)).toEqual(["Sem pagamento"]);
   });
 });

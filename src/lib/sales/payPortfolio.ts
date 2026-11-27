@@ -7,6 +7,12 @@ import type { PayPortfolio, PortfolioClinic, PortfolioContract, PortfolioInvoice
 
 export type { PayPortfolio, PortfolioClinic, PortfolioContract };
 
+/**
+ * Ganhos de CR que ainda pedem ação em "Pagamentos sem dono": sem pagamento localizado
+ * e sem liberação da gestão (quem liberou o ganho assumiu o caso).
+ */
+export const unmatchedClinics = (clinics: PortfolioClinic[]) => clinics.filter(c => !c.contracts.length && !c.releasedBy);
+
 /** Dia em São Paulo (yyyy-MM-dd): a competência segue a data real da cobrança. */
 export function payDay(value: string | null | undefined): string | null {
   if (!value) return null;
