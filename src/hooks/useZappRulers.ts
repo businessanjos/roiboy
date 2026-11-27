@@ -3,6 +3,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import type { RulerContactExtra } from "@/lib/zappRulerFilters";
+
+/** Lê e-mails/telefones guardados como lista de textos ou de objetos. */
+function flattenContactList(value: unknown, keys: string[]): string[] {
+  if (!value) return [];
+  if (typeof value === "string") return [value];
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  for (const item of value) {
+    if (typeof item === "string") out.push(item);
+    else if (item && typeof item === "object") {
+      for (const k of keys) {
+        const v = (item as Record<string, unknown>)[k];
+        if (typeof v === "string" && v) out.push(v);
+      }
+    }
+  }
+  return out;
+}
+
+function chunk<T>(list: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
 
 export interface RulerTemplateStep {
   id?: string;
@@ -53,6 +78,8 @@ export interface RulerEnrollment {
   template_id: string | null;
   template_name: string | null;
   conversation_id: string | null;
+  lead_id?: string | null;
+  client_id?: string | null;
   contact_name: string | null;
   contact_phone: string;
   assigned_to: string | null;
@@ -115,13 +142,20 @@ export const RULER_PRESETS: Array<{ id: string; label: string; steps: RulerTempl
   },
 ];
 
-export function useZappRulers(sectorId?: string | null) {
+export function useZappRulers(
+  sectorId?: string | null,
+  /** `withContactExtras`: só a tela de réguas precisa dos cadastros para a busca. */
+  options: { withContactExtras?: boolean } = {},
+) {
+  const withContactExtras = !!options.withContactExtras;
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
 
   const [templates, setTemplates] = useState<RulerTemplate[]>([]);
   const [enrollments, setEnrollments] = useState<RulerEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
+  /** E-mails e telefones extras do cadastro, só para a busca da tela. */
+  const [contactExtras, setContactExtras] = useState<Record<string, RulerContactExtra>>({});
 
   const fetchAll = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accountId) return;
@@ -176,6 +210,78 @@ export function useZappRulers(sectorId?: string | null) {
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  // Chave estável: só refaz a leitura dos cadastros quando muda quem está em régua.
+  const contactLinksKey = useMemo(
+    () =>
+      enrollments
+        .map((e) => `${e.id}:${e.lead_id || ""}:${e.client_id || ""}`)
+        .sort()
+        .join("|"),
+    [enrollments],
+  );
+
+  useEffect(() => {
+    if (!withContactExtras) return;
+    let cancelled = false;
+    const leadIds = Array.from(new Set(enrollments.map((e) => e.lead_id).filter(Boolean))) as string[];
+    const clientIds = Array.from(new Set(enrollments.map((e) => e.client_id).filter(Boolean))) as string[];
+    if (!leadIds.length && !clientIds.length) {
+      setContactExtras({});
+      return;
+    }
+    (async () => {
+      try {
+        const [leadRows, clientRows] = await Promise.all([
+          Promise.all(
+            chunk(leadIds, 150).map((ids) =>
+              supabase
+                .from("leads")
+                .select("id, full_name, company_name, email, emails, phone, additional_phones")
+                .in("id", ids),
+            ),
+          ),
+          Promise.all(
+            chunk(clientIds, 150).map((ids) =>
+              supabase.from("clients").select("id, full_name, company_name, emails").in("id", ids),
+            ),
+          ),
+        ]);
+        if (cancelled) return;
+        const byLead = new Map<string, any>();
+        const byClient = new Map<string, any>();
+        for (const res of leadRows) for (const row of (res.data || []) as any[]) byLead.set(row.id, row);
+        for (const res of clientRows) for (const row of (res.data || []) as any[]) byClient.set(row.id, row);
+
+        const next: Record<string, RulerContactExtra> = {};
+        for (const e of enrollments) {
+          const lead = e.lead_id ? byLead.get(e.lead_id) : null;
+          const client = e.client_id ? byClient.get(e.client_id) : null;
+          if (!lead && !client) continue;
+          next[e.id] = {
+            emails: [
+              ...(lead?.email ? [lead.email] : []),
+              ...flattenContactList(lead?.emails, ["email", "value", "address"]),
+              ...flattenContactList(client?.emails, ["email", "value", "address"]),
+            ],
+            phones: [
+              ...(lead?.phone ? [lead.phone] : []),
+              ...flattenContactList(lead?.additional_phones, ["phone", "value", "number"]),
+            ],
+            names: [lead?.full_name, lead?.company_name, client?.full_name, client?.company_name].filter(Boolean),
+          };
+        }
+        setContactExtras(next);
+      } catch (err) {
+        // A busca por nome e telefone da régua continua funcionando sem os cadastros.
+        console.error("[ZappRulers] contact extras failed", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contactLinksKey, withContactExtras]);
 
   const saveTemplate = useCallback(
     async (input: {
@@ -340,45 +446,144 @@ export function useZappRulers(sectorId?: string | null) {
   );
 
 
+  /**
+   * As ações abaixo atualizam a tela na hora, sem recarregar a lista inteira:
+   * recarregar tudo fechava a régua aberta e voltava para a primeira aba.
+   */
+  const patchTouch = useCallback((touchId: string, patch: Partial<RulerTouch> | null) => {
+    setEnrollments((prev) =>
+      prev.map((e) => {
+        if (!e.touches.some((t) => t.id === touchId)) return e;
+        const touches = patch
+          ? e.touches.map((t) => (t.id === touchId ? { ...t, ...patch } : t))
+          : e.touches.filter((t) => t.id !== touchId);
+        // Mesma regra do banco: sem atividade em aberto, a régua está concluída.
+        const stillOpen = touches.some((t) => t.status === "pending");
+        return {
+          ...e,
+          touches,
+          status: e.status === "active" && !stillOpen ? "completed" : e.status,
+        };
+      }),
+    );
+  }, []);
+
   const cancelEnrollment = useCallback(
     async (id: string, reason = "cancelada manualmente") => {
-      await supabase
-        .from("zapp_ruler_touches")
-        .update({ status: "cancelled", last_error: reason })
-        .eq("enrollment_id", id)
-        .eq("status", "pending");
-      const { error } = await supabase
-        .from("zapp_ruler_enrollments")
-        .update({ status: "cancelled", cancel_reason: reason })
-        .eq("id", id);
-      if (error) throw error;
-      await fetchAll();
+      try {
+        const { error: touchError } = await supabase
+          .from("zapp_ruler_touches")
+          .update({ status: "cancelled", last_error: reason })
+          .eq("enrollment_id", id)
+          .eq("status", "pending");
+        if (touchError) throw touchError;
+        const { data, error } = await supabase
+          .from("zapp_ruler_enrollments")
+          .update({ status: "cancelled", cancel_reason: reason })
+          .eq("id", id)
+          .select("id");
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error("Você não tem permissão para encerrar esta régua.");
+        setEnrollments((prev) =>
+          prev.map((e) =>
+            e.id === id
+              ? {
+                  ...e,
+                  status: "cancelled",
+                  cancel_reason: reason,
+                  touches: e.touches.map((t) =>
+                    t.status === "pending" ? { ...t, status: "cancelled", last_error: reason } : t,
+                  ),
+                }
+              : e,
+          ),
+        );
+        toast.success("Régua encerrada");
+      } catch (err: any) {
+        console.error("[ZappRulers] cancel enrollment failed", err);
+        toast.error(err?.message || "Erro ao encerrar a régua");
+        await fetchAll({ silent: true });
+      }
     },
     [fetchAll],
   );
 
   const markTouchDone = useCallback(
     async (touchId: string) => {
-      const { error } = await supabase
-        .from("zapp_ruler_touches")
-        .update({ status: "sent", sent_at: new Date().toISOString(), sent_by: currentUser?.id || null })
-        .eq("id", touchId);
-      if (error) throw error;
-      await fetchAll();
+      try {
+        const sentAt = new Date().toISOString();
+        const { data, error } = await supabase
+          .from("zapp_ruler_touches")
+          .update({ status: "sent", sent_at: sentAt, sent_by: currentUser?.id || null })
+          .eq("id", touchId)
+          .select("id");
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error("Você não tem permissão para concluir esta atividade.");
+        patchTouch(touchId, { status: "sent", sent_at: sentAt });
+        toast.success("Atividade concluída");
+      } catch (err: any) {
+        console.error("[ZappRulers] mark touch done failed", err);
+        toast.error(err?.message || "Erro ao concluir a atividade");
+        await fetchAll({ silent: true });
+      }
     },
-    [currentUser?.id, fetchAll],
+    [currentUser?.id, fetchAll, patchTouch],
   );
 
   const skipTouch = useCallback(
     async (touchId: string) => {
-      const { error } = await supabase
-        .from("zapp_ruler_touches")
-        .update({ status: "cancelled", last_error: "pulado manualmente" })
-        .eq("id", touchId);
-      if (error) throw error;
-      await fetchAll();
+      try {
+        const { data, error } = await supabase
+          .from("zapp_ruler_touches")
+          .update({ status: "cancelled", last_error: "pulado manualmente" })
+          .eq("id", touchId)
+          .select("id");
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error("Você não tem permissão para pular esta atividade.");
+        patchTouch(touchId, { status: "cancelled", last_error: "pulado manualmente" });
+      } catch (err: any) {
+        console.error("[ZappRulers] skip touch failed", err);
+        toast.error(err?.message || "Erro ao pular a atividade");
+        await fetchAll({ silent: true });
+      }
     },
-    [fetchAll],
+    [fetchAll, patchTouch],
+  );
+
+  /** Remove uma atividade da régua do contato. */
+  const deleteTouch = useCallback(
+    async (touchId: string) => {
+      try {
+        const owner = enrollments.find((e) => e.touches.some((t) => t.id === touchId));
+        const { data, error } = await supabase
+          .from("zapp_ruler_touches")
+          .delete()
+          .eq("id", touchId)
+          .select("id");
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error("Você não tem permissão para excluir esta atividade.");
+        // Excluir não dispara a conclusão automática; sem mais nada em aberto, conclui aqui.
+        if (
+          owner &&
+          owner.status === "active" &&
+          !owner.touches.some((t) => t.id !== touchId && t.status === "pending")
+        ) {
+          const { error: enrError } = await supabase
+            .from("zapp_ruler_enrollments")
+            .update({ status: "completed" })
+            .eq("id", owner.id)
+            .eq("status", "active");
+          if (enrError) throw enrError;
+        }
+        patchTouch(touchId, null);
+        toast.success("Atividade excluída");
+      } catch (err: any) {
+        console.error("[ZappRulers] delete touch failed", err);
+        toast.error(err?.message || "Erro ao excluir a atividade");
+        await fetchAll({ silent: true });
+      }
+    },
+    [enrollments, fetchAll, patchTouch],
   );
 
   const activeEnrollments = useMemo(
@@ -415,5 +620,7 @@ export function useZappRulers(sectorId?: string | null) {
     deleteEnrollment,
     markTouchDone,
     skipTouch,
+    deleteTouch,
+    contactExtras,
   };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,15 +15,31 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  ArrowDownUp,
   CalendarClock,
   Check,
+  ListChecks,
   Loader2,
   Pencil,
   Plus,
+  Search,
   SkipForward,
   Trash2,
+  X,
   XCircle,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DEFAULT_RULER_FILTERS,
+  filterAndSortRulerRows,
+  matchesRulerSearch,
+  rulerDayKey,
+  type RulerFilterState,
+  type RulerPeriod,
+  type RulerSort,
+} from "@/lib/zappRulerFilters";
+import { RulerEnrollmentDetailDialog } from "./RulerEnrollmentDetailDialog";
 import { useZappRulers, type RulerTemplate, type RulerEnrollment } from "@/hooks/useZappRulers";
 import { ZappRulerTemplateDialog } from "./ZappRulerTemplateDialog";
 import { usePagedList } from "@/hooks/usePagedList";
@@ -61,16 +77,74 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
     cancelEnrollment,
     markTouchDone,
     skipTouch,
-  } = useZappRulers(sectorId);
+    deleteTouch,
+    contactExtras,
+  } = useZappRulers(sectorId, { withContactExtras: true });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<RulerTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RulerTemplate | null>(null);
   const [deleteEnrollTarget, setDeleteEnrollTarget] = useState<RulerEnrollment | null>(null);
 
-  const filaPg = usePagedList(pendingManualTouches, { resetKey: "fila", isLoading: loading });
-  const ativasPg = usePagedList(enrollments, { resetKey: "ativas", isLoading: loading });
-  const modelosPg = usePagedList(templates, { resetKey: "modelos", isLoading: loading });
+  const [tab, setTab] = useState("fila");
+  const [filters, setFilters] = useState<RulerFilterState>(DEFAULT_RULER_FILTERS);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const setFilter = (patch: Partial<RulerFilterState>) => setFilters((prev) => ({ ...prev, ...patch }));
+
+  const todayKey = rulerDayKey(new Date());
+  const templateNames = useMemo(
+    () =>
+      Array.from(new Set(enrollments.map((e) => e.template_name).filter(Boolean) as string[])).sort((a, b) =>
+        a.localeCompare(b, "pt-BR"),
+      ),
+    [enrollments],
+  );
+
+  // Fila: a data é o vencimento do toque. Ativas: a data é a próxima atividade em aberto.
+  const filaRows = useMemo(
+    () =>
+      filterAndSortRulerRows(
+        pendingManualTouches,
+        (row) => ({ enrollment: row.enrollment, date: row.touch.scheduled_at }),
+        filters,
+        contactExtras,
+        todayKey,
+      ),
+    [pendingManualTouches, filters, contactExtras, todayKey],
+  );
+  const ativasRows = useMemo(
+    () =>
+      filterAndSortRulerRows(
+        enrollments,
+        (enrollment) => ({
+          enrollment,
+          date: enrollment.touches.find((t) => t.status === "pending")?.scheduled_at ?? null,
+        }),
+        filters,
+        contactExtras,
+        todayKey,
+      ),
+    [enrollments, filters, contactExtras, todayKey],
+  );
+  const modeloRows = useMemo(
+    () =>
+      templates.filter((t) =>
+        matchesRulerSearch(
+          { id: t.id, contact_name: t.name, contact_phone: "", template_name: t.description },
+          undefined,
+          filters.query,
+        ),
+      ),
+    [templates, filters.query],
+  );
+
+  const filtering =
+    filters.query.trim() !== "" || filters.template !== "all" || filters.period !== "all";
+  const detailEnrollment = detailId ? enrollments.find((e) => e.id === detailId) ?? null : null;
+
+  const filaPg = usePagedList(filaRows, { resetKey: ["fila", filters], isLoading: loading });
+  const ativasPg = usePagedList(ativasRows, { resetKey: ["ativas", filters], isLoading: loading });
+  const modelosPg = usePagedList(modeloRows, { resetKey: ["modelos", filters.query], isLoading: loading });
 
   // Mantém o estado de edição sincronizado com a lista atualizada,
   // mesmo quando o diálogo de detalhe está aberto.
@@ -112,17 +186,132 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
         </Button>
       </div>
 
-      <Tabs defaultValue="fila">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="fila">Fila de hoje ({pendingManualTouches.length})</TabsTrigger>
           <TabsTrigger value="ativas">Ativas ({activeEnrollments.length})</TabsTrigger>
           <TabsTrigger value="modelos">Modelos ({templates.length})</TabsTrigger>
         </TabsList>
 
+        <div className="mt-3 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[220px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={filters.query}
+                onChange={(e) => setFilter({ query: e.target.value })}
+                placeholder={
+                  tab === "modelos" ? "Buscar modelo pelo nome" : "Buscar por nome, telefone, e-mail ou régua"
+                }
+                aria-label="Buscar nas réguas"
+                className="h-9 pl-9 pr-9"
+              />
+              {filters.query && (
+                <button
+                  type="button"
+                  aria-label="Limpar busca"
+                  onClick={() => setFilter({ query: "" })}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {tab !== "modelos" && (
+              <>
+                <Select value={filters.template} onValueChange={(v) => setFilter({ template: v })}>
+                  <SelectTrigger className="h-9 w-full sm:w-[200px]" aria-label="Filtrar por régua">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as réguas</SelectItem>
+                    {templateNames.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.period} onValueChange={(v) => setFilter({ period: v as RulerPeriod })}>
+                  <SelectTrigger className="h-9 w-[calc(50%-0.25rem)] sm:w-[170px]" aria-label="Filtrar por data">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todo o período</SelectItem>
+                    <SelectItem value="today">Hoje</SelectItem>
+                    <SelectItem value="week">Esta semana</SelectItem>
+                    <SelectItem value="month">Este mês</SelectItem>
+                    <SelectItem value="custom">Escolher datas</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.sort} onValueChange={(v) => setFilter({ sort: v as RulerSort })}>
+                  <SelectTrigger className="h-9 w-[calc(50%-0.25rem)] sm:w-[190px]" aria-label="Ordenar">
+                    <ArrowDownUp className="mr-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date_asc">Data mais antiga</SelectItem>
+                    <SelectItem value="date_desc">Data mais recente</SelectItem>
+                    <SelectItem value="name_asc">Nome de A a Z</SelectItem>
+                    <SelectItem value="name_desc">Nome de Z a A</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+          </div>
+
+          {tab !== "modelos" && filters.period === "custom" && (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>De</span>
+              <Input
+                type="date"
+                aria-label="Data inicial"
+                value={filters.from}
+                max={filters.to || undefined}
+                onChange={(e) => setFilter({ from: e.target.value })}
+                className="h-9 w-[150px]"
+              />
+              <span>até</span>
+              <Input
+                type="date"
+                aria-label="Data final"
+                value={filters.to}
+                min={filters.from || undefined}
+                onChange={(e) => setFilter({ to: e.target.value })}
+                className="h-9 w-[150px]"
+              />
+            </div>
+          )}
+
+          {tab !== "modelos" && filtering && (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>
+                {tab === "fila"
+                  ? `${filaRows.length} de ${pendingManualTouches.length} toques`
+                  : `${ativasRows.length} de ${enrollments.length} réguas`}
+              </span>
+              <button
+                type="button"
+                className="font-medium text-primary hover:underline"
+                onClick={() => setFilters((prev) => ({ ...DEFAULT_RULER_FILTERS, sort: prev.sort }))}
+              >
+                Limpar filtros
+              </button>
+            </div>
+          )}
+        </div>
+
         <TabsContent value="fila" className="space-y-3 pt-3">
           {pendingManualTouches.length === 0 ? (
             <p className="text-sm text-zapp-text-muted py-8 text-center">
               Nenhum toque manual pendente. Tudo em dia.
+            </p>
+          ) : filaRows.length === 0 ? (
+            <p className="text-sm text-zapp-text-muted py-8 text-center">
+              Nenhum toque encontrado com essa busca ou filtro.
             </p>
           ) : (
             <>
@@ -131,9 +320,13 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
+                      <button
+                        type="button"
+                        onClick={() => setDetailId(enrollment.id)}
+                        className="block max-w-full truncate text-left text-sm font-medium hover:text-primary hover:underline"
+                      >
                         {enrollment.contact_name || enrollment.contact_phone}
-                      </p>
+                      </button>
                       <p className="text-xs text-muted-foreground">
                         {enrollment.template_name} · {touch.title} · venceu em {formatDateTime(touch.scheduled_at)}
                       </p>
@@ -150,7 +343,7 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
                   ) : (
                     <p className="text-xs text-muted-foreground whitespace-pre-wrap">{touch.message}</p>
                   )}
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {!touch.is_task && (
                       <Button
                         size="sm"
@@ -170,6 +363,9 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
                     <Button size="sm" variant="ghost" onClick={() => skipTouch(touch.id)}>
                       <SkipForward className="h-4 w-4 mr-1" /> Pular
                     </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setDetailId(enrollment.id)}>
+                      <ListChecks className="h-4 w-4 mr-1" /> Ver régua
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -183,6 +379,10 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
           {enrollments.length === 0 ? (
             <p className="text-sm text-zapp-text-muted py-8 text-center">
               Nenhum contato em régua ainda. Abra uma conversa e use "Régua" no cabeçalho.
+            </p>
+          ) : ativasRows.length === 0 ? (
+            <p className="text-sm text-zapp-text-muted py-8 text-center">
+              Nenhuma régua encontrada com essa busca ou filtro.
             </p>
           ) : (
             <>
@@ -214,7 +414,10 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
                     {enrollment.cancel_reason && (
                       <p className="text-xs text-muted-foreground">Motivo: {enrollment.cancel_reason}</p>
                     )}
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" onClick={() => setDetailId(enrollment.id)}>
+                        <ListChecks className="h-4 w-4 mr-1" /> Ver atividades
+                      </Button>
                       {enrollment.status === "active" && (
                         <Button
                           size="sm"
@@ -243,7 +446,11 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
         </TabsContent>
 
         <TabsContent value="modelos" className="space-y-3 pt-3">
-          {templates.length === 0 ? (
+          {templates.length > 0 && modeloRows.length === 0 ? (
+            <p className="text-sm text-zapp-text-muted py-8 text-center">
+              Nenhum modelo encontrado com essa busca.
+            </p>
+          ) : templates.length === 0 ? (
             <p className="text-sm text-zapp-text-muted py-8 text-center">
               Nenhum modelo criado. Comece com um preset em "Nova régua".
             </p>
@@ -295,6 +502,14 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
           )}
         </TabsContent>
       </Tabs>
+
+      <RulerEnrollmentDetailDialog
+        enrollment={detailEnrollment}
+        onOpenChange={(o) => !o && setDetailId(null)}
+        onComplete={markTouchDone}
+        onDelete={deleteTouch}
+        onCancelEnrollment={cancelEnrollment}
+      />
 
       <ZappRulerTemplateDialog
         open={dialogOpen}
