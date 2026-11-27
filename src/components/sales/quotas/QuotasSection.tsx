@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Save, ChevronLeft, ChevronRight, User, Hash, DollarSign } from "lucide-react";
+import { Save, ChevronLeft, ChevronRight, User, Layers3, Banknote, Building2, CalendarDays, Target, Pencil } from "lucide-react";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,9 +44,9 @@ const fmtAmount = (a: QuotaAmount, view: QuotaView, compact = false) =>
   view === "quantity" ? String(a.quantity) : compact ? fmtCompactBRL(a.value) : fmtBRL(a.value);
 const fmtPercent = (v: number | null) => (v === null ? "—" : `${v.toFixed(0)}%`);
 
-const VIEW_OPTIONS: { value: QuotaView; label: string; icon: typeof Hash }[] = [
-  { value: "quantity", label: "Quantidade", icon: Hash },
-  { value: "value", label: "R$", icon: DollarSign },
+const VIEW_OPTIONS: { value: QuotaView; label: string; icon: typeof Layers3 }[] = [
+  { value: "quantity", label: "Quantidade", icon: Layers3 },
+  { value: "value", label: "Valor (R$)", icon: Banknote },
 ];
 
 function ProductTag({ label, title, color }: { label: string; title?: string; color: string | null }) {
@@ -368,57 +368,69 @@ export function QuotasSection() {
     value: products.reduce((s, p) => s + getQuotaValue(p.id, "value"), 0),
   };
 
-  const segmented = "inline-flex items-center gap-1 rounded-lg bg-muted p-1";
+  const segmented = "inline-flex min-w-0 items-center gap-1 rounded-lg border border-border/70 bg-muted/30 p-1";
   const segment = (active: boolean) =>
     cn(
-      "inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-      active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+      "h-11 min-w-0 flex-1 gap-2 rounded-md px-3 text-sm font-medium shadow-none motion-reduce:transition-none",
+      active ? "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
     );
 
   return (
     <div className="space-y-4">
       {/* Mês, empresa e visão */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-11 w-11 sm:h-10 sm:w-10" aria-label="Mês anterior" onClick={handlePrevMonth}>
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 py-1">
+        <div className="space-y-1.5">
+          <span className="block text-xs font-medium text-muted-foreground">Período</span>
+          <div className="flex items-center rounded-lg border border-border/70 bg-background p-1">
+          <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Mês anterior" onClick={handlePrevMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-semibold text-lg min-w-[120px] text-center">
+          <span className="flex min-w-[136px] items-center justify-center gap-2 px-2 text-sm font-semibold tabular-nums">
+            <CalendarDays className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             {MONTHS[month - 1]} {year}
           </span>
-          <Button variant="outline" size="icon" className="h-11 w-11 sm:h-10 sm:w-10" aria-label="Próximo mês" onClick={handleNextMonth}>
+          <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Próximo mês" onClick={handleNextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex max-w-full flex-wrap items-end gap-x-5 gap-y-3">
           {companies.length > 1 && (
+            <div className="min-w-0 max-w-full space-y-1.5">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Building2 className="h-3.5 w-3.5" aria-hidden="true" />Empresa</span>
             <div className={segmented} role="group" aria-label="Empresa">
               {companies.map((c) => (
-                <button
+                <Button
                   key={c.id}
+                  variant="ghost"
                   type="button"
                   aria-pressed={c.id === companyId}
                   className={segment(c.id === companyId)}
                   onClick={() => { setParam("empresa", c.id); setDraftQuotas({}); }}
                 >
                   {c.name}
-                </button>
+                </Button>
               ))}
             </div>
+            </div>
           )}
+          <div className="min-w-0 max-w-full space-y-1.5">
+            <span className="block text-xs font-medium text-muted-foreground">Metas por</span>
           <div className={segmented} role="group" aria-label="Ver metas por">
             {VIEW_OPTIONS.map((o) => (
-              <button
+              <Button
                 key={o.value}
+                variant="ghost"
                 type="button"
                 aria-pressed={view === o.value}
                 className={segment(view === o.value)}
                 onClick={() => setParam("ver", o.value === "value" ? "valor" : null)}
               >
-                <o.icon className="h-3.5 w-3.5" />
+                <o.icon className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
                 {o.label}
-              </button>
+              </Button>
             ))}
+          </div>
           </div>
         </div>
       </div>
@@ -426,11 +438,14 @@ export function QuotasSection() {
       {/* Visão geral */}
       {!selectedUserId && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Metas por Vendedor & Produto{companyName ? ` — ${companyName}` : ""}</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Cada célula mostra o realizado sobre a meta do mês. Clique no vendedor para cadastrar quantidade e valor.
-            </p>
+          <CardHeader className="pb-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Target className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" /></span>
+                <CardTitle className="text-base">Metas por vendedor e produto</CardTitle>
+              </div>
+              {companyName && <Badge variant="outline" className="gap-1.5 rounded-md px-2.5 py-1 font-normal text-muted-foreground"><Building2 className="h-3.5 w-3.5" aria-hidden="true" />{companyName}</Badge>}
+            </div>
           </CardHeader>
           <CardContent className="px-3 sm:px-6">
             {columns.length === 0 ? (
@@ -498,7 +513,7 @@ export function QuotasSection() {
                     <TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedUserId(u.id); setDraftQuotas({}); }}>
                       <TableCell className="font-medium whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground"><User className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" /></span>
                           {u.name.split(" ")[0]}
                         </div>
                       </TableCell>
@@ -524,7 +539,7 @@ export function QuotasSection() {
                         </Badge>
                       </TableCell>
                       <TableCell className="px-1 text-right">
-                        <Button size="sm" variant="ghost" className="text-xs px-2">Editar</Button>
+                        <Button size="icon" variant="ghost" className="h-11 w-11 text-muted-foreground" aria-label={`Editar metas de ${u.name}`} title={`Editar metas de ${u.name}`}><Pencil className="h-4 w-4" strokeWidth={1.75} /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
