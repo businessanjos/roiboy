@@ -245,7 +245,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
   const rows = data.slice(0, visibleRows);
 
   return (
-    <div ref={containerRef} className={`h-full px-1 flex gap-4 ${tv.tv ? 'overflow-hidden' : 'overflow-auto'}`}>
+    <div ref={containerRef} className={`h-full px-1 ${compact ? 'mx-auto w-full max-w-[640px]' : 'flex gap-4'} ${tv.tv ? 'overflow-hidden' : 'overflow-auto'}`}>
       {/* Podium - left side */}
       {!compact && showPodium && hasPodiumData && (
         <div className="w-[40%] shrink-0 flex items-end justify-center">
@@ -278,7 +278,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                   className={`border-b transition-colors hover:bg-muted/30 ${isTop ? 'border-transparent' : 'border-border/50'}`}
                 >
                   {/* O destaque fica nas células: cantos arredondados não funcionam na linha da tabela. */}
-                  <td className={`${compact ? 'py-2 rounded-l-lg' : 'py-2.5 rounded-l-xl'} px-1`} style={topCell}>
+                  <td className={`${compact ? 'py-3 rounded-l-xl' : 'py-2.5 rounded-l-xl'} px-1`} style={topCell}>
                     {emoji ? (
                       <span className="text-base">{emoji}</span>
                     ) : (
@@ -287,9 +287,9 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                       </span>
                     )}
                   </td>
-                  <td className={`${compact ? 'py-2' : 'py-2.5'} px-1 ${compact ? 'rounded-r-lg' : ''}`} style={topCell}>
-                    <div className={`flex gap-2.5 ${compact ? 'items-start' : 'items-center'}`}>
-                      {privacy?.showPhotos !== false && <Avatar className="shrink-0" style={{ height: Math.round(32 * m), width: Math.round(32 * m) }}>
+                  <td className={`${compact ? 'py-3' : 'py-2.5'} px-1 ${compact ? 'rounded-r-xl' : ''}`} style={topCell}>
+                    <div className={`flex ${compact ? 'gap-3 items-start' : 'gap-2.5 items-center'}`}>
+                      {privacy?.showPhotos !== false && <Avatar className="shrink-0" style={{ height: Math.round((compact ? 40 : 32) * m), width: Math.round((compact ? 40 : 32) * m) }}>
                         <AvatarImage src={userAvatar?.avatar_url || undefined} alt={privacy?.showNames === false ? 'Vendedor' : item.name} />
                         <AvatarFallback className="text-[10px] font-medium" style={{ backgroundColor: `${rowColor}22`, color: rowColor }}>
                           {getInitials(item.name)}
@@ -299,19 +299,19 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                         <div className={compact ? 'flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5' : ''}>
                         <span
                           className={compact ? 'min-w-0 break-words font-medium leading-snug' : 'font-medium block truncate'}
-                          style={{ fontSize: `${Math.round(14 * m)}px`, color: isTop ? rowColor : undefined }}
+                          style={{ fontSize: `${Math.round((compact ? 15 : 14) * m)}px`, color: isTop ? rowColor : undefined }}
                         >
                           {privacy?.showNames === false ? '• • •' : item.name}
                         </span>
-                        {compact && <span className={`shrink-0 font-semibold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>{formatCurrency(item.value, formatting.type, formatting.decimals)}</span>}
+                        {compact && <span className={`shrink-0 font-semibold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`} style={{ fontSize: `${Math.round(15 * m)}px` }}>{formatCurrency(item.value, formatting.type, formatting.decimals)}</span>}
                         </div>
-                        <div className="w-full h-1.5 bg-muted rounded-full mt-1">
+                        <div className={`w-full bg-muted rounded-full ${compact ? 'mt-1.5 h-2' : 'mt-1 h-1.5'}`}>
                           <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{ width: `${progress}%`, backgroundColor: rowColor }}
                           />
                         </div>
-                        <div className={compact ? 'mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1' : ''}>
+                        <div className={compact ? 'mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1' : ''}>
                         {item.products && item.products.length > 0 && (
                           <div className={`flex flex-wrap gap-1 ${compact ? '' : 'mt-1.5'}`}>
                             {groupProducts(item.products, hiddenProducts).map(g => (
@@ -319,7 +319,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                                 key={g.short}
                                 title={g.items.map(i => `${i.qty}x ${i.name}`).join('\n')}
                               className={`inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-semibold leading-none tabular-nums ${g.renewal ? 'border-renewal/30 bg-renewal/10 text-foreground' : 'border-primary/30 bg-primary/10 text-foreground'}`}
-                                style={{ fontSize: `${Math.round(11 * m)}px` }}
+                                style={{ fontSize: `${Math.round((compact ? 12 : 11) * m)}px` }}
                               >
                                 <span className={g.renewal ? 'text-renewal' : 'text-primary'}>{g.qty}x</span>
                                 {g.short}
@@ -328,15 +328,15 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                           </div>
                         )}
                         {compact && showRecurring && (
-                          <div className="ml-auto min-w-0" style={{ fontSize: Math.round(12 * m) }}>
+                          <div className="ml-auto min-w-0" style={{ fontSize: Math.round(13 * m) }}>
                             <div className="flex flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5 leading-snug">
-                              <Repeat2 className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+                              <Repeat2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                               <span className="text-muted-foreground">Recorrência</span>
                               <span className={`font-medium tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>
                                 {item.recurringValue != null ? formatCurrency(item.recurringValue, 'currency', 2) : recurringLoading ? 'Carregando…' : 'Indisponível'}
                               </span>
                             </div>
-                            <div className="mt-1 h-1 w-full rounded-full bg-muted">
+                            <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
                               {item.recurringValue != null && <div className="h-full rounded-full opacity-60 transition-all duration-500 motion-reduce:transition-none" style={{ width: `${Math.min(100, item.recurringValue / maxRecurring * 100)}%`, backgroundColor: rowColor }} />}
                             </div>
                           </div>
