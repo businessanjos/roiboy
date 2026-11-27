@@ -4,7 +4,7 @@ import {
   requiresSubscriptionAnswer,
   type SubscriptionCycle,
 } from "./subscriptionWin";
-import { ITEM_VENDA_FIELD_ID, requiresPaidWin } from "./payWinGate";
+import { ITEM_VENDA_FIELD_ID, paidWinLocked } from "./payWinGate";
 
 export const SUBSCRIPTION_PAYMENT_FIELD_NAME = "Forma da Pagamento";
 
@@ -39,7 +39,7 @@ export async function fetchDealItemVenda(dealId: string): Promise<string | null>
 }
 
 /** Reads, under the caller's own access, what the win flow needs to know about the subscription answer. */
-export async function fetchSubscriptionWinState(dealId: string): Promise<SubscriptionWinState> {
+export async function fetchSubscriptionWinState(dealId: string, isRetroactive = false): Promise<SubscriptionWinState> {
   const empty: SubscriptionWinState = {
     required: false,
     complete: true,
@@ -103,7 +103,7 @@ export async function fetchSubscriptionWinState(dealId: string): Promise<Subscri
     : null;
 
   // A sale that needs a confirmed RykaPay payment always goes through the win dialog.
-  const needsPaidCheck = requiresPaidWin(await fetchDealItemVenda(dealId));
+  const needsPaidCheck = paidWinLocked(await fetchDealItemVenda(dealId), isRetroactive);
 
   return {
     required,

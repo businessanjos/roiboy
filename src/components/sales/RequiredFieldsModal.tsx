@@ -34,7 +34,7 @@ import {
   type SubscriptionCycle,
 } from "@/lib/sales/subscriptionWin";
 import { fetchDealItemVenda, fetchSubscriptionWinState, type SubscriptionWinState } from "@/lib/sales/subscriptionWinState";
-import { DEAL_DOCUMENT_FIELD_IDS, ITEM_VENDA_FIELD_ID, payWinGate, requiresPaidWin } from "@/lib/sales/payWinGate";
+import { DEAL_DOCUMENT_FIELD_IDS, ITEM_VENDA_FIELD_ID, payWinGate, paidWinLocked } from "@/lib/sales/payWinGate";
 import { useRykaPaySubscriptions } from "@/hooks/useRykaPaySubscriptions";
 import { paidPayCharge } from "@/lib/sales/subscriptionPayCharge";
 import { payRelationshipLabel } from "@/lib/rykaPay";
@@ -61,6 +61,8 @@ interface RequiredFieldsModalProps {
   skipBriefing?: boolean;
   /** A empresa do negócio exige responder "É uma assinatura?" antes do ganho */
   subscriptionRequired?: boolean;
+  /** Retroactive win launched by an administrator: not held to the RykaPay confirmation. */
+  retroactive?: boolean;
 }
 
 const PAYMENT_METHOD_FIELD_NAME = "Forma da Pagamento";
@@ -98,6 +100,7 @@ export function RequiredFieldsModal({
   clientId,
   skipBriefing = false,
   subscriptionRequired = false,
+  retroactive = false,
 }: RequiredFieldsModalProps) {
   const [subscriptionState, setSubscriptionState] = useState<SubscriptionWinState | null>(null);
   const [isSubscription, setIsSubscription] = useState<boolean | null>(null);
@@ -159,7 +162,7 @@ export function RequiredFieldsModal({
       }
 
       if (subscriptionRequired && dealId) {
-        fetchSubscriptionWinState(dealId)
+        fetchSubscriptionWinState(dealId, retroactive)
           .then((state) => {
             setSubscriptionState(state);
             setIsSubscription(state.isSubscription);
@@ -250,7 +253,7 @@ export function RequiredFieldsModal({
   // consultado quando o vendedor clica em verificar. Outros produtos não passam por isso.
   const itemField = missingFields.find((f) => f.id === ITEM_VENDA_FIELD_ID);
   const itemValue = ((itemField ? values[itemField.id] : null) as string | null) || storedItem;
-  const payGate = isWinFlow && requiresPaidWin(itemValue);
+  const payGate = isWinFlow && paidWinLocked(itemValue, retroactive);
   const docFields = payGate
     ? missingFields.filter(
         (f) => DEAL_DOCUMENT_FIELD_IDS.includes(f.id) || (f.field_type === "text" && /\b(cpf|cnpj)\b/i.test(f.name)),

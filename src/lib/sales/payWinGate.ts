@@ -16,6 +16,14 @@ export function requiresPaidWin(itemVenda: string | null | undefined): boolean {
   return resolveItemVendaToProductId(itemVenda) === PRODUCT_IDS.CLINICA_RYKA;
 }
 
+/**
+ * A retroactive win (administrators only) registers a sale already settled elsewhere
+ * (Asaas, transfer, etc.), so it is not held to the RykaPay confirmation.
+ */
+export function paidWinLocked(itemVenda: string | null | undefined, isRetroactive = false): boolean {
+  return !isRetroactive && requiresPaidWin(itemVenda);
+}
+
 export type PayWinGate =
   | { status: "idle" | "checking" | "unpaid" | "needs_document" | "needs_product" | "error" }
   /** No payment found and the seller already asked the manager to link an ownerless sale. */

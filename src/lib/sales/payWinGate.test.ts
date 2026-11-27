@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PayResult, PaySubscription } from "@/lib/rykaPay";
 import { PRODUCT_IDS } from "./itemVendaResolver";
-import { payLinkAction, payWinGate, requiresPaidWin } from "./payWinGate";
+import { paidWinLocked, payLinkAction, payWinGate, requiresPaidWin } from "./payWinGate";
 
 const inv = (situation: string, paidAt: string | null = null) => ({
   id: "qa-" + situation, cycle: 1, status: situation, situation, amountCents: 49700, dueDate: null, paidAt,
@@ -16,6 +16,12 @@ const paidMonthly = result([sub("mensal", [inv("pago", "2026-11-20")])]);
 const asked = { requested: true, checking: false, failed: false, isSubscription: true, cycle: "monthly" as const };
 
 describe("trava de pagamento no ganho", () => {
+  it("ganho retroativo do Programa Clínica Ryka não fica preso ao RykaPay", () => {
+    expect(paidWinLocked(PRODUCT_IDS.CLINICA_RYKA, true)).toBe(false);
+    expect(paidWinLocked(PRODUCT_IDS.CLINICA_RYKA, false)).toBe(true);
+    expect(paidWinLocked(PRODUCT_IDS.CLINICA_RYKA)).toBe(true);
+  });
+
   it("vale só para o Programa Clínica Ryka", () => {
     for (const item of [PRODUCT_IDS.CLINICA_RYKA, "opt_1787176918301", "clinica_ryka"]) expect(requiresPaidWin(item)).toBe(true);
     for (const item of [PRODUCT_IDS.EM, PRODUCT_IDS.EC, PRODUCT_IDS.EP, PRODUCT_IDS.CA, "eternum_club", "", null]) {

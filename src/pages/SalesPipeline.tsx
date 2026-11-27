@@ -1742,7 +1742,7 @@ export default function SalesPipeline() {
       // Empresas marcadas (ex.: Anjos) exigem responder "É uma assinatura?" antes do ganho
       let subscriptionState;
       try {
-        subscriptionState = await fetchSubscriptionWinState(dealId);
+        subscriptionState = await fetchSubscriptionWinState(dealId, !!retroactiveDay);
       } catch (subscriptionError) {
         console.error("[MarkAsWon] Error reading subscription state:", subscriptionError);
         toast.error("Não foi possível conferir os dados de assinatura. Tente novamente.");
@@ -3323,6 +3323,7 @@ export default function SalesPipeline() {
         clientId={outcomeRequiredFieldsModal.clientId ?? null}
         skipBriefing={!!outcomeRequiredFieldsModal.skipBriefing}
         subscriptionRequired={!!(outcomeRequiredFieldsModal as any).subscriptionRequired}
+        retroactive={!!outcomeRequiredFieldsModal.retroactiveDay}
       />
 
       {/* Meeting Schedule Dialog - opens when deal moves to "reunião agendada" */}
