@@ -30,6 +30,8 @@ interface Props {
   variables?: Record<string, string>;
   buildText?: (item: PlaybookItem, processedText?: string) => string;
   signText?: (text: string) => string;
+  /** Botões clicáveis do template, quando a conversa aceita (individual, WhatsApp por QR Code). */
+  buildMenu?: (item: PlaybookItem, text: string) => { text: string; footer: string; choices: string[] } | null;
   /** Inicia esta sequência direto (atalho "/" no chat), sem abrir a janela. */
   autoStartSequenceId?: string | null;
   onAutoStartHandled?: () => void;
@@ -37,7 +39,7 @@ interface Props {
 
 type Draft = { id?: string; name: string; visibility: "personal" | "sector"; steps: SequenceStep[] };
 
-export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversationId, variables = {}, buildText, signText, autoStartSequenceId, onAutoStartHandled }: Props) {
+export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversationId, variables = {}, buildText, signText, buildMenu, autoStartSequenceId, onAutoStartHandled }: Props) {
   const { items, folders, replaceVariables } = usePlaybook({ sectorId });
   const { sequences, isLoading, save, isSaving, remove } = usePlaybookSequences(sectorId);
   const { currentUser } = useCurrentUser();
@@ -130,10 +132,12 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
           const caption = item.media_caption ? replaceVariables(item.media_caption, variables, item) : "";
           // Assinatura só na primeira mensagem; as seguintes chegam limpas.
           const sign = (t: string) => (pos === 0 && signText ? signText(t) : t);
+          const menu = text && buildMenu ? buildMenu(item, text) : null;
           return {
             name: item.name, content_type: item.content_type, text_content: sign(text) || null,
             media_url: item.media_url, media_filename: item.media_filename,
             media_caption: sign(caption) || null,
+            menu: menu ? { text: sign(menu.text), footer: menu.footer, choices: menu.choices } : null,
             delay_seconds: st.delay_seconds,
           };
         }),
@@ -262,7 +266,7 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
             </div>
           </div>
           <aside className="self-start lg:sticky lg:top-0">
-            <PlaybookSequencePreview steps={draft.steps} items={items} tags={tags} stages={stages} variables={variables} replaceVariables={replaceVariables} signText={signText} />
+            <PlaybookSequencePreview steps={draft.steps} items={items} tags={tags} stages={stages} variables={variables} replaceVariables={replaceVariables} signText={signText} clickableButtons />
           </aside>
           </div>
         ) : (

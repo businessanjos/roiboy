@@ -807,7 +807,7 @@ export function PlaybookItemForm({
                         <Label htmlFor="buttonsClickable">Enviar como botões clicáveis</Label>
                         <p className="text-xs text-muted-foreground">
                           Ligado: o cliente toca no botão para responder. Desligado: os botões vão escritos no texto.
-                          Em grupos, nas sequências e no WhatsApp oficial (Meta) eles sempre vão como texto.
+                          Vale também nas sequências. Em grupos e no WhatsApp oficial (Meta) eles sempre vão como texto.
                         </p>
                       </div>
                       <Switch id="buttonsClickable" checked={buttonsClickable} onCheckedChange={setButtonsClickable} />

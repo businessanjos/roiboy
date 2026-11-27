@@ -2494,6 +2494,7 @@ export default function RoyZapp() {
         sectorId={selectedSectorId}
         conversationId={selectedConversation?.zapp_conversation_id ?? selectedConversation?.zapp_conversation?.id ?? null}
         buildText={buildPlaybookText}
+        buildMenu={playbookMenuFor}
         autoStartSequenceId={autoStartSequenceId}
         onAutoStartHandled={() => setAutoStartSequenceId(null)}
         signText={messaging.buildSignedText}

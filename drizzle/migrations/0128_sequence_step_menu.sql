@@ -1,0 +1,2 @@
+ALTER TABLE public.zapp_sequence_run_steps ADD COLUMN IF NOT EXISTS menu jsonb;
+COMMENT ON COLUMN public.zapp_sequence_run_steps.menu IS 'Botões clicáveis do template (text, footer, choices). Nulo = envia só o texto.';

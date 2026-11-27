@@ -145,7 +145,27 @@ async function processRun(supabase: any, url: string, serviceKey: string, runId:
     try {
       let res: Response;
       if (isText) {
-        res = await fetch(`${host}/send/text`, { method: "POST", headers: { "Content-Type": "application/json", token }, body: JSON.stringify({ number, text: step.text_content || "" }) });
+        // Template com botões clicáveis: tenta com botões e, se o WhatsApp recusar, manda a mensagem inteira em texto.
+        const menu = conv.is_group ? null : (step.menu as { text?: unknown; footer?: unknown; choices?: unknown } | null);
+        const choices = Array.isArray(menu?.choices)
+          ? (menu!.choices as unknown[]).filter((c): c is string => typeof c === "string" && c.trim().length > 0).slice(0, 3)
+          : [];
+        let menuRes: Response | null = null;
+        if (choices.length > 0 && typeof menu?.text === "string" && menu.text.trim()) {
+          const menuBody: Record<string, unknown> = { number, type: "button", text: menu.text, choices };
+          if (typeof menu.footer === "string" && menu.footer.trim()) menuBody.footerText = menu.footer.trim().slice(0, 60);
+          try {
+            menuRes = await fetch(`${host}/send/menu`, { method: "POST", headers: { "Content-Type": "application/json", token }, body: JSON.stringify(menuBody) });
+            if (!menuRes.ok) {
+              console.warn(`[sequence] botões recusados (HTTP ${menuRes.status}); enviando como texto`);
+              menuRes = null;
+            }
+          } catch (e) {
+            console.warn("[sequence] falha ao enviar botões; enviando como texto:", (e as Error).message);
+            menuRes = null;
+          }
+        }
+        res = menuRes ?? await fetch(`${host}/send/text`, { method: "POST", headers: { "Content-Type": "application/json", token }, body: JSON.stringify({ number, text: step.text_content || "" }) });
       } else {
         const type = step.content_type === "audio" ? "ptt" : step.content_type === "sticker" ? "image" : step.content_type;
         const payload: Record<string, unknown> = { number, type, file: step.media_url, text: step.media_caption || "" };

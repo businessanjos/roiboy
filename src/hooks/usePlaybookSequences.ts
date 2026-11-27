@@ -151,6 +151,7 @@ export function buildRunStepRows(
   return steps.map((s, i) => ({
     run_id: runId, account_id: accountId, position: i, name: s.name, content_type: s.content_type,
     text_content: s.text_content, media_url: s.media_url, media_filename: s.media_filename, media_caption: s.media_caption, tag_id: s.tag_id || null, action_type: s.action_type || null, stage_id: s.stage_id || null,
+    menu: s.menu?.choices?.length ? s.menu : null,
     delay_seconds: effectiveDelay(delays, i),
     scheduled_at: new Date(times[i]).toISOString(),
   }));
@@ -163,6 +164,8 @@ export interface StartRunInput {
     name: string; content_type: string; text_content: string | null;
     media_url: string | null; media_filename: string | null; media_caption: string | null; delay_seconds: number; tag_id?: string | null;
     action_type?: SequenceActionType | null; stage_id?: string | null;
+    /** Botões clicáveis do template; `text_content` continua sendo a mensagem inteira em texto (reserva). */
+    menu?: { text: string; footer: string; choices: string[] } | null;
   }>;
 }
 

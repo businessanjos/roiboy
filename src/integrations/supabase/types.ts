@@ -31075,6 +31075,7 @@ export type Database = {
           media_caption: string | null
           media_filename: string | null
           media_url: string | null
+          menu: Json | null
           name: string | null
           position: number
           run_id: string
@@ -31098,6 +31099,7 @@ export type Database = {
           media_caption?: string | null
           media_filename?: string | null
           media_url?: string | null
+          menu?: Json | null
           name?: string | null
           position: number
           run_id: string
@@ -31121,6 +31123,7 @@ export type Database = {
           media_caption?: string | null
           media_filename?: string | null
           media_url?: string | null
+          menu?: Json | null
           name?: string | null
           position?: number
           run_id?: string
@@ -31873,6 +31876,7 @@ export type Database = {
           media_caption: string | null
           media_filename: string | null
           media_url: string | null
+          menu: Json | null
           name: string | null
           position: number
           run_id: string

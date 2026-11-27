@@ -25,4 +25,12 @@ describe("sequências do playbook", () => {
     );
     expect(rows.map((r) => r.delay_seconds)).toEqual([0, 10, 10, 5]);
   });
+
+  it("template com botões clicáveis leva os botões no passo; sem botões vai só o texto", () => {
+    const base = { name: "x", content_type: "template", text_content: "Oi\n\n👉 Responda *EU QUERO*", media_url: null, media_filename: null, media_caption: null, delay_seconds: 1 };
+    const menu = { text: "Oi", footer: "", choices: ["EU QUERO|EU QUERO"] };
+    const rows = buildRunStepRows([{ ...base, menu }, base, { ...base, menu: { text: "Oi", footer: "", choices: [] } }], "run", "acc", 0);
+    expect(rows.map((r) => r.menu)).toEqual([menu, null, null]);
+    expect(rows[0].text_content).toBe(base.text_content);
+  });
 });
