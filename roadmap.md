@@ -396,3 +396,7 @@
 - [x] Gestor: notificação, lista inteira, relação (Sócio, Marido/Esposa, Cartão da empresa, Outro)
 - [x] Aba Assinaturas: linha "Pago por"
 - [ ] Pedido e vínculo de ponta a ponta com um negócio real (Saulo/Winny): não feito para não gravar em dados reais; aguarda o vendedor solicitar
+
+## Aba Assinaturas em Vendas (painel de receita recorrente)
+- [x] Leitura da carteira de CR no RykaPay (só gestão, sem gravar nada), painel completo e Modo TV; comissão e conversão de indicação ficam de fora por decisão do Lucas. 8 testes; leitura real conferida (28 negócios, 25 localizados) e telas conferidas em 1440, 1920 (TV) e 390.
+- [ ] Conferir a tela ao vivo depois que a nova consulta entrar no ar (nesta entrega a tela foi vista com a leitura real feita fora do app).

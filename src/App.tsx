@@ -153,6 +153,7 @@ const SalesCalendar = lazyRetry(() => import("./pages/SalesCalendar"));
 const SpiffsTracking = lazyRetry(() => import("./pages/SpiffsTracking"));
 const DealTransferRequests = lazyRetry(() => import("./pages/DealTransferRequests"));
 const PayLinkRequests = lazyRetry(() => import("./pages/PayLinkRequests"));
+const SalesSubscriptions = lazyRetry(() => import("./pages/SalesSubscriptions"));
 const DealTransferDecision = lazyRetry(() => import("./pages/DealTransferDecision"));
 const ZappTransferDecision = lazyRetry(() => import("./pages/ZappTransferDecision"));
 const IncentivePresentation = lazyRetry(() => import("./pages/IncentivePresentation"));
@@ -354,6 +355,7 @@ const App = () => (
                               <Route path="/sales-team/spiffs" element={<SpiffsTracking />} />
                               <Route path="/sales-team/transfer-requests" element={<DealTransferRequests />} />
                               <Route path="/sales-team/pay-links" element={<PayLinkRequests />} />
+                              <Route path="/sales/subscriptions" element={<SalesSubscriptions />} />
                               <Route path="/transferencia/:id" element={<DealTransferDecision />} />
                               <Route path="/transferencia-conversa/:id" element={<ZappTransferDecision />} />
                               <Route path="/sales-team/incentive-presentation" element={<CloserDashboard />} />
