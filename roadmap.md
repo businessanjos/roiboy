@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Ranking compacto com recorrência na TV
+- [x] Nome e venda alinhados, produtos e recorrência discreta no mesmo rodapé; ranking compacto mantém todos os vendedores e ajusta escala à altura disponível, sem alterar valores ou outros gráficos.
+- [x] 41 testes passaram; ranking real conferido em 1920×1080, 1366×768 e 802×674 claro/escuro e celular 390px. Jonathan e Everton visíveis na apresentação sem corte de linhas/laterais; totais R$ 105.916,67 e recorrência R$ 12.500 preservados. Compilação OK, sem escritas reais ou publicação.
+
 ## Recorrência recebida no ranking Anjos
 - [x] Substituir MRR por recebimentos do mês de vendas recorrentes anteriores; excluir vendas novas e manter o valor principal intacto.
 - [x] 36 testes passaram; novembro e outubro conferidos no ranking autenticado, incluindo vendedor sem vendas novas. Novembro: R$ 12.500 recebidos (R$ 7.500 Darlan, R$ 2.500 Jonathan, R$ 2.500 Everton), total principal R$ 105.916,67 preservado. Compilação e execução sem erros; sem alterar registros ou publicar.

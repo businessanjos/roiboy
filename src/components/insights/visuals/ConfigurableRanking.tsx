@@ -1,3 +1,4 @@
+import { Repeat2 } from "lucide-react";
 import { filterVisiblePeople, visiblePeopleQuery } from "@/lib/peopleVisibility";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { productShortName, isRenewalProduct } from "@/lib/insights/productShortName";
@@ -174,7 +175,7 @@ function Podium({
 export function ConfigurableRanking({ data: sourceData, formatting, appearance, dimensionLabel, measureLabel, hiddenProducts, compact = false, showRecurring = false, recurringLoading = false, privacy }: ConfigurableRankingProps) {
   const data = useMemo(() => filterVisiblePeople(sourceData), [sourceData]);
   const tv = useTvMode();
-  const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'] * tv.scale;
+  const preferredScale = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'] * tv.scale;
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
   const containerRef = useRef<HTMLDivElement>(null);
@@ -231,13 +232,15 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
   const hasPodiumData = data.length >= 2;
   const colors = insightPaletteColors(appearance?.colorPalette);
 
-  // Na TV não existe rolagem: exibe só as posições que cabem na altura do card.
-  // Compact rows measure ~85px per scale unit on the TV; 88 keeps a small safety margin.
-  const rowHeight = Math.round((compact ? (showRecurring ? 132 : 88) : 44) * m);
+  // Company columns fit every seller instead of silently removing lower positions.
+  const m = compact && tv.tv && boxHeight > 0
+    ? Math.min(preferredScale, Math.max(0.45, (boxHeight - data.length * 16) / (30 + data.length * (showRecurring ? 86 : 68))))
+    : preferredScale;
+  const rowHeight = Math.round(44 * m);
   const headerHeight = Math.round(30 * m);
   const visibleRows =
-    tv.tv && boxHeight > 0
-      ? Math.max(compact ? 1 : 3, Math.floor((boxHeight - headerHeight) / rowHeight))
+    tv.tv && !compact && boxHeight > 0
+      ? Math.max(3, Math.floor((boxHeight - headerHeight) / rowHeight))
       : data.length;
   const rows = data.slice(0, visibleRows);
 
@@ -275,7 +278,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                   className={`border-b transition-colors hover:bg-muted/30 ${isTop ? 'border-transparent' : 'border-border/50'}`}
                 >
                   {/* O destaque fica nas células: cantos arredondados não funcionam na linha da tabela. */}
-                  <td className={`py-2.5 px-1 rounded-l-xl`} style={topCell}>
+                  <td className={`${compact ? 'py-2 rounded-l-lg' : 'py-2.5 rounded-l-xl'} px-1`} style={topCell}>
                     {emoji ? (
                       <span className="text-base">{emoji}</span>
                     ) : (
@@ -284,7 +287,7 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                       </span>
                     )}
                   </td>
-                  <td className={`py-2.5 px-1 ${compact ? 'rounded-r-xl' : ''}`} style={topCell}>
+                  <td className={`${compact ? 'py-2' : 'py-2.5'} px-1 ${compact ? 'rounded-r-lg' : ''}`} style={topCell}>
                     <div className={`flex gap-2.5 ${compact ? 'items-start' : 'items-center'}`}>
                       {privacy?.showPhotos !== false && <Avatar className="shrink-0" style={{ height: Math.round(32 * m), width: Math.round(32 * m) }}>
                         <AvatarImage src={userAvatar?.avatar_url || undefined} alt={privacy?.showNames === false ? 'Vendedor' : item.name} />
@@ -293,34 +296,24 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                         </AvatarFallback>
                       </Avatar>}
                       <div className="flex-1 min-w-0">
+                        <div className={compact ? 'flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5' : ''}>
                         <span
-                          className={compact ? 'block break-words font-medium leading-snug' : 'font-medium block truncate'}
+                          className={compact ? 'min-w-0 break-words font-medium leading-snug' : 'font-medium block truncate'}
                           style={{ fontSize: `${Math.round(14 * m)}px`, color: isTop ? rowColor : undefined }}
                         >
                           {privacy?.showNames === false ? '• • •' : item.name}
                         </span>
-                        {compact && <span className={`mt-1 block font-semibold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>{formatCurrency(item.value, formatting.type, formatting.decimals)}</span>}
+                        {compact && <span className={`shrink-0 font-semibold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>{formatCurrency(item.value, formatting.type, formatting.decimals)}</span>}
+                        </div>
                         <div className="w-full h-1.5 bg-muted rounded-full mt-1">
                           <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{ width: `${progress}%`, backgroundColor: rowColor }}
                           />
                         </div>
-                        {compact && showRecurring && (
-                          <div className="mt-2" style={{ fontSize: Math.round(12 * m) }}>
-                            <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 leading-snug">
-                              <span className="text-muted-foreground">Recorrência recebida</span>
-                              <span className={`font-semibold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>
-                                {item.recurringValue != null ? formatCurrency(item.recurringValue, 'currency', 2) : recurringLoading ? 'Carregando…' : 'Indisponível'}
-                              </span>
-                            </div>
-                            <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
-                              {item.recurringValue != null && <div className="h-full rounded-full opacity-60 transition-all duration-500 motion-reduce:transition-none" style={{ width: `${Math.min(100, item.recurringValue / maxRecurring * 100)}%`, backgroundColor: rowColor }} />}
-                            </div>
-                          </div>
-                        )}
+                        <div className={compact ? 'mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1' : ''}>
                         {item.products && item.products.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
+                          <div className={`flex flex-wrap gap-1 ${compact ? '' : 'mt-1.5'}`}>
                             {groupProducts(item.products, hiddenProducts).map(g => (
                               <span
                                 key={g.short}
@@ -334,6 +327,21 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                             ))}
                           </div>
                         )}
+                        {compact && showRecurring && (
+                          <div className="ml-auto min-w-0" style={{ fontSize: Math.round(12 * m) }}>
+                            <div className="flex flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5 leading-snug">
+                              <Repeat2 className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+                              <span className="text-muted-foreground">Recorrência</span>
+                              <span className={`font-medium tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>
+                                {item.recurringValue != null ? formatCurrency(item.recurringValue, 'currency', 2) : recurringLoading ? 'Carregando…' : 'Indisponível'}
+                              </span>
+                            </div>
+                            <div className="mt-1 h-1 w-full rounded-full bg-muted">
+                              {item.recurringValue != null && <div className="h-full rounded-full opacity-60 transition-all duration-500 motion-reduce:transition-none" style={{ width: `${Math.min(100, item.recurringValue / maxRecurring * 100)}%`, backgroundColor: rowColor }} />}
+                            </div>
+                          </div>
+                        )}
+                        </div>
                       </div>
                     </div>
                   </td>
