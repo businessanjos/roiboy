@@ -404,3 +404,7 @@
 ## Recorrência abaixo dos vendedores da Anjos
 - [x] Valor mensal e segunda barra separados do total vendido, usando toda a carteira ativa do vendedor, inclusive ganhos antigos, na data de fechamento do período (mês atual: última leitura); sem consultar o provedor nem alterar vendas.
 - [x] 28 testes passaram; carteira real de novembro e outubro conferida no painel em sessão autenticada, sem erros ou rolagem lateral. Apresentação desktop/celular/TV preservada; compilação OK; não publicado.
+
+## Metas por vendedor em Gestão > Metas & Incentivos
+- [x] Aba ajustada: seletor de empresa (Eternum Club / Anjos), produtos atuais de cada empresa, visão por Quantidade ou R$, cadastro de meta em quantidade e em reais. 6 testes; conferido no app sem salvar.
+- [ ] Organizar as metas em si (valores por vendedor, uso no ranking do Insights e Meta da Empresa por empresa): aguardando Lucas, que pediu para tratar depois da aba.
