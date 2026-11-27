@@ -4,6 +4,11 @@ import { companyRankingRows, type RankingPoint } from '@/lib/insights/companyRan
 import type { AppearanceConfig, FormatType } from '../visual-builder/types';
 import { ConfigurableRanking } from './ConfigurableRanking';
 import { useTvMode } from '../TvModeContext';
+import { useQuery } from '@tanstack/react-query';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { supabase } from '@/integrations/supabase/client';
+import { rankingRecurringValue } from '@/lib/insights/rankingRecurring';
+import type { PayPortfolio } from '@/lib/sales/payPortfolio';
 import './CompanyRanking.css';
 
 interface Props {
@@ -21,6 +26,23 @@ export function CompanyRanking({ data, companyIds, ...rankingProps }: Props) {
   const { companies, loading } = useCompany();
   const tv = useTvMode();
   const visibleData = filterVisiblePeople(data);
+  const { currentUser } = useCurrentUser();
+  const hasRecurring = visibleData.some(row => row.recurringDealIds?.length);
+  // Read only the already-stored, RLS-scoped portfolio. Opening a TV never triggers a provider sweep.
+  const stored = useQuery({
+    queryKey: ['pay-portfolio-stored', currentUser?.account_id, currentUser?.id],
+    enabled: Boolean(currentUser && hasRecurring && rankingProps.formatting.type === 'currency'),
+    staleTime: 60 * 1000,
+    refetchInterval: tv.tv ? 15 * 60 * 1000 : false,
+    refetchOnWindowFocus: false,
+    retry: false,
+    queryFn: async (): Promise<PayPortfolio | null> => {
+      const { data: result, error } = await supabase.from('pay_portfolio_snapshots').select('data').maybeSingle();
+      if (error) throw error;
+      const snapshot = result?.data as PayPortfolio | undefined;
+      return snapshot && Array.isArray(snapshot.clinics) ? snapshot : null;
+    },
+  });
   const unlinked = visibleData.filter(row => !row.companyId);
   const unlinkedValue = unlinked.reduce((total, row) => total + row.value, 0);
   const format = (value: number) => value.toLocaleString('pt-BR', {
@@ -36,6 +58,8 @@ export function CompanyRanking({ data, companyIds, ...rankingProps }: Props) {
           const company = companies.find(item => item.id === id);
           const name = company?.trade_name || company?.legal_name || (loading ? 'Carregando empresa…' : 'Empresa indisponível');
           const rows = companyRankingRows(visibleData, id);
+          const showRecurring = rankingProps.formatting.type === 'currency' && rows.some(row => row.recurringDealIds?.length);
+          const displayRows = showRecurring ? rows.map(row => ({ ...row, recurringValue: rankingRecurringValue(row, stored.data) })) : rows;
           const total = rows.reduce((sum, row) => sum + row.value, 0);
           return (
             <section key={id} aria-label={`Ranking ${name}`} className={`flex min-h-0 min-w-0 flex-col border-border ${index > 0 ? 'company-ranking-secondary' : 'company-ranking-primary'}`}>
@@ -44,7 +68,7 @@ export function CompanyRanking({ data, companyIds, ...rankingProps }: Props) {
                 <span style={tv.tv ? { fontSize: Math.round(22 * tv.scale), lineHeight: 1.2, fontWeight: 700 } : undefined} className={`text-sm font-semibold tabular-nums text-foreground ${rankingProps.privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>{format(total)}</span>
               </header>
               <div className={`min-h-0 flex-1 ${tv.tv ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-                {rows.length ? <ConfigurableRanking data={rows} {...rankingProps} compact /> : (
+                {rows.length ? <ConfigurableRanking data={displayRows} {...rankingProps} compact showRecurring={showRecurring} recurringLoading={stored.isLoading} /> : (
                   <p className="py-8 text-center text-sm text-muted-foreground">Sem vendas neste período</p>
                 )}
               </div>

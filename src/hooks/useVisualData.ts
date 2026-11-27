@@ -17,6 +17,7 @@ import { isCustomFieldKey, enrichRecordsWithCustomField, getSelectedValuesForKey
 import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
 import { resolveFunnelPipelineIds } from "@/lib/insights/funnelPipelineScope";
 import { aggregateCompanyRanking, rankingCompanyIds, rankingProductCompanyId } from "@/lib/insights/companyRanking";
+import { PRODUCT_IDS, resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
 
 
 
@@ -32,6 +33,7 @@ export interface AggregatedDataPoint {
   /** Produtos vendidos no grupo (ranking): nome e quantidade de negócios. */
   products?: { name: string; qty: number }[];
   companyId?: string | null;
+  recurringDealIds?: string[];
   /** Calls comerciais: vendas ganhas no mês atual. */
   salesMonth?: number;
 }
@@ -845,7 +847,11 @@ export async function enrichDealsWithProduct(accountId: string, deals: any[], in
     return {
       ...deal,
       product: productName,
-      ...(includeRankingCompany ? { product_company_id: rankingProductCompanyId(rawValue, rankingProducts, optionLabels) } : {}),
+      ...(includeRankingCompany ? {
+        product_company_id: rankingProductCompanyId(rawValue, rankingProducts, optionLabels),
+        ranking_recurring: resolveItemVendaToProductId(rawValue) === PRODUCT_IDS.CLINICA_RYKA
+          || rankingProducts.some(p => p.id === PRODUCT_IDS.CLINICA_RYKA && p.name === productName),
+      } : {}),
     };
   });
 }

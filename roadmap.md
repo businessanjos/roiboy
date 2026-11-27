@@ -400,3 +400,7 @@
 ## Aba Assinaturas em Vendas (painel de receita recorrente)
 - [x] Leitura da carteira de CR no RykaPay (só gestão, sem gravar nada), painel completo e Modo TV; comissão e conversão de indicação ficam de fora por decisão do Lucas. 8 testes; leitura real conferida (28 negócios, 25 localizados) e telas conferidas em 1440, 1920 (TV) e 390.
 - [ ] Conferir a tela ao vivo depois que a nova consulta entrar no ar (nesta entrega a tela foi vista com a leitura real feita fora do app).
+
+## Recorrência abaixo dos vendedores da Anjos
+- [x] Valor mensal e segunda barra separados do total vendido, usando os negócios filtrados e a leitura guardada já autorizada; sem consultar o provedor nem alterar vendas.
+- [x] 25 testes passaram; valores reais de novembro e apresentação em desktop, celular e TV conferidos em sessão autenticada, sem erros ou rolagem lateral. Compilação OK; não publicado.

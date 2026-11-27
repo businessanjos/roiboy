@@ -14,6 +14,7 @@ interface AggregatedDataPoint {
   count?: number;
   color?: string;
   products?: { name: string; qty: number }[];
+  recurringValue?: number | null;
 }
 
 interface ConfigurableRankingProps {
@@ -30,6 +31,8 @@ interface ConfigurableRankingProps {
   hiddenProducts?: string[];
   /** Company columns use the list only, with readable values beneath the name. */
   compact?: boolean;
+  showRecurring?: boolean;
+  recurringLoading?: boolean;
   privacy?: { showNames: boolean; showPhotos: boolean; blurNumbers: boolean };
 }
 
@@ -168,7 +171,7 @@ function Podium({
   );
 }
 
-export function ConfigurableRanking({ data: sourceData, formatting, appearance, dimensionLabel, measureLabel, hiddenProducts, compact = false, privacy }: ConfigurableRankingProps) {
+export function ConfigurableRanking({ data: sourceData, formatting, appearance, dimensionLabel, measureLabel, hiddenProducts, compact = false, showRecurring = false, recurringLoading = false, privacy }: ConfigurableRankingProps) {
   const data = useMemo(() => filterVisiblePeople(sourceData), [sourceData]);
   const tv = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'] * tv.scale;
@@ -224,12 +227,13 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
   }
 
   const maxValue = Math.max(...data.map(d => d.value), 1);
+  const maxRecurring = Math.max(...data.map(d => d.recurringValue ?? 0), 1);
   const hasPodiumData = data.length >= 2;
   const colors = insightPaletteColors(appearance?.colorPalette);
 
   // Na TV não existe rolagem: exibe só as posições que cabem na altura do card.
   // Compact rows measure ~85px per scale unit on the TV; 88 keeps a small safety margin.
-  const rowHeight = Math.round((compact ? 88 : 44) * m);
+  const rowHeight = Math.round((compact ? (showRecurring ? 132 : 88) : 44) * m);
   const headerHeight = Math.round(30 * m);
   const visibleRows =
     tv.tv && boxHeight > 0
@@ -302,6 +306,19 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                             style={{ width: `${progress}%`, backgroundColor: rowColor }}
                           />
                         </div>
+                        {compact && showRecurring && (
+                          <div className="mt-2" style={{ fontSize: Math.round(12 * m) }}>
+                            <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 leading-snug">
+                              <span className="text-muted-foreground">Recorrência mensal</span>
+                              <span className={`font-semibold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>
+                                {item.recurringValue != null ? `${formatCurrency(item.recurringValue, 'currency', 2)}/mês` : recurringLoading ? 'Carregando…' : 'Indisponível'}
+                              </span>
+                            </div>
+                            <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
+                              {item.recurringValue != null && <div className="h-full rounded-full opacity-60 transition-all duration-500 motion-reduce:transition-none" style={{ width: `${Math.min(100, item.recurringValue / maxRecurring * 100)}%`, backgroundColor: rowColor }} />}
+                            </div>
+                          </div>
+                        )}
                         {item.products && item.products.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
                             {groupProducts(item.products, hiddenProducts).map(g => (

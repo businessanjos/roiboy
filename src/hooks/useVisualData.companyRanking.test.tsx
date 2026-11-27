@@ -64,6 +64,8 @@ describe('leitura do ranking por empresa', () => {
     expect(result.current.data?.find(row => row.companyId === 'eternum' && row.name === 'Jonathan')).toMatchObject({ value: 241200, count: 3 });
     expect(result.current.data?.find(row => row.companyId === 'eternum' && row.name === 'Darlan')).toMatchObject({ value: 80400, count: 1, products: [{ name: 'EM l Eternum Mentoring', qty: 1 }] });
     expect(result.current.data?.reduce((sum, row) => sum + row.value, 0)).toBe(481600);
+    expect(result.current.data?.find(row => row.companyId === 'anjos')?.recurringDealIds).toEqual(['cr', 'cr-old1', 'cr-old2', 'cr-old3', 'cr-uuid']);
+    expect(result.current.data?.find(row => row.companyId === 'eternum' && row.name === 'Jonathan')?.recurringDealIds).toEqual([]);
     expect(state.rows.filter(row => row.company_id === 'eternum')).toHaveLength(8);
     expect(state.scopes).toContainEqual(['account_id', 'account']);
     expect(state.scopes).toContainEqual(['status', 'won']);
