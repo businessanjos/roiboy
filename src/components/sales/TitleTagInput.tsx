@@ -5,13 +5,17 @@ import { cn } from "@/lib/utils";
 export const TITLE_TAGS = [
   "CARTEIRA-EM",
   "CARTEIRA-EC",
+  "CARTEIRA-CR",
   "ORG-EVER",
   "ORG-EC",
   "ORG-BP",
+  "ORG-CR",
   "TRAF-IMP-EC",
   "TRAF-STUDIO-EC",
+  "TRAF-CR",
   "IND-EM",
   "IND-EC",
+  "IND-CR",
 ];
 
 const norm = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
