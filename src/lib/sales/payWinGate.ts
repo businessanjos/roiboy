@@ -72,3 +72,11 @@ export function payWinGate(input: {
 export function payLinkAction(canManage: boolean): "link" | "request" {
   return canManage ? "link" : "request";
 }
+
+/**
+ * A manager/administrator may release the win only after a completed RykaPay read found no payment.
+ * Unfinished or failed reads, and every other answer, never open this path.
+ */
+export function canReleaseUnpaidWin(status: PayWinGate["status"], canManage: boolean): boolean {
+  return canManage && (status === "unpaid" || status === "awaiting_manager");
+}

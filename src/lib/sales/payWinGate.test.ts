@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PayResult, PaySubscription } from "@/lib/rykaPay";
 import { PRODUCT_IDS } from "./itemVendaResolver";
-import { paidWinLocked, payLinkAction, payWinGate, requiresPaidWin } from "./payWinGate";
+import { paidWinLocked, payLinkAction, payWinGate, requiresPaidWin, canReleaseUnpaidWin } from "./payWinGate";
 
 const inv = (situation: string, paidAt: string | null = null) => ({
   id: "qa-" + situation, cycle: 1, status: situation, situation, amountCents: 49700, dueDate: null, paidAt,
@@ -81,5 +81,21 @@ describe("vínculo de pagamento de terceiro", () => {
   });
   it("vendedor continua solicitando ao gestor", () => {
     expect(payLinkAction(false)).toBe("request");
+  });
+});
+
+describe("liberação do ganho sem pagamento no RykaPay", () => {
+  it("gestor/administrador libera depois que a consulta não achou pagamento", () => {
+    expect(canReleaseUnpaidWin("unpaid", true)).toBe(true);
+    expect(canReleaseUnpaidWin("awaiting_manager", true)).toBe(true);
+  });
+  it("vendedor nunca libera", () => {
+    expect(canReleaseUnpaidWin("unpaid", false)).toBe(false);
+    expect(canReleaseUnpaidWin("awaiting_manager", false)).toBe(false);
+  });
+  it("sem consulta concluída ninguém libera", () => {
+    for (const status of ["idle", "checking", "error", "needs_document", "needs_product", "other_cycle"] as const) {
+      expect(canReleaseUnpaidWin(status, true)).toBe(false);
+    }
   });
 });

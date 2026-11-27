@@ -34,7 +34,8 @@ import {
   type SubscriptionCycle,
 } from "@/lib/sales/subscriptionWin";
 import { fetchDealItemVenda, fetchSubscriptionWinState, type SubscriptionWinState } from "@/lib/sales/subscriptionWinState";
-import { DEAL_DOCUMENT_FIELD_IDS, ITEM_VENDA_FIELD_ID, payWinGate, paidWinLocked } from "@/lib/sales/payWinGate";
+import { DEAL_DOCUMENT_FIELD_IDS, ITEM_VENDA_FIELD_ID, payWinGate, paidWinLocked, canReleaseUnpaidWin } from "@/lib/sales/payWinGate";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useRykaPaySubscriptions } from "@/hooks/useRykaPaySubscriptions";
 import { paidPayCharge } from "@/lib/sales/subscriptionPayCharge";
 import { payRelationshipLabel } from "@/lib/rykaPay";
@@ -122,6 +123,11 @@ export function RequiredFieldsModal({
   // Pagador guardado de outra venda: o vendedor confirma que foi a mesma pessoa que pagou esta.
   const [thirdPartyConfirmed, setThirdPartyConfirmed] = useState(false);
   const docPrefilledRef = useRef(false);
+  // A consulta ao RykaPay roda sozinha uma vez por abertura, assim que a etapa de pagamento aparece.
+  const autoVerifiedRef = useRef(false);
+  // Gestor/administrador liberou o ganho depois de a consulta não achar pagamento.
+  const [manualRelease, setManualRelease] = useState(false);
+  const { currentUser } = useCurrentUser();
   // Documento do cadastro: só vira valor do campo quando o vendedor clica para usar.
   const [docSuggestion, setDocSuggestion] = useState<string | null>(null);
   // A trava de pagamento só existe no ganho.
@@ -152,6 +158,8 @@ export function RequiredFieldsModal({
       setSubscriptionCycle(null);
       setStoredItem(null);
       setPayVerifiedKey(null);
+      autoVerifiedRef.current = false;
+      setManualRelease(false);
       docPrefilledRef.current = false;
       setDocSuggestion(null);
 
@@ -407,7 +415,8 @@ export function RequiredFieldsModal({
   // Valor recebido (cash collect) é obrigatório no ganho — pode ser 0, mas precisa ser informado.
   const parsedReceived = Number(String(receivedValue).replace(/\./g, "").replace(",", "."));
   const receivedOk = !showBilling || (receivedValue.trim() !== "" && Number.isFinite(parsedReceived) && parsedReceived >= 0);
-  const payGateOk = !payGate || gate.status === "paid";
+  const payReleased = manualRelease && canReleaseUnpaidWin(gate.status, payManagerQuery.data === true);
+  const payGateOk = !payGate || gate.status === "paid" || payReleased;
   const canSave = subscriptionOk && allFieldsFilled && breakdownOk && briefingOk && billingOk && receivedOk && !payChecking && payGateOk;
 
   const upsertFieldValue = async (field: CustomField) => {
@@ -469,6 +478,7 @@ export function RequiredFieldsModal({
       for (const field of itemField ? [...docFields, itemField] : docFields) await upsertFieldValue(field);
       setPayVerifiedKey(payKey);
       setThirdPartyConfirmed(false);
+      setManualRelease(false);
       await Promise.all([payQuery.refetch(), payRequestQuery.refetch()]);
     } catch (error) {
       console.error("Erro ao verificar pagamento:", error);
@@ -632,6 +642,19 @@ export function RequiredFieldsModal({
           _items: gate.charge.saleIds.map((id) => ({ source: gate.charge.source, external_id: id })),
         });
         if (linkErr) throw linkErr;
+      }
+
+      // Liberação sem pagamento confirmado fica registrada no histórico do negócio, com quem liberou.
+      if (payGate && payReleased) {
+        const { error: releaseErr } = await supabase.from("deal_activities").insert({
+          account_id: accountId,
+          deal_id: dealId,
+          type: "note",
+          title: "Ganho liberado sem pagamento no RykaPay",
+          content: `${currentUser?.name ?? "Gestor"} liberou o ganho do Programa Clínica Ryka depois de a consulta ao RykaPay não encontrar pagamento confirmado.`,
+          user_id: currentUser?.id ?? null,
+        } as any);
+        if (releaseErr) throw releaseErr;
       }
 
       clearLocalAutosaveDraft(draftKey);
@@ -814,6 +837,14 @@ export function RequiredFieldsModal({
   const subscriptionAnswered =
     !subscriptionRequired || isSubscription === false || (isSubscription === true && subscriptionCycle !== null);
 
+  // O pagamento sempre precisa ser conferido: a consulta começa sozinha, sem esperar o clique.
+  useEffect(() => {
+    if (!open || !payGate || !subscriptionAnswered || !draftHydrated) return;
+    if (autoVerifiedRef.current || payVerifiedKey !== null || verifying) return;
+    autoVerifiedRef.current = true;
+    void handleVerifyPay();
+  });
+
   const subscriptionSection = subscriptionRequired ? (
     <div className="space-y-4 rounded-xl border border-border bg-muted/30 p-4">
       <div className="space-y-2.5">
@@ -888,7 +919,7 @@ export function RequiredFieldsModal({
           Pagamento no RykaPay <span className="text-destructive">*</span>
         </p>
         <p className="text-xs text-muted-foreground">
-          O ganho do Programa Clínica Ryka só é liberado com o pagamento confirmado no RykaPay.
+          A consulta ao RykaPay é feita sozinha ao abrir. Sem pagamento confirmado, só gestor ou administrador libera o ganho.
         </p>
       </div>
       {docFields.map((field) => renderField(field))}
@@ -928,7 +959,7 @@ export function RequiredFieldsModal({
             "warning",
             <>
               <span className="font-semibold">Nenhum pagamento confirmado no RykaPay.</span> O ganho fica bloqueado até a
-              cliente concluir o pagamento. Depois que ela pagar, clique em "Verificar de novo".
+              cliente concluir o pagamento ou um gestor liberar. Depois que ela pagar, clique em "Verificar de novo".
             </>,
           )}
         {!gateBusy && gate.status === "unpaid" && (
@@ -959,6 +990,33 @@ export function RequiredFieldsModal({
             <Button type="button" variant="outline" className="min-h-11 w-full" onClick={() => setPayRequestOpen(true)}>
               Ver vendas sem dono e vincular
             </Button>
+          </div>
+        )}
+        {!gateBusy && canReleaseUnpaidWin(gate.status, payManagerQuery.data === true) && (
+          <div className="mt-2 space-y-2 border-t border-border pt-3">
+            {payReleased ? (
+              <>
+                {gateNote(
+                  "warning",
+                  <>
+                    <span className="font-semibold">Ganho liberado por você sem pagamento no RykaPay.</span> Ao salvar, a
+                    liberação fica registrada no histórico do negócio com o seu nome.
+                  </>,
+                )}
+                <Button type="button" variant="ghost" className="min-h-11 w-full" onClick={() => setManualRelease(false)}>
+                  Desfazer liberação
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Pagou por outro meio? Como gestor, você pode liberar o ganho mesmo sem pagamento no RykaPay.
+                </p>
+                <Button type="button" variant="outline" className="min-h-11 w-full" onClick={() => setManualRelease(true)}>
+                  Liberar o ganho mesmo assim
+                </Button>
+              </>
+            )}
           </div>
         )}
         {!gateBusy && gate.status === "third_party" && (
