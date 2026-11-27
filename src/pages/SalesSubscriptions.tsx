@@ -58,7 +58,7 @@ export default function SalesSubscriptions() {
     return (
       <div className="p-4 md:p-6">
         <Card><CardContent className="flex items-center gap-3 p-6 text-sm text-muted-foreground">
-          <Lock className="h-5 w-5 shrink-0" strokeWidth={1.5} /> O painel de assinaturas mostra a receita de toda a carteira e fica disponível só para a gestão.
+          <Lock className="h-5 w-5 shrink-0" strokeWidth={1.5} /> O painel de assinaturas mostra a receita de toda a carteira e fica disponível só para a gestão. Peça a liberação a um gestor.
         </CardContent></Card>
       </div>
     );

@@ -32,8 +32,9 @@ Deno.serve(async req => {
   if (authError || !uid) return reply({ error: "Sessão inválida." }, 401);
   const { data: me, error: meError } = await db.from("users").select("account_id,is_active").eq("auth_user_id", uid).maybeSingle();
   if (meError || !me || me.is_active === false || me.account_id !== ROY_ACCOUNT) return reply({ error: "Integração indisponível para esta conta." }, 403);
-  const { data: manager, error: managerError } = await db.rpc("can_manage_spiff_payments", { _auth_user_id: uid });
-  if (managerError || manager !== true) return reply({ error: "O painel de assinaturas é só para a gestão." }, 403);
+  // Managers, or people granted the "Assinaturas" item in their permission profile.
+  const { data: allowed, error: allowedError } = await db.rpc("can_view_pay_portfolio");
+  if (allowedError || allowed !== true) return reply({ error: "O painel de assinaturas é só para a gestão ou para quem a gestão liberou." }, 403);
   const key = Deno.env.get("RYKAPAY_API_KEY");
   if (!key) return reply({ error: "Chave RykaPay não configurada." }, 503);
 

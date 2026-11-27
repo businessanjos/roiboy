@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { PayPortfolio } from "@/lib/sales/payPortfolio";
 
-/** Gestão comercial/financeira: a mesma regra que o servidor confere antes de ler a carteira. */
+/** Gestão, ou quem recebeu o item "Assinaturas" no Perfil de Permissão: a mesma regra que o servidor confere antes de ler a carteira. */
 export function useCanSeePayPortfolio() {
   const { currentUser } = useCurrentUser();
   return useQuery({
@@ -12,9 +12,7 @@ export function useCanSeePayPortfolio() {
     enabled: Boolean(currentUser),
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return false;
-      const { data } = await (supabase as any).rpc("can_manage_spiff_payments", { _auth_user_id: auth.user.id });
+      const { data } = await (supabase as any).rpc("can_view_pay_portfolio");
       return data === true;
     },
   });

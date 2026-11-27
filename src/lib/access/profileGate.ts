@@ -26,7 +26,7 @@ export const PROFILE_ROUTE_RULES: RouteRule[] = [
   { prefix: "/sales-team/incentive-presentation", items: [{ module: "comercial", sub: "accelerometer" }], label: "Acelerômetro" },
   { prefix: "/sales-team/spiffs", items: [{ module: "comercial", sub: "spiffs" }], label: "SPIFFs" },
   { prefix: "/sales-team", items: [{ module: "comercial", sub: "ranking" }], label: "Ranking" },
-  { prefix: "/sales/subscriptions", items: [{ module: "comercial", sub: "sales_dashboard" }], label: "Assinaturas" },
+  { prefix: "/sales/subscriptions", items: [{ module: "comercial", sub: "subscriptions" }], label: "Assinaturas" },
   { prefix: "/sales-dashboard", items: [{ module: "comercial", sub: "sales_dashboard" }], label: "Dashboard de vendas" },
   { prefix: "/sales/contracts", items: [{ module: "comercial", sub: "digital_contracts" }], label: "Contratos digitais" },
   { prefix: "/sales/logs", items: [{ module: "gestao", sub: "logs" }], label: "Logs" },

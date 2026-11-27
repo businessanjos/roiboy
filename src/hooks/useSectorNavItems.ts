@@ -104,6 +104,11 @@ export function useSectorNavItems(sector?: Sector | null): NavItem[] {
       );
     }
 
+    // Assinaturas: só gestão, ou quem recebeu o item no Perfil de Permissão.
+    if (!profileIsAdmin && !granted("/sales/subscriptions")) {
+      sectorItems = sectorItems.filter((item) => item.to !== "/sales/subscriptions");
+    }
+
     // Produtividade do ROY zAPP: apenas admins e heads (mesma regra da view interna).
     if (!canViewZappAnalytics(currentUser)) {
       sectorItems = sectorItems.filter((item) => !item.to.includes("view=analytics"));

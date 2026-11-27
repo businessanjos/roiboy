@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isRouteBlockedByProfile, isExplicitlyDenied, type ProfilePerm } from "./profileGate";
+import { isRouteBlockedByProfile, isRouteGrantedByProfile, isExplicitlyDenied, type ProfilePerm } from "./profileGate";
 
 const none = (module: string, sub_item: string): ProfilePerm => ({ module, sub_item, access_level: "none" });
 const view = (module: string, sub_item: string): ProfilePerm => ({ module, sub_item, access_level: "view" });
@@ -49,5 +49,14 @@ describe("profile gate", () => {
   it("visualizar não é negação", () => {
     expect(isExplicitlyDenied([view("royzapp", "transfer")], "royzapp", "transfer")).toBe(false);
     expect(isExplicitlyDenied([none("royzapp", "transfer")], "royzapp", "transfer")).toBe(true);
+  });
+});
+
+describe("Assinaturas", () => {
+  it("só aparece liberada quando o item Assinaturas foi concedido", () => {
+    expect(isRouteGrantedByProfile("/sales/subscriptions", [])).toBe(false);
+    expect(isRouteGrantedByProfile("/sales/subscriptions", [{ module: "comercial", sub_item: "sales_dashboard", access_level: "view" }])).toBe(false);
+    expect(isRouteGrantedByProfile("/sales/subscriptions", [{ module: "comercial", sub_item: "subscriptions", access_level: "view" }])).toBe(true);
+    expect(isRouteGrantedByProfile("/sales/subscriptions", [{ module: "comercial", sub_item: "subscriptions", access_level: "none" }])).toBe(false);
   });
 });

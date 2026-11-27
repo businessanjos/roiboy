@@ -31782,6 +31782,7 @@ export type Database = {
         Returns: boolean
       }
       can_view_deal_id: { Args: { _deal_id: string }; Returns: boolean }
+      can_view_pay_portfolio: { Args: never; Returns: boolean }
       cancel_fiscal_invoice: {
         Args: { p_invoice_id: string; p_reason: string }
         Returns: string

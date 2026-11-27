@@ -25,6 +25,7 @@ export const PERMISSION_CATALOG: CatalogModule[] = [
       { sub: "deal_transfer", label: "Transferir negócios", scoped: true },
       { sub: "leads", label: "Leads", scoped: true },
       { sub: "sales_dashboard", label: "Dashboard de vendas" },
+      { sub: "subscriptions", label: "Assinaturas (carteira Clínica Ryka)" },
       { sub: "ranking", label: "Ranking" },
       { sub: "accelerometer", label: "Acelerômetro" },
       { sub: "spiffs", label: "SPIFFs" },

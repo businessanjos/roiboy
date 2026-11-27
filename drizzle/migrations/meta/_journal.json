@@ -883,6 +883,13 @@
       "when": 1795784172919,
       "tag": "0125_fix_contract_product_sync_deactivation",
       "breakpoints": true
+    },
+    {
+      "idx": 126,
+      "version": "7",
+      "when": 1795787065436,
+      "tag": "0126_pay_portfolio_access",
+      "breakpoints": true
     }
   ]
 }
