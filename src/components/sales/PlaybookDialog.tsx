@@ -65,6 +65,7 @@ import { PlaybookItemForm } from './PlaybookItemForm';
 import { PlaybookEventFields } from '@/components/playbook/PlaybookEventFields';
 import { usesEventVariables, hasEventVarsValue, applyEventVariables, previewEventVariables, type PlaybookEventVars } from '@/lib/playbookEventVars';
 import { cn } from '@/lib/utils';
+import { playbookItemRawText } from "@/lib/playbookItemText";
 
 export interface MultiSendPayload {
   items: PlaybookItem[];
@@ -246,18 +247,18 @@ export function PlaybookDialog({
 
   const handleUseItem = useCallback(async (item: PlaybookItem) => {
     await trackUsage(item.id);
-    const processedText = item.text_content
-      ? replaceVariables(item.text_content, variables, item)
-      : undefined;
+    const raw = playbookItemRawText(item);
+    const processedText = raw ? replaceVariables(raw, variables, item) : undefined;
     onUseItem?.(item, processedText);
     onOpenChange(false);
   }, [trackUsage, replaceVariables, variables, onUseItem, onOpenChange]);
 
   const handleMultiSend = useCallback(async () => {
     if (selectedItems.length === 0) return;
-    const processedTexts = selectedItems.map(item =>
-      item.text_content ? replaceVariables(item.text_content, variables, item) : undefined
-    );
+    const processedTexts = selectedItems.map(item => {
+      const raw = playbookItemRawText(item);
+      return raw ? replaceVariables(raw, variables, item) : undefined;
+    });
     // Track usage for all items
     for (const item of selectedItems) {
       await trackUsage(item.id);

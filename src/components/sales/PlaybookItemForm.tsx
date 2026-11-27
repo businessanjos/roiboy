@@ -1091,6 +1091,9 @@ export function PlaybookItemForm({
               id: '__draft__', name: name || 'Prévia', content_type: contentType,
               text_content: contentType === 'text' ? textContent : null,
               template_body: contentType === 'template' ? templateBody : null,
+              template_header: contentType === 'template' ? templateHeader : null,
+              template_footer: contentType === 'template' ? templateFooter : null,
+              template_buttons: contentType === 'template' ? templateButtons : null,
               media_caption: mediaCaption || null,
               media_url: mediaPreview || existingMediaUrl,
             } as unknown as PlaybookItem;

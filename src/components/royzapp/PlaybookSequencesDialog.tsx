@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Send, Trash2, ListOrdered, Loader2, History, Tag, Zap, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
+import { playbookItemRawText } from "@/lib/playbookItemText";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { PlaybookItemForm } from "@/components/sales/PlaybookItemForm";
 import { PlaybookItemSelect } from "@/components/royzapp/PlaybookItemSelect";
@@ -123,7 +124,8 @@ export function PlaybookSequencesDialog({ open, onOpenChange, sectorId, conversa
           }
           const pos = usable.slice(0, idx).filter((x) => !isActionStep(x)).length;
           const item = itemById.get(st.playbook_item_id)!;
-          const processed = item.text_content ? replaceVariables(item.text_content, variables, item) : undefined;
+          const raw = playbookItemRawText(item);
+          const processed = raw ? replaceVariables(raw, variables, item) : undefined;
           const text = buildText ? buildText(item, processed) : (processed || "");
           const caption = item.media_caption ? replaceVariables(item.media_caption, variables, item) : "";
           // Assinatura só na primeira mensagem; as seguintes chegam limpas.

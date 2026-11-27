@@ -1,3 +1,4 @@
+import { playbookItemRawText } from "@/lib/playbookItemText";
 import { useEffect, useMemo, useRef } from "react";
 import { applyWhatsAppFormatting } from "@/lib/whatsappFormatting";
 import {
@@ -170,7 +171,7 @@ export function PlaybookSequencePreview({ steps, items, variables = {}, replaceV
             </p>
           ) : (
             resolved.map(({ item, step, index }, pos) => {
-              const text = applyVars(item.text_content, pos === 0, item) || applyVars(item.template_body, pos === 0, item);
+              const text = applyVars(playbookItemRawText(item), pos === 0, item);
               const caption = applyVars(item.media_caption, pos === 0, item);
               const isMedia = item.content_type !== "text";
               return (

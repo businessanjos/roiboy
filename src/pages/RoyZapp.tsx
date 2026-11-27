@@ -1,4 +1,5 @@
 import { ZappTransferRequestDialog } from "@/components/royzapp/dialogs/ZappTransferRequestDialog";
+import { playbookItemRawText } from "@/lib/playbookItemText";
 import { resolveZappHistorySelection, zappSelectionHistoryStates } from "@/lib/navigation/zappMobileSelection";
 import { getZappConversationReturn } from "@/lib/navigation/zappAnalyticsReturn";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
@@ -1087,7 +1088,7 @@ export default function RoyZapp() {
   // Monta o texto de itens que viram mensagem de texto (texto, link, lista, template)
   const buildPlaybookText = useCallback((item: PlaybookItem, processedText?: string): string => {
     const parts: string[] = [];
-    const base = (processedText ?? item.text_content ?? "").trim();
+    const base = (processedText ?? playbookItemRawText(item)).trim();
     if (item.content_type === 'link') {
       const title = (item.link_title || "").trim();
       const desc = (item.link_description || "").trim();
@@ -2237,7 +2238,8 @@ export default function RoyZapp() {
              const item = slashPlaybookItems.find((i) => i.id === opt.id);
              if (!item) return;
              const vars = extractPlaybookVariables({ conversation: selectedConversation, currentUser, deal: null, keepTitle: keepFirstNameTitle });
-             const processed = item.text_content ? slashReplaceVars(item.text_content, vars, item) : undefined;
+             const raw = playbookItemRawText(item);
+             const processed = raw ? slashReplaceVars(raw, vars, item) : undefined;
              void handlePlaybookItemInChat(item, processed);
            }}
            filePreview={messaging.filePreview}
