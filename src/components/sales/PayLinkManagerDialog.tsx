@@ -45,6 +45,7 @@ export function PayLinkManagerDialog({ open, onOpenChange, dealId, onLinked }: P
       toast.success("Pagamento vinculado ao negócio.");
       qc.invalidateQueries({ queryKey: ["pay-link-requests"] });
       qc.invalidateQueries({ queryKey: ["pay-orphans"] });
+      qc.invalidateQueries({ queryKey: ["pay-portfolio"] });
       setSelected(null); setRelationship(null); setOther(""); setDocument(""); setEmail("");
       onLinked();
       onOpenChange(false);

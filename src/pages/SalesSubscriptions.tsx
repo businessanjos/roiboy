@@ -6,6 +6,9 @@ import { AlertTriangle, CalendarDays, CheckCircle2, Loader2, Lock, MonitorPlay, 
 import { usePayPortfolio, useCanSeePayPortfolio } from "@/hooks/usePayPortfolio";
 import { PERIOD_LABELS, formatBRL, formatPercent, monthLabel, monthLongLabel, payDay, periodFor, portfolioMetrics, type PeriodKey } from "@/lib/sales/payPortfolio";
 import { ChartCard, IndicatorCard, MiniTable, SectionHeader } from "@/components/sales/subscriptions/PortfolioParts";
+import { PortfolioUnmatched } from "@/components/sales/subscriptions/PortfolioUnmatched";
+import { PayLinkRequestsPanel } from "@/pages/PayLinkRequests";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CashflowChart, CashflowLegend, CountBars, HealthDonut, MrrChart, RankingBars } from "@/components/sales/subscriptions/PortfolioCharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +21,8 @@ const dayBR = (day: string) => `${day.slice(8, 10)}/${day.slice(5, 7)}/${day.sli
 export default function SalesSubscriptions() {
   const [params, setParams] = useSearchParams();
   const tv = params.get("tv") === "1";
+  const tab = params.get("aba") === "pagamentos" ? "pagamentos" : "painel";
+  const setTab = (value: string) => setParams(prev => { const next = new URLSearchParams(prev); if (value === "pagamentos") next.set("aba", "pagamentos"); else next.delete("aba"); return next; }, { replace: true });
   const [periodKey, setPeriodKey] = useState<PeriodKey>("12m");
   const access = useCanSeePayPortfolio();
   const query = usePayPortfolio(access.data === true, tv);
@@ -35,6 +40,7 @@ export default function SalesSubscriptions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tv]);
 
+  const unmatched = useMemo(() => (query.data?.clinics ?? []).filter(c => !c.contracts.length), [query.data]);
   const updated = query.data ? `Atualizado ${formatDistanceToNow(new Date(query.data.generatedAt), { addSuffix: true, locale: ptBR })}` : null;
   const notices = query.data && metrics ? (
     <>
@@ -109,16 +115,23 @@ export default function SalesSubscriptions() {
           <p className="text-sm text-muted-foreground">Receita recorrente do Programa Clínica Ryka, lida direto do RykaPay.{updated ? ` ${updated}.` : ""}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={periodKey} onValueChange={v => setPeriodKey(v as PeriodKey)}>
+          {tab === "painel" && <Select value={periodKey} onValueChange={v => setPeriodKey(v as PeriodKey)}>
             <SelectTrigger className="h-11 w-44 sm:h-9" aria-label="Período"><SelectValue /></SelectTrigger>
             <SelectContent>{PERIODS.map(p => <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>)}</SelectContent>
-          </Select>
+          </Select>}
           <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={() => query.refetch()} disabled={query.isFetching}>
             {query.isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" strokeWidth={1.5} />} Atualizar
           </Button>
-          <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={() => setTv(true)}><MonitorPlay className="h-4 w-4" strokeWidth={1.5} /> Modo TV</Button>
+          {tab === "painel" && <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={() => setTv(true)}><MonitorPlay className="h-4 w-4" strokeWidth={1.5} /> Modo TV</Button>}
         </div>
       </div>
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="painel" className="min-h-9">Painel</TabsTrigger>
+          <TabsTrigger value="pagamentos" className="min-h-9">Pagamentos sem dono{unmatched.length > 0 ? ` (${unmatched.length})` : ""}</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {!metrics && query.isLoading && (
         <div className="space-y-4" aria-busy="true">
@@ -134,12 +147,22 @@ export default function SalesSubscriptions() {
         </CardContent></Card>
       )}
 
-      {metrics && query.data && (
+      {tab === "pagamentos" && query.data && (
+        <div className="max-w-4xl space-y-4">
+          {notices}
+          <PortfolioUnmatched clinics={unmatched} onLinked={() => void query.refetch()} />
+          <PayLinkRequestsPanel embedded />
+        </div>
+      )}
+      {tab === "pagamentos" && !query.data && !query.isLoading && <div className="max-w-4xl"><PayLinkRequestsPanel embedded /></div>}
+
+      {tab === "painel" && metrics && query.data && (
         <>
           {notices}
           {metrics.notFound > 0 && (
             <p className="text-xs text-muted-foreground">
-              {metrics.notFound} {metrics.notFound === 1 ? "negócio ganho de CR não foi localizado" : "negócios ganhos de CR não foram localizados"} no RykaPay e não {metrics.notFound === 1 ? "entra" : "entram"} nos números.
+              {metrics.notFound} {metrics.notFound === 1 ? "negócio ganho de CR não foi localizado" : "negócios ganhos de CR não foram localizados"} no RykaPay e não {metrics.notFound === 1 ? "entra" : "entram"} nos números.{" "}
+              <button type="button" className="font-medium text-foreground underline underline-offset-2" onClick={() => setTab("pagamentos")}>Ver quem {metrics.notFound === 1 ? "é" : "são"}</button>
             </p>
           )}
 

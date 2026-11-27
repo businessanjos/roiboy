@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -7,6 +7,7 @@ import { Check, Inbox, Link2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCanSeePayPortfolio } from "@/hooks/usePayPortfolio";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { PAY_RELATIONSHIP_LABEL, payRelationshipLabel, type PayRelationship } from "@/lib/rykaPay";
 import { approvePayLink, notifyPayLink, orphanDay, orphanKey, orphanMoney, usePayOrphans } from "@/hooks/usePayOrphans";
@@ -43,7 +44,20 @@ type Row = {
   payer: { relationship: PayRelationship; relationship_other: string | null } | null;
 };
 
+/** Quem vê a aba Assinaturas acompanha os pagamentos sem dono lá dentro; os demais seguem os próprios pedidos aqui. */
 export default function PayLinkRequests() {
+  const access = useCanSeePayPortfolio();
+  const [params] = useSearchParams();
+  if (access.isLoading) return <div className="p-4 text-sm text-muted-foreground md:p-6">Carregando…</div>;
+  if (access.data === true) {
+    const next = new URLSearchParams(params);
+    next.set("aba", "pagamentos");
+    return <Navigate to={`/sales/subscriptions?${next.toString()}`} replace />;
+  }
+  return <PayLinkRequestsPanel />;
+}
+
+export function PayLinkRequestsPanel({ embedded = false }: { embedded?: boolean }) {
   const { currentUser } = useCurrentUser();
   const isManager = isManagementUser(currentUser as any);
   const qc = useQueryClient();
@@ -104,6 +118,7 @@ export default function PayLinkRequests() {
     toast.success(message);
     qc.invalidateQueries({ queryKey: ["pay-link-requests"] });
     qc.invalidateQueries({ queryKey: ["pay-orphans"] });
+    qc.invalidateQueries({ queryKey: ["pay-portfolio"] });
     reset();
   };
 
@@ -169,20 +184,22 @@ export default function PayLinkRequests() {
   );
 
   return (
-    <div className="max-w-4xl space-y-4 p-4 md:p-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Link2 className="h-5 w-5" /> Pagamentos sem dono
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {isManager
-            ? "Vincule ao negócio a venda paga por outra pessoa. Só vendas pagas do Programa Clínica Ryka aparecem."
-            : "Acompanhe seus pedidos de vínculo de pagamento."}
-        </p>
-      </div>
+    <div className={embedded ? "space-y-4" : "max-w-4xl space-y-4 p-4 md:p-6"}>
+      {!embedded && (
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-semibold">
+            <Link2 className="h-5 w-5" /> Pagamentos sem dono
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {isManager
+              ? "Vincule ao negócio a venda paga por outra pessoa. Só vendas pagas do Programa Clínica Ryka aparecem."
+              : "Acompanhe seus pedidos de vínculo de pagamento."}
+          </p>
+        </div>
+      )}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Aguardando decisão ({pending.length})</CardTitle>
+          <CardTitle className="text-base">Pedidos de vínculo aguardando decisão ({pending.length})</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading ? (

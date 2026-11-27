@@ -3,6 +3,7 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { PayPortfolio } from "@/lib/sales/payPortfolio";
+import { readPortfolioCache, writePortfolioCache } from "@/lib/sales/payPortfolioCache";
 
 /** Gestão, ou quem recebeu o item "Assinaturas" no Perfil de Permissão: a mesma regra que o servidor confere antes de ler a carteira. */
 export function useCanSeePayPortfolio() {
@@ -20,11 +21,17 @@ export function useCanSeePayPortfolio() {
 
 const REFRESH_MS = 15 * 60 * 1000;
 
-/** Carteira inteira do Clínica Ryka lida no RykaPay; a leitura é pesada, então fica guardada e só renova a cada 15 min. */
+/**
+ * Carteira do Clínica Ryka lida no RykaPay. A leitura é pesada: a última fica guardada no navegador (por pessoa),
+ * a tela abre com ela e só relê por trás quando tem mais de 15 min ou no botão Atualizar.
+ */
 export function usePayPortfolio(active: boolean, autoRefresh: boolean) {
   const { currentUser } = useCurrentUser();
+  const userId = currentUser?.id as string | undefined;
   return useQuery<PayPortfolio>({
-    queryKey: ["pay-portfolio", currentUser?.account_id],
+    queryKey: ["pay-portfolio", currentUser?.account_id, userId],
+    initialData: () => readPortfolioCache(userId)?.data,
+    initialDataUpdatedAt: () => readPortfolioCache(userId)?.at,
     enabled: Boolean(active && currentUser),
     queryFn: async ({ signal }) => {
       const { data, error } = await supabase.functions.invoke("rykapay-portfolio", { body: {}, signal });
@@ -37,6 +44,7 @@ export function usePayPortfolio(active: boolean, autoRefresh: boolean) {
         throw new Error(message);
       }
       if (!data || !Array.isArray(data.clinics)) throw new Error("Painel de assinaturas indisponível.");
+      writePortfolioCache(userId, data as PayPortfolio);
       return data as PayPortfolio;
     },
     staleTime: REFRESH_MS,

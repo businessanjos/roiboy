@@ -10,6 +10,7 @@ import { isTrafficAgencyUser } from "@/lib/agency";
 import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 import type { NavItem, Sector } from "@/config/sectors";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { useCanSeePayPortfolio } from "@/hooks/usePayPortfolio";
 import { isRouteBlockedByProfile, isRouteGrantedByProfile } from "@/lib/access/profileGate";
 
 export const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
@@ -45,6 +46,7 @@ export function useSectorNavItems(sector?: Sector | null): NavItem[] {
   const { currentSector: selectedSector } = useSector();
   const currentSector = sector === undefined ? selectedSector : sector;
   const { perms: profilePerms, isAdmin: profileIsAdmin } = useUserPermissions();
+  const { data: seesPayPortfolio } = useCanSeePayPortfolio();
 
   return useMemo(() => {
     const teamRoleName = currentUser?.team_role_name;
@@ -62,7 +64,7 @@ export function useSectorNavItems(sector?: Sector | null): NavItem[] {
     }
 
     if (isSuperAdmin) {
-      return currentSector.navItems.filter((item) => item.to !== "/notifications");
+      return currentSector.navItems.filter((item) => item.to !== "/notifications" && !(seesPayPortfolio === true && item.to === "/sales-team/pay-links"));
     }
 
     const emailLower = (currentUser?.email || "").toLowerCase();
@@ -122,6 +124,8 @@ export function useSectorNavItems(sector?: Sector | null): NavItem[] {
     );
 
     return sectorItems.filter((item) => {
+      // Quem vê Assinaturas acompanha os pagamentos sem dono dentro dela.
+      if (seesPayPortfolio === true && item.to === "/sales-team/pay-links") return false;
       if (isSalesRepUser && item.to === "/sales-team") return false;
       if (isSalesRepUser && item.to === "/insights") return false;
       if (!item.permission) return true;
@@ -130,6 +134,7 @@ export function useSectorNavItems(sector?: Sector | null): NavItem[] {
       return hasPermission(item.permission);
     });
   }, [
+    seesPayPortfolio,
     profilePerms,
     profileIsAdmin,
     hasPermission,
