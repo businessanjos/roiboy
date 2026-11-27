@@ -115,6 +115,18 @@ Deno.serve(async req => {
         const read = portfolioContractsFromPay(data);
         partial ||= read.partial;
         take(read.contracts);
+        // Same rule as the deal card (rykapay-read): old Stripe subscriptions count when the payer
+        // reached by the clinic's own document/e-mail is on the closed legacy list of the program.
+        const stripe = record(data.stripe);
+        const charges = Array.isArray(stripe.cobrancas) ? stripe.cobrancas.map(record) : [];
+        if (!charges.length && !(Array.isArray(stripe.assinaturas) && stripe.assinaturas.length)) return;
+        const candidates = [...new Set([...(param === "email" ? [value] : []), ...charges.map(c => c.email).filter(validEmail).map(e => e.trim().toLowerCase())])].slice(0, 30);
+        if (!candidates.length) return;
+        const seeded = must(await db.rpc("pay_seed_emails", { _emails: candidates }));
+        if (!seeded.length) return;
+        const legacy = portfolioContractFromStripe(stripe);
+        if (legacy === null) partial = true;
+        else if (legacy) take([legacy]);
       };
       for (const doc of docs) await lookup("documento", doc);
       // E-mail and approved third-party payers are only tried when the clinic's own documents found nothing.

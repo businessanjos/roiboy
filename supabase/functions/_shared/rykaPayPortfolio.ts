@@ -139,7 +139,7 @@ export function portfolioContractFromSale(raw: unknown): PortfolioContract | nul
   return contract && hasPaidInvoice(contract) ? contract : null;
 }
 /** Old Stripe subscription of the program; null when the Stripe part is unavailable. */
-export function portfolioContractFromStripe(rawStripe: unknown, onlyId: string): PortfolioContract | null | undefined {
+export function portfolioContractFromStripe(rawStripe: unknown, onlyId?: string): PortfolioContract | null | undefined {
   const legacy = normalizeStripeLegacy(rawStripe, onlyId);
   if (!legacy) return null;
   const sub = legacy[0];
