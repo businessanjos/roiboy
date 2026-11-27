@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AlertTriangle, CalendarDays, CheckCircle2, Loader2, Lock, MonitorPlay, Package, RefreshCw, Repeat, TrendingUp, X, XCircle } from "lucide-react";
@@ -237,7 +237,8 @@ export default function SalesSubscriptions() {
                 : (
                   <ul className="max-h-72 divide-y overflow-y-auto">
                     {metrics.cancellations.list.map(row => (
-                      <li key={row.dealId} className="flex items-start justify-between gap-3 py-2.5">
+                      <li key={row.dealId}>
+                       <Link to={`/pipeline?deal=${row.dealId}`} title="Abrir o negócio" className="-mx-2 flex items-start justify-between gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold">{row.clinic}</p>
                           <p className="truncate text-xs text-muted-foreground">{[dayBR(row.date), "Cancelamento", row.kind, row.seller || "Sem vendedor"].join(" · ")}</p>
@@ -246,6 +247,7 @@ export default function SalesSubscriptions() {
                           <p className="text-sm font-semibold tabular-nums text-destructive">−{formatBRL(row.lostMrrCents)}</p>
                           <p className="text-xs text-muted-foreground">{formatBRL(row.receivedCents)} recebidos</p>
                         </div>
+                       </Link>
                       </li>
                     ))}
                   </ul>

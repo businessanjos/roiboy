@@ -44,7 +44,7 @@ export function PortfolioUnmatched({ clinics, onLinked }: { clinics: PortfolioCl
             {clinics.map(c => (
               <li key={c.dealId} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{c.name}</p>
+                  <Link to={`/pipeline?deal=${c.dealId}`} title="Abrir o negócio" className="block truncate text-sm font-semibold hover:underline">{c.name}</Link>
                   <p className="truncate text-xs text-muted-foreground">
                     {[c.sellerName || "Sem vendedor", dayBR(c.wonAt) ? `Ganho em ${dayBR(c.wonAt)}` : null].filter(Boolean).join(" · ")}
                   </p>
