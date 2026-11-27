@@ -7,7 +7,7 @@ import { useTvMode } from '../TvModeContext';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { supabase } from '@/integrations/supabase/client';
-import { rankingRecurringValue } from '@/lib/insights/rankingRecurring';
+import { rankingRecurringRows, rankingRecurringValue } from '@/lib/insights/rankingRecurring';
 import type { PayPortfolio } from '@/lib/sales/payPortfolio';
 import { useInsightsFilters } from '@/hooks/useInsightsFilters';
 import './CompanyRanking.css';
@@ -61,10 +61,15 @@ export function CompanyRanking({ data, companyIds, ...rankingProps }: Props) {
           const name = company?.trade_name || company?.legal_name || (loading ? 'Carregando empresa…' : 'Empresa indisponível');
           const rows = companyRankingRows(visibleData, id);
           const showRecurring = rankingProps.formatting.type === 'currency' && rows.some(row => row.recurringDealIds?.length);
-          const displayRows = showRecurring ? rows.map(row => ({ ...row, recurringValue: rankingRecurringValue(row, stored.data, filters.endDate) })) : rows;
+          const canIncludePreviousSellers = filters.productId === 'all' && (!filters.pipelineId || filters.pipelineId === 'all') && filters.stageId === 'all' && !filters.globalFieldFilter;
+          const displayRows = showRecurring
+            ? canIncludePreviousSellers
+              ? rankingRecurringRows(rows, stored.data, filters.endDate, filters.userId)
+              : rows.map(row => ({ ...row, recurringValue: rankingRecurringValue(row, stored.data, filters.endDate) }))
+            : rows;
           const total = rows.reduce((sum, row) => sum + row.value, 0);
           const recurringTotal = showRecurring
-            ? rankingRecurringValue({ sellerIds: rows.flatMap(row => row.sellerIds ?? []) }, stored.data, filters.endDate)
+            ? rankingRecurringValue({ sellerIds: displayRows.flatMap(row => row.sellerIds ?? []) }, stored.data, filters.endDate)
             : null;
           return (
             <section key={id} aria-label={`Ranking ${name}`} className={`flex min-h-0 min-w-0 flex-col border-border ${index > 0 ? 'company-ranking-secondary' : 'company-ranking-primary'}`}>
@@ -74,7 +79,7 @@ export function CompanyRanking({ data, companyIds, ...rankingProps }: Props) {
                   <span style={tv.tv ? { fontSize: Math.round(22 * tv.scale), lineHeight: 1.2, fontWeight: 700 } : undefined} className="text-sm font-semibold tabular-nums text-foreground">{format(total)}</span>
                   {showRecurring && (
                     <span className="text-right text-xs font-normal tabular-nums text-muted-foreground" style={tv.tv ? { fontSize: Math.round(14 * tv.scale), lineHeight: 1.2 } : undefined}>
-                      Recorrência: {recurringTotal != null ? `${format(recurringTotal)}/mês` : stored.isLoading ? 'Carregando…' : 'Indisponível'}
+                      Recorrência recebida: {recurringTotal != null ? format(recurringTotal) : stored.isLoading ? 'Carregando…' : 'Indisponível'}
                     </span>
                   )}
                 </div>

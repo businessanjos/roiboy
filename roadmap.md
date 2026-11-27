@@ -1,5 +1,9 @@
 # Roadmap — Processos do CS
 
+## Recorrência recebida no ranking Anjos
+- [x] Substituir MRR por recebimentos do mês de vendas recorrentes anteriores; excluir vendas novas e manter o valor principal intacto.
+- [x] 36 testes passaram; novembro e outubro conferidos no ranking autenticado, incluindo vendedor sem vendas novas. Novembro: R$ 12.500 recebidos (R$ 7.500 Darlan, R$ 2.500 Jonathan, R$ 2.500 Everton), total principal R$ 105.916,67 preservado. Compilação e execução sem erros; sem alterar registros ou publicar.
+
 ## Ganho retroativo para administradores
 - [x] Ação no card do Pipeline com calendário ROY; preservar validações, pagamento, contratos e responsável original.
 - [x] 18 testes passaram; data passada, calendário e passagem aos campos obrigatórios conferidos em sessão autenticada, sem gravações em negócios reais. Compilação OK; não publicado.

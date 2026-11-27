@@ -309,9 +309,9 @@ export function ConfigurableRanking({ data: sourceData, formatting, appearance, 
                         {compact && showRecurring && (
                           <div className="mt-2" style={{ fontSize: Math.round(12 * m) }}>
                             <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 leading-snug">
-                              <span className="text-muted-foreground">Recorrência mensal</span>
+                              <span className="text-muted-foreground">Recorrência recebida</span>
                               <span className={`font-semibold tabular-nums text-foreground ${privacy?.blurNumbers ? 'blur-md select-none' : ''}`}>
-                                {item.recurringValue != null ? `${formatCurrency(item.recurringValue, 'currency', 2)}/mês` : recurringLoading ? 'Carregando…' : 'Indisponível'}
+                                {item.recurringValue != null ? formatCurrency(item.recurringValue, 'currency', 2) : recurringLoading ? 'Carregando…' : 'Indisponível'}
                               </span>
                             </div>
                             <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
