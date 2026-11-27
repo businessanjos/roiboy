@@ -112,9 +112,10 @@ export default function SalesSubscriptions() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-xl font-semibold"><Repeat className="h-5 w-5" strokeWidth={1.5} /> Assinaturas</h1>
-          <p className="text-sm text-muted-foreground">Receita recorrente do Programa Clínica Ryka, lida direto do RykaPay.{updated ? ` ${updated}.` : ""}</p>
+          <p className="text-sm text-muted-foreground">Receita recorrente do Programa Clínica Ryka.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {updated && <span className="text-[11px] text-muted-foreground/70" data-testid="portfolio-updated">{updated}</span>}
           {tab === "painel" && <Select value={periodKey} onValueChange={v => setPeriodKey(v as PeriodKey)}>
             <SelectTrigger className="h-11 w-44 sm:h-9" aria-label="Período"><SelectValue /></SelectTrigger>
             <SelectContent>{PERIODS.map(p => <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>)}</SelectContent>
