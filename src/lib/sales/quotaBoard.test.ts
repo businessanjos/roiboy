@@ -21,8 +21,8 @@ const products: QuotaProduct[] = [
 ];
 
 describe("metas por empresa", () => {
-  it("a Anjos lista só os produtos ativos dela", () => {
-    expect(quotaProductsForCompany(products, ANJOS, ETERNUM).map((p) => p.id)).toEqual(["cr", "epass"]);
+  it("a Anjos lista só os produtos ativos dela e o E-Pass não entra nas metas", () => {
+    expect(quotaProductsForCompany(products, ANJOS, ETERNUM).map((p) => p.id)).toEqual(["cr"]);
   });
 
   it("produto desativado não recebe meta nova e renovações ficam juntas na última coluna", () => {

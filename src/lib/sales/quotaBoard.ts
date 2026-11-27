@@ -42,8 +42,11 @@ const isRenewal = (p: QuotaProduct) => Boolean(p.is_renewal) || isRenewalProduct
 /** Produto legado (ex.: Rykas Mentoring) conta no produto atual que o substituiu. */
 export const currentProductId = (id: string | null | undefined) => normalizeProductId(id) ?? "";
 
+/** E-Pass (antigo Rykas Pass) é vendido, mas não tem meta. */
+export const hasNoQuota = (name: string) => /\b(e-?pass|eternum pass|rykas pass)\b/i.test(name);
+
 /**
- * Produtos em que se cadastra meta para a empresa: os ativos dela.
+ * Produtos em que se cadastra meta para a empresa: os ativos dela, menos os sem meta.
  * Produto sem empresa aparece na empresa padrão para não sumir da tela.
  */
 export function quotaProductsForCompany(
@@ -52,13 +55,12 @@ export function quotaProductsForCompany(
   fallbackCompanyId: string | null,
 ): QuotaProduct[] {
   return products
-    .filter((p) => p.is_active && (p.company_id ?? fallbackCompanyId) === companyId)
+    .filter((p) => p.is_active && !hasNoQuota(p.name) && (p.company_id ?? fallbackCompanyId) === companyId)
     .sort((a, b) => Number(isRenewal(a)) - Number(isRenewal(b)) || a.name.localeCompare(b.name, "pt-BR"));
 }
 
-/** Siglas automáticas que confundem: "Eternum MVP" viraria "EM" e "E-Pass" viraria "EEP". */
-const columnLabel = (name: string) =>
-  /\bmvp\b/i.test(name) ? "MVP" : /\be-?pass\b/i.test(name) ? "E-Pass" : productShortName(name);
+/** Sigla automática que confunde: "Eternum MVP" viraria "EM". */
+const columnLabel = (name: string) => (/\bmvp\b/i.test(name) ? "MVP" : productShortName(name));
 
 /** Colunas da visão geral: um produto por coluna e as renovações juntas na última. */
 export function quotaColumns(products: readonly QuotaProduct[]): QuotaColumn[] {
