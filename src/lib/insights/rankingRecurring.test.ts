@@ -18,19 +18,19 @@ const snapshot: PayPortfolio = {
   ],
 };
 describe('recorrência abaixo do ranking', () => {
-  it('mostra a mensalidade somente dos negócios filtrados do vendedor', () => {
-    expect(rankingRecurringValue({ recurringDealIds: ['darlan'] }, snapshot)).toBe(3500);
+  it('inclui todas as clínicas do vendedor, inclusive vendas de meses anteriores', () => {
+    expect(rankingRecurringValue({ sellerIds: ['seller-a'] }, snapshot)).toBe(7000);
   });
   it('plano anual de R$ 35.000 corresponde a R$ 2.916,67 por mês', () => {
-    expect(rankingRecurringValue({ recurringDealIds: ['jonathan'] }, snapshot)).toBe(2916.67);
+    expect(rankingRecurringValue({ sellerIds: ['seller-b'] }, snapshot)).toBe(2916.67);
   });
   it('soma mensal e anual sem duplicar contratos ou IDs', () => {
-    expect(rankingRecurringValue({ recurringDealIds: ['darlan', 'jonathan', 'darlan'] }, snapshot)).toBe(6416.67);
+    expect(rankingRecurringValue({ sellerIds: ['seller-a', 'seller-b', 'seller-a'] }, snapshot)).toBe(9916.67);
   });
   it('não apresenta falta de cache ou resposta parcial como zero', () => {
-    expect(rankingRecurringValue({ recurringDealIds: ['darlan'] }, null)).toBeNull();
-    expect(rankingRecurringValue({ recurringDealIds: ['darlan'] }, { ...snapshot, partial: true })).toBeNull();
-    expect(rankingRecurringValue({ recurringDealIds: ['missing'] }, snapshot)).toBeNull();
+    expect(rankingRecurringValue({ sellerIds: ['seller-a'] }, null)).toBeNull();
+    expect(rankingRecurringValue({ sellerIds: ['seller-a'] }, { ...snapshot, partial: true })).toBeNull();
+    expect(rankingRecurringValue({ sellerIds: [] }, snapshot)).toBeNull();
   });
   it('não soma contratos cancelados, expirados, avulsos ou sem pagamento', () => {
     const excluded = [
@@ -40,7 +40,20 @@ describe('recorrência abaixo do ranking', () => {
       { ...monthly, invoices: [] },
     ];
     for (const contract of excluded) {
-      expect(rankingRecurringValue({ recurringDealIds: ['darlan'] }, { ...snapshot, clinics: [{ ...snapshot.clinics[0], contracts: [contract] }] })).toBe(0);
+      expect(rankingRecurringValue({ sellerIds: ['seller-a'] }, { ...snapshot, clinics: [{ ...snapshot.clinics[0], contracts: [contract] }] })).toBe(0);
     }
+  });
+  it('usa o fechamento do mês escolhido e não a data do ganho', () => {
+    const historical = { ...snapshot, clinics: [{ ...snapshot.clinics[0], wonAt: '2026-01-01', contracts: [{ ...monthly, startedOn: '2026-09-01', canceledAt: '2026-11-20', active: false }] }] };
+    expect(rankingRecurringValue({ sellerIds: ['seller-a'] }, historical, '2026-10-31')).toBe(3500);
+    expect(rankingRecurringValue({ sellerIds: ['seller-a'] }, historical, '2026-11-30')).toBe(0);
+  });
+  it('não mistura vendedores com o mesmo nome', () => {
+    const sameNames = { ...snapshot, clinics: snapshot.clinics.map(c => ({ ...c, sellerName: 'Darlan' })) };
+    expect(rankingRecurringValue({ sellerIds: ['seller-b'] }, sameNames)).toBe(2916.67);
+  });
+  it('negócio sem pagamento não adiciona receita nem bloqueia as clínicas localizadas', () => {
+    const withUnmatched = { ...snapshot, clinics: [...snapshot.clinics, { ...snapshot.clinics[0], dealId: 'unmatched', state: 'not_found' as const, contracts: [] }] };
+    expect(rankingRecurringValue({ sellerIds: ['seller-a'] }, withUnmatched)).toBe(7000);
   });
 });

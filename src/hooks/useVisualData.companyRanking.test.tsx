@@ -8,7 +8,7 @@ const state = vi.hoisted(() => ({
   filters: { startDate: '2026-11-01', endDate: '2026-11-30', userId: 'all', pipelineId: 'all', stageId: 'all' },
   scopes: [] as [string, unknown][],
   rows: [
-    { id: 'cr', item: 'opt_1787176918301', users: { name: 'Darlan' }, company_id: 'anjos', value: 35000 },
+    { id: 'cr', responsible_user_id: 'seller-darlan', item: 'opt_1787176918301', users: { name: 'Darlan' }, company_id: 'anjos', value: 35000 },
     { id: 'cr-old1', item: 'opt_1787176918301', users: { name: 'Darlan' }, company_id: 'eternum', value: 30000 },
     { id: 'cr-old2', item: 'opt_1787176918301', users: { name: 'Darlan' }, company_id: 'eternum', value: 30000 },
     { id: 'cr-old3', item: 'opt_1787176918301', users: { name: 'Darlan' }, company_id: 'eternum', value: 30000 },
@@ -65,6 +65,7 @@ describe('leitura do ranking por empresa', () => {
     expect(result.current.data?.find(row => row.companyId === 'eternum' && row.name === 'Darlan')).toMatchObject({ value: 80400, count: 1, products: [{ name: 'EM l Eternum Mentoring', qty: 1 }] });
     expect(result.current.data?.reduce((sum, row) => sum + row.value, 0)).toBe(481600);
     expect(result.current.data?.find(row => row.companyId === 'anjos')?.recurringDealIds).toEqual(['cr', 'cr-old1', 'cr-old2', 'cr-old3', 'cr-uuid']);
+    expect(result.current.data?.find(row => row.companyId === 'anjos')?.sellerIds).toEqual(['seller-darlan']);
     expect(result.current.data?.find(row => row.companyId === 'eternum' && row.name === 'Jonathan')?.recurringDealIds).toEqual([]);
     expect(state.rows.filter(row => row.company_id === 'eternum')).toHaveLength(8);
     expect(state.scopes).toContainEqual(['account_id', 'account']);

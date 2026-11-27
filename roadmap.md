@@ -402,5 +402,5 @@
 - [ ] Conferir a tela ao vivo depois que a nova consulta entrar no ar (nesta entrega a tela foi vista com a leitura real feita fora do app).
 
 ## Recorrência abaixo dos vendedores da Anjos
-- [x] Valor mensal e segunda barra separados do total vendido, usando os negócios filtrados e a leitura guardada já autorizada; sem consultar o provedor nem alterar vendas.
-- [x] 25 testes passaram; valores reais de novembro e apresentação em desktop, celular e TV conferidos em sessão autenticada, sem erros ou rolagem lateral. Compilação OK; não publicado.
+- [x] Valor mensal e segunda barra separados do total vendido, usando toda a carteira ativa do vendedor, inclusive ganhos antigos, na data de fechamento do período (mês atual: última leitura); sem consultar o provedor nem alterar vendas.
+- [x] 28 testes passaram; carteira real de novembro e outubro conferida no painel em sessão autenticada, sem erros ou rolagem lateral. Apresentação desktop/celular/TV preservada; compilação OK; não publicado.

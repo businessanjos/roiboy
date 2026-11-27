@@ -9,6 +9,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { supabase } from '@/integrations/supabase/client';
 import { rankingRecurringValue } from '@/lib/insights/rankingRecurring';
 import type { PayPortfolio } from '@/lib/sales/payPortfolio';
+import { useInsightsFilters } from '@/hooks/useInsightsFilters';
 import './CompanyRanking.css';
 
 interface Props {
@@ -25,6 +26,7 @@ interface Props {
 export function CompanyRanking({ data, companyIds, ...rankingProps }: Props) {
   const { companies, loading } = useCompany();
   const tv = useTvMode();
+  const { filters } = useInsightsFilters();
   const visibleData = filterVisiblePeople(data);
   const { currentUser } = useCurrentUser();
   const hasRecurring = visibleData.some(row => row.recurringDealIds?.length);
@@ -59,7 +61,7 @@ export function CompanyRanking({ data, companyIds, ...rankingProps }: Props) {
           const name = company?.trade_name || company?.legal_name || (loading ? 'Carregando empresa…' : 'Empresa indisponível');
           const rows = companyRankingRows(visibleData, id);
           const showRecurring = rankingProps.formatting.type === 'currency' && rows.some(row => row.recurringDealIds?.length);
-          const displayRows = showRecurring ? rows.map(row => ({ ...row, recurringValue: rankingRecurringValue(row, stored.data) })) : rows;
+          const displayRows = showRecurring ? rows.map(row => ({ ...row, recurringValue: rankingRecurringValue(row, stored.data, filters.endDate) })) : rows;
           const total = rows.reduce((sum, row) => sum + row.value, 0);
           return (
             <section key={id} aria-label={`Ranking ${name}`} className={`flex min-h-0 min-w-0 flex-col border-border ${index > 0 ? 'company-ranking-secondary' : 'company-ranking-primary'}`}>

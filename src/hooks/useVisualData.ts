@@ -34,6 +34,7 @@ export interface AggregatedDataPoint {
   products?: { name: string; qty: number }[];
   companyId?: string | null;
   recurringDealIds?: string[];
+  sellerIds?: string[];
   /** Calls comerciais: vendas ganhas no mês atual. */
   salesMonth?: number;
 }
@@ -977,6 +978,7 @@ async function fetchDealsData(
       id,
       lead_id,
       company_id,
+      responsible_user_id,
       value,
       entry_value,
       probability,

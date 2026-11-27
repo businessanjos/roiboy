@@ -8,6 +8,7 @@ export interface RankingPoint {
   secondaryValue?: number;
   companyId?: string | null;
   recurringDealIds?: string[];
+  sellerIds?: string[];
   products?: { name: string; qty: number }[];
 }
 
@@ -54,14 +55,16 @@ export function aggregateCompanyRanking<T extends { id?: string; ranking_recurri
   return [...partitions].flatMap(([companyId, rows]) => aggregate(rows).map(point => {
     const products = new Map<string, number>();
     const recurringDealIds: string[] = [];
+    const sellerIds = new Set<string>();
     // Same responsible grouping as the existing visual, including joined names.
     for (const row of rows) {
-      const seller = row as T & { responsible_name?: string; users?: { name?: string } | null };
+      const seller = row as T & { responsible_user_id?: string; responsible_name?: string; users?: { name?: string } | null };
       if ((seller.responsible_name || seller.users?.name || 'Sem Responsável') !== point.name) continue;
+      if (seller.responsible_user_id) sellerIds.add(seller.responsible_user_id);
       if (row.ranking_recurring && row.id) recurringDealIds.push(row.id);
       if (row.product && row.product !== 'Não informado') products.set(row.product, (products.get(row.product) ?? 0) + 1);
     }
-    return { ...point, companyId, recurringDealIds: [...new Set(recurringDealIds)], products: [...products].map(([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty) };
+    return { ...point, companyId, sellerIds: [...sellerIds], recurringDealIds: [...new Set(recurringDealIds)], products: [...products].map(([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty) };
   }));
 }
 
