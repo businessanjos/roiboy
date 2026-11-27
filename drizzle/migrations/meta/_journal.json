@@ -890,6 +890,13 @@
       "when": 1795787065436,
       "tag": "0126_pay_portfolio_access",
       "breakpoints": true
+    },
+    {
+      "idx": 127,
+      "version": "7",
+      "when": 1795789990229,
+      "tag": "0127_pay_portfolio_snapshots",
+      "breakpoints": true
     }
   ]
 }

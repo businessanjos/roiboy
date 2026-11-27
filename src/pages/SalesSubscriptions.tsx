@@ -121,7 +121,7 @@ export default function SalesSubscriptions() {
             <SelectContent>{PERIODS.map(p => <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>)}</SelectContent>
           </Select>}
           <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={() => query.refetch()} disabled={query.isFetching}>
-            {query.isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" strokeWidth={1.5} />} Atualizar
+            {query.isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" strokeWidth={1.5} />} {query.isFetching && query.data ? "Atualizando" : "Atualizar"}
           </Button>
           {tab === "painel" && <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={() => setTv(true)}><MonitorPlay className="h-4 w-4" strokeWidth={1.5} /> Modo TV</Button>}
         </div>

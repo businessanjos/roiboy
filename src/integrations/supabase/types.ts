@@ -21679,6 +21679,33 @@ export type Database = {
           },
         ]
       }
+      pay_portfolio_snapshots: {
+        Row: {
+          account_id: string
+          data: Json
+          generated_at: string
+          refreshed_by: string | null
+          scope_key: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          data: Json
+          generated_at: string
+          refreshed_by?: string | null
+          scope_key: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          data?: Json
+          generated_at?: string
+          refreshed_by?: string | null
+          scope_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pay_sale_links: {
         Row: {
           account_id: string
@@ -32383,6 +32410,7 @@ export type Database = {
         Returns: undefined
       }
       open_pay_link_as_manager: { Args: { _deal_id: string }; Returns: string }
+      pay_portfolio_snapshot_scope: { Args: never; Returns: string }
       pay_seed_emails: { Args: { _emails: string[] }; Returns: string[] }
       pda_is_hr_or_director: { Args: never; Returns: boolean }
       pda_synergy_pct: {

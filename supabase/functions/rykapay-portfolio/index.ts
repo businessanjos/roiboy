@@ -157,6 +157,21 @@ Deno.serve(async req => {
     const clinics: PortfolioClinic[] = [];
     for (const batch of chunks(deals, 4)) clinics.push(...await Promise.all(batch.map(readDeal)));
     const body: PayPortfolio = { generatedAt: new Date().toISOString(), partial, clinics };
+    // Keep the last read so the page opens at once for the next visitor of the same scope
+    // (management shares the whole portfolio; anyone else keeps their own RLS-limited read).
+    // The scope is decided by the database for the caller, never taken from the request.
+    try {
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      const { data: scope } = await db.rpc("pay_portfolio_snapshot_scope");
+      if (serviceKey && typeof scope === "string" && scope) {
+        const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
+        // An incomplete read never replaces a complete one; it is only kept when nothing is stored yet.
+        await admin.from("pay_portfolio_snapshots").upsert(
+          { account_id: me.account_id, scope_key: scope, data: body, generated_at: body.generatedAt, refreshed_by: uid, updated_at: body.generatedAt },
+          { onConflict: "account_id,scope_key", ignoreDuplicates: partial },
+        );
+      }
+    } catch { /* storing is best effort: the read itself already succeeded */ }
     return reply(body);
   } catch {
     return reply({ error: "Não foi possível montar o painel de assinaturas. Tente novamente." }, 502);
