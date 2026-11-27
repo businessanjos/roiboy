@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import {
   mentoringSessionStatus,
   orderMentoringSessions,
+  pendingMentoring,
   type MentoringSession,
 } from "@/lib/mentoring/sessionStatus";
 import { Badge } from "@/components/ui/badge";
@@ -85,11 +86,31 @@ export function ClientMentoringDeliveries({ clientId, linkedClientIds, accountId
     },
   });
 
+  // Mesma régua da tela Mentoria Ao Vivo: só entra na fila quem tem contrato ativo.
+  const { data: hasActiveContract = false } = useQuery({
+    queryKey: ["ec-mentoring-client-active", clientId],
+    queryFn: async (): Promise<boolean> => {
+      const { count, error } = await supabase
+        .from("client_contracts")
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", clientId)
+        .eq("status", "active");
+      if (error) throw error;
+      return (count ?? 0) > 0;
+    },
+  });
+
   const ordered = orderMentoringSessions(sessions, today);
+  const pending = pendingMentoring(
+    sessions.filter((s) => s.client_id === clientId),
+    today,
+    hasActiveContract,
+  );
   const pg = usePagedList(ordered, { resetKey: ordered.length });
 
   const refreshAll = () => {
     qc.invalidateQueries({ queryKey: ["ec-mentoring-client"] });
+    qc.invalidateQueries({ queryKey: ["ec-mentoring-client-active"] });
     qc.invalidateQueries({ queryKey: ["ec-mentoring-members"] });
     qc.invalidateQueries({ queryKey: ["ec-mentoring-history"] });
   };
@@ -160,7 +181,7 @@ export function ClientMentoringDeliveries({ clientId, linkedClientIds, accountId
 
       {isLoading ? (
         <p className="py-6 text-center text-sm text-muted-foreground">Carregando mentorias...</p>
-      ) : ordered.length === 0 ? (
+      ) : ordered.length === 0 && !pending ? (
         <div className="text-center py-6 text-muted-foreground border rounded-lg bg-muted/10">
           <GraduationCap className="h-8 w-8 mx-auto mb-2 opacity-30" />
           <p className="text-sm">Nenhuma mentoria ao vivo registrada para este cliente.</p>
@@ -181,6 +202,46 @@ export function ClientMentoringDeliveries({ clientId, linkedClientIds, accountId
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {pending && (
+                  <TableRow>
+                    <TableCell>
+                      <Checkbox checked={false} disabled aria-label="Em aberto" className="disabled:opacity-100" />
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium">Mentoria Ao Vivo</span>
+                      <p className="text-sm text-muted-foreground">
+                        {pending === "first" ? "Primeira mentoria do cliente" : "Próxima mentoria do cliente"}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge>
+                        <Users className="h-3 w-3 mr-1" />
+                        Mentoria
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">Sem data marcada</span>
+                    </TableCell>
+                    <TableCell>
+                      {pending === "first" ? (
+                        <Badge variant="outline" className="text-danger border-danger/30 bg-danger/10">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Em aberto
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-warning border-warning/30 bg-warning/10">
+                          <CalendarClock className="h-3 w-3 mr-1" />
+                          Agendar a próxima
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="outline" size="sm" onClick={() => open("schedule")} disabled={!accountId}>
+                        Agendar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )}
                 {pg.items.map((s) => {
                   const done = mentoringSessionStatus(s.session_date, today) === "done";
                   return (

@@ -26,3 +26,21 @@ export function orderMentoringSessions<T extends { session_date: string }>(rows:
     .sort((a, b) => b.session_date.localeCompare(a.session_date));
   return [...scheduled, ...done];
 }
+
+/**
+ * Item padrão da mentoria na agenda do cliente: todo cliente com contrato ativo
+ * (mesma régua da tela "Mentoria Ao Vivo") tem uma mentoria em aberto enquanto
+ * não houver data futura marcada. É só exibição: nada é gravado até agendar.
+ * "first" = nunca fez mentoria; "next" = já fez e falta marcar a próxima.
+ */
+export type PendingMentoring = "first" | "next";
+
+export function pendingMentoring(
+  sessions: { session_date: string }[],
+  today: string,
+  hasActiveContract: boolean,
+): PendingMentoring | null {
+  if (!hasActiveContract) return null;
+  if (sessions.some((s) => mentoringSessionStatus(s.session_date, today) === "scheduled")) return null;
+  return sessions.length === 0 ? "first" : "next";
+}
